@@ -1,0 +1,2582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planeador — Sistema de Gestión y Planificación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#34C98B; --brand-dark:#239C6B; --brand-light:#E6F7F0;
+  --navy:#171C91; --navy-dark:#0F1466;
+  --sidebar-1:#20259C; --sidebar-2:#11154F;
+  --ink:#101828; --sub:#667085; --line:#E4E7EC; --bg:#F5F6F8; --card:#FFFFFF;
+  --orange:#B7590A; --orange-bg:#FDECD1;
+  --blue:#1D4ED8; --blue-bg:#DBEAFE;
+  --gray:#475467; --gray-bg:#EEF0F2;
+  --green:#0F7A50; --green-bg:#D6F0E3;
+  --purple:#6D28D9; --purple-bg:#EDE4FB;
+  --red:#B42318; --red-bg:#FBE4E1;
+  --pink:#BE185D; --pink-bg:#FCE4EF;
+  --teal:#0E7490; --teal-bg:#DCF3F8;
+  --shadow: 0 1px 2px rgba(16,24,40,0.05), 0 4px 14px rgba(16,24,40,0.06);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;font-size:14px;}
+button,select,input,textarea{font-family:'Inter',sans-serif;}
+
+/* SHELL */
+.app-shell{display:flex;min-height:100vh;align-items:stretch;}
+
+/* SIDEBAR */
+.sidebar{width:246px;flex-shrink:0;background:linear-gradient(180deg,var(--sidebar-1),var(--sidebar-2));color:#DCEBE3;display:flex;flex-direction:column;padding:22px 16px;position:sticky;top:0;height:100vh;}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:0 6px 26px;}
+.sb-logo-img{height:34px;width:auto;display:block;}
+.sb-logo{width:34px;height:34px;border-radius:9px;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sb-brand-text{font-weight:800;font-size:16px;color:#fff;letter-spacing:0.2px;}
+.sb-nav{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;}
+.sb-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;color:#B9CFC3;font-weight:600;font-size:13.5px;cursor:pointer;transition:all .15s;}
+.sb-item:hover{background:rgba(255,255,255,0.06);color:#fff;}
+.sb-item.active{background:var(--brand);color:#fff;}
+.sb-icon{width:18px;text-align:center;font-size:15px;flex-shrink:0;}
+.sb-count{margin-left:auto;background:rgba(255,255,255,0.14);border-radius:20px;padding:1px 8px;font-family:'Space Mono',monospace;font-size:11px;}
+.sb-item.active .sb-count{background:rgba(255,255,255,0.28);}
+.sb-count.warn{background:var(--orange);color:#fff;}
+.sb-footer{display:flex;align-items:center;gap:10px;padding:14px 10px 4px;border-top:1px solid rgba(255,255,255,0.08);margin-top:10px;}
+.sb-avatar{width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0;}
+.sb-user-name{font-size:13px;font-weight:700;color:#fff;}
+.sb-user-role{font-size:11px;color:#93AEA1;}
+
+/* MAIN */
+.main-wrap{flex:1;min-width:0;}
+main{max-width:1600px;margin:0 auto;padding:26px 32px 60px;}
+
+.page-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.page-top-title{font-size:22px;font-weight:800;}
+.page-top-sub{font-size:12.5px;color:var(--sub);margin-top:2px;}
+
+/* NAV / FILTER CARD */
+.nav-card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:20px;}
+.search-filter-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.search-box{flex:1;min-width:220px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;background:var(--bg);}
+.search-box input{border:none;background:transparent;outline:none;width:100%;font-size:13.5px;}
+.filters-toggle{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:9px 14px;background:var(--bg);font-weight:600;font-size:13.5px;cursor:pointer;color:var(--ink);}
+.filters-toggle .cnt{background:var(--brand);color:#fff;border-radius:20px;padding:1px 8px;font-size:11.5px;font-family:'Space Mono',monospace;}
+
+.filters-panel{display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--line);}
+.filters-panel.show{display:block;}
+.filters-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
+.f-field label{display:block;font-size:11.5px;font-weight:700;color:var(--sub);margin-bottom:6px;}
+.f-field select,.f-field input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;font-size:13px;background:#fff;color:var(--ink);}
+.filters-foot{margin-top:12px;text-align:right;}
+.link-clear{color:var(--red);font-weight:700;font-size:13px;background:none;border:none;cursor:pointer;}
+@media(max-width:1000px){.filters-grid{grid-template-columns:repeat(2,1fr);}}
+
+/* CONTENT CARD */
+.content-card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:20px;}
+.view-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.view-title{font-size:20px;font-weight:800;}
+.view-sub{font-size:12.5px;color:var(--sub);margin-top:2px;}
+.btn{background:var(--brand);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-weight:700;font-size:13.5px;cursor:pointer;}
+.btn:hover{background:var(--brand-dark);}
+.btn-outline{background:#fff;border:1px solid var(--line);color:var(--ink);}
+.btn-outline:hover{background:var(--bg);}
+.btn-sm{padding:6px 11px;font-size:12.5px;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* INICIO DASHBOARD */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px;}
+.stat-card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;}
+.stat-label{font-size:12.5px;color:var(--sub);font-weight:600;margin-bottom:10px;}
+.stat-value{font-size:30px;font-weight:800;}
+.stat-delta{font-size:12px;color:var(--brand);font-weight:700;margin-top:6px;}
+.widgets-row{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+@media(max-width:900px){.stat-grid{grid-template-columns:1fr 1fr;} .widgets-row{grid-template-columns:1fr;}}
+.widget-card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:20px;}
+.widget-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+.venc-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+.venc-item:last-child{border-bottom:none;}
+.venc-left{display:flex;align-items:center;gap:9px;}
+.venc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.venc-date{color:var(--sub);font-size:12.5px;white-space:nowrap;}
+.donut-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 0;}
+.donut-legend{display:flex;gap:16px;margin-top:14px;font-size:12.5px;color:var(--sub);}
+.legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px;}
+
+/* CALENDAR */
+.cal-nav{display:flex;align-items:center;gap:10px;}
+.cal-nav button{width:32px;height:32px;border-radius:7px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px;}
+.cal-month{font-size:19px;font-weight:800;min-width:170px;text-align:center;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+.cal-dow{background:var(--bg);text-align:center;font-size:11px;font-weight:700;letter-spacing:0.5px;color:var(--sub);padding:9px 0;border-bottom:1px solid var(--line);text-transform:uppercase;}
+.cal-day{min-height:118px;padding:8px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);cursor:pointer;position:relative;transition:background .1s;}
+.cal-day.drag-over{background:var(--brand-light);outline:2px dashed var(--brand);outline-offset:-2px;}
+.cal-day:hover{background:#FAFBFC;}
+.cal-day.empty{background:#FAFAFB;cursor:default;}
+.cal-day.today{background:#FFFBEB;}
+.cal-daynum{font-family:'Space Mono',monospace;font-size:12px;color:var(--sub);font-weight:700;}
+.cal-day.today .cal-daynum{color:var(--orange);}
+.cal-cards{margin-top:6px;display:flex;flex-direction:column;gap:4px;}
+.cal-card{border-left:3px solid var(--gray);background:var(--bg);border-radius:5px;padding:5px 7px;font-size:11px;cursor:grab;}
+.cal-card.dragging{opacity:0.4;}
+.cal-card .cc-status{display:inline-block;font-size:9px;font-weight:800;padding:1px 6px;border-radius:20px;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.3px;}
+.cal-card .cc-title{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-more{font-size:11px;font-weight:700;color:var(--brand);text-align:center;padding:3px;background:var(--brand-light);border-radius:5px;cursor:pointer;}
+
+/* KANBAN */
+.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;overflow-x:auto;}
+.kcol{background:var(--bg);border-radius:10px;padding:12px;min-width:220px;}
+.kcol-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;margin-bottom:10px;border-top:3px solid var(--gray);border-radius:3px;padding-top:10px;}
+.kcol-head .kt{font-weight:800;font-size:14px;}
+.kcol-head .kc{font-family:'Space Mono',monospace;background:#fff;border-radius:20px;padding:2px 9px;font-size:12px;font-weight:700;}
+.kcards{display:flex;flex-direction:column;gap:10px;min-height:60px;border-radius:8px;transition:background .12s;}
+.kcards.drag-over{background:var(--brand-light);outline:2px dashed var(--brand);outline-offset:-2px;}
+.task-card[draggable="true"]{cursor:grab;}
+.task-card.dragging{opacity:0.4;}
+.task-card{background:#fff;border:1px solid var(--line);border-left:4px solid var(--gray);border-radius:8px;padding:12px;box-shadow:var(--shadow);cursor:pointer;}
+.task-card:hover{border-color:#cbd2d9;}
+.badge{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.3px;}
+.tc-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+.tc-title{font-weight:700;font-size:13.5px;margin-bottom:6px;line-height:1.3;}
+.tc-empresa{font-size:12px;color:var(--sub);display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.avatars{display:flex;}
+.avatar{width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-left:-6px;border:2px solid #fff;}
+.avatar:first-child{margin-left:0;}
+.tc-meta{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--sub);}
+.tc-tags{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;}
+.tag{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;}
+
+/* TABLE */
+table.data{width:100%;border-collapse:collapse;}
+table.data th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:0.4px;color:var(--sub);font-weight:800;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+table.data td{padding:12px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle;}
+table.data tr:hover td{background:#FAFBFC;}
+.company-cell{display:flex;align-items:center;gap:8px;}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.icon-btn{background:none;border:none;cursor:pointer;padding:5px;border-radius:6px;color:var(--sub);}
+.icon-btn:hover{background:var(--bg);}
+.icon-btn.danger:hover{color:var(--red);}
+select.status-select{border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;background:#fff;}
+.table-scroll{overflow-x:auto;}
+
+.empty-state{text-align:center;padding:44px 20px;color:var(--sub);}
+.empty-state .em-title{font-weight:800;color:var(--ink);font-size:15.5px;margin-bottom:5px;}
+
+.myday-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(16,24,40,0.5);display:none;align-items:center;justify-content:center;z-index:60;padding:20px;}
+.overlay.show{display:flex;}
+.modal{background:#fff;border-radius:12px;width:480px;max-width:100%;max-height:88vh;overflow-y:auto;}
+.modal.modal-lg{width:560px;}
+.dd-multi{position:relative;}
+.dd-trigger{display:flex;justify-content:space-between;align-items:center;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;background:var(--bg);cursor:pointer;color:var(--ink);}
+.dd-trigger:hover{background:#EFF1F3;}
+.dd-arrow{color:var(--sub);font-size:11px;}
+.dd-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(16,24,40,0.14);max-height:190px;overflow-y:auto;padding:8px 10px;z-index:40;}
+.dd-panel .mc-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:6px 2px;}
+.dd-panel .mc-item:hover{background:var(--bg);border-radius:5px;}
+.collapsible{border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+.collapsible-header{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;font-weight:700;font-size:13.5px;cursor:pointer;background:var(--bg);}
+.collapsible-body{padding:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:13px;}
+.subtask-add-row{display:flex;gap:8px;margin-bottom:8px;}
+.subtask-add-row input{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;background:var(--bg);}
+.subtask-list{display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;}
+.subtask-item{display:flex;align-items:center;gap:9px;background:var(--bg);border-radius:7px;padding:8px 10px;font-size:13px;}
+.subtask-item.done .st-text{text-decoration:line-through;color:var(--sub);}
+.subtask-item .st-text{flex:1;}
+.subtask-item .st-remove{background:none;border:none;color:var(--sub);cursor:pointer;font-size:15px;padding:0 4px;}
+.subtask-item .st-remove:hover{color:var(--red);}
+.tag-picker{display:flex;flex-wrap:wrap;gap:8px;}
+.tag-chip{padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer;border:2px solid transparent;opacity:0.55;transition:all .12s;}
+.tag-chip.selected{opacity:1;border-color:rgba(0,0,0,0.15);}
+.field-row-3{grid-template-columns:1fr 1fr 1fr;}
+.toggle-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;padding-top:12px;border-top:1px solid var(--line);}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;}
+.progress-mini{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub);}
+.progress-mini-track{width:44px;height:5px;background:var(--gray-bg);border-radius:4px;overflow:hidden;}
+.progress-mini-fill{height:100%;background:var(--brand);}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.modal-title{font-weight:800;font-size:16.5px;}
+.modal-close{background:none;border:none;font-size:20px;color:var(--sub);cursor:pointer;}
+.modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:13px;}
+.field label{display:block;font-size:11.5px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:6px;}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;background:var(--bg);}
+.field textarea{resize:vertical;min-height:56px;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.check-row{display:flex;gap:14px;flex-wrap:wrap;}
+.check-item{display:flex;align-items:center;gap:6px;font-size:13px;}
+.modal-foot{padding:16px 22px 20px;display:flex;justify-content:space-between;gap:10px;}
+
+/* ADMIN MODULE */
+.admin-tabs{display:flex;gap:6px;flex-wrap:wrap;background:var(--bg);border-radius:10px;padding:6px;margin-bottom:20px;}
+.admin-tab{display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:7px;font-weight:700;font-size:13px;color:var(--sub);cursor:pointer;}
+.admin-tab:hover{background:#EAECEF;}
+.admin-tab.active{background:#fff;color:var(--ink);box-shadow:var(--shadow);}
+.admin-head{margin-bottom:16px;}
+.admin-head .a-title{font-size:19px;font-weight:800;display:flex;align-items:center;gap:9px;}
+.admin-head .a-sub{font-size:12.5px;color:var(--sub);margin-top:3px;}
+.catalog-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:900px){.catalog-grid{grid-template-columns:1fr;}}
+.catalog-box{border:1px solid var(--line);border-radius:12px;padding:18px;}
+.catalog-box-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.catalog-box-head .cb-title{font-weight:800;font-size:14.5px;display:flex;align-items:center;gap:8px;}
+.catalog-box-desc{font-size:12px;color:var(--sub);margin-bottom:12px;}
+.mini-table{width:100%;border-collapse:collapse;margin-top:10px;}
+.mini-table th{text-align:left;font-size:11px;color:var(--sub);font-weight:700;padding:6px 8px;border-bottom:1px solid var(--line);text-transform:uppercase;}
+.mini-table td{padding:9px 8px;border-bottom:1px solid var(--line);font-size:13px;}
+.mini-table tr:last-child td{border-bottom:none;}
+.toggle-switch{width:38px;height:21px;border-radius:20px;background:var(--gray-bg);position:relative;cursor:pointer;flex-shrink:0;transition:background .15s;}
+.toggle-switch.on{background:var(--brand);}
+.toggle-switch .knob{position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,0.2);}
+.toggle-switch.on .knob{left:19px;}
+.role-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--blue-bg);color:var(--blue);margin-right:4px;display:inline-block;}
+.color-swatch-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.color-swatch{border:1px solid var(--line);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;cursor:pointer;background:#fff;}
+.color-swatch.active{outline:2px solid var(--brand);}
+.swatch-dot{width:16px;height:16px;border-radius:5px;flex-shrink:0;}
+.appearance-preview{background:linear-gradient(180deg,var(--sidebar-1),var(--sidebar-2));border-radius:12px;padding:20px;display:flex;align-items:center;gap:10px;margin-top:10px;}
+.appearance-preview .prev-logo{width:34px;height:34px;border-radius:9px;background:var(--brand);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;}
+.appearance-preview .prev-text{color:#fff;font-weight:800;font-size:15px;}
+.appearance-preview .prev-sub{color:#B9CFC3;font-size:11.5px;}
+
+.login-screen{position:fixed;inset:0;background:linear-gradient(135deg,var(--sidebar-1),var(--sidebar-2));display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.login-card{background:#fff;border-radius:16px;padding:36px 32px;width:380px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.login-logo{width:44px;height:44px;border-radius:10px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;margin-bottom:14px;}
+.login-title{font-size:20px;font-weight:800;}
+.login-sub{font-size:13px;color:var(--sub);margin-top:2px;}
+.login-hint{font-size:11.5px;color:var(--sub);margin-top:14px;line-height:1.5;}
+::selection{background:var(--brand);color:#fff;}
+@media(max-width:900px){
+  .app-shell{flex-direction:column;}
+  .sidebar{width:100%;height:auto;position:relative;flex-direction:row;align-items:center;overflow-x:auto;padding:14px 12px;}
+  .sb-brand{padding:0 12px 0 0;}
+  .sb-nav{flex-direction:row;flex:none;}
+  .sb-item{white-space:nowrap;}
+  .sb-footer{display:none;}
+  .kanban{grid-template-columns:1fr;}
+  .filters-grid{grid-template-columns:1fr 1fr;}
+  main{padding:16px 14px 40px;}
+}
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE LOGIN -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">✓</div>
+    <div class="login-title">Planeador</div>
+    <div class="login-sub">Inicia sesión para continuar</div>
+    <div class="field" style="margin-top:18px;"><label>Correo electrónico</label><input id="lg-email" type="email" placeholder="tucorreo@cerpat.com" onkeydown="if(event.key==='Enter') document.getElementById('lg-password').focus();"></div>
+    <div class="field"><label>Contraseña</label><input id="lg-password" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin();"></div>
+    <div id="login-error" style="display:none;color:var(--red);font-size:12.5px;font-weight:700;margin-bottom:8px;">Correo o contraseña incorrectos.</div>
+    <button class="btn" style="width:100%;padding:11px;" onclick="doLogin()">Iniciar sesión</button>
+    <div class="login-hint">¿Olvidaste tu clave? Pídele a un administrador que la restablezca en Administración → Usuarios.</div>
+  </div>
+</div>
+
+<div class="app-shell" id="app-shell" style="display:none;">
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <img src="data:image/png;base64,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" alt="CERPAT" class="sb-logo-img">
+    </div>
+    <div class="sb-nav" id="sb-nav"></div>
+    <div class="sb-footer">
+      <div class="sb-avatar" id="sb-avatar-initials">TU</div>
+      <div style="flex:1;min-width:0;">
+        <div id="sb-user-name" style="font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+        <div id="sb-user-role" style="font-size:11px;color:#93AEA1;"></div>
+      </div>
+      <button onclick="doLogout()" title="Cerrar sesión" style="background:rgba(255,255,255,0.08);border:none;color:#fff;border-radius:6px;padding:6px 8px;cursor:pointer;font-size:13px;">⏻</button>
+    </div>
+  </aside>
+
+  <div class="main-wrap">
+    <main>
+      <div id="nav-card-wrap">
+        <div class="nav-card" id="nav-card">
+          <div class="search-filter-row">
+            <div class="search-box">
+              <span>🔎</span>
+              <input id="search-input" type="text" placeholder="Buscar tarea..." oninput="renderAll()">
+            </div>
+            <button class="filters-toggle" onclick="toggleFilters()">▽ Filtros <span class="cnt" id="filters-count">0</span></button>
+            <button class="btn" onclick="openTaskModal()">+ Nueva Tarea</button>
+          </div>
+          <div class="filters-panel" id="filters-panel">
+            <div class="filters-grid">
+              <div class="f-field"><label>Asignado</label><select id="f-asignado" onchange="renderAll()"><option value="">Todos</option></select></div>
+              <div class="f-field"><label>Estado</label><select id="f-estado" onchange="renderAll()"><option value="">Todos</option></select></div>
+              <div class="f-field"><label>Empresa</label><select id="f-empresa" onchange="renderAll()"><option value="">Todas</option></select></div>
+              <div class="f-field"><label>Prioridad</label><select id="f-prioridad" onchange="renderAll()"><option value="">Todas</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></div>
+              <div class="f-field"><label>Etiqueta</label><select id="f-etiqueta" onchange="renderAll()"><option value="">Todas</option></select></div>
+              <div class="f-field"><label>Auditoría</label><select id="f-auditoria" onchange="renderAll()"><option value="">Todos</option><option value="pendiente">Pendiente</option><option value="aprobada">Aprobada</option><option value="rechazada">Rechazada</option></select></div>
+            </div>
+            <div class="filters-grid" style="margin-top:14px;grid-template-columns:repeat(3,1fr);">
+              <div class="f-field"><label>Desde (vencimiento)</label><input type="date" id="f-desde" onchange="renderAll()"></div>
+              <div class="f-field"><label>Hasta (vencimiento)</label><input type="date" id="f-hasta" onchange="renderAll()"></div>
+            </div>
+            <div class="filters-foot"><button class="link-clear" onclick="clearFilters()">✕ Limpiar todos los filtros</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-card" id="content-card">
+        <div id="view-inicio"></div>
+        <div id="view-calendario" style="display:none;"></div>
+        <div id="view-tablero" style="display:none;"></div>
+        <div id="view-lista" style="display:none;"></div>
+        <div id="view-miDia" style="display:none;"></div>
+        <div id="view-pagos" style="display:none;"></div>
+        <div id="view-auditoria" style="display:none;"></div>
+        <div id="view-administracion" style="display:none;"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL TAREA -->
+<div class="overlay" id="modal-task">
+  <div class="modal modal-lg">
+    <div class="modal-head"><div class="modal-title" id="task-modal-title">Nueva tarea</div><button class="modal-close" onclick="closeModal('modal-task')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Nombre de la tarea</label><input id="tk-titulo" type="text" placeholder="Ej. Liquidar Retención Agosto"></div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Empresa</label>
+          <div class="dd-multi" id="dd-empresa">
+            <div class="dd-trigger" onclick="toggleDropdown('dd-empresa')">
+              <span class="dd-trigger-text" id="dd-empresa-text">Seleccionar empresa(s)...</span>
+              <span class="dd-arrow">▾</span>
+            </div>
+            <div class="dd-panel" id="dd-empresa-panel"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Asignados</label>
+          <div class="dd-multi" id="dd-asignados">
+            <div class="dd-trigger" onclick="toggleDropdown('dd-asignados')">
+              <span class="dd-trigger-text" id="dd-asignados-text">Seleccionar usuarios...</span>
+              <span class="dd-arrow">▾</span>
+            </div>
+            <div class="dd-panel" id="dd-asignados-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field"><label>Fecha Inicio</label><input id="tk-fecha-inicio" type="date"></div>
+        <div class="field"><label>Fecha Vencimiento</label><input id="tk-fecha" type="date"></div>
+      </div>
+
+      <div id="tk-lock-banner" style="display:none;background:var(--orange-bg);color:var(--orange);border-radius:8px;padding:10px 14px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center;">
+        <span>🔒 Tarea auditada y bloqueada. Solo se puede editar tras desbloquearla en Auditoría.</span>
+      </div>
+
+      <div class="field-row">
+        <div class="field"><label>Estado</label>
+          <select id="tk-estado">
+            <option value="por_iniciar">Por iniciar</option>
+            <option value="en_curso">En curso</option>
+            <option value="en_revision">En revisión</option>
+            <option value="terminado">Terminado</option>
+            <option value="auditado">Auditado</option>
+            <option value="no_realizado">No realizado</option>
+          </select>
+        </div>
+        <div class="field"><label>Prioridad</label>
+          <select id="tk-prioridad">
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+            <option value="baja">Baja</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="collapsible" id="tk-clasificacion-wrap">
+        <div class="collapsible-header" onclick="toggleClasificacion()">
+          <span>⛭ Clasificación de Tarea</span>
+          <span id="tk-clasif-arrow">▸</span>
+        </div>
+        <div class="collapsible-body" id="tk-clasif-body" style="display:none;">
+          <div class="field-row field-row-3">
+            <div class="field"><label>Tipo de Tarea</label><select id="tk-tipo-tarea"></select></div>
+            <div class="field"><label>Tipo de Obligación</label><select id="tk-tipo-obligacion"></select></div>
+            <div class="field"><label>Periodicidad</label><select id="tk-periodicidad"></select></div>
+          </div>
+          <div class="toggle-grid">
+            <div class="toggle-row"><span>Requiere Revisión Técnica</span><div class="toggle-switch" id="tk-toggle-revision" onclick="flipToggle('tk-toggle-revision')"><div class="knob"></div></div></div>
+            <div class="toggle-row"><span>Genera Pago</span><div class="toggle-switch" id="tk-toggle-pago" onclick="flipToggle('tk-toggle-pago')"><div class="knob"></div></div></div>
+            <div class="toggle-row"><span>Genera Ineficacia</span><div class="toggle-switch" id="tk-toggle-ineficacia" onclick="flipToggle('tk-toggle-ineficacia')"><div class="knob"></div></div></div>
+            <div class="toggle-row"><span>Requiere Soporte</span><div class="toggle-switch" id="tk-toggle-soporte" onclick="flipToggle('tk-toggle-soporte'); toggleSoporteLinkField();"><div class="knob"></div></div></div>
+            <div class="toggle-row"><span>Tarea interna (no va al cliente)</span><div class="toggle-switch" id="tk-toggle-interno" onclick="flipToggle('tk-toggle-interno')"><div class="knob"></div></div></div>
+          </div>
+          <div class="field" id="tk-soporte-link-wrap" style="display:none;"><label>Link de soporte documental</label><input id="tk-soporte-link" type="text" placeholder="Ej. https://drive.google.com/..."></div>
+          <div class="field"><label>Auditoría</label>
+            <select id="tk-auditoria">
+              <option value="pendiente">Pendiente</option>
+              <option value="aprobada">Aprobada</option>
+              <option value="rechazada">Rechazada</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field"><label>Observaciones</label><textarea id="tk-observaciones" placeholder="Notas adicionales..."></textarea></div>
+
+      <div class="field"><label>Subtareas</label>
+        <div class="subtask-add-row">
+          <input id="tk-subtarea-input" type="text" placeholder="Ej. Revisar documentos" onkeydown="if(event.key==='Enter'){event.preventDefault(); addSubtarea();}">
+          <button class="btn btn-sm" type="button" onclick="addSubtarea()">+</button>
+        </div>
+        <div id="tk-subtareas-list" class="subtask-list"></div>
+      </div>
+
+      <div class="field"><label>Etiquetas</label>
+        <div class="subtask-add-row">
+          <input id="tk-nueva-etiqueta" type="text" placeholder="Nueva etiqueta..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addNuevaEtiqueta();}">
+          <button class="btn btn-sm" type="button" onclick="addNuevaEtiqueta()">+</button>
+        </div>
+        <div id="tk-etiquetas-picker" class="tag-picker"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" style="color:var(--red);border-color:#f3d4d0;" id="tk-delete-btn" onclick="deleteCurrentTask()">Eliminar</button>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal('modal-task')">Cancelar</button>
+        <button class="btn" onclick="saveTask()">Guardar tarea</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PAGO -->
+<div class="overlay" id="modal-pago">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Nueva obligación de pago</div><button class="modal-close" onclick="closeModal('modal-pago')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Empresa</label><input id="pg-empresa" type="text" placeholder="Ej. Ecoconcretos SAS" list="empresa-list"><datalist id="empresa-list"></datalist></div>
+      <div class="field"><label>Obligación</label><input id="pg-obligacion" type="text" placeholder="Ej. Retención en la fuente Julio 2026"></div>
+      <div class="field-row">
+        <div class="field"><label>Periodicidad</label><input id="pg-periodicidad" type="text" placeholder="Ej. Mensual, Bimestral"></div>
+        <div class="field"><label>Vencimiento</label><input id="pg-fecha" type="date"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Valor del impuesto</label><input id="pg-valor" type="number" placeholder="Ej. 1200000"></div>
+        <div class="field"><label>Estado de la tarea</label>
+          <select id="pg-estado-tarea">
+            <option value="por_iniciar">Por iniciar</option>
+            <option value="en_curso">En curso</option>
+            <option value="terminado">Terminado (presentada)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Estado de pago</label>
+        <select id="pg-estado">
+          <option value="pendiente">Pendiente</option>
+          <option value="presentado_sin_pago">Presentado sin pago</option>
+          <option value="presentado_pagado">Presentado y pagado</option>
+          <option value="no_presentado">No presentado</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" style="color:var(--red);border-color:#f3d4d0;" id="pg-delete-btn" onclick="deleteCurrentPayment()">Eliminar</button>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal('modal-pago')">Cancelar</button>
+        <button class="btn" onclick="savePayment()">Guardar obligación</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: USUARIO -->
+<div class="overlay" id="modal-usuario">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="usuario-modal-title">Nuevo usuario</div><button class="modal-close" onclick="closeModal('modal-usuario')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Nombre completo</label><input id="us-nombre" type="text" placeholder="Ej. María Torres"></div>
+      <div class="field"><label>Correo electrónico</label><input id="us-email" type="email" placeholder="Ej. maria@cerpat.com"></div>
+      <div class="field"><label>Contraseña</label><input id="us-password" type="text" placeholder="Ej. cerpat2026"></div>
+      <div class="field"><label>Roles</label>
+        <div class="check-row">
+          <label class="check-item"><input type="checkbox" value="Administrador" class="us-rol"> Administrador</label>
+          <label class="check-item"><input type="checkbox" value="Asesor" class="us-rol"> Asesor</label>
+          <label class="check-item"><input type="checkbox" value="Auditor" class="us-rol"> Auditor</label>
+          <label class="check-item"><input type="checkbox" value="Auxiliar" class="us-rol"> Auxiliar</label>
+        </div>
+      </div>
+      <div class="field"><label>Activo</label>
+        <select id="us-activo"><option value="true">Sí</option><option value="false">No</option></select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" style="color:var(--red);border-color:#f3d4d0;" id="us-delete-btn" onclick="deleteCurrentUsuario()">Eliminar</button>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal('modal-usuario')">Cancelar</button>
+        <button class="btn" onclick="saveUsuario()">Guardar usuario</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EMPRESA (ADMIN) -->
+<div class="overlay" id="modal-empresa-admin">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="empresa-modal-title">Nueva empresa</div><button class="modal-close" onclick="closeModal('modal-empresa-admin')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Nombre de la empresa</label><input id="em-nombre" type="text" placeholder="Ej. Acme Consultores S.A.S"></div>
+      <div class="field-row">
+        <div class="field"><label>NIT</label><input id="em-nit" type="text" placeholder="900123456-1"></div>
+        <div class="field"><label>Municipio</label><select id="em-municipio"></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Tipo de empresa</label><select id="em-tipo"></select></div>
+        <div class="field"><label>Sector</label><select id="em-sector"></select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Régimen tributario</label><select id="em-regimen"></select></div>
+        <div class="field"><label>Periodicidad IVA</label><select id="em-periodicidad"></select></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" style="color:var(--red);border-color:#f3d4d0;" id="em-delete-btn" onclick="deleteCurrentEmpresaAdmin()">Eliminar</button>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal('modal-empresa-admin')">Cancelar</button>
+        <button class="btn" onclick="saveEmpresaAdmin()">Guardar empresa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ASESOR -->
+<div class="overlay" id="modal-asesor">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="asesor-modal-title">Nuevo asesor</div><button class="modal-close" onclick="closeModal('modal-asesor')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Nombre completo</label><input id="as-nombre" type="text" placeholder="Ej. Sofía Herrera"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" style="color:var(--red);border-color:#f3d4d0;" id="as-delete-btn" onclick="deleteCurrentAsesor()">Eliminar</button>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal('modal-asesor')">Cancelar</button>
+        <button class="btn" onclick="saveAsesor()">Guardar asesor</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ITEM DE CATALOGO GENERICO -->
+<div class="overlay" id="modal-catitem">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="catitem-modal-title">Agregar elemento</div><button class="modal-close" onclick="closeModal('modal-catitem')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label id="catitem-label-nombre">Nombre</label><input id="cat-nombre" type="text"></div>
+      <div class="field" id="catitem-depto-wrap" style="display:none;"><label>Departamento</label><input id="cat-departamento" type="text" placeholder="Ej. Meta"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" style="color:var(--red);border-color:#f3d4d0;" id="catitem-delete-btn" onclick="deleteCurrentCatItem()">Eliminar</button>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal('modal-catitem')">Cancelar</button>
+        <button class="btn" onclick="saveCatItem()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VENCIMIENTO -->
+<div class="overlay" id="modal-vencimiento">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="vencimiento-modal-title">Nuevo vencimiento</div><button class="modal-close" onclick="closeModal('modal-vencimiento')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Obligación</label><select id="vc-obligacion"></select></div>
+      <div class="field-row">
+        <div class="field"><label>Municipio</label><input id="vc-municipio" type="text" placeholder="Ej. Nacional, Villavicencio"></div>
+        <div class="field"><label>Período</label><input id="vc-periodo" type="text" placeholder="Ej. Período 1"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Fecha de vencimiento</label><input id="vc-fecha" type="date"></div>
+        <div class="field"><label>NIT (rango, opcional)</label><input id="vc-nit" type="text" placeholder="Ej. 0-7"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" style="color:var(--red);border-color:#f3d4d0;" id="vc-delete-btn" onclick="deleteCurrentVencimiento()">Eliminar</button>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal('modal-vencimiento')">Cancelar</button>
+        <button class="btn" onclick="saveVencimiento()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: IMPRIMIR CALENDARIO -->
+<div class="overlay" id="modal-print">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">🖨 Imprimir calendario</div><button class="modal-close" onclick="closeModal('modal-print')">×</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Mes a imprimir</label><input type="month" id="pr-month"></div>
+      <div class="field"><label>Filtrar por</label>
+        <div class="check-row" style="flex-direction:column;align-items:flex-start;gap:10px;">
+          <label class="check-item"><input type="radio" name="pr-modo" value="asesor" checked onchange="updatePrintValueOptions()"> Solo tareas de un asesor</label>
+          <label class="check-item"><input type="radio" name="pr-modo" value="etiqueta" onchange="updatePrintValueOptions()"> Solo tareas con una etiqueta</label>
+          <label class="check-item"><input type="radio" name="pr-modo" value="empresa" onchange="updatePrintValueOptions()"> Todas las actividades de una empresa (para enviar al cliente)</label>
+          <label class="check-item"><input type="radio" name="pr-modo" value="todas" onchange="updatePrintValueOptions()"> Todas las tareas del mes</label>
+        </div>
+      </div>
+      <div class="field" id="pr-value-wrap"><label id="pr-value-label">Asesor</label><select id="pr-value"></select></div>
+    </div>
+    <div class="modal-foot">
+      <div></div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal('modal-print')">Cancelar</button>
+        <button class="btn" onclick="generatePrintCalendar()">🖨 Generar e Imprimir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: IMPORTAR TAREAS MASIVAS -->
+<div class="overlay" id="modal-import-tareas">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📥 Tareas masivas</div><button class="modal-close" onclick="closeModal('modal-import-tareas')">×</button></div>
+    <div class="modal-body">
+      <div class="empty-state" style="text-align:left;padding:4px 0;">
+        1. Descarga la plantilla en Excel/CSV.<br>
+        2. Complétala (puedes dejar vacíos los campos opcionales).<br>
+        3. Súbela aquí para crear todas las tareas de una vez.
+      </div>
+      <button class="btn btn-outline" style="width:100%;" onclick="downloadTaskTemplate()">⬇ Descargar plantilla de tareas</button>
+      <div class="field"><label>Subir archivo (.csv)</label><input type="file" id="import-tareas-file" accept=".csv" onchange="handleTasksFileUpload(event)"></div>
+      <div id="import-tareas-result"></div>
+    </div>
+    <div class="modal-foot">
+      <div></div>
+      <button class="btn btn-outline" onclick="closeModal('modal-import-tareas')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: IMPORTAR USUARIOS MASIVOS -->
+<div class="overlay" id="modal-import-usuarios">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📥 Usuarios masivos</div><button class="modal-close" onclick="closeModal('modal-import-usuarios')">×</button></div>
+    <div class="modal-body">
+      <div class="empty-state" style="text-align:left;padding:4px 0;">
+        1. Descarga la plantilla en Excel/CSV.<br>
+        2. Complétala con nombre, correo, contraseña y roles.<br>
+        3. Súbela aquí para crear todos los usuarios de una vez.
+      </div>
+      <button class="btn btn-outline" style="width:100%;" onclick="downloadUserTemplate()">⬇ Descargar plantilla de usuarios</button>
+      <div class="field"><label>Subir archivo (.csv)</label><input type="file" id="import-usuarios-file" accept=".csv" onchange="handleUsersFileUpload(event)"></div>
+      <div id="import-usuarios-result"></div>
+    </div>
+    <div class="modal-foot">
+      <div></div>
+      <button class="btn btn-outline" onclick="closeModal('modal-import-usuarios')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DOW = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const ESTADOS = {
+  por_iniciar:{label:'Por iniciar', color:'var(--orange)', bg:'var(--orange-bg)'},
+  en_curso:{label:'En curso', color:'var(--blue)', bg:'var(--blue-bg)'},
+  en_revision:{label:'En revisión', color:'var(--gray)', bg:'var(--gray-bg)'},
+  terminado:{label:'Terminado', color:'var(--green)', bg:'var(--green-bg)'},
+  auditado:{label:'Auditado', color:'var(--purple)', bg:'var(--purple-bg)'},
+  no_realizado:{label:'No realizado', color:'var(--gray)', bg:'var(--gray-bg)'}
+};
+const AUDITORIA = {
+  pendiente:{label:'Pendiente', color:'var(--orange)', bg:'var(--orange-bg)'},
+  aprobada:{label:'Aprobada', color:'var(--green)', bg:'var(--green-bg)'},
+  rechazada:{label:'Rechazada', color:'var(--red)', bg:'var(--red-bg)'}
+};
+const PRIORIDAD = {
+  alta:{label:'Alta', color:'#fff', bg:'var(--red)'},
+  media:{label:'Media', color:'#fff', bg:'var(--green)'},
+  baja:{label:'Baja', color:'var(--ink)', bg:'var(--gray-bg)'}
+};
+const ESTADO_PAGO = {
+  pendiente:{label:'Pendiente', color:'var(--orange)', bg:'var(--orange-bg)'},
+  presentado_sin_pago:{label:'Presentado sin pago', color:'var(--red)', bg:'var(--red-bg)'},
+  presentado_pagado:{label:'Presentado y pagado', color:'var(--green)', bg:'var(--green-bg)'},
+  no_presentado:{label:'No presentado', color:'#fff', bg:'var(--red)'}
+};
+const TAG_COLORS = {
+  'Laboral':{color:'var(--green)', bg:'var(--green-bg)'},
+  'Nómina':{color:'var(--pink)', bg:'var(--pink-bg)'},
+  'Contable':{color:'var(--teal)', bg:'var(--teal-bg)'},
+  'Legal':{color:'var(--orange)', bg:'var(--orange-bg)'},
+  'Fiscal':{color:'var(--purple)', bg:'var(--purple-bg)'}
+};
+const DOT_PALETTE = ['#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6','#EC4899','#14B8A6','#F97316'];
+const KANBAN_ORDER = ['por_iniciar','en_curso','en_revision','terminado','auditado'];
+const NAV_ITEMS = [
+  {key:'inicio', label:'Inicio', icon:'🏠', showFilters:false},
+  {key:'calendario', label:'Calendario', icon:'📅', showFilters:true},
+  {key:'tablero', label:'Tablero', icon:'▦', showFilters:true},
+  {key:'lista', label:'Lista', icon:'☰', showFilters:true},
+  {key:'miDia', label:'Mi Día', icon:'☆', showFilters:true, countKey:'miDia'},
+  {key:'pagos', label:'Pagos', icon:'💲', showFilters:true, countKey:'pagos'},
+  {key:'auditoria', label:'Auditoría', icon:'🛡', showFilters:true, countKey:'auditoria'},
+  {key:'administracion', label:'Administración', icon:'⚙', showFilters:false}
+];
+const ADMIN_TABS = [
+  {key:'usuarios', label:'Usuarios', icon:'👥'},
+  {key:'empresasAdmin', label:'Empresas', icon:'🏢'},
+  {key:'asesores', label:'Asesores', icon:'🧑‍💼'},
+  {key:'catalogos', label:'Catálogos', icon:'🗂️'},
+  {key:'catTareas', label:'Cat. Tareas', icon:'📋'},
+  {key:'vencimientosAdmin', label:'Vencimientos', icon:'⏰'},
+  {key:'parametros', label:'Parámetros', icon:'⚖️'},
+  {key:'apariencia', label:'Apariencia', icon:'🎨'}
+];
+let adminSubView = 'usuarios';
+
+/* ================= DATA ================= */
+function loadData(){
+  try{ return JSON.parse(localStorage.getItem('planeador-cerpat-data')); }catch(e){ return null; }
+}
+function seedData(){
+  const today = new Date();
+  const iso = (d)=> d.toISOString().slice(0,10);
+  const addDays = (n)=> { const d = new Date(today); d.setDate(d.getDate()+n); return iso(d); };
+  return {
+    tasks: [
+      {id:1, titulo:'Envío nómina electrónica junio', empresa:'Consultores Andinos S.A.S', asignados:['Juan Gómez'], estado:'terminado', prioridad:'media', etiquetas:['Nómina','Laboral'], fecha:addDays(-10), auditoria:'aprobada'},
+      {id:2, titulo:'Liquidación planilla seguridad social', empresa:'Textiles del Meta S.A.S', asignados:['Diana Ardila'], estado:'auditado', prioridad:'media', etiquetas:['Nómina'], fecha:addDays(-8), auditoria:'aprobada'},
+      {id:3, titulo:'Revisión nómina quincenal', empresa:'Transportes El Llano S.A.S', asignados:['Diana Ardila','Sofía Herrera'], estado:'terminado', prioridad:'media', etiquetas:['Laboral','Nómina'], fecha:addDays(-6), auditoria:'pendiente'},
+      {id:4, titulo:'TH — Plazo envío planillas y nómina', empresa:'Agropecuaria San Rafael S.A.S', asignados:['Jorge Gil'], estado:'por_iniciar', prioridad:'alta', etiquetas:['Nómina'], fecha:addDays(1), auditoria:'pendiente'},
+      {id:5, titulo:'Liquidación planilla seguridad social', empresa:'Acacías Ingeniería S.A.S', asignados:['Iván Salas'], estado:'en_curso', prioridad:'media', etiquetas:['Nómina'], fecha:addDays(2), auditoria:'pendiente'},
+      {id:6, titulo:'Causación nómina segunda quincena', empresa:'Transportes El Llano S.A.S', asignados:['Sofía Herrera'], estado:'terminado', prioridad:'media', etiquetas:['Nómina'], fecha:addDays(3), auditoria:'pendiente'},
+      {id:7, titulo:'Liquidación planilla seguridad social', empresa:'Metal Andes S.A.S', asignados:['Diana Ardila'], estado:'terminado', prioridad:'media', etiquetas:['Laboral','Nómina'], fecha:addDays(4), auditoria:'pendiente'},
+      {id:8, titulo:'Reajuste prima primer semestre', empresa:'Comercial Bendición S.A.S', asignados:['Diana Ardila'], estado:'terminado', prioridad:'media', etiquetas:['Laboral','Nómina'], fecha:addDays(5), auditoria:'pendiente'},
+      {id:9, titulo:'Envío consulta detalles pago planilla', empresa:'Agropecuaria San Rafael S.A.S', asignados:['Hugo Bravo','Katherine Díaz'], estado:'terminado', prioridad:'media', etiquetas:['Nómina','Contable'], fecha:addDays(4), auditoria:'pendiente'},
+      {id:10, titulo:'Pago prima de servicios', empresa:'Arakari S.A.S', asignados:['Jorge Gil'], estado:'auditado', prioridad:'media', etiquetas:['Legal','Nómina'], fecha:addDays(-12), auditoria:'aprobada'},
+      {id:11, titulo:'Nómina electrónica mayo 2026', empresa:'Grasscol S.A.S', asignados:['Juliana Arias'], estado:'por_iniciar', prioridad:'media', etiquetas:['Nómina'], fecha:addDays(0), auditoria:'pendiente'},
+      {id:12, titulo:'Envío de nómina electrónica', empresa:'Consultec Inc S.A.S', asignados:['Andrés Castro'], estado:'no_realizado', prioridad:'media', etiquetas:['Nómina'], fecha:addDays(0), auditoria:'pendiente'},
+      {id:13, titulo:'Planilla Seguridad Social mayo 2026', empresa:'Agroindustrias La Cosecha S.A.S', asignados:['Juliana Arias'], estado:'por_iniciar', prioridad:'media', etiquetas:['Nómina'], fecha:addDays(0), auditoria:'pendiente'},
+      {id:14, titulo:'Villavicencio — Información exógena', empresa:'Ingeniería Corban S.A.S', asignados:['María Ávila','Sara Cifuentes'], estado:'auditado', prioridad:'alta', etiquetas:['Fiscal'], fecha:addDays(-14), auditoria:'aprobada'},
+      {id:15, titulo:'Visita técnica programada', empresa:'Soluxionar S.A.S.', asignados:['Julián Amaya','Tatiana León'], estado:'auditado', prioridad:'baja', etiquetas:['Contable'], fecha:addDays(-14), auditoria:'aprobada'},
+      {id:16, titulo:'Liquidación planilla seguridad social', empresa:'B&B Logística S.A.S', asignados:['Iván Salas'], estado:'auditado', prioridad:'media', etiquetas:['Nómina'], fecha:addDays(-14), auditoria:'aprobada'},
+      {id:17, titulo:'Renta persona jurídica año gravable 2025', empresa:'Ecoconcretos S.A.S', asignados:['Katherine Díaz'], estado:'por_iniciar', prioridad:'alta', etiquetas:['Fiscal'], fecha:addDays(2), auditoria:'pendiente'},
+      {id:18, titulo:'Declaración de IVA bimestral', empresa:'Ecoconcretos S.A.S', asignados:['Katherine Díaz'], estado:'en_revision', prioridad:'alta', etiquetas:['Fiscal','Contable'], fecha:addDays(6), auditoria:'pendiente'}
+    ],
+    payments: [
+      {id:101, empresa:'Ecoconcretos S.A.S', obligacion:'Retención en la fuente mayo de 2026', periodicidad:'Mensual', fecha:addDays(-1), estado:'pendiente'},
+      {id:102, empresa:'Ecoconcretos S.A.S', obligacion:'Renta persona jurídica año gravable 2025 (2da cuota)', periodicidad:'Anual', fecha:addDays(2), estado:'pendiente'},
+      {id:103, empresa:'Ecoconcretos S.A.S', obligacion:'Retención en la fuente junio de 2026', periodicidad:'Mensual', fecha:addDays(4), estado:'pendiente'},
+      {id:104, empresa:'Grasscol S.A.S', obligacion:'IVA bimestral mayo-junio 2026', periodicidad:'Bimestral', fecha:addDays(7), estado:'pendiente'},
+      {id:105, empresa:'Agropecuaria San Rafael S.A.S', obligacion:'Seguridad social junio 2026', periodicidad:'Mensual', fecha:addDays(-3), estado:'presentado_pagado'}
+    ],
+    admin: defaultAdmin(),
+    nextId: 200
+  };
+}
+function defaultAdmin(){
+  return {
+    usuarios: [
+      {id:1, nombre:'Tu Usuario', email:'admin@cerpat.com', password:'admin123', roles:['Administrador'], activo:true},
+      {id:2, nombre:'Diana Ardila', email:'diana.ardila@cerpat.com', password:'cerpat2026', roles:['Asesor'], activo:true},
+      {id:3, nombre:'Jorge Gil', email:'jorge.gil@cerpat.com', password:'cerpat2026', roles:['Asesor','Auditor'], activo:true},
+      {id:4, nombre:'Katherine Díaz', email:'katherine.diaz@cerpat.com', password:'cerpat2026', roles:['Auxiliar'], activo:false}
+    ],
+    empresas: [
+      {id:1, nombre:'Ecoconcretos S.A.S', nit:'900123456-1', tipo:'Persona Jurídica', sector:'Construcción', regimen:'Régimen Ordinario', periodicidadIva:'Bimestral', municipio:'Villavicencio'},
+      {id:2, nombre:'Grasscol S.A.S', nit:'900234567-2', tipo:'Persona Jurídica', sector:'Agropecuario', regimen:'Régimen Simple de Tributación (RST)', periodicidadIva:'Anual', municipio:'Acacías'},
+      {id:3, nombre:'Transportes El Llano S.A.S', nit:'900345678-3', tipo:'Persona Jurídica', sector:'Transporte', regimen:'Régimen Ordinario', periodicidadIva:'Bimestral', municipio:'Villavicencio'}
+    ],
+    asesores: [
+      {id:1, nombre:'Diana Ardila'}, {id:2, nombre:'Jorge Gil'}, {id:3, nombre:'Sofía Herrera'},
+      {id:4, nombre:'Iván Salas'}, {id:5, nombre:'Katherine Díaz'}, {id:6, nombre:'Juliana Arias'}
+    ],
+    catalogos: {
+      tiposEmpresa: ['Persona Jurídica','Persona Natural','Consorcio o Unión Temporal','Sucursal Extranjera'],
+      sectores: ['Construcción','Transporte','Comercial','Salud','Educación','Agropecuario','Tecnología'],
+      regimenes: ['Régimen Simple de Tributación (RST)','Régimen Ordinario','Régimen Especial','Gran Contribuyente'],
+      periodicidadesIva: ['Bimestral','Cuatrimestral','Anual'],
+      tiposServicio: ['Asesoría Contable','Outsourcing Contable','Auditoría Externa'],
+      municipios: [
+        {nombre:'Villavicencio', departamento:'Meta'},
+        {nombre:'Acacías', departamento:'Meta'},
+        {nombre:'Granada', departamento:'Meta'},
+        {nombre:'Bogotá', departamento:'Bogotá D.C.'}
+      ]
+    },
+    catTareas: {
+      tiposTarea: ['Fiscal','Contable','Laboral','Legal','Auditoría','Visita'],
+      tiposObligacion: ['IVA','Renta','Retención en la Fuente','Seguridad Social','Información Exógena','Otro'],
+      periodicidades: ['Mensual','Bimestral','Trimestral','Cuatrimestral','Semestral','Anual','Quincenal','Eventual'],
+      etiquetas: ['Laboral','Nómina','Contable','Legal','Fiscal']
+    },
+    vencimientos: [
+      {id:1, obligacion:'Seguridad Social', municipio:'Nacional', periodo:'Período 1', fecha:'2026-01-20', nit:'70-75'},
+      {id:2, obligacion:'Retención en la Fuente', municipio:'Nacional', periodo:'Período 1', fecha:'2026-02-13', nit:'—'},
+      {id:3, obligacion:'IVA', municipio:'Nacional', periodo:'Período 1', fecha:'2026-07-15', nit:'0-7'}
+    ],
+    apariencia: {nombre:'Planeador', subtitulo:'Sistema de Gestión y Planificación', colorPrimario:'#34C98B'},
+    parametros: {
+      tasaMoraMensual: 0.2679,
+      valorUvt: 52374,
+      smmlv: 1423500,
+      sancionMinimaUvt: 10,
+      pctSancionExtemporaneidad: 0.05
+    }
+  };
+}
+let data = loadData() || seedData();
+if(!data.admin) data.admin = defaultAdmin();
+if(!data.admin.catalogos) data.admin.catalogos = defaultAdmin().catalogos;
+if(!data.admin.catTareas) data.admin.catTareas = defaultAdmin().catTareas;
+if(!data.admin.vencimientos) data.admin.vencimientos = defaultAdmin().vencimientos;
+if(!data.admin.apariencia) data.admin.apariencia = defaultAdmin().apariencia;
+if(!data.admin.parametros) data.admin.parametros = defaultAdmin().parametros;
+// Migración: subtareas de booleano a 3 estados; empresas por defecto
+data.tasks.forEach(t=>{
+  if(t.subtareas) t.subtareas.forEach(s=>{ if(s.estado===undefined){ s.estado = s.completada ? 'realizada' : 'pendiente'; delete s.completada; } });
+  if(t.interno===undefined) t.interno = false;
+  if(t.soporteLink===undefined) t.soporteLink = '';
+});
+// Seguro de acceso: nunca quedar sin ningún administrador activo (evita bloqueos totales de login)
+(function ensureAccessSafety(){
+  const hayAdminActivo = data.admin.usuarios.some(u=>u.activo && u.password && (u.roles||[]).includes('Administrador'));
+  if(!hayAdminActivo){
+    let admin = data.admin.usuarios.find(u=>u.email==='admin@cerpat.com');
+    if(admin){
+      admin.activo = true;
+      admin.password = 'admin123';
+      if(!(admin.roles||[]).includes('Administrador')) admin.roles = (admin.roles||[]).concat('Administrador');
+    } else {
+      data.admin.usuarios.push({id:(data.nextId=(data.nextId||200)+1), nombre:'Tu Usuario', email:'admin@cerpat.com', password:'admin123', roles:['Administrador'], activo:true});
+    }
+  }
+})();
+// Migración: usuarios creados antes del sistema de login no tenían contraseña
+data.admin.usuarios.forEach(u=>{ if(!u.password) u.password = 'cerpat2026'; });
+// Migración: estados de pago antiguos (pendiente/pagado) a los 4 nuevos estados
+data.payments.forEach(p=>{
+  if(p.estado==='pagado') p.estado = 'presentado_pagado';
+  if(!ESTADO_PAGO[p.estado]) p.estado = 'pendiente';
+});
+function persist(){ localStorage.setItem('planeador-cerpat-data', JSON.stringify(data)); }
+function newId(){ data.nextId = (data.nextId||200)+1; return data.nextId; }
+
+/* ---- Sesión / Login ---- */
+function loadUiState(){
+  try{ return JSON.parse(localStorage.getItem('planeador-cerpat-ui')) || {}; }catch(e){ return {}; }
+}
+let uiState = loadUiState();
+let loggedInEmail = uiState.loggedInEmail || null;
+let currentUser = uiState.currentUser || null;
+function persistUiState(){
+  uiState.loggedInEmail = loggedInEmail;
+  uiState.currentUser = currentUser;
+  uiState.currentView = currentView;
+  uiState.filters = typeof activeFilters==='function' ? activeFilters() : uiState.filters;
+  localStorage.setItem('planeador-cerpat-ui', JSON.stringify(uiState));
+}
+function findUserByEmail(email){
+  return data.admin.usuarios.find(u=>u.email.toLowerCase()===String(email).toLowerCase());
+}
+function doLogin(){
+  const email = document.getElementById('lg-email').value.trim();
+  const pass = document.getElementById('lg-password').value;
+  const user = findUserByEmail(email);
+  const errEl = document.getElementById('login-error');
+  if(!user || user.password!==pass || user.activo===false){
+    errEl.textContent = !user ? 'Correo no registrado.' : (user.activo===false ? 'Este usuario está inactivo. Contacta a un administrador.' : 'Contraseña incorrecta.');
+    errEl.style.display='block';
+    return;
+  }
+  errEl.style.display='none';
+  loggedInEmail = user.email;
+  currentUser = user.nombre;
+  persistUiState();
+  showApp();
+}
+function doLogout(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  loggedInEmail = null;
+  persistUiState();
+  document.getElementById('app-shell').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('lg-password').value='';
+}
+function showApp(){
+  const user = findUserByEmail(loggedInEmail);
+  if(!user){ document.getElementById('login-screen').style.display='flex'; return; }
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-shell').style.display='flex';
+  document.getElementById('sb-avatar-initials').textContent = initialsOf(user.nombre);
+  document.getElementById('sb-user-name').textContent = user.nombre;
+  document.getElementById('sb-user-role').textContent = (user.roles||[]).join(' · ');
+  populateFilterOptions();
+  restoreSavedFilters();
+  switchView(currentView);
+}
+
+let calDate = new Date();
+let editingTaskId = null;
+let editingPaymentId = null;
+let currentView = uiState.currentView || 'inicio';
+
+/* ================= HELPERS ================= */
+function escapeHtml(str){ const d=document.createElement('div'); d.textContent = str||''; return d.innerHTML; }
+function formatDate(str){ if(!str) return '—'; const [y,m,d]=str.split('-'); return `${d}/${m}/${y}`; }
+function initialsOf(name){ return name.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+function colorFor(str){ let h=0; for(let i=0;i<str.length;i++) h = str.charCodeAt(i) + ((h<<5)-h); return DOT_PALETTE[Math.abs(h)%DOT_PALETTE.length]; }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function badge(map,key){ const o = map[key] || {label:key,color:'var(--gray)',bg:'var(--gray-bg)'}; return `<span class="badge" style="color:${o.color};background:${o.bg};">${o.label}</span>`; }
+const TAG_PALETTE = [
+  {color:'var(--green)', bg:'var(--green-bg)'},
+  {color:'var(--pink)', bg:'var(--pink-bg)'},
+  {color:'var(--teal)', bg:'var(--teal-bg)'},
+  {color:'var(--orange)', bg:'var(--orange-bg)'},
+  {color:'var(--purple)', bg:'var(--purple-bg)'},
+  {color:'var(--blue)', bg:'var(--blue-bg)'},
+  {color:'var(--red)', bg:'var(--red-bg)'}
+];
+function tagStyle(name){
+  if(TAG_COLORS[name]) return TAG_COLORS[name];
+  let h=0; for(let i=0;i<name.length;i++) h = name.charCodeAt(i) + ((h<<5)-h);
+  return TAG_PALETTE[Math.abs(h)%TAG_PALETTE.length];
+}
+function tagPill(name){ const o = tagStyle(name); return `<span class="tag" style="color:${o.color};background:${o.bg};">${escapeHtml(name)}</span>`; }
+function avatarsHtml(names){ return `<div class="avatars">` + names.map(n=>`<div class="avatar" style="background:${colorFor(n)};" title="${escapeHtml(n)}">${initialsOf(n)}</div>`).join('') + `</div>`; }
+
+/* ================= FILTERS ================= */
+function uniqueValues(field){
+  const set = new Set();
+  data.tasks.forEach(t=>{
+    if(field==='asignados') t.asignados.forEach(a=>set.add(a));
+    else if(field==='etiquetas') t.etiquetas.forEach(e=>set.add(e));
+    else if(t[field]) set.add(t[field]);
+  });
+  return Array.from(set).sort();
+}
+function populateFilterOptions(){
+  const empresaSel = document.getElementById('f-empresa');
+  const asigSel = document.getElementById('f-asignado');
+  const etqSel = document.getElementById('f-etiqueta');
+  const estSel = document.getElementById('f-estado');
+  const empresaList = document.getElementById('empresa-list');
+
+  const keepFirst = (sel)=> sel.querySelector('option');
+  [empresaSel, asigSel, etqSel].forEach(sel=>{ const first = keepFirst(sel); sel.innerHTML=''; sel.appendChild(first); });
+
+  uniqueValues('empresa').forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; empresaSel.appendChild(o); });
+  uniqueValues('asignados').forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; asigSel.appendChild(o); });
+  uniqueValues('etiquetas').forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; etqSel.appendChild(o); });
+
+  if(estSel.options.length<=1){
+    Object.keys(ESTADOS).forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=ESTADOS[k].label; estSel.appendChild(o); });
+  }
+  if(empresaList) empresaList.innerHTML = uniqueValues('empresa').concat(data.admin.empresas.map(e=>e.nombre)).map(v=>`<option value="${escapeHtml(v)}">`).join('');
+}
+function restoreSavedFilters(){
+  const f = uiState.filters;
+  if(!f) return;
+  const map = {q:'search-input', asignado:'f-asignado', estado:'f-estado', empresa:'f-empresa', prioridad:'f-prioridad', etiqueta:'f-etiqueta', auditoria:'f-auditoria', desde:'f-desde', hasta:'f-hasta'};
+  Object.keys(map).forEach(k=>{ const el = document.getElementById(map[k]); if(el && f[k]) el.value = f[k]; });
+}
+function toggleFilters(){ document.getElementById('filters-panel').classList.toggle('show'); }
+function clearFilters(){
+  ['f-asignado','f-estado','f-empresa','f-prioridad','f-etiqueta','f-auditoria','f-desde','f-hasta'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('search-input').value='';
+  persistUiState();
+  renderAll();
+}
+function activeFilters(){
+  return {
+    q: document.getElementById('search-input').value.trim().toLowerCase(),
+    asignado: document.getElementById('f-asignado').value,
+    estado: document.getElementById('f-estado').value,
+    empresa: document.getElementById('f-empresa').value,
+    prioridad: document.getElementById('f-prioridad').value,
+    etiqueta: document.getElementById('f-etiqueta').value,
+    auditoria: document.getElementById('f-auditoria').value,
+    desde: document.getElementById('f-desde').value,
+    hasta: document.getElementById('f-hasta').value
+  };
+}
+function updateFiltersCount(){
+  const f = activeFilters();
+  let n=0;
+  ['asignado','estado','empresa','prioridad','etiqueta','auditoria','desde','hasta'].forEach(k=>{ if(f[k]) n++; });
+  document.getElementById('filters-count').textContent = n;
+}
+function filteredTasks(){
+  const f = activeFilters();
+  return data.tasks.filter(t=>{
+    if(f.q && !(t.titulo.toLowerCase().includes(f.q) || t.empresa.toLowerCase().includes(f.q))) return false;
+    if(f.asignado && !t.asignados.includes(f.asignado)) return false;
+    if(f.estado && t.estado!==f.estado) return false;
+    if(f.empresa && t.empresa!==f.empresa) return false;
+    if(f.prioridad && t.prioridad!==f.prioridad) return false;
+    if(f.etiqueta && !t.etiquetas.includes(f.etiqueta)) return false;
+    if(f.auditoria && t.auditoria!==f.auditoria) return false;
+    if(f.desde && t.fecha < f.desde) return false;
+    if(f.hasta && t.fecha > f.hasta) return false;
+    return true;
+  });
+}
+
+/* ================= NAV (SIDEBAR) ================= */
+function renderNav(){
+  const wrap = document.getElementById('sb-nav');
+  const miDiaCount = data.tasks.filter(t=> t.fecha===todayStr() && t.asignados.includes(currentUser) && !['terminado','auditado'].includes(t.estado)).length;
+  const pagosCount = data.payments.length;
+  const auditoriaCount = data.tasks.filter(t=>t.auditoria==='pendiente').length;
+  const counts = {miDia:miDiaCount, pagos:pagosCount, auditoria:auditoriaCount};
+  wrap.innerHTML = NAV_ITEMS.map(item=>{
+    let cntHtml = '';
+    if(item.countKey){
+      const c = counts[item.countKey];
+      cntHtml = `<span class="sb-count ${item.countKey==='auditoria'&&c>0?'warn':''}">${c}</span>`;
+    }
+    return `<div class="sb-item ${currentView===item.key?'active':''}" onclick="switchView('${item.key}')">
+      <span class="sb-icon">${item.icon}</span><span>${item.label}</span>${cntHtml}
+    </div>`;
+  }).join('');
+}
+function switchView(key){
+  currentView = key;
+  document.querySelectorAll('.content-card > div').forEach(d=>d.style.display='none');
+  document.getElementById('view-'+key).style.display='block';
+  const navItem = NAV_ITEMS.find(n=>n.key===key);
+  document.getElementById('nav-card-wrap').style.display = navItem.showFilters ? 'block' : 'none';
+  renderNav();
+  renderView(key);
+  persistUiState();
+}
+
+/* ================= RENDER ALL ================= */
+function renderAll(){
+  updateFiltersCount();
+  renderNav();
+  renderView(currentView);
+  persistUiState();
+}
+function renderView(key){
+  if(key==='inicio') renderInicio();
+  if(key==='calendario') renderCalendario();
+  if(key==='tablero') renderTablero();
+  if(key==='lista') renderLista();
+  if(key==='miDia') renderMiDia();
+  if(key==='pagos') renderPagos();
+  if(key==='auditoria') renderAuditoria();
+  if(key==='administracion') renderAdministracion();
+}
+
+/* ================= INICIO (DASHBOARD) ================= */
+function renderInicio(){
+  const el = document.getElementById('view-inicio');
+  const empresas = new Set();
+  data.tasks.forEach(t=>empresas.add(t.empresa));
+  data.payments.forEach(p=>empresas.add(p.empresa));
+
+  const pendientes = data.tasks.filter(t=>!['terminado','auditado'].includes(t.estado)).length;
+  const t7 = new Date(); t7.setDate(t7.getDate()+7);
+  const t7str = t7.toISOString().slice(0,10);
+  const today = todayStr();
+  const vencProx = [
+    ...data.tasks.filter(t=>t.fecha>=today && t.fecha<=t7str).map(t=>({tipo:'tarea', label:t.titulo, empresa:t.empresa, fecha:t.fecha, color:ESTADOS[t.estado].color})),
+    ...data.payments.filter(p=>p.fecha>=today && p.fecha<=t7str).map(p=>({tipo:'pago', label:p.obligacion, empresa:p.empresa, fecha:p.fecha, color:'var(--orange)'}))
+  ].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const pagosPorConfirmar = data.payments.filter(p=>p.estado!=='presentado_pagado').length;
+
+  const total = data.tasks.length;
+  const completadas = data.tasks.filter(t=>['terminado','auditado'].includes(t.estado)).length;
+  const pct = total ? Math.round((completadas/total)*100) : 0;
+  const R = 54, C = 2*Math.PI*R;
+  const dash = C * (pct/100);
+
+  el.innerHTML = `
+    <div class="page-top">
+      <div><div class="page-top-title">Resumen general</div><div class="page-top-sub">${MONTHS[new Date().getMonth()]} ${new Date().getFullYear()} · Vista general</div></div>
+      <button class="btn" onclick="openTaskModal()">+ Nueva Tarea</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Empresas activas</div>
+        <div class="stat-value">${empresas.size}</div>
+        <div class="stat-delta">clientes en seguimiento</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tareas pendientes</div>
+        <div class="stat-value">${pendientes}</div>
+        <div class="stat-delta">de ${total} tareas totales</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Vencimientos próx.</div>
+        <div class="stat-value">${vencProx.length}</div>
+        <div class="stat-delta">próximos 7 días</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pagos por confirmar</div>
+        <div class="stat-value">${pagosPorConfirmar}</div>
+        <div class="stat-delta">obligaciones pendientes</div>
+      </div>
+    </div>
+    <div class="widgets-row">
+      <div class="widget-card">
+        <div class="widget-title">Vencimientos próximos</div>
+        ${vencProx.length===0? `<div class="empty-state" style="padding:20px 0;"><div class="em-title">Sin vencimientos próximos</div></div>` :
+        vencProx.slice(0,6).map(v=>`<div class="venc-item">
+          <div class="venc-left"><span class="venc-dot" style="background:${v.color};"></span>${escapeHtml(v.label)} <span style="color:var(--sub);font-size:12px;">· ${escapeHtml(v.empresa)}</span></div>
+          <div class="venc-date">${formatDate(v.fecha)}</div>
+        </div>`).join('')}
+      </div>
+      <div class="widget-card">
+        <div class="widget-title">Tareas por estatus</div>
+        <div class="donut-wrap">
+          <svg width="150" height="150" viewBox="0 0 150 150">
+            <circle cx="75" cy="75" r="${R}" fill="none" stroke="var(--green-bg)" stroke-width="16"></circle>
+            <circle cx="75" cy="75" r="${R}" fill="none" stroke="var(--green)" stroke-width="16"
+              stroke-dasharray="${dash} ${C-dash}" stroke-linecap="round"
+              transform="rotate(-90 75 75)"></circle>
+            <text x="75" y="80" text-anchor="middle" font-size="26" font-weight="800" fill="var(--ink)" font-family="Inter, sans-serif">${total}</text>
+          </svg>
+          <div class="donut-legend">
+            <span><span class="legend-dot" style="background:var(--green);"></span>Completadas (${completadas})</span>
+            <span><span class="legend-dot" style="background:var(--green-bg);border:1px solid var(--line);"></span>En proceso (${total-completadas})</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ================= CALENDARIO ================= */
+function changeMonth(delta){ calDate.setMonth(calDate.getMonth()+delta); renderCalendario(); }
+function goToday(){ calDate = new Date(); renderCalendario(); }
+function renderCalendario(){
+  const el = document.getElementById('view-calendario');
+  const year = calDate.getFullYear(), month = calDate.getMonth();
+  const firstDow = (new Date(year, month, 1).getDay()+6)%7;
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const tasks = filteredTasks();
+  const today = todayStr();
+
+  let cellsHtml = '';
+  for(let i=0;i<firstDow;i++) cellsHtml += `<div class="cal-day empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayTasks = tasks.filter(t=>t.fecha===dateStr);
+    const visible = dayTasks.slice(0,3);
+    const extra = dayTasks.length - visible.length;
+    cellsHtml += `<div class="cal-day ${dateStr===today?'today':''}" data-date="${dateStr}" onclick="openTaskModal(null,'${dateStr}')" ondragover="onCalDayDragOver(event)" ondragleave="onCalDayDragLeave(event)" ondrop="onCalDayDrop(event,'${dateStr}')">
+      <div class="cal-daynum">${d}</div>
+      <div class="cal-cards">
+        ${visible.map(t=>`<div class="cal-card" draggable="true" ondragstart="onCalCardDragStart(event,${t.id})" ondragend="onCalCardDragEnd(event)" style="border-left-color:${ESTADOS[t.estado].color}" onclick="event.stopPropagation(); openTaskModal(${t.id})">
+          <span class="cc-status" style="color:${ESTADOS[t.estado].color};background:${ESTADOS[t.estado].bg};">${ESTADOS[t.estado].label}</span>
+          <div class="cc-title">${escapeHtml(t.titulo)}</div>
+        </div>`).join('')}
+        ${extra>0?`<div class="cal-more" onclick="event.stopPropagation(); switchView('lista'); document.getElementById('f-desde').value='${dateStr}'; document.getElementById('f-hasta').value='${dateStr}'; renderAll();">+${extra} más</div>`:''}
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="view-head">
+      <div class="cal-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <div class="cal-month">${MONTHS[month]} ${year}</div>
+        <button onclick="changeMonth(1)">›</button>
+        <button class="btn-outline btn btn-sm" onclick="goToday()">Hoy</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="openPrintModal()">🖨 Imprimir</button>
+        <button class="btn" onclick="openTaskModal()">+ Nueva Tarea</button>
+      </div>
+    </div>
+    <div class="view-sub" style="margin:-8px 0 14px;">Arrastra una tarea a otro día para cambiar su fecha de vencimiento</div>
+    <div class="cal-grid">
+      ${DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('')}
+      ${cellsHtml}
+    </div>
+  `;
+}
+let draggedCalTaskId = null;
+function onCalCardDragStart(ev, id){
+  draggedCalTaskId = id;
+  ev.stopPropagation();
+  ev.dataTransfer.effectAllowed = 'move';
+  try{ ev.dataTransfer.setData('text/plain', String(id)); }catch(e){}
+  ev.target.classList.add('dragging');
+}
+function onCalCardDragEnd(ev){
+  ev.target.classList.remove('dragging');
+  document.querySelectorAll('.cal-day.drag-over').forEach(c=>c.classList.remove('drag-over'));
+}
+function onCalDayDragOver(ev){
+  if(draggedCalTaskId===null) return;
+  ev.preventDefault();
+  ev.currentTarget.classList.add('drag-over');
+}
+function onCalDayDragLeave(ev){
+  ev.currentTarget.classList.remove('drag-over');
+}
+function onCalDayDrop(ev, dateStr){
+  ev.preventDefault();
+  ev.stopPropagation();
+  ev.currentTarget.classList.remove('drag-over');
+  const id = draggedCalTaskId;
+  draggedCalTaskId = null;
+  if(!id) return;
+  const t = data.tasks.find(t=>t.id===id);
+  if(!t || t.fecha===dateStr) return;
+  if(t.auditoria==='aprobada'){
+    alert('Esta tarea ya fue aprobada en Auditoría y está bloqueada. Desbloquéala primero desde la pestaña de Auditoría.');
+    return;
+  }
+  t.fecha = dateStr;
+  persist();
+  renderAll();
+}
+
+/* ================= TABLERO (KANBAN) ================= */
+function renderTablero(){
+  const el = document.getElementById('view-tablero');
+  const tasks = filteredTasks();
+  el.innerHTML = `
+    <div class="view-head">
+      <div><div class="view-title">Tablero</div><div class="view-sub">Arrastra una tarjeta a otra columna para cambiar su estado</div></div>
+      <button class="btn" onclick="openTaskModal()">+ Nueva Tarea</button>
+    </div>
+    <div class="kanban" id="kanban-cols"></div>
+  `;
+  const cols = document.getElementById('kanban-cols');
+  cols.innerHTML = KANBAN_ORDER.map(statusKey=>{
+    const colTasks = tasks.filter(t=>t.estado===statusKey);
+    const e = ESTADOS[statusKey];
+    return `<div class="kcol">
+      <div class="kcol-head" style="border-top-color:${e.color};">
+        <span class="kt">${e.label}</span><span class="kc">${colTasks.length}</span>
+      </div>
+      <div class="kcards" data-status="${statusKey}" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event,'${statusKey}')">
+        ${colTasks.length===0? `<div class="empty-state" style="padding:20px 8px;"><div style="font-size:12px;">Sin tareas</div></div>` :
+        colTasks.map(t=>taskCardHtml(t, true)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+let draggedTaskId = null;
+function onCardDragStart(ev, id){
+  draggedTaskId = id;
+  ev.dataTransfer.effectAllowed = 'move';
+  try{ ev.dataTransfer.setData('text/plain', String(id)); }catch(e){}
+  ev.target.classList.add('dragging');
+}
+function onCardDragEnd(ev){
+  ev.target.classList.remove('dragging');
+  document.querySelectorAll('.kcards.drag-over').forEach(c=>c.classList.remove('drag-over'));
+}
+function onColDragOver(ev){
+  ev.preventDefault();
+  ev.currentTarget.classList.add('drag-over');
+}
+function onColDragLeave(ev){
+  ev.currentTarget.classList.remove('drag-over');
+}
+function onColDrop(ev, statusKey){
+  ev.preventDefault();
+  ev.currentTarget.classList.remove('drag-over');
+  const id = draggedTaskId;
+  draggedTaskId = null;
+  if(!id) return;
+  const t = data.tasks.find(t=>t.id===id);
+  if(!t) return;
+  if(t.estado===statusKey) return;
+  if(t.auditoria==='aprobada'){
+    alert('Esta tarea ya fue aprobada en Auditoría y está bloqueada. Desbloquéala primero desde la pestaña de Auditoría.');
+    return;
+  }
+  if(['terminado','auditado'].includes(statusKey)){
+    const pendientes = (t.subtareas||[]).filter(s=>s.estado==='pendiente');
+    if(pendientes.length>0){
+      alert('No puedes mover esta tarea a "'+ESTADOS[statusKey].label+'" mientras tenga subtareas sin marcar (Realizada / No aplica / No realizada).');
+      return;
+    }
+  }
+  t.estado = statusKey;
+  persist();
+  renderAll();
+}
+function taskCardHtml(t, draggable){
+  const e = ESTADOS[t.estado];
+  const subs = t.subtareas||[];
+  const subsDone = subs.filter(s=>s.estado && s.estado!=='pendiente').length;
+  const subsPct = subs.length? Math.round((subsDone/subs.length)*100) : 0;
+  const dragAttrs = draggable ? `draggable="true" ondragstart="onCardDragStart(event,${t.id})" ondragend="onCardDragEnd(event)"` : '';
+  return `<div class="task-card" ${dragAttrs} style="border-left-color:${e.color};" onclick="openTaskModal(${t.id})">
+    <div class="tc-badges">${badge(ESTADOS,t.estado)}${badge(AUDITORIA,t.auditoria)}</div>
+    <div class="tc-title">${escapeHtml(t.titulo)}</div>
+    <div class="tc-empresa"><span>${escapeHtml(t.empresa)}</span>${avatarsHtml(t.asignados)}</div>
+    <div class="tc-meta"><span>📅 ${formatDate(t.fecha)}</span>${badge(PRIORIDAD,t.prioridad)}</div>
+    ${subs.length? `<div class="progress-mini" style="margin-top:8px;"><div class="progress-mini-track"><div class="progress-mini-fill" style="width:${subsPct}%;"></div></div><span>${subsDone}/${subs.length} subtareas</span></div>` : ''}
+    <div class="tc-tags">${t.etiquetas.map(tagPill).join('')}</div>
+  </div>`;
+}
+
+/* ================= LISTA ================= */
+function renderLista(){
+  const el = document.getElementById('view-lista');
+  const tasks = filteredTasks().slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  el.innerHTML = `
+    <div class="view-head">
+      <div><div class="view-title">Lista de tareas</div><div class="view-sub">${tasks.length} tarea(s) encontradas</div></div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="downloadTareasCsv()">⬇ Descargar Excel</button>
+        <button class="btn btn-outline" onclick="openImportTareasModal()">📥 Tareas masivas</button>
+        <button class="btn" onclick="openTaskModal()">+ Nueva Tarea</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr>
+        <th>Tarea</th><th>Empresa</th><th>Asignados</th><th>Estado</th><th>Auditoría</th><th>Vencimiento</th><th>Prioridad</th><th>Acciones</th>
+      </tr></thead>
+      <tbody>
+        ${tasks.length===0? `<tr><td colspan="8"><div class="empty-state"><div class="em-title">No hay tareas</div>Ajusta los filtros o crea una nueva tarea.</div></td></tr>` :
+        tasks.map(t=>`<tr>
+          <td><strong>${escapeHtml(t.titulo)}</strong></td>
+          <td><div class="company-cell"><span class="dot" style="background:${colorFor(t.empresa)};"></span>${escapeHtml(t.empresa)}</div></td>
+          <td>${avatarsHtml(t.asignados)}</td>
+          <td>${badge(ESTADOS,t.estado)}</td>
+          <td>${badge(AUDITORIA,t.auditoria)}</td>
+          <td>${formatDate(t.fecha)}</td>
+          <td>${badge(PRIORIDAD,t.prioridad)}</td>
+          <td>
+            <button class="icon-btn" title="Editar" onclick="openTaskModal(${t.id})">✎</button>
+            <button class="icon-btn danger" title="Eliminar" onclick="quickDeleteTask(${t.id})">🗑</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+function downloadTareasCsv(){
+  const tasks = filteredTasks().slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const rows = [['Tarea','Empresa','Asignados','Estado','Auditoría','Fecha inicio','Fecha vencimiento','Prioridad','Tipo de tarea','Tipo de obligación','Periodicidad','Etiquetas','Interno','Observaciones']];
+  tasks.forEach(t=>{
+    rows.push([
+      t.titulo, t.empresa, (t.asignados||[]).join(', '), ESTADOS[t.estado]?ESTADOS[t.estado].label:t.estado,
+      AUDITORIA[t.auditoria]?AUDITORIA[t.auditoria].label:t.auditoria, formatDate(t.fechaInicio), formatDate(t.fecha),
+      PRIORIDAD[t.prioridad]?PRIORIDAD[t.prioridad].label:t.prioridad, t.tipoTarea||'', t.tipoObligacion||'', t.periodicidad||'',
+      (t.etiquetas||[]).join(', '), t.interno?'Sí':'No', t.observaciones||''
+    ]);
+  });
+  const csv = rows.map(r=> r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'tareas-planeador.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ================= IMPORTACION MASIVA (TAREAS Y USUARIOS) ================= */
+function downloadCsvGeneric(rows, filename){
+  const csv = rows.map(r=> r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQuotes=false; }
+      else field += c;
+    } else {
+      if(c==='"') inQuotes = true;
+      else if(c===','){ row.push(field); field=''; }
+      else if(c==='\n' || c==='\r'){
+        if(c==='\r' && text[i+1]==='\n') i++;
+        row.push(field); rows.push(row); row=[]; field='';
+      } else field += c;
+    }
+  }
+  if(field.length>0 || row.length>0){ row.push(field); rows.push(row); }
+  return rows.filter(r=> !(r.length===1 && r[0].trim()===''));
+}
+function labelToKey(map, label, fallback){
+  if(!label) return fallback;
+  const norm = label.trim().toLowerCase();
+  const found = Object.keys(map).find(k=> map[k].label.toLowerCase()===norm || k.toLowerCase()===norm);
+  return found || fallback;
+}
+function yesNoToBool(v){ return /^(s[ií]|si|sí|yes|true|1|x)$/i.test(String(v||'').trim()); }
+
+function openImportTareasModal(){
+  document.getElementById('import-tareas-file').value = '';
+  document.getElementById('import-tareas-result').innerHTML = '';
+  openModal('modal-import-tareas');
+}
+function openImportUsuariosModal(){
+  document.getElementById('import-usuarios-file').value = '';
+  document.getElementById('import-usuarios-result').innerHTML = '';
+  openModal('modal-import-usuarios');
+}
+function downloadTaskTemplate(){
+  const rows = [
+    ['Titulo','Empresa','Asignados','Estado','Prioridad','FechaInicio','FechaVencimiento','TipoTarea','TipoObligacion','Periodicidad','Etiquetas','Auditoria','RequiereRevisionTecnica','GeneraPago','GeneraIneficacia','RequiereSoporte','Interno','Observaciones'],
+    ['Liquidar Retención Agosto','Acme Consultores S.A.S','Diana Ardila; Jorge Gil','Por iniciar','Alta','2026-08-01','2026-08-10','Fiscal','Retención en la Fuente','Mensual','Fiscal; Nómina','Pendiente','No','Sí','No','No','No','Ejemplo de observación (opcional)']
+  ];
+  downloadCsvGeneric(rows, 'plantilla-tareas-masivas.csv');
+}
+function downloadUserTemplate(){
+  const rows = [
+    ['Nombre','Email','Password','Roles','Activo'],
+    ['María Torres','maria.torres@cerpat.com','cerpat2026','Asesor','Sí']
+  ];
+  downloadCsvGeneric(rows, 'plantilla-usuarios-masivos.csv');
+}
+function handleTasksFileUpload(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const rows = parseCSV(e.target.result);
+      if(rows.length<2){ showImportResult('import-tareas-result', 'El archivo no tiene filas de datos.', true); return; }
+      const header = rows[0].map(h=>h.trim().toLowerCase());
+      const idx = (name)=> header.indexOf(name.toLowerCase());
+      let creadas = 0; const errores = [];
+      for(let i=1;i<rows.length;i++){
+        const r = rows[i];
+        if(r.every(v=>!v || !v.trim())) continue;
+        const titulo = (r[idx('titulo')]||'').trim();
+        const empresa = (r[idx('empresa')]||'').trim();
+        const fecha = (r[idx('fechavencimiento')]||'').trim();
+        if(!titulo || !empresa || !fecha){ errores.push(`Fila ${i+1}: falta Título, Empresa o FechaVencimiento.`); continue; }
+        const asignados = (r[idx('asignados')]||'').split(';').map(s=>s.trim()).filter(Boolean);
+        const etiquetas = (r[idx('etiquetas')]||'').split(';').map(s=>s.trim()).filter(Boolean);
+        etiquetas.forEach(tag=>{ if(!data.admin.catTareas.etiquetas.includes(tag)) data.admin.catTareas.etiquetas.push(tag); });
+        data.tasks.push({
+          id:newId(),
+          titulo, empresa,
+          asignados: asignados.length?asignados:[currentUser||'Sin asignar'],
+          estado: labelToKey(ESTADOS, r[idx('estado')], 'por_iniciar'),
+          prioridad: labelToKey(PRIORIDAD, r[idx('prioridad')], 'media'),
+          fechaInicio: (r[idx('fechainicio')]||'').trim() || fecha,
+          fecha,
+          tipoTarea: (r[idx('tipotarea')]||'').trim(),
+          tipoObligacion: (r[idx('tipoobligacion')]||'').trim(),
+          periodicidad: (r[idx('periodicidad')]||'').trim(),
+          etiquetas,
+          auditoria: labelToKey(AUDITORIA, r[idx('auditoria')], 'pendiente'),
+          requiereRevisionTecnica: yesNoToBool(r[idx('requiererevisiontecnica')]),
+          generaPago: yesNoToBool(r[idx('generapago')]),
+          generaIneficacia: yesNoToBool(r[idx('generaineficacia')]),
+          requiereSoporte: yesNoToBool(r[idx('requieresoporte')]),
+          soporteLink: '',
+          interno: yesNoToBool(r[idx('interno')]),
+          observaciones: (r[idx('observaciones')]||'').trim(),
+          subtareas: [],
+          creadoPor: currentUser
+        });
+        creadas++;
+      }
+      persist(); populateFilterOptions(); renderAll();
+      let msg = `✓ ${creadas} tarea(s) creada(s) correctamente.`;
+      if(errores.length) msg += `<br><br>⚠ ${errores.length} fila(s) con problemas:<br>` + errores.join('<br>');
+      showImportResult('import-tareas-result', msg, errores.length>0 && creadas===0);
+    }catch(err){
+      showImportResult('import-tareas-result', 'No se pudo leer el archivo: '+err.message, true);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+function handleUsersFileUpload(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const rows = parseCSV(e.target.result);
+      if(rows.length<2){ showImportResult('import-usuarios-result', 'El archivo no tiene filas de datos.', true); return; }
+      const header = rows[0].map(h=>h.trim().toLowerCase());
+      const idx = (name)=> header.indexOf(name.toLowerCase());
+      let creados = 0; const errores = [];
+      for(let i=1;i<rows.length;i++){
+        const r = rows[i];
+        if(r.every(v=>!v || !v.trim())) continue;
+        const nombre = (r[idx('nombre')]||'').trim();
+        const email = (r[idx('email')]||'').trim();
+        if(!nombre || !email){ errores.push(`Fila ${i+1}: falta Nombre o Email.`); continue; }
+        if(findUserByEmail(email)){ errores.push(`Fila ${i+1}: el correo ${email} ya existe, se omitió.`); continue; }
+        const roles = (r[idx('roles')]||'Auxiliar').split(';').map(s=>s.trim()).filter(Boolean);
+        data.admin.usuarios.push({
+          id:newId(), nombre, email,
+          password: (r[idx('password')]||'cerpat2026').trim(),
+          roles: roles.length?roles:['Auxiliar'],
+          activo: idx('activo')>-1 ? yesNoToBool(r[idx('activo')]) : true
+        });
+        if(!data.admin.asesores.some(a=>a.nombre===nombre)) data.admin.asesores.push({id:newId(), nombre});
+        creados++;
+      }
+      persist(); renderAdministracion();
+      let msg = `✓ ${creados} usuario(s) creado(s) correctamente.`;
+      if(errores.length) msg += `<br><br>⚠ ${errores.length} fila(s) con problemas:<br>` + errores.join('<br>');
+      showImportResult('import-usuarios-result', msg, errores.length>0 && creados===0);
+    }catch(err){
+      showImportResult('import-usuarios-result', 'No se pudo leer el archivo: '+err.message, true);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+function showImportResult(elId, html, isError){
+  const el = document.getElementById(elId);
+  el.innerHTML = `<div style="margin-top:12px;padding:12px 14px;border-radius:8px;font-size:13px;background:${isError?'var(--red-bg)':'var(--green-bg)'};color:${isError?'var(--red)':'var(--green)'};">${html}</div>`;
+}
+
+function quickDeleteTask(id){
+  if(confirm('¿Eliminar esta tarea?')){ data.tasks = data.tasks.filter(t=>t.id!==id); persist(); populateFilterOptions(); renderAll(); }
+}
+
+/* ================= MI DIA ================= */
+function renderMiDia(){
+  const el = document.getElementById('view-miDia');
+  const t = todayStr();
+  const tasks = filteredTasks().filter(x=> x.fecha===t && x.asignados.includes(currentUser) && !['terminado','auditado'].includes(x.estado))
+    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  el.innerHTML = `
+    <div class="view-head">
+      <div><div class="view-title">Mi Día</div><div class="view-sub">Tareas de <strong>${escapeHtml(currentUser)}</strong> con fecha de hoy (${tasks.length}) — las vencidas se revisan en Tablero o Lista</div></div>
+    </div>
+    ${tasks.length===0? `<div class="empty-state"><div class="em-title">¡Todo al día!</div>No tienes tareas propias programadas para hoy.</div>` :
+    `<div class="myday-grid">${tasks.map(t=>taskCardHtml(t,false)).join('')}</div>`}
+  `;
+}
+
+/* ================= PAGOS ================= */
+let pagosSortKey = 'fecha';
+let pagosSortDir = 'asc';
+function pagosSortBy(key){
+  if(pagosSortKey===key) pagosSortDir = pagosSortDir==='asc'?'desc':'asc';
+  else { pagosSortKey = key; pagosSortDir = 'asc'; }
+  renderPagos();
+}
+function calcMora(p){
+  const par = data.admin.parametros;
+  const today = todayStr();
+  if(p.estado==='presentado_pagado' || !p.fecha || p.fecha>=today) return {dias:0, interes:0, sancion:0, total:p.valor||0};
+  const dias = Math.floor((new Date(today) - new Date(p.fecha)) / (1000*60*60*24));
+  const tasaDiaria = (par.tasaMoraMensual||0) / 30;
+  const interes = Math.round((p.valor||0) * tasaDiaria * dias);
+  let sancion = 0;
+  if(dias>60){
+    const sancionMinima = (par.sancionMinimaUvt||0) * (par.valorUvt||0);
+    sancion = Math.max(Math.round((p.valor||0) * (par.pctSancionExtemporaneidad||0)), sancionMinima);
+  }
+  return {dias, interes, sancion, total:(p.valor||0)+interes+sancion};
+}
+function formatCOP(n){ return '$ ' + Math.round(n||0).toLocaleString('es-CO'); }
+function renderPagos(){
+  const el = document.getElementById('view-pagos');
+  const empresaFilter = document.getElementById('pg-filter-empresa') ? document.getElementById('pg-filter-empresa').value : '';
+  const estadoFilter = document.getElementById('pg-filter-estado') ? document.getElementById('pg-filter-estado').value : '';
+  const today = todayStr();
+
+  // Regla: no mostrar impuestos futuros a menos que la tarea ya esté Terminada, o ya estén vencidos/pagados
+  let list = data.payments.filter(p=> p.estado==='presentado_pagado' || p.fecha<=today || p.estadoTarea==='terminado');
+  if(empresaFilter) list = list.filter(p=>p.empresa===empresaFilter);
+  if(estadoFilter) list = list.filter(p=>p.estado===estadoFilter);
+
+  list = list.map(p=>Object.assign({}, p, {_mora:calcMora(p)}));
+  list.sort((a,b)=>{
+    let av, bv;
+    if(pagosSortKey==='empresa'){ av=a.empresa; bv=b.empresa; }
+    else if(pagosSortKey==='estado'){ av=a.estado; bv=b.estado; }
+    else if(pagosSortKey==='total'){ av=a._mora.total; bv=b._mora.total; }
+    else { av=a.fecha||''; bv=b.fecha||''; }
+    if(av<bv) return pagosSortDir==='asc'?-1:1;
+    if(av>bv) return pagosSortDir==='asc'?1:-1;
+    return 0;
+  });
+
+  const empresas = Array.from(new Set(data.payments.map(p=>p.empresa))).sort();
+  const arrow = (key)=> pagosSortKey===key ? (pagosSortDir==='asc'?' ▲':' ▼') : '';
+
+  el.innerHTML = `
+    <div class="view-head">
+      <div><div class="view-title">Seguimiento de Pagos</div><div class="view-sub">${list.length} de ${data.payments.length} obligación(es) — se ocultan impuestos futuros hasta que la tarea esté Terminada</div></div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="downloadPagosCsv()">⬇ Descargar Excel</button>
+        <button class="btn" onclick="openPaymentModal()">+ Nueva obligación</button>
+      </div>
+    </div>
+    <div class="filters-grid" style="grid-template-columns:1fr 1fr;margin-bottom:18px;">
+      <div class="f-field"><label>Empresa</label><select id="pg-filter-empresa" onchange="renderPagos()"><option value="">Todas</option>${empresas.map(e=>`<option value="${escapeHtml(e)}" ${e===empresaFilter?'selected':''}>${escapeHtml(e)}</option>`).join('')}</select></div>
+      <div class="f-field"><label>Estado de pago</label><select id="pg-filter-estado" onchange="renderPagos()"><option value="">Todos</option>${Object.keys(ESTADO_PAGO).map(k=>`<option value="${k}" ${estadoFilter===k?'selected':''}>${ESTADO_PAGO[k].label}</option>`).join('')}</select></div>
+    </div>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr>
+        <th style="cursor:pointer;" onclick="pagosSortBy('empresa')">Empresa${arrow('empresa')}</th>
+        <th>Obligación</th><th>Periodicidad</th>
+        <th style="cursor:pointer;" onclick="pagosSortBy('fecha')">Vencimiento${arrow('fecha')}</th>
+        <th>Días mora</th><th>Intereses</th><th>Sanción</th>
+        <th style="cursor:pointer;" onclick="pagosSortBy('total')">Total${arrow('total')}</th>
+        <th style="cursor:pointer;" onclick="pagosSortBy('estado')">Estado${arrow('estado')}</th>
+        <th>Acciones</th>
+      </tr></thead>
+      <tbody>
+        ${list.length===0?`<tr><td colspan="10"><div class="empty-state"><div class="em-title">No hay obligaciones</div>Agrega la primera con "+ Nueva obligación", o revisa: los impuestos futuros solo aparecen aquí cuando su tarea está Terminada.</div></td></tr>`:
+        list.map(p=>{
+          const vencido = p.estado!=='presentado_pagado' && p.fecha && p.fecha<today;
+          const m = p._mora;
+          return `<tr>
+            <td><div class="company-cell"><span class="dot" style="background:${colorFor(p.empresa)};"></span>${escapeHtml(p.empresa)}</div></td>
+            <td>${escapeHtml(p.obligacion)}</td>
+            <td>${escapeHtml(p.periodicidad||'—')}</td>
+            <td>${formatDate(p.fecha)} ${vencido?'<span class="badge" style="color:var(--red);background:var(--red-bg);margin-left:6px;">Vencido</span>':''}</td>
+            <td>${m.dias>0?m.dias:'—'}</td>
+            <td>${m.interes>0?formatCOP(m.interes):'—'}</td>
+            <td>${m.sancion>0?formatCOP(m.sancion):'—'}</td>
+            <td><strong>${formatCOP(m.total)}</strong></td>
+            <td>
+              <select class="status-select" onchange="updatePaymentStatus(${p.id}, this.value)">
+                ${Object.keys(ESTADO_PAGO).map(k=>`<option value="${k}" ${p.estado===k?'selected':''}>${ESTADO_PAGO[k].label}</option>`).join('')}
+              </select>
+            </td>
+            <td>
+              <button class="icon-btn" title="Editar" onclick="openPaymentModal(${p.id})">✎</button>
+              <button class="icon-btn danger" title="Eliminar" onclick="quickDeletePayment(${p.id})">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+function updatePaymentStatus(id, estado){
+  const p = data.payments.find(p=>p.id===id);
+  if(p){ p.estado = estado; persist(); renderAll(); }
+}
+function quickDeletePayment(id){
+  if(confirm('¿Eliminar esta obligación de pago?')){ data.payments = data.payments.filter(p=>p.id!==id); persist(); renderAll(); }
+}
+function downloadPagosCsv(){
+  const rows = [['Empresa','Obligación','Periodicidad','Vencimiento','Valor','Días mora','Intereses','Sanción','Total','Estado']];
+  data.payments.forEach(p=>{
+    const m = calcMora(p);
+    rows.push([p.empresa, p.obligacion, p.periodicidad||'', formatDate(p.fecha), p.valor||0, m.dias, m.interes, m.sancion, m.total, ESTADO_PAGO[p.estado]?ESTADO_PAGO[p.estado].label:p.estado]);
+  });
+  const csv = rows.map(r=> r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'seguimiento-pagos.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ================= AUDITORIA ================= */
+function renderAuditoria(){
+  const el = document.getElementById('view-auditoria');
+  const tasks = filteredTasks().filter(t=>t.auditoria==='pendiente' || t.estado==='auditado' || t.auditoria==='rechazada')
+    .sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  el.innerHTML = `
+    <div class="view-head">
+      <div><div class="view-title">Auditoría de tareas</div><div class="view-sub">${tasks.length} tarea(s) en revisión de auditoría</div></div>
+    </div>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Empresa</th><th>Tarea</th><th>Asignados</th><th>Vencimiento</th><th>Auditoría</th><th>Acciones</th></tr></thead>
+      <tbody>
+        ${tasks.length===0?`<tr><td colspan="6"><div class="empty-state"><div class="em-title">Sin tareas pendientes de auditoría</div></div></td></tr>`:
+        tasks.map(t=>`<tr>
+          <td><div class="company-cell"><span class="dot" style="background:${colorFor(t.empresa)};"></span>${escapeHtml(t.empresa)}</div></td>
+          <td>${escapeHtml(t.titulo)}</td>
+          <td>${avatarsHtml(t.asignados)}</td>
+          <td>${formatDate(t.fecha)}</td>
+          <td>${badge(AUDITORIA,t.auditoria)}</td>
+          <td>
+            <div class="btn-row">
+              ${t.auditoria==='aprobada' ?
+                `<button class="btn btn-sm btn-outline" onclick="unlockTask(${t.id})">🔓 Desbloquear</button>` :
+                `<button class="btn btn-sm" style="background:var(--green);" onclick="setAudit(${t.id},'aprobada')">✓ Aprobar</button>
+                 <button class="btn btn-sm btn-outline" onclick="openTaskModal(${t.id})">💬 Cambios</button>
+                 <button class="btn btn-sm" style="background:var(--red);" onclick="setAudit(${t.id},'rechazada')">✕ Rechazar</button>`}
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+function setAudit(id, estado){
+  const t = data.tasks.find(t=>t.id===id);
+  if(t){ t.auditoria = estado; if(estado==='aprobada') t.estado='auditado'; persist(); renderAll(); }
+}
+function unlockTask(id){
+  if(!confirm('¿Desbloquear esta tarea para poder editarla de nuevo?')) return;
+  const t = data.tasks.find(t=>t.id===id);
+  if(t){ t.auditoria = 'pendiente'; persist(); renderAll(); }
+}
+
+/* ================= IMPRESION DE CALENDARIO ================= */
+function openPrintModal(){
+  document.getElementById('pr-month').value = `${calDate.getFullYear()}-${String(calDate.getMonth()+1).padStart(2,'0')}`;
+  const asesorRadio = document.querySelector('input[name="pr-modo"][value="asesor"]');
+  if(asesorRadio) asesorRadio.checked = true;
+  updatePrintValueOptions();
+  openModal('modal-print');
+}
+function updatePrintValueOptions(){
+  const modo = document.querySelector('input[name="pr-modo"]:checked').value;
+  const wrap = document.getElementById('pr-value-wrap');
+  const label = document.getElementById('pr-value-label');
+  const sel = document.getElementById('pr-value');
+  if(modo==='todas'){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  let options = [];
+  if(modo==='asesor'){
+    label.textContent='Asesor';
+    const names = new Set(); data.admin.asesores.forEach(a=>names.add(a.nombre)); data.tasks.forEach(t=>t.asignados.forEach(a=>names.add(a)));
+    options = Array.from(names).sort();
+  }
+  if(modo==='etiqueta'){ label.textContent='Etiqueta'; options = data.admin.catTareas.etiquetas.slice(); }
+  if(modo==='empresa'){ label.textContent='Empresa (cliente)'; options = empresaOptionsList(); }
+  sel.innerHTML = options.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('') || `<option value="">Sin opciones disponibles</option>`;
+}
+function generatePrintCalendar(){
+  const monthVal = document.getElementById('pr-month').value;
+  if(!monthVal){ alert('Selecciona el mes a imprimir.'); return; }
+  const [year, month] = monthVal.split('-').map(Number);
+  const modo = document.querySelector('input[name="pr-modo"]:checked').value;
+  const value = document.getElementById('pr-value') ? document.getElementById('pr-value').value : '';
+
+  let tasks = data.tasks.filter(t=>{
+    if(!t.fecha) return false;
+    const [ty,tm] = t.fecha.split('-').map(Number);
+    return ty===year && tm===month;
+  });
+  let subtitle = 'Todas las actividades del mes';
+  if(modo==='asesor'){ tasks = tasks.filter(t=>t.asignados.includes(value)); subtitle = `Asesor responsable: ${value}`; }
+  if(modo==='etiqueta'){ tasks = tasks.filter(t=>t.etiquetas.includes(value)); subtitle = `Etiqueta: ${value}`; }
+  if(modo==='empresa'){
+    tasks = tasks.filter(t=>t.empresa.split(',').map(s=>s.trim()).includes(value) && !t.interno);
+    subtitle = `Cliente: ${value}`;
+  }
+
+  const html = buildPrintHtml(year, month, subtitle, tasks);
+  const win = window.open('', '_blank');
+  if(!win){ alert('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes para este sitio.'); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>{ try{ win.focus(); win.print(); }catch(e){} }, 350);
+  closeModal('modal-print');
+}
+function buildPrintHtml(year, month, subtitle, tasks){
+  const monthName = MONTHS[month-1];
+  const firstDow = (new Date(year, month-1, 1).getDay()+6)%7;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let cells = '';
+  let col = 0;
+  for(let i=0;i<firstDow;i++){ cells += `<td class="pc-empty"></td>`; col++; }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayTasks = tasks.filter(t=>t.fecha===dateStr);
+    cells += `<td><div class="pc-daynum">${d}</div>${dayTasks.map(t=>`<div class="pc-task"><strong>${escapeHtml(t.titulo)}</strong><br>${escapeHtml(t.empresa)}${t.asignados&&t.asignados.length?' · '+escapeHtml(t.asignados.join(', ')):''}</div>`).join('')}</td>`;
+    col++;
+    if(col%7===0 && d!==daysInMonth) cells += `</tr><tr>`;
+  }
+  while(col%7!==0){ cells += `<td class="pc-empty"></td>`; col++; }
+
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Calendario ${monthName} ${year}</title>
+<style>
+  body{font-family:Arial, Helvetica, sans-serif;margin:26px;color:#101828;}
+  h1{font-size:20px;margin:0 0 3px;}
+  .pc-sub{color:#475467;font-size:13px;margin-bottom:18px;}
+  table{width:100%;border-collapse:collapse;table-layout:fixed;}
+  th{background:#F5F6F8;padding:7px;font-size:11px;text-transform:uppercase;border:1px solid #ddd;letter-spacing:0.4px;}
+  td{border:1px solid #ddd;vertical-align:top;height:92px;padding:5px;font-size:11px;}
+  .pc-empty{background:#fafafa;}
+  .pc-daynum{font-weight:700;font-size:12px;margin-bottom:4px;color:#344054;}
+  .pc-task{background:#F0F7F3;border-left:3px solid #34C98B;border-radius:3px;padding:3px 5px;margin-bottom:3px;font-size:10px;line-height:1.35;}
+  .pc-foot{margin-top:16px;font-size:10.5px;color:#98A2B3;}
+  @media print{ body{margin:10px;} button{display:none;} }
+</style></head>
+<body>
+  <h1>Calendario de Tareas — ${monthName} ${year}</h1>
+  <div class="pc-sub">${escapeHtml(subtitle)} · Generado el ${new Date().toLocaleDateString('es-ES')}</div>
+  <table>
+    <thead><tr>${DOW.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+    <tbody><tr>${cells}</tr></tbody>
+  </table>
+  <div class="pc-foot">Planeador — Sistema de Gestión y Planificación</div>
+</body></html>`;
+}
+
+/* ================= MODAL: TAREA ================= */
+let modalSubtareas = [];
+let modalEtiquetasSelected = new Set();
+
+function toggleClasificacion(){
+  const body = document.getElementById('tk-clasif-body');
+  const arrow = document.getElementById('tk-clasif-arrow');
+  const show = body.style.display==='none';
+  body.style.display = show?'flex':'none';
+  arrow.textContent = show?'▾':'▸';
+}
+function flipToggle(id){ document.getElementById(id).classList.toggle('on'); }
+function isToggleOn(id){ return document.getElementById(id).classList.contains('on'); }
+function setToggle(id, on){ document.getElementById(id).classList.toggle('on', !!on); }
+
+/* ---- Dropdown multi-select (Empresa / Asignados) ---- */
+function toggleDropdown(id){
+  const panel = document.getElementById(id+'-panel');
+  const isOpen = panel.style.display==='block';
+  closeAllDropdowns();
+  if(!isOpen) panel.style.display='block';
+}
+function closeAllDropdowns(){
+  document.querySelectorAll('.dd-panel').forEach(p=>p.style.display='none');
+}
+document.addEventListener('click', function(e){
+  if(!e.target.closest('.dd-multi')) closeAllDropdowns();
+});
+
+function empresaOptionsList(){
+  const names = new Set();
+  data.admin.empresas.forEach(e=>names.add(e.nombre));
+  data.tasks.forEach(t=>names.add(t.empresa));
+  return Array.from(names).sort();
+}
+function renderEmpresaDropdown(selected){
+  const panel = document.getElementById('dd-empresa-panel');
+  const options = empresaOptionsList();
+  panel.innerHTML = options.length? options.map(n=>`
+    <label class="mc-item"><input type="checkbox" class="tk-empresa-cb" value="${escapeHtml(n)}" ${selected.includes(n)?'checked':''} onchange="updateEmpresaDropdownText()"> ${escapeHtml(n)}</label>
+  `).join('') : `<div style="font-size:12px;color:var(--sub);padding:6px;">Agrega empresas en Administración.</div>`;
+  updateEmpresaDropdownText();
+}
+function updateEmpresaDropdownText(){
+  const chosen = Array.from(document.querySelectorAll('.tk-empresa-cb')).filter(c=>c.checked).map(c=>c.value);
+  document.getElementById('dd-empresa-text').textContent = chosen.length===0? 'Seleccionar empresa(s)...' : chosen.length===1? chosen[0] : `${chosen.length} empresas seleccionadas`;
+}
+function renderAsignadosDropdown(selected){
+  const names = new Set();
+  data.admin.asesores.forEach(a=>names.add(a.nombre));
+  selected.forEach(n=>names.add(n));
+  const panel = document.getElementById('dd-asignados-panel');
+  panel.innerHTML = names.size? Array.from(names).sort().map(n=>`
+    <label class="mc-item"><input type="checkbox" class="tk-asignado-cb" value="${escapeHtml(n)}" ${selected.includes(n)?'checked':''} onchange="updateAsignadosDropdownText()"> ${escapeHtml(n)}</label>
+  `).join('') : `<div style="font-size:12px;color:var(--sub);padding:6px;">Agrega asesores en Administración.</div>`;
+  updateAsignadosDropdownText();
+}
+function updateAsignadosDropdownText(){
+  const chosen = Array.from(document.querySelectorAll('.tk-asignado-cb')).filter(c=>c.checked).map(c=>c.value);
+  document.getElementById('dd-asignados-text').textContent = chosen.length===0? 'Seleccionar usuarios...' : chosen.length===1? chosen[0] : `${chosen.length} seleccionados`;
+}
+const SUBTASK_ESTADOS = {
+  pendiente:{label:'Pendiente', color:'var(--sub)', bg:'var(--gray-bg)'},
+  realizada:{label:'Realizada', color:'var(--green)', bg:'var(--green-bg)'},
+  no_aplica:{label:'No aplica', color:'var(--teal)', bg:'var(--teal-bg)'},
+  no_realizada:{label:'No realizada', color:'var(--red)', bg:'var(--red-bg)'}
+};
+function renderSubtareasList(){
+  const wrap = document.getElementById('tk-subtareas-list');
+  wrap.innerHTML = modalSubtareas.length===0 ? `<div style="font-size:12px;color:var(--sub);">Sin subtareas todavía.</div>` :
+    modalSubtareas.map((s,i)=>`
+      <div class="subtask-item ${s.estado!=='pendiente'?'done':''}">
+        <span class="st-text">${escapeHtml(s.texto)}</span>
+        <select class="status-select" onchange="setSubtareaEstado(${i}, this.value)">
+          ${Object.keys(SUBTASK_ESTADOS).map(k=>`<option value="${k}" ${s.estado===k?'selected':''}>${SUBTASK_ESTADOS[k].label}</option>`).join('')}
+        </select>
+        <button type="button" class="st-remove" onclick="removeSubtarea(${i})">×</button>
+      </div>
+    `).join('');
+}
+function addSubtarea(){
+  const input = document.getElementById('tk-subtarea-input');
+  const texto = input.value.trim();
+  if(!texto) return;
+  modalSubtareas.push({texto, estado:'pendiente'});
+  input.value='';
+  renderSubtareasList();
+}
+function setSubtareaEstado(i, estado){ modalSubtareas[i].estado = estado; renderSubtareasList(); }
+function removeSubtarea(i){ modalSubtareas.splice(i,1); renderSubtareasList(); }
+function toggleSoporteLinkField(){
+  document.getElementById('tk-soporte-link-wrap').style.display = isToggleOn('tk-toggle-soporte') ? 'block':'none';
+}
+
+function renderTagPickerModal(){
+  const wrap = document.getElementById('tk-etiquetas-picker');
+  const all = data.admin.catTareas.etiquetas;
+  wrap.innerHTML = all.map(tag=>{
+    const style = tagStyle(tag);
+    const sel = modalEtiquetasSelected.has(tag);
+    return `<span class="tag-chip ${sel?'selected':''}" style="background:${style.bg};color:${style.color};" onclick="toggleEtiquetaModal('${escapeHtml(tag).replace(/'/g,"\\'")}')">${escapeHtml(tag)}</span>`;
+  }).join('');
+}
+function toggleEtiquetaModal(tag){
+  if(modalEtiquetasSelected.has(tag)) modalEtiquetasSelected.delete(tag);
+  else modalEtiquetasSelected.add(tag);
+  renderTagPickerModal();
+}
+function addNuevaEtiqueta(){
+  const input = document.getElementById('tk-nueva-etiqueta');
+  const tag = input.value.trim();
+  if(!tag) return;
+  if(!data.admin.catTareas.etiquetas.includes(tag)) data.admin.catTareas.etiquetas.push(tag);
+  modalEtiquetasSelected.add(tag);
+  input.value='';
+  renderTagPickerModal();
+}
+
+function openTaskModal(id, prefillDate){
+  editingTaskId = id || null;
+  document.getElementById('task-modal-title').textContent = id ? 'Editar tarea' : 'Nueva tarea';
+  document.getElementById('tk-delete-btn').style.display = id ? 'inline-block' : 'none';
+  closeAllDropdowns();
+
+  fillSelect(document.getElementById('tk-tipo-tarea'), data.admin.catTareas.tiposTarea, null);
+  fillSelect(document.getElementById('tk-tipo-obligacion'), data.admin.catTareas.tiposObligacion, null);
+  fillSelect(document.getElementById('tk-periodicidad'), data.admin.catTareas.periodicidades, null);
+
+  document.getElementById('tk-clasif-body').style.display='none';
+  document.getElementById('tk-clasif-arrow').textContent='▸';
+
+  const isLocked = id && data.tasks.find(t=>t.id===id).auditoria==='aprobada';
+  document.getElementById('tk-lock-banner').style.display = isLocked ? 'flex' : 'none';
+  document.querySelectorAll('#modal-task input, #modal-task select, #modal-task textarea, #modal-task button.btn:not(#tk-delete-btn)').forEach(el=>{
+    if(el.id!=='tk-unlock') el.disabled = !!isLocked;
+  });
+
+  if(id){
+    const t = data.tasks.find(t=>t.id===id);
+    document.getElementById('tk-titulo').value = t.titulo;
+    document.getElementById('tk-estado').value = t.estado;
+    document.getElementById('tk-prioridad').value = t.prioridad;
+    document.getElementById('tk-fecha-inicio').value = t.fechaInicio || t.fecha;
+    document.getElementById('tk-fecha').value = t.fecha;
+    document.getElementById('tk-auditoria').value = t.auditoria;
+    document.getElementById('tk-observaciones').value = t.observaciones || '';
+    document.getElementById('tk-soporte-link').value = t.soporteLink || '';
+    if(t.tipoTarea) document.getElementById('tk-tipo-tarea').value = t.tipoTarea;
+    if(t.tipoObligacion) document.getElementById('tk-tipo-obligacion').value = t.tipoObligacion;
+    if(t.periodicidad) document.getElementById('tk-periodicidad').value = t.periodicidad;
+    setToggle('tk-toggle-revision', t.requiereRevisionTecnica);
+    setToggle('tk-toggle-pago', t.generaPago);
+    setToggle('tk-toggle-ineficacia', t.generaIneficacia);
+    setToggle('tk-toggle-soporte', t.requiereSoporte);
+    setToggle('tk-toggle-interno', t.interno);
+    toggleSoporteLinkField();
+
+    const empresasArr = String(t.empresa).split(',').map(s=>s.trim()).filter(Boolean);
+    renderEmpresaDropdown(empresasArr);
+    renderAsignadosDropdown(t.asignados||[]);
+    modalSubtareas = (t.subtareas||[]).map(s=>({texto:s.texto, estado:s.estado||'pendiente'}));
+    modalEtiquetasSelected = new Set(t.etiquetas||[]);
+  } else {
+    document.getElementById('tk-titulo').value='';
+    document.getElementById('tk-estado').value='por_iniciar';
+    document.getElementById('tk-prioridad').value='media';
+    document.getElementById('tk-fecha-inicio').value = prefillDate || todayStr();
+    document.getElementById('tk-fecha').value = prefillDate || todayStr();
+    document.getElementById('tk-auditoria').value='pendiente';
+    document.getElementById('tk-observaciones').value='';
+    document.getElementById('tk-soporte-link').value='';
+    setToggle('tk-toggle-revision', false);
+    setToggle('tk-toggle-pago', false);
+    setToggle('tk-toggle-ineficacia', false);
+    setToggle('tk-toggle-soporte', false);
+    setToggle('tk-toggle-interno', false);
+    toggleSoporteLinkField();
+    renderEmpresaDropdown([]);
+    renderAsignadosDropdown([currentUser]);
+    modalSubtareas = [];
+    modalEtiquetasSelected = new Set();
+  }
+  renderSubtareasList();
+  renderTagPickerModal();
+  populateFilterOptions();
+  openModal('modal-task');
+}
+function saveTask(){
+  const titulo = document.getElementById('tk-titulo').value.trim();
+  const empresa = Array.from(document.querySelectorAll('.tk-empresa-cb')).filter(c=>c.checked).map(c=>c.value).join(', ');
+  const fecha = document.getElementById('tk-fecha').value;
+  if(!titulo || !empresa || !fecha){ alert('Completa al menos el título, la empresa y la fecha de vencimiento.'); return; }
+
+  if(editingTaskId){
+    const existing = data.tasks.find(t=>t.id===editingTaskId);
+    if(existing && existing.auditoria==='aprobada' && !isToggleOn('tk-unlock')){
+      alert('Esta tarea ya fue aprobada en Auditoría y está bloqueada. Usa "Desbloquear" en la pestaña de Auditoría si necesitas corregirla.');
+      return;
+    }
+  }
+
+  const estadoNuevo = document.getElementById('tk-estado').value;
+  if(['terminado','auditado'].includes(estadoNuevo)){
+    const pendientes = modalSubtareas.filter(s=>s.estado==='pendiente');
+    if(pendientes.length>0){
+      alert('No puedes marcar la tarea como "'+ESTADOS[estadoNuevo].label+'" mientras tengas subtareas sin marcar (Realizada / No aplica / No realizada).');
+      return;
+    }
+  }
+  if(isToggleOn('tk-toggle-soporte') && !document.getElementById('tk-soporte-link').value.trim()){
+    alert('Esta tarea requiere soporte documental: agrega el link de soporte antes de guardar.');
+    return;
+  }
+
+  let asignados = Array.from(document.querySelectorAll('.tk-asignado-cb')).filter(c=>c.checked).map(c=>c.value);
+  if(asignados.length===0) asignados = [currentUser];
+  const etiquetas = Array.from(modalEtiquetasSelected);
+  const payload = {
+    titulo, empresa,
+    asignados,
+    estado: estadoNuevo,
+    prioridad: document.getElementById('tk-prioridad').value,
+    fechaInicio: document.getElementById('tk-fecha-inicio').value || fecha,
+    fecha,
+    auditoria: document.getElementById('tk-auditoria').value,
+    etiquetas,
+    observaciones: document.getElementById('tk-observaciones').value.trim(),
+    tipoTarea: document.getElementById('tk-tipo-tarea').value,
+    tipoObligacion: document.getElementById('tk-tipo-obligacion').value,
+    periodicidad: document.getElementById('tk-periodicidad').value,
+    requiereRevisionTecnica: isToggleOn('tk-toggle-revision'),
+    generaPago: isToggleOn('tk-toggle-pago'),
+    generaIneficacia: isToggleOn('tk-toggle-ineficacia'),
+    requiereSoporte: isToggleOn('tk-toggle-soporte'),
+    soporteLink: document.getElementById('tk-soporte-link').value.trim(),
+    interno: isToggleOn('tk-toggle-interno'),
+    subtareas: modalSubtareas.map(s=>({texto:s.texto, estado:s.estado}))
+  };
+  if(editingTaskId){
+    const t = data.tasks.find(t=>t.id===editingTaskId);
+    Object.assign(t, payload);
+  } else {
+    payload.creadoPor = currentUser;
+    data.tasks.push(Object.assign({id:newId()}, payload));
+  }
+  persist();
+  closeModal('modal-task');
+  populateFilterOptions();
+  renderAll();
+}
+function deleteCurrentTask(){
+  if(!editingTaskId) return;
+  if(confirm('¿Eliminar esta tarea?')){
+    data.tasks = data.tasks.filter(t=>t.id!==editingTaskId);
+    persist();
+    closeModal('modal-task');
+    populateFilterOptions();
+    renderAll();
+  }
+}
+
+/* ================= MODAL: PAGO ================= */
+function openPaymentModal(id){
+  editingPaymentId = id || null;
+  document.getElementById('pg-delete-btn').style.display = id ? 'inline-block' : 'none';
+  if(id){
+    const p = data.payments.find(p=>p.id===id);
+    document.getElementById('pg-empresa').value = p.empresa;
+    document.getElementById('pg-obligacion').value = p.obligacion;
+    document.getElementById('pg-periodicidad').value = p.periodicidad || '';
+    document.getElementById('pg-fecha').value = p.fecha;
+    document.getElementById('pg-valor').value = p.valor || '';
+    document.getElementById('pg-estado-tarea').value = p.estadoTarea || 'por_iniciar';
+    document.getElementById('pg-estado').value = p.estado;
+  } else {
+    document.getElementById('pg-empresa').value='';
+    document.getElementById('pg-obligacion').value='';
+    document.getElementById('pg-periodicidad').value='';
+    document.getElementById('pg-fecha').value = todayStr();
+    document.getElementById('pg-valor').value='';
+    document.getElementById('pg-estado-tarea').value='por_iniciar';
+    document.getElementById('pg-estado').value='pendiente';
+  }
+  openModal('modal-pago');
+}
+function savePayment(){
+  const empresa = document.getElementById('pg-empresa').value.trim();
+  const obligacion = document.getElementById('pg-obligacion').value.trim();
+  const fecha = document.getElementById('pg-fecha').value;
+  if(!empresa || !obligacion || !fecha){ alert('Completa al menos la empresa, la obligación y la fecha.'); return; }
+  const payload = {
+    empresa, obligacion,
+    periodicidad: document.getElementById('pg-periodicidad').value.trim(),
+    fecha,
+    valor: Number(document.getElementById('pg-valor').value) || 0,
+    estadoTarea: document.getElementById('pg-estado-tarea').value,
+    estado: document.getElementById('pg-estado').value
+  };
+  if(editingPaymentId){
+    const p = data.payments.find(p=>p.id===editingPaymentId);
+    Object.assign(p, payload);
+  } else {
+    data.payments.push(Object.assign({id:newId()}, payload));
+  }
+  persist();
+  closeModal('modal-pago');
+  renderAll();
+}
+function deleteCurrentPayment(){
+  if(!editingPaymentId) return;
+  if(confirm('¿Eliminar esta obligación?')){
+    data.payments = data.payments.filter(p=>p.id!==editingPaymentId);
+    persist();
+    closeModal('modal-pago');
+    renderAll();
+  }
+}
+
+/* ================= ADMINISTRACION ================= */
+let editingUsuarioId=null, editingEmpresaAdminId=null, editingAsesorId=null, editingVencimientoId=null;
+let editingCatItem = null; // {group, index/oldValue, isMunicipio}
+
+function adminSwitch(tab){ adminSubView = tab; renderAdministracion(); }
+
+function renderAdministracion(){
+  const el = document.getElementById('view-administracion');
+  el.innerHTML = `
+    <div class="admin-head">
+      <div class="a-title">⚙ Administración</div>
+      <div class="a-sub">Gestión del sistema: usuarios, clientes, catálogos y apariencia</div>
+    </div>
+    <div class="admin-tabs">
+      ${ADMIN_TABS.map(t=>`<div class="admin-tab ${adminSubView===t.key?'active':''}" onclick="adminSwitch('${t.key}')">${t.icon} ${t.label}</div>`).join('')}
+    </div>
+    <div id="admin-content"></div>
+  `;
+  const c = document.getElementById('admin-content');
+  if(adminSubView==='usuarios') c.innerHTML = usuariosHtml();
+  if(adminSubView==='empresasAdmin') c.innerHTML = empresasAdminHtml();
+  if(adminSubView==='asesores') c.innerHTML = asesoresHtml();
+  if(adminSubView==='catalogos') c.innerHTML = catalogosHtml();
+  if(adminSubView==='catTareas') c.innerHTML = catTareasHtml();
+  if(adminSubView==='vencimientosAdmin') c.innerHTML = vencimientosAdminHtml();
+  if(adminSubView==='parametros') c.innerHTML = parametrosHtml();
+  if(adminSubView==='apariencia') c.innerHTML = aparienciaHtml();
+}
+
+/* ---------- USUARIOS ---------- */
+function usuariosHtml(){
+  const list = data.admin.usuarios;
+  return `
+    <div class="view-head">
+      <div><div class="view-title">Usuarios</div><div class="view-sub">Gestiona los usuarios del sistema y asigna roles · ${list.length} usuario(s)</div></div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="openImportUsuariosModal()">📥 Usuarios masivos</button>
+        <button class="btn" onclick="openUsuarioModal()">+ Nuevo Usuario</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Usuario</th><th>Email</th><th>Roles</th><th>Activo</th><th>Acciones</th></tr></thead>
+      <tbody>
+        ${list.length===0?`<tr><td colspan="5"><div class="empty-state">Sin usuarios registrados.</div></td></tr>`:
+        list.map(u=>`<tr>
+          <td><strong>${escapeHtml(u.nombre)}</strong></td>
+          <td>${escapeHtml(u.email)}</td>
+          <td>${u.roles.map(r=>`<span class="role-pill">${escapeHtml(r)}</span>`).join('')}</td>
+          <td><div class="toggle-switch ${u.activo?'on':''}" onclick="toggleUsuarioActivo(${u.id})"><div class="knob"></div></div></td>
+          <td><button class="icon-btn" onclick="openUsuarioModal(${u.id})">✎</button><button class="icon-btn danger" onclick="quickDeleteUsuario(${u.id})">🗑</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+function toggleUsuarioActivo(id){ const u=data.admin.usuarios.find(u=>u.id===id); if(u){ u.activo=!u.activo; persist(); renderAdministracion(); } }
+function openUsuarioModal(id){
+  editingUsuarioId = id||null;
+  document.getElementById('usuario-modal-title').textContent = id?'Editar usuario':'Nuevo usuario';
+  document.getElementById('us-delete-btn').style.display = id?'inline-block':'none';
+  document.querySelectorAll('.us-rol').forEach(c=>c.checked=false);
+  if(id){
+    const u = data.admin.usuarios.find(u=>u.id===id);
+    document.getElementById('us-nombre').value=u.nombre;
+    document.getElementById('us-email').value=u.email;
+    document.getElementById('us-password').value=u.password||'';
+    document.getElementById('us-activo').value=String(u.activo);
+    u.roles.forEach(r=>{ const cb=Array.from(document.querySelectorAll('.us-rol')).find(c=>c.value===r); if(cb) cb.checked=true; });
+  } else {
+    document.getElementById('us-nombre').value='';
+    document.getElementById('us-email').value='';
+    document.getElementById('us-password').value='';
+    document.getElementById('us-activo').value='true';
+  }
+  openModal('modal-usuario');
+}
+function saveUsuario(){
+  const nombre = document.getElementById('us-nombre').value.trim();
+  const email = document.getElementById('us-email').value.trim();
+  const password = document.getElementById('us-password').value;
+  if(!nombre || !email){ alert('Completa el nombre y el correo.'); return; }
+  if(!editingUsuarioId && !password){ alert('Define una contraseña inicial para el nuevo usuario.'); return; }
+  const roles = Array.from(document.querySelectorAll('.us-rol')).filter(c=>c.checked).map(c=>c.value);
+  const payload = {nombre, email, roles: roles.length?roles:['Auxiliar'], activo: document.getElementById('us-activo').value==='true'};
+  if(password) payload.password = password;
+  if(editingUsuarioId){ Object.assign(data.admin.usuarios.find(u=>u.id===editingUsuarioId), payload); }
+  else { data.admin.usuarios.push(Object.assign({id:newId()}, payload)); }
+  persist(); closeModal('modal-usuario'); renderAdministracion();
+}
+function deleteCurrentUsuario(){ if(editingUsuarioId && confirm('¿Eliminar este usuario?')){ data.admin.usuarios = data.admin.usuarios.filter(u=>u.id!==editingUsuarioId); persist(); closeModal('modal-usuario'); renderAdministracion(); } }
+function quickDeleteUsuario(id){ if(confirm('¿Eliminar este usuario?')){ data.admin.usuarios = data.admin.usuarios.filter(u=>u.id!==id); persist(); renderAdministracion(); } }
+
+/* ---------- EMPRESAS (ADMIN / CLIENTES) ---------- */
+function empresasAdminHtml(){
+  const list = data.admin.empresas;
+  return `
+    <div class="view-head">
+      <div><div class="view-title">Empresas (clientes)</div><div class="view-sub">Base de clientes de la firma · ${list.length} empresa(s)</div></div>
+      <button class="btn" onclick="openEmpresaAdminModal()">+ Nueva Empresa</button>
+    </div>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Empresa</th><th>NIT</th><th>Tipo</th><th>Sector</th><th>Régimen</th><th>Municipio</th><th>Acciones</th></tr></thead>
+      <tbody>
+        ${list.length===0?`<tr><td colspan="7"><div class="empty-state">Sin empresas registradas.</div></td></tr>`:
+        list.map(e=>`<tr>
+          <td><div class="company-cell"><span class="dot" style="background:${colorFor(e.nombre)};"></span><strong>${escapeHtml(e.nombre)}</strong></div></td>
+          <td>${escapeHtml(e.nit||'—')}</td>
+          <td>${escapeHtml(e.tipo||'—')}</td>
+          <td>${escapeHtml(e.sector||'—')}</td>
+          <td>${escapeHtml(e.regimen||'—')}</td>
+          <td>${escapeHtml(e.municipio||'—')}</td>
+          <td><button class="icon-btn" onclick="openEmpresaAdminModal(${e.id})">✎</button><button class="icon-btn danger" onclick="quickDeleteEmpresaAdmin(${e.id})">🗑</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+function fillSelect(sel, items, current){
+  sel.innerHTML = items.map(v=>`<option value="${escapeHtml(v)}" ${v===current?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+function openEmpresaAdminModal(id){
+  editingEmpresaAdminId = id||null;
+  document.getElementById('empresa-modal-title').textContent = id?'Editar empresa':'Nueva empresa';
+  document.getElementById('em-delete-btn').style.display = id?'inline-block':'none';
+  const cat = data.admin.catalogos;
+  fillSelect(document.getElementById('em-municipio'), cat.municipios.map(m=>m.nombre), id?data.admin.empresas.find(e=>e.id===id).municipio:cat.municipios[0]?.nombre);
+  fillSelect(document.getElementById('em-tipo'), cat.tiposEmpresa, id?data.admin.empresas.find(e=>e.id===id).tipo:cat.tiposEmpresa[0]);
+  fillSelect(document.getElementById('em-sector'), cat.sectores, id?data.admin.empresas.find(e=>e.id===id).sector:cat.sectores[0]);
+  fillSelect(document.getElementById('em-regimen'), cat.regimenes, id?data.admin.empresas.find(e=>e.id===id).regimen:cat.regimenes[0]);
+  fillSelect(document.getElementById('em-periodicidad'), cat.periodicidadesIva, id?data.admin.empresas.find(e=>e.id===id).periodicidadIva:cat.periodicidadesIva[0]);
+  if(id){
+    const e = data.admin.empresas.find(e=>e.id===id);
+    document.getElementById('em-nombre').value = e.nombre;
+    document.getElementById('em-nit').value = e.nit||'';
+  } else {
+    document.getElementById('em-nombre').value='';
+    document.getElementById('em-nit').value='';
+  }
+  openModal('modal-empresa-admin');
+}
+function saveEmpresaAdmin(){
+  const nombre = document.getElementById('em-nombre').value.trim();
+  if(!nombre){ alert('Completa el nombre de la empresa.'); return; }
+  const payload = {
+    nombre,
+    nit: document.getElementById('em-nit').value.trim(),
+    municipio: document.getElementById('em-municipio').value,
+    tipo: document.getElementById('em-tipo').value,
+    sector: document.getElementById('em-sector').value,
+    regimen: document.getElementById('em-regimen').value,
+    periodicidadIva: document.getElementById('em-periodicidad').value
+  };
+  if(editingEmpresaAdminId){ Object.assign(data.admin.empresas.find(e=>e.id===editingEmpresaAdminId), payload); }
+  else { data.admin.empresas.push(Object.assign({id:newId()}, payload)); }
+  persist(); closeModal('modal-empresa-admin'); populateFilterOptions(); renderAdministracion();
+}
+function deleteCurrentEmpresaAdmin(){ if(editingEmpresaAdminId && confirm('¿Eliminar esta empresa?')){ data.admin.empresas = data.admin.empresas.filter(e=>e.id!==editingEmpresaAdminId); persist(); closeModal('modal-empresa-admin'); renderAdministracion(); } }
+function quickDeleteEmpresaAdmin(id){ if(confirm('¿Eliminar esta empresa?')){ data.admin.empresas = data.admin.empresas.filter(e=>e.id!==id); persist(); renderAdministracion(); } }
+
+/* ---------- ASESORES ---------- */
+function asesoresHtml(){
+  const list = data.admin.asesores;
+  return `
+    <div class="view-head">
+      <div><div class="view-title">Asesores</div><div class="view-sub">Asesores disponibles para asignar a tareas · ${list.length} asesor(es)</div></div>
+      <button class="btn" onclick="openAsesorModal()">+ Nuevo Asesor</button>
+    </div>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Asesor</th><th>Iniciales</th><th>Acciones</th></tr></thead>
+      <tbody>
+        ${list.length===0?`<tr><td colspan="3"><div class="empty-state">Sin asesores registrados.</div></td></tr>`:
+        list.map(a=>`<tr>
+          <td><div class="company-cell"><div class="avatar" style="background:${colorFor(a.nombre)};position:static;margin:0;">${initialsOf(a.nombre)}</div>${escapeHtml(a.nombre)}</div></td>
+          <td>${initialsOf(a.nombre)}</td>
+          <td><button class="icon-btn" onclick="openAsesorModal(${a.id})">✎</button><button class="icon-btn danger" onclick="quickDeleteAsesor(${a.id})">🗑</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+function openAsesorModal(id){
+  editingAsesorId = id||null;
+  document.getElementById('asesor-modal-title').textContent = id?'Editar asesor':'Nuevo asesor';
+  document.getElementById('as-delete-btn').style.display = id?'inline-block':'none';
+  document.getElementById('as-nombre').value = id? data.admin.asesores.find(a=>a.id===id).nombre : '';
+  openModal('modal-asesor');
+}
+function saveAsesor(){
+  const nombre = document.getElementById('as-nombre').value.trim();
+  if(!nombre){ alert('Completa el nombre del asesor.'); return; }
+  if(editingAsesorId){ data.admin.asesores.find(a=>a.id===editingAsesorId).nombre = nombre; }
+  else { data.admin.asesores.push({id:newId(), nombre}); }
+  persist(); closeModal('modal-asesor'); renderAdministracion();
+}
+function deleteCurrentAsesor(){ if(editingAsesorId && confirm('¿Eliminar este asesor?')){ data.admin.asesores = data.admin.asesores.filter(a=>a.id!==editingAsesorId); persist(); closeModal('modal-asesor'); renderAdministracion(); } }
+function quickDeleteAsesor(id){ if(confirm('¿Eliminar este asesor?')){ data.admin.asesores = data.admin.asesores.filter(a=>a.id!==id); persist(); renderAdministracion(); } }
+
+/* ---------- CATALOGOS GENERICOS ---------- */
+const CATALOG_DEFS = [
+  {group:'tiposEmpresa', title:'Tipos de Empresa', desc:'Persona Natural, Jurídica, etc.', store:'catalogos'},
+  {group:'sectores', title:'Sectores', desc:'Sectores económicos', store:'catalogos'},
+  {group:'regimenes', title:'Regímenes Tributarios', desc:'RST, Ordinario, Especial', store:'catalogos'},
+  {group:'periodicidadesIva', title:'Periodicidades IVA', desc:'Bimestral, Cuatrimestral, Anual', store:'catalogos'},
+  {group:'tiposServicio', title:'Tipos de Servicio', desc:'Contabilidad, Auditoría, etc.', store:'catalogos'},
+  {group:'municipios', title:'Municipios', desc:'Ciudades y municipios', store:'catalogos', isMunicipio:true},
+  {group:'tiposTarea', title:'Tipos de Tarea', desc:'Fiscal, Contable, Laboral, etc.', store:'catTareas'},
+  {group:'tiposObligacion', title:'Tipos de Obligación', desc:'IVA, Renta, Retención, etc.', store:'catTareas'},
+  {group:'periodicidades', title:'Periodicidades', desc:'Mensual, Bimestral, Anual', store:'catTareas'},
+  {group:'etiquetas', title:'Etiquetas', desc:'Etiquetas usadas en tareas', store:'catTareas'}
+];
+function catalogBoxHtml(def){
+  const items = data.admin[def.store][def.group];
+  const rows = def.isMunicipio ?
+    items.map((it,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(it.nombre)}</td><td>${escapeHtml(it.departamento||'—')}</td><td><button class="icon-btn" onclick="openCatItemModal('${def.group}','${def.store}',${i},true)">✎</button><button class="icon-btn danger" onclick="deleteCatItemQuick('${def.group}','${def.store}',${i})">🗑</button></td></tr>`).join('')
+    : items.map((it,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(it)}</td><td><button class="icon-btn" onclick="openCatItemModal('${def.group}','${def.store}',${i},false)">✎</button><button class="icon-btn danger" onclick="deleteCatItemQuick('${def.group}','${def.store}',${i})">🗑</button></td></tr>`).join('');
+  return `<div class="catalog-box">
+    <div class="catalog-box-head"><div class="cb-title">${escapeHtml(def.title)}</div><button class="btn btn-sm" onclick="openCatItemModal('${def.group}','${def.store}',null,${def.isMunicipio?'true':'false'})">+ Agregar</button></div>
+    <div class="catalog-box-desc">${escapeHtml(def.desc)}</div>
+    <table class="mini-table">
+      <thead><tr><th>Orden</th><th>Nombre</th>${def.isMunicipio?'<th>Departamento</th>':''}<th>Acciones</th></tr></thead>
+      <tbody>${items.length===0?`<tr><td colspan="${def.isMunicipio?4:3}" style="color:var(--sub);">Sin elementos</td></tr>`:rows}</tbody>
+    </table>
+  </div>`;
+}
+function catalogosHtml(){
+  const defs = CATALOG_DEFS.filter(d=>d.store==='catalogos');
+  return `<div class="view-head"><div><div class="view-title">Catálogos</div><div class="view-sub">Listas usadas para clasificar empresas</div></div></div>
+  <div class="catalog-grid">${defs.map(catalogBoxHtml).join('')}</div>`;
+}
+function catTareasHtml(){
+  const defs = CATALOG_DEFS.filter(d=>d.store==='catTareas');
+  return `<div class="view-head"><div><div class="view-title">Catálogos de Tareas</div><div class="view-sub">Listas usadas para clasificar tareas</div></div></div>
+  <div class="catalog-grid">${defs.map(catalogBoxHtml).join('')}</div>`;
+}
+function openCatItemModal(group, store, index, isMunicipio){
+  editingCatItem = {group, store, index, isMunicipio};
+  const isNew = index===null;
+  document.getElementById('catitem-modal-title').textContent = isNew? 'Agregar elemento' : 'Editar elemento';
+  document.getElementById('catitem-delete-btn').style.display = isNew? 'none':'inline-block';
+  document.getElementById('catitem-depto-wrap').style.display = isMunicipio? 'block':'none';
+  if(isNew){
+    document.getElementById('cat-nombre').value='';
+    document.getElementById('cat-departamento').value='';
+  } else {
+    const item = data.admin[store][group][index];
+    if(isMunicipio){ document.getElementById('cat-nombre').value=item.nombre; document.getElementById('cat-departamento').value=item.departamento||''; }
+    else { document.getElementById('cat-nombre').value=item; document.getElementById('cat-departamento').value=''; }
+  }
+  openModal('modal-catitem');
+}
+function saveCatItem(){
+  const {group, store, index, isMunicipio} = editingCatItem;
+  const nombre = document.getElementById('cat-nombre').value.trim();
+  if(!nombre){ alert('Completa el nombre.'); return; }
+  const value = isMunicipio ? {nombre, departamento: document.getElementById('cat-departamento').value.trim()} : nombre;
+  if(index===null){ data.admin[store][group].push(value); }
+  else { data.admin[store][group][index] = value; }
+  persist(); closeModal('modal-catitem'); renderAdministracion(); populateFilterOptions();
+}
+function deleteCurrentCatItem(){
+  const {group, store, index} = editingCatItem;
+  if(index!==null && confirm('¿Eliminar este elemento?')){
+    data.admin[store][group].splice(index,1);
+    persist(); closeModal('modal-catitem'); renderAdministracion();
+  }
+}
+function deleteCatItemQuick(group, store, index){
+  if(confirm('¿Eliminar este elemento?')){ data.admin[store][group].splice(index,1); persist(); renderAdministracion(); }
+}
+
+/* ---------- VENCIMIENTOS (ADMIN) ---------- */
+function vencimientosAdminHtml(){
+  const list = data.admin.vencimientos.slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  return `
+    <div class="view-head">
+      <div><div class="view-title">Calendario de Vencimientos</div><div class="view-sub">Configura las fechas de vencimiento de obligaciones tributarias · ${list.length} registro(s)</div></div>
+      <button class="btn" onclick="openVencimientoModal()">+ Agregar</button>
+    </div>
+    <div class="table-scroll">
+    <table class="data">
+      <thead><tr><th>Obligación</th><th>Municipio</th><th>Período</th><th>Fecha vencimiento</th><th>NIT</th><th>Acciones</th></tr></thead>
+      <tbody>
+        ${list.length===0?`<tr><td colspan="6"><div class="empty-state">Sin vencimientos configurados.</div></td></tr>`:
+        list.map(v=>`<tr>
+          <td><strong>${escapeHtml(v.obligacion)}</strong></td>
+          <td>${escapeHtml(v.municipio||'—')}</td>
+          <td>${escapeHtml(v.periodo||'—')}</td>
+          <td>${formatDate(v.fecha)}</td>
+          <td>${escapeHtml(v.nit||'—')}</td>
+          <td><button class="icon-btn" onclick="openVencimientoModal(${v.id})">✎</button><button class="icon-btn danger" onclick="quickDeleteVencimiento(${v.id})">🗑</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+function openVencimientoModal(id){
+  editingVencimientoId = id||null;
+  document.getElementById('vencimiento-modal-title').textContent = id?'Editar vencimiento':'Nuevo vencimiento';
+  document.getElementById('vc-delete-btn').style.display = id?'inline-block':'none';
+  fillSelect(document.getElementById('vc-obligacion'), data.admin.catTareas.tiposObligacion, id?data.admin.vencimientos.find(v=>v.id===id).obligacion:data.admin.catTareas.tiposObligacion[0]);
+  if(id){
+    const v = data.admin.vencimientos.find(v=>v.id===id);
+    document.getElementById('vc-municipio').value=v.municipio||'';
+    document.getElementById('vc-periodo').value=v.periodo||'';
+    document.getElementById('vc-fecha').value=v.fecha||'';
+    document.getElementById('vc-nit').value=v.nit||'';
+  } else {
+    document.getElementById('vc-municipio').value='Nacional';
+    document.getElementById('vc-periodo').value='';
+    document.getElementById('vc-fecha').value=todayStr();
+    document.getElementById('vc-nit').value='';
+  }
+  openModal('modal-vencimiento');
+}
+function saveVencimiento(){
+  const fecha = document.getElementById('vc-fecha').value;
+  if(!fecha){ alert('Completa la fecha de vencimiento.'); return; }
+  const payload = {
+    obligacion: document.getElementById('vc-obligacion').value,
+    municipio: document.getElementById('vc-municipio').value.trim(),
+    periodo: document.getElementById('vc-periodo').value.trim(),
+    fecha,
+    nit: document.getElementById('vc-nit').value.trim()
+  };
+  if(editingVencimientoId){ Object.assign(data.admin.vencimientos.find(v=>v.id===editingVencimientoId), payload); }
+  else { data.admin.vencimientos.push(Object.assign({id:newId()}, payload)); }
+  persist(); closeModal('modal-vencimiento'); renderAdministracion();
+}
+function deleteCurrentVencimiento(){ if(editingVencimientoId && confirm('¿Eliminar este vencimiento?')){ data.admin.vencimientos = data.admin.vencimientos.filter(v=>v.id!==editingVencimientoId); persist(); closeModal('modal-vencimiento'); renderAdministracion(); } }
+function quickDeleteVencimiento(id){ if(confirm('¿Eliminar este vencimiento?')){ data.admin.vencimientos = data.admin.vencimientos.filter(v=>v.id!==id); persist(); renderAdministracion(); } }
+
+/* ---------- PARAMETROS (LIQUIDADOR DE INTERESES) ---------- */
+function parametrosHtml(){
+  const p = data.admin.parametros;
+  return `
+    <div class="view-head"><div><div class="view-title">⚖️ Parámetros de liquidación</div><div class="view-sub">Usados para calcular intereses de mora y sanción de extemporaneidad en Pagos</div></div></div>
+    <div class="field-row">
+      <div class="field"><label>Tasa de interés moratorio mensual (%)</label><input id="pm-tasa-mensual" type="number" step="0.0001" value="${(p.tasaMoraMensual*100).toFixed(2)}"></div>
+      <div class="field"><label>Valor UVT vigente</label><input id="pm-uvt" type="number" value="${p.valorUvt}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>SMMLV vigente</label><input id="pm-smmlv" type="number" value="${p.smmlv}"></div>
+      <div class="field"><label>Sanción mínima (en UVT)</label><input id="pm-sancion-min-uvt" type="number" value="${p.sancionMinimaUvt}"></div>
+    </div>
+    <div class="field"><label>% Sanción de extemporaneidad (aplica si hay más de 60 días de mora)</label><input id="pm-pct-sancion" type="number" step="0.01" value="${(p.pctSancionExtemporaneidad*100).toFixed(2)}"></div>
+    <div class="empty-state" style="text-align:left;padding:14px 0;">
+      <div class="em-title" style="margin-bottom:6px;">Regla aplicada en Pagos</div>
+      Si una obligación está pendiente y vencida: se calculan <strong>intereses de mora</strong> sobre el valor del impuesto según los días vencidos.
+      Si supera <strong>60 días</strong> de mora, además se calcula la <strong>sanción de extemporaneidad</strong> (el mayor entre el % configurado y la sanción mínima en UVT).
+    </div>
+    <button class="btn" onclick="saveParametros()">Guardar parámetros</button>
+  `;
+}
+function saveParametros(){
+  const p = data.admin.parametros;
+  p.tasaMoraMensual = (Number(document.getElementById('pm-tasa-mensual').value)||0) / 100;
+  p.valorUvt = Number(document.getElementById('pm-uvt').value) || p.valorUvt;
+  p.smmlv = Number(document.getElementById('pm-smmlv').value) || p.smmlv;
+  p.sancionMinimaUvt = Number(document.getElementById('pm-sancion-min-uvt').value) || 0;
+  p.pctSancionExtemporaneidad = (Number(document.getElementById('pm-pct-sancion').value)||0) / 100;
+  persist();
+  renderAdministracion();
+}
+
+/* ---------- APARIENCIA ---------- */
+const BRAND_PRESETS = [
+  {name:'Verde CERPAT', color:'#34C98B'},
+  {name:'Azul corporativo', color:'#2563EB'},
+  {name:'Púrpura elegante', color:'#7C3AED'},
+  {name:'Rojo intenso', color:'#DC2626'},
+  {name:'Slate profesional', color:'#475569'}
+];
+function aparienciaHtml(){
+  const ap = data.admin.apariencia;
+  return `
+    <div class="view-head"><div><div class="view-title">Apariencia</div><div class="view-sub">Configura el nombre y los colores que se muestran en toda la plataforma</div></div></div>
+    <div class="field-row">
+      <div class="field"><label>Nombre de la aplicación</label><input id="ap-nombre" type="text" value="${escapeHtml(ap.nombre)}"></div>
+      <div class="field"><label>Subtítulo</label><input id="ap-subtitulo" type="text" value="${escapeHtml(ap.subtitulo)}"></div>
+    </div>
+    <div style="margin-top:18px;">
+      <label style="display:block;font-size:11.5px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:10px;">Color primario</label>
+      <div class="color-swatch-row">
+        ${BRAND_PRESETS.map(p=>`<div class="color-swatch ${ap.colorPrimario===p.color?'active':''}" onclick="pickApColor('${p.color}')"><span class="swatch-dot" style="background:${p.color};"></span>${p.name}</div>`).join('')}
+        <div class="color-swatch"><input type="color" id="ap-color-custom" value="${ap.colorPrimario}" style="border:none;width:22px;height:22px;padding:0;background:none;cursor:pointer;" onchange="pickApColor(this.value)"> Personalizado</div>
+      </div>
+    </div>
+    <div class="appearance-preview">
+      <div class="prev-logo" id="ap-preview-logo" style="background:${ap.colorPrimario};">✓</div>
+      <div><div class="prev-text" id="ap-preview-text">${escapeHtml(ap.nombre)}</div><div class="prev-sub" id="ap-preview-sub">${escapeHtml(ap.subtitulo)}</div></div>
+    </div>
+    <div style="margin-top:18px;"><button class="btn" onclick="saveApariencia()">Guardar cambios</button></div>
+  `;
+}
+function pickApColor(color){
+  data.admin.apariencia.colorPrimario = color;
+  renderAdministracion();
+}
+function saveApariencia(){
+  data.admin.apariencia.nombre = document.getElementById('ap-nombre').value.trim() || 'Planeador';
+  data.admin.apariencia.subtitulo = document.getElementById('ap-subtitulo').value.trim();
+  persist();
+  applyApariencia();
+  renderAdministracion();
+}
+function applyApariencia(){
+  const ap = data.admin.apariencia;
+  document.documentElement.style.setProperty('--brand', ap.colorPrimario);
+}
+applyApariencia();
+
+/* ================= MODAL UTILS ================= */
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('show'); });
+});
+
+/* ================= INIT ================= */
+/* ================= INIT ================= */
+if(loggedInEmail && findUserByEmail(loggedInEmail)){
+  showApp();
+} else {
+  document.getElementById('login-screen').style.display='flex';
+}
+</script>
+</body>
+</html>
