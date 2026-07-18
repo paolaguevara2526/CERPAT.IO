@@ -169,6 +169,14 @@ model Empresa {
   regimenId         String?
   periodicidadIvaId String?
   municipioId       String?
+  // Datos operativos y de contacto (base de clientes CERPAT)
+  servicio            String? // Asesoría Contable | Outsourcing | Revisoría Contable
+  asesorNombre        String? // asesor responsable (texto; puede quedar vinculado a Asesor luego)
+  emailRepresentante  String?
+  emailAdministracion String?
+  emailContabilidad   String?
+  emailTalentoHumano  String?
+  emailTesoreria      String?
   createdAt         DateTime @default(now())
 
   organizacion    Organizacion       @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
