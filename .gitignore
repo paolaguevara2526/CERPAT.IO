@@ -9,6 +9,7 @@ build/
 out/
 .next/
 .turbo/
+next-env.d.ts
 
 # Env
 .env
