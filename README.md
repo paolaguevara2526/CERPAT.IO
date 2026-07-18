@@ -9,9 +9,10 @@ Sistema de gestión y planificación de tareas para CERPAT (firma contable). Per
 ## Antes de tocar código
 
 Lee, en este orden:
-1. [`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md) — resumen de producto, arquitectura, modelo de datos y reglas de negocio ya validadas.
-2. [`docs/arquitectura.md`](./docs/arquitectura.md) — arquitectura completa del sistema.
-3. Abre `prototipo-referencia/planeador-cerpat.html` en el navegador para ver el comportamiento esperado de cada pantalla.
+1. [`docs/estado-y-plan.md`](./docs/estado-y-plan.md) — **estado en producción y roadmap** (empieza aquí).
+2. [`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md) — resumen de producto, arquitectura, modelo de datos y reglas de negocio ya validadas.
+3. [`docs/arquitectura.md`](./docs/arquitectura.md) — arquitectura completa del sistema (incluye ADR-0001, multi-tenancy).
+4. Abre `prototipo-referencia/planeador-cerpat.html` en el navegador para ver el comportamiento esperado de cada pantalla.
 
 ## Arquitectura (resumen)
 
