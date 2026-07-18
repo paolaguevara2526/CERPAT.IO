@@ -7,13 +7,34 @@
 > Cualquier cambio en el modelo debe reflejarse en el mismo cambio que lo
 > introduce en el código.
 
+## Multi-tenancy (leer primero)
+
+El modelo es **multi-tenant**: cada firma contable es una **`Organizacion`**
+(el *tenant*) y **todas las entidades del dominio llevan `organizacionId`**. Ver
+[`arquitectura.md`](./arquitectura.md) → ADR-0001.
+
+- **`Organizacion`** — la firma contable. `nombre`, `slug` (único), `nit`,
+  `activo`. Raíz de todo: usuarios, empresas cliente, tareas, pagos, catálogos,
+  parámetros y apariencia cuelgan de ella (con borrado en cascada).
+- **Root de plataforma** — `Usuario` con `esRootPlataforma = true` y
+  `organizacionId = null`; único actor cross-tenant, administra organizaciones.
+- **Unicidad por tenant** — índices compuestos: `Usuario [organizacionId, email]`,
+  `Rol [organizacionId, nombre]`, `Etiqueta [organizacionId, nombre]`.
+  `ParametrosLiquidacion` y `Apariencia` tienen `organizacionId` único (una fila
+  por organización).
+- **Regla de aislamiento** — el backend filtra por `organizacionId` (derivado de
+  la sesión) en cada consulta; nunca confiar en un `organizacionId` del cliente.
+
 ## Entidades principales
+
+Todas (salvo `Organizacion` y el root) pertenecen a una organización vía
+`organizacionId`:
 
 - **`Empresa`** (clientes) — nombre, NIT y FKs a catálogos (tipo, sector,
   régimen, periodicidad de IVA, municipio). Hoy ~60 empresas, proyectado a 200.
-- **`Usuario`** — nombre, email único, `passwordHash`, `activo`. 35 usuarios
-  internos. Roles vía `Rol` + `UsuarioRol` (muchos-a-muchos): Administrador,
-  Asesor, Auditor, Auxiliar.
+- **`Usuario`** — nombre, email (único por organización), `passwordHash`,
+  `activo`, `esRootPlataforma`. Roles vía `Rol` + `UsuarioRol` (muchos-a-muchos):
+  Administrador, Asesor, Auditor, Auxiliar (roles definidos por organización).
 - **`Asesor`** — vinculable a un `Usuario` (`usuarioId` opcional): puede haber
   asesores sin cuenta de login.
 - **`Tarea`** — entidad central. Estado (`por_iniciar`, `en_curso`,
@@ -29,8 +50,8 @@
 - **Catálogos** — `TipoEmpresa`, `Sector`, `RegimenTributario`,
   `PeriodicidadIva`, `TipoServicio`, `Municipio` (con `departamento`),
   `TipoTarea`, `TipoObligacion`, `Periodicidad`, `Etiqueta`.
-- **Configuración (fila única)** — `ParametrosLiquidacion` (tasa de mora, UVT,
-  SMMLV, etc.) y `Apariencia` (marca de la app).
+- **Configuración (fila única por organización)** — `ParametrosLiquidacion`
+  (tasa de mora, UVT, SMMLV, etc.) y `Apariencia` (marca de la app).
 
 ## Relaciones
 

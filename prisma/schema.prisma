@@ -1,6 +1,8 @@
 // Esquema de base de datos — Planeador CERPAT
-// Basado en el modelo de datos validado en el prototipo (ver CONTEXTO-PARA-CLAUDE-CODE.md).
-// Antes de correr la primera migración, revisa este archivo con el equipo.
+// Arquitectura multi-tenant (SaaS multi-firma): cada Organizacion (firma contable)
+// es un tenant aislado; todas las entidades del dominio llevan organizacionId.
+// El acceso "root" de plataforma se modela con Usuario.esRootPlataforma (y
+// organizacionId nulo). Ver docs/arquitectura.md (ADR-0001) y modelo-de-datos.md.
 
 datasource db {
   provider = "postgresql"
@@ -54,30 +56,81 @@ enum EstadoPago {
   no_presentado
 }
 
+// ---------- TENANT: ORGANIZACION (firma contable) ----------
+// Raíz del aislamiento multi-tenant. Todo el dominio cuelga de aquí.
+// Un usuario root de plataforma (Usuario.esRootPlataforma) vive por fuera de
+// cualquier organización y puede administrarlas todas.
+
+model Organizacion {
+  id        String   @id @default(uuid())
+  nombre    String
+  slug      String   @unique // identificador/subdominio de la firma (p. ej. "cerpat")
+  nit       String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuarios     Usuario[]
+  roles        Rol[]
+  asesores     Asesor[]
+  empresas     Empresa[]
+  tareas       Tarea[]
+  pagos        Pago[]
+  vencimientos Vencimiento[]
+
+  // Catálogos (por organización)
+  tiposEmpresa      TipoEmpresa[]
+  sectores          Sector[]
+  regimenes         RegimenTributario[]
+  periodicidadesIva PeriodicidadIva[]
+  tiposServicio     TipoServicio[]
+  municipios        Municipio[]
+  tiposTarea        TipoTarea[]
+  tiposObligacion   TipoObligacion[]
+  periodicidades    Periodicidad[]
+  etiquetas         Etiqueta[]
+
+  // Configuración de fila única (por organización)
+  parametros ParametrosLiquidacion?
+  apariencia Apariencia?
+
+  @@map("organizaciones")
+}
+
 // ---------- USUARIOS Y ROLES ----------
 
 model Usuario {
-  id           String   @id @default(uuid())
-  nombre       String
-  email        String   @unique
-  passwordHash String
-  activo       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(uuid())
+  organizacionId  String? // null = usuario root de plataforma (fuera de toda firma)
+  nombre          String
+  email           String
+  passwordHash    String
+  activo          Boolean  @default(true)
+  esRootPlataforma Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
+  organizacion  Organizacion?   @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   roles         UsuarioRol[]
   tareasCreadas Tarea[]         @relation("TareasCreadas")
   asignaciones  TareaAsignado[]
   asesor        Asesor?
 
+  // Email único por organización (dos firmas distintas pueden repetir email).
+  @@unique([organizacionId, email])
+  @@index([organizacionId])
   @@map("usuarios")
 }
 
 model Rol {
-  id       String       @id @default(uuid())
-  nombre   String       @unique // Administrador, Asesor, Auditor, Auxiliar
-  usuarios UsuarioRol[]
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String // Administrador, Asesor, Auditor, Auxiliar
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  usuarios       UsuarioRol[]
 
+  @@unique([organizacionId, nombre])
+  @@index([organizacionId])
   @@map("roles")
 }
 
@@ -93,11 +146,14 @@ model UsuarioRol {
 
 // Un asesor puede o no tener una cuenta de usuario asociada (usuarioId nullable)
 model Asesor {
-  id        String   @id @default(uuid())
-  nombre    String
-  usuarioId String?  @unique
-  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  usuarioId      String?      @unique
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  usuario        Usuario?     @relation(fields: [usuarioId], references: [id])
 
+  @@index([organizacionId])
   @@map("asesores")
 }
 
@@ -105,6 +161,7 @@ model Asesor {
 
 model Empresa {
   id                String   @id @default(uuid())
+  organizacionId    String
   nombre            String
   nit               String?
   tipoId            String?
@@ -114,110 +171,143 @@ model Empresa {
   municipioId       String?
   createdAt         DateTime @default(now())
 
+  organizacion    Organizacion       @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   tipo            TipoEmpresa?       @relation(fields: [tipoId], references: [id])
   sector          Sector?            @relation(fields: [sectorId], references: [id])
   regimen         RegimenTributario? @relation(fields: [regimenId], references: [id])
   periodicidadIva PeriodicidadIva?   @relation(fields: [periodicidadIvaId], references: [id])
   municipio       Municipio?         @relation(fields: [municipioId], references: [id])
 
-  tareas Tarea[]  // relación directa (una tarea puede tener varias empresas vía TareaEmpresa si aplica)
+  tareas Tarea[]
   pagos  Pago[]
 
+  @@index([organizacionId])
   @@map("empresas")
 }
 
 // ---------- CATÁLOGOS (Administración → Catálogos) ----------
 
 model TipoEmpresa {
-  id       String    @id @default(uuid())
-  nombre   String
-  orden    Int       @default(0)
-  empresas Empresa[]
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int          @default(0)
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresas       Empresa[]
 
+  @@index([organizacionId])
   @@map("cat_tipos_empresa")
 }
 
 model Sector {
-  id       String    @id @default(uuid())
-  nombre   String
-  orden    Int       @default(0)
-  empresas Empresa[]
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int          @default(0)
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresas       Empresa[]
 
+  @@index([organizacionId])
   @@map("cat_sectores")
 }
 
 model RegimenTributario {
-  id       String    @id @default(uuid())
-  nombre   String
-  orden    Int       @default(0)
-  empresas Empresa[]
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int          @default(0)
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresas       Empresa[]
 
+  @@index([organizacionId])
   @@map("cat_regimenes_tributarios")
 }
 
 model PeriodicidadIva {
-  id       String    @id @default(uuid())
-  nombre   String
-  orden    Int       @default(0)
-  empresas Empresa[]
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int          @default(0)
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresas       Empresa[]
 
+  @@index([organizacionId])
   @@map("cat_periodicidades_iva")
 }
 
 model TipoServicio {
-  id     String @id @default(uuid())
-  nombre String
-  orden  Int    @default(0)
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int          @default(0)
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
 
+  @@index([organizacionId])
   @@map("cat_tipos_servicio")
 }
 
 model Municipio {
-  id           String    @id @default(uuid())
-  nombre       String
-  departamento String
-  orden        Int       @default(0)
-  empresas     Empresa[]
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  departamento   String
+  orden          Int          @default(0)
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresas       Empresa[]
 
+  @@index([organizacionId])
   @@map("cat_municipios")
 }
 
 // ---------- CATÁLOGOS DE TAREAS (Administración → Cat. Tareas) ----------
 
 model TipoTarea {
-  id     String  @id @default(uuid())
-  nombre String
-  orden  Int     @default(0)
-  tareas Tarea[]
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int          @default(0)
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  tareas         Tarea[]
 
+  @@index([organizacionId])
   @@map("cat_tipos_tarea")
 }
 
 model TipoObligacion {
-  id           String        @id @default(uuid())
-  nombre       String
-  orden        Int           @default(0)
-  tareas       Tarea[]
-  pagos        Pago[]
-  vencimientos Vencimiento[]
+  id             String        @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int           @default(0)
+  organizacion   Organizacion  @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  tareas         Tarea[]
+  pagos          Pago[]
+  vencimientos   Vencimiento[]
 
+  @@index([organizacionId])
   @@map("cat_tipos_obligacion")
 }
 
 model Periodicidad {
-  id     String  @id @default(uuid())
-  nombre String
-  orden  Int     @default(0)
-  tareas Tarea[]
+  id             String       @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int          @default(0)
+  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  tareas         Tarea[]
 
+  @@index([organizacionId])
   @@map("cat_periodicidades")
 }
 
 model Etiqueta {
-  id     String          @id @default(uuid())
-  nombre String          @unique
-  tareas TareaEtiqueta[]
+  id             String          @id @default(uuid())
+  organizacionId String
+  nombre         String
+  organizacion   Organizacion    @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  tareas         TareaEtiqueta[]
 
+  @@unique([organizacionId, nombre])
+  @@index([organizacionId])
   @@map("cat_etiquetas")
 }
 
@@ -225,6 +315,7 @@ model Etiqueta {
 
 model Tarea {
   id                      String          @id @default(uuid())
+  organizacionId          String
   titulo                  String
   empresaId               String
   estado                  EstadoTarea     @default(por_iniciar)
@@ -246,6 +337,7 @@ model Tarea {
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 
+  organizacion   Organizacion    @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa        Empresa         @relation(fields: [empresaId], references: [id])
   tipoTarea      TipoTarea?      @relation(fields: [tipoTareaId], references: [id])
   tipoObligacion TipoObligacion? @relation(fields: [tipoObligacionId], references: [id])
@@ -256,6 +348,7 @@ model Tarea {
   etiquetas TareaEtiqueta[]
   subtareas Subtarea[]
 
+  @@index([organizacionId])
   @@index([fechaVencimiento])
   @@index([estado])
   @@index([empresaId])
@@ -299,6 +392,7 @@ model Subtarea {
 
 model Pago {
   id               String          @id @default(uuid())
+  organizacionId   String
   empresaId        String
   obligacionId     String?
   obligacionTexto  String? // usar si la obligación no está en el catálogo
@@ -309,9 +403,11 @@ model Pago {
   estadoPago       EstadoPago      @default(pendiente)
   createdAt        DateTime        @default(now())
 
-  empresa    Empresa         @relation(fields: [empresaId], references: [id])
-  obligacion TipoObligacion? @relation(fields: [obligacionId], references: [id])
+  organizacion Organizacion    @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa         @relation(fields: [empresaId], references: [id])
+  obligacion   TipoObligacion? @relation(fields: [obligacionId], references: [id])
 
+  @@index([organizacionId])
   @@index([fechaVencimiento])
   @@index([empresaId])
   @@map("pagos")
@@ -321,37 +417,46 @@ model Pago {
 
 model Vencimiento {
   id               String   @id @default(uuid())
+  organizacionId   String
   obligacionId     String?
   municipio        String?
   periodo          String?
   fechaVencimiento DateTime
   nitRango         String?
 
-  obligacion TipoObligacion? @relation(fields: [obligacionId], references: [id])
+  organizacion Organizacion    @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  obligacion   TipoObligacion? @relation(fields: [obligacionId], references: [id])
 
+  @@index([organizacionId])
   @@map("vencimientos")
 }
 
-// ---------- PARÁMETROS DEL LIQUIDADOR DE INTERESES (fila única) ----------
+// ---------- PARÁMETROS DEL LIQUIDADOR DE INTERESES (fila única por organización) ----------
 
 model ParametrosLiquidacion {
   id                        String  @id @default(uuid())
+  organizacionId            String  @unique
   tasaMoraMensual           Decimal @default(0.2679) @db.Decimal(6, 4)
   valorUvt                  Decimal @default(52374) @db.Decimal(12, 2)
   smmlv                     Decimal @default(1423500) @db.Decimal(12, 2)
   sancionMinimaUvt          Decimal @default(10) @db.Decimal(6, 2)
   pctSancionExtemporaneidad Decimal @default(0.05) @db.Decimal(5, 4)
 
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+
   @@map("parametros_liquidacion")
 }
 
-// ---------- APARIENCIA (fila única de configuración de marca) ----------
+// ---------- APARIENCIA (fila única de configuración de marca por organización) ----------
 
 model Apariencia {
-  id            String @id @default(uuid())
-  nombreApp     String @default("Planeador")
-  subtitulo     String @default("Sistema de Gestión y Planificación")
-  colorPrimario String @default("#34C98B")
+  id             String @id @default(uuid())
+  organizacionId String @unique
+  nombreApp      String @default("Planeador")
+  subtitulo      String @default("Sistema de Gestión y Planificación")
+  colorPrimario  String @default("#34C98B")
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
 
   @@map("apariencia")
 }
