@@ -1,7 +1,7 @@
 # packages/shared
 
-Tipos, contratos y utilidades compartidas entre `apps/web` y `apps/api`.
+Tipos, contratos y validaciones compartidas entre `apps/web` y `apps/api`.
 
-Estado: **bootstrap** — sin contenido todavía. Este paquete debe ser la fuente
-de verdad para cualquier tipo o utilidad usada por ambas apps, para evitar
-duplicación entre frontend y backend.
+Este paquete es la **fuente de verdad** para cualquier tipo, esquema (p. ej.
+Zod) o utilidad usada por ambas apps, para evitar duplicación entre frontend y
+backend. El código va en `src/` y se expone desde `src/index.ts`.

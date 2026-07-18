@@ -1,0 +1,49 @@
+flowchart TB
+    subgraph USUARIOS["👥 Usuarios"]
+        U1["Equipo interno\n(35 usuarios: asesores, auditores, líderes)"]
+        U2["Portal de clientes\n(futuro — equipos contables externos)"]
+    end
+
+    subgraph VERCEL["▲ Vercel — Frontend"]
+        FE["App web (React / Next.js)\nInicio · Calendario · Tablero · Lista\nMi Día · Pagos · Auditoría · Administración"]
+    end
+
+    subgraph RAILWAY["🚂 Railway — Backend e infraestructura propia"]
+        API["Backend API (Node.js / Express)\nReglas de negocio + validaciones\n(bloqueo tras auditoría, subtareas,\nliquidador de intereses, permisos por rol)"]
+        DB[("PostgreSQL\nEmpresas · Usuarios · Tareas · Subtareas\nPagos · Catálogos · Vencimientos")]
+        N8N["n8n — Automatización\nRecordatorios · Recálculo diario de mora\nGeneración de tareas recurrentes\nAlertas a líderes de área"]
+    end
+
+    subgraph EXTERNOS["🔌 Servicios externos especializados"]
+        AUTH["Auth.js / Clerk\nAutenticación real\n(hash de contraseñas, sesiones)"]
+        MAIL["Resend / Postmark\nEnvío de correos"]
+        WA["WhatsApp Business API\n(opcional, vía Twilio)"]
+        STORAGE["Cloudflare R2 / AWS S3\nArchivos de soporte documental"]
+        MON["Sentry\nMonitoreo de errores en producción"]
+    end
+
+    U1 --> FE
+    U2 --> FE
+    FE <--> API
+    FE -.autenticación.-> AUTH
+    API --> DB
+    API -.valida sesión.-> AUTH
+    API -.reporta errores.-> MON
+    API --> STORAGE
+
+    N8N -.lectura con usuario solo-lectura.-> DB
+    N8N == "llama a la API\n(respeta las mismas reglas de negocio)" ==> API
+    N8N --> MAIL
+    N8N --> WA
+
+    classDef frontend fill:#E6F4EE,stroke:#159463,stroke-width:2px,color:#0E7A50;
+    classDef backend fill:#DBEAFE,stroke:#1D4ED8,stroke-width:2px,color:#1E3A8A;
+    classDef data fill:#EDE4FB,stroke:#6D28D9,stroke-width:2px,color:#4C1D95;
+    classDef externo fill:#FDECD1,stroke:#B7590A,stroke-width:2px,color:#7C3A0A;
+    classDef usuarios fill:#FFFFFF,stroke:#667085,stroke-width:1.5px,color:#101828;
+
+    class FE frontend;
+    class API,N8N backend;
+    class DB data;
+    class AUTH,MAIL,WA,STORAGE,MON externo;
+    class U1,U2 usuarios;

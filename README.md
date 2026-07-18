@@ -1,36 +1,47 @@
 # Planeador CERPAT
 
-Monorepo del **Planeador CERPAT**: la herramienta de planificación y programación
-de operaciones de CERPAT.
+Sistema de gestión y planificación de tareas para CERPAT (firma contable). Permite el seguimiento de obligaciones tributarias y contables de empresas clientes, medición de desempeño por equipo, y (en fase futura) un portal de consulta para los equipos contables de nuestros clientes.
+
+## Estado del proyecto
+
+🚧 En construcción — migrando desde un prototipo funcional (`prototipo-referencia/`) hacia una implementación de producción con arquitectura real.
+
+## Antes de tocar código
+
+Lee, en este orden:
+1. [`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md) — resumen de producto, arquitectura, modelo de datos y reglas de negocio ya validadas.
+2. [`docs/arquitectura.md`](./docs/arquitectura.md) — arquitectura completa del sistema.
+3. Abre `prototipo-referencia/planeador-cerpat.html` en el navegador para ver el comportamiento esperado de cada pantalla.
+
+## Arquitectura (resumen)
+
+- **Frontend:** Next.js → Vercel (`app.cerpat.io`)
+- **Backend:** Node.js/Express → Railway (`api.cerpat.io`)
+- **Base de datos:** PostgreSQL (Railway)
+- **Autenticación:** Auth.js / Clerk
+- **Automatización:** n8n (Railway)
+- **Correo:** Microsoft 365 (Graph API) vía buzón `notificaciones@cerpat.io`
+- **Monitoreo:** Sentry
 
 ## Estructura del repositorio
 
 ```
-.
-├── apps/
-│   ├── web/              # Frontend (interfaz del planeador)
-│   └── api/               # Backend (API y lógica de negocio)
-├── packages/
-│   └── shared/            # Tipos, utilidades y contratos compartidos entre web y api
-└── docs/
-    ├── arquitectura.md         # Decisiones y visión general de arquitectura
-    ├── modelo-de-datos.md      # Entidades, relaciones y esquema de datos
-    └── reglas-de-negocio.md    # Reglas y lógica de negocio del dominio CERPAT
+apps/
+  web/     → Frontend (Next.js)
+  api/      → Backend (Node/Express)
+packages/
+  shared/    → Tipos y validaciones compartidas
+docs/         → Documentación de arquitectura, modelo de datos y reglas de negocio
+prototipo-referencia/  → Prototipo HTML de referencia visual y funcional
 ```
 
-## Primeros pasos
+## Desarrollo local
 
-Este repositorio está en fase de bootstrap. Aún no hay stack tecnológico ni
-dependencias definidas en `apps/web`, `apps/api` ni `packages/shared`; cada uno
-contiene por ahora un `README.md` describiendo su propósito.
+```bash
+# instrucciones de instalación y variables de entorno se agregan
+# a medida que el proyecto se inicializa
+```
 
-Consulta [`CLAUDE.md`](./CLAUDE.md) para las convenciones de trabajo con Claude
-Code en este repositorio, y
-[`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md) para el
-contexto de negocio detrás del proyecto.
+## Seguridad
 
-## Documentación
-
-- [Arquitectura](./docs/arquitectura.md)
-- [Modelo de datos](./docs/modelo-de-datos.md)
-- [Reglas de negocio](./docs/reglas-de-negocio.md)
+Este repositorio eventualmente manejará datos de clientes reales. Nunca subir credenciales, contraseñas ni llaves de API al código — usar variables de entorno (`.env`, excluido del control de versiones) desde el primer commit.

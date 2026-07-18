@@ -1,0 +1,357 @@
+// Esquema de base de datos — Planeador CERPAT
+// Basado en el modelo de datos validado en el prototipo (ver CONTEXTO-PARA-CLAUDE-CODE.md).
+// Antes de correr la primera migración, revisa este archivo con el equipo.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------- ENUMS (reflejan exactamente las reglas de negocio ya validadas) ----------
+
+enum EstadoTarea {
+  por_iniciar
+  en_curso
+  en_revision
+  terminado
+  auditado
+  no_realizado
+}
+
+enum Prioridad {
+  alta
+  media
+  baja
+}
+
+enum EstadoAuditoria {
+  pendiente
+  aprobada
+  rechazada
+}
+
+enum EstadoSubtarea {
+  pendiente
+  realizada
+  no_aplica
+  no_realizada
+}
+
+enum EstadoTareaPago {
+  por_iniciar
+  en_curso
+  terminado
+}
+
+enum EstadoPago {
+  pendiente
+  presentado_sin_pago
+  presentado_pagado
+  no_presentado
+}
+
+// ---------- USUARIOS Y ROLES ----------
+
+model Usuario {
+  id           String   @id @default(uuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  roles         UsuarioRol[]
+  tareasCreadas Tarea[]         @relation("TareasCreadas")
+  asignaciones  TareaAsignado[]
+  asesor        Asesor?
+
+  @@map("usuarios")
+}
+
+model Rol {
+  id       String       @id @default(uuid())
+  nombre   String       @unique // Administrador, Asesor, Auditor, Auxiliar
+  usuarios UsuarioRol[]
+
+  @@map("roles")
+}
+
+model UsuarioRol {
+  usuarioId String
+  rolId     String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol       Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, rolId])
+  @@map("usuario_roles")
+}
+
+// Un asesor puede o no tener una cuenta de usuario asociada (usuarioId nullable)
+model Asesor {
+  id        String   @id @default(uuid())
+  nombre    String
+  usuarioId String?  @unique
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@map("asesores")
+}
+
+// ---------- EMPRESAS (CLIENTES) ----------
+
+model Empresa {
+  id                String   @id @default(uuid())
+  nombre            String
+  nit               String?
+  tipoId            String?
+  sectorId          String?
+  regimenId         String?
+  periodicidadIvaId String?
+  municipioId       String?
+  createdAt         DateTime @default(now())
+
+  tipo            TipoEmpresa?       @relation(fields: [tipoId], references: [id])
+  sector          Sector?            @relation(fields: [sectorId], references: [id])
+  regimen         RegimenTributario? @relation(fields: [regimenId], references: [id])
+  periodicidadIva PeriodicidadIva?   @relation(fields: [periodicidadIvaId], references: [id])
+  municipio       Municipio?         @relation(fields: [municipioId], references: [id])
+
+  tareas Tarea[]  // relación directa (una tarea puede tener varias empresas vía TareaEmpresa si aplica)
+  pagos  Pago[]
+
+  @@map("empresas")
+}
+
+// ---------- CATÁLOGOS (Administración → Catálogos) ----------
+
+model TipoEmpresa {
+  id       String    @id @default(uuid())
+  nombre   String
+  orden    Int       @default(0)
+  empresas Empresa[]
+
+  @@map("cat_tipos_empresa")
+}
+
+model Sector {
+  id       String    @id @default(uuid())
+  nombre   String
+  orden    Int       @default(0)
+  empresas Empresa[]
+
+  @@map("cat_sectores")
+}
+
+model RegimenTributario {
+  id       String    @id @default(uuid())
+  nombre   String
+  orden    Int       @default(0)
+  empresas Empresa[]
+
+  @@map("cat_regimenes_tributarios")
+}
+
+model PeriodicidadIva {
+  id       String    @id @default(uuid())
+  nombre   String
+  orden    Int       @default(0)
+  empresas Empresa[]
+
+  @@map("cat_periodicidades_iva")
+}
+
+model TipoServicio {
+  id     String @id @default(uuid())
+  nombre String
+  orden  Int    @default(0)
+
+  @@map("cat_tipos_servicio")
+}
+
+model Municipio {
+  id           String    @id @default(uuid())
+  nombre       String
+  departamento String
+  orden        Int       @default(0)
+  empresas     Empresa[]
+
+  @@map("cat_municipios")
+}
+
+// ---------- CATÁLOGOS DE TAREAS (Administración → Cat. Tareas) ----------
+
+model TipoTarea {
+  id     String  @id @default(uuid())
+  nombre String
+  orden  Int     @default(0)
+  tareas Tarea[]
+
+  @@map("cat_tipos_tarea")
+}
+
+model TipoObligacion {
+  id           String        @id @default(uuid())
+  nombre       String
+  orden        Int           @default(0)
+  tareas       Tarea[]
+  pagos        Pago[]
+  vencimientos Vencimiento[]
+
+  @@map("cat_tipos_obligacion")
+}
+
+model Periodicidad {
+  id     String  @id @default(uuid())
+  nombre String
+  orden  Int     @default(0)
+  tareas Tarea[]
+
+  @@map("cat_periodicidades")
+}
+
+model Etiqueta {
+  id     String          @id @default(uuid())
+  nombre String          @unique
+  tareas TareaEtiqueta[]
+
+  @@map("cat_etiquetas")
+}
+
+// ---------- TAREAS ----------
+
+model Tarea {
+  id                      String          @id @default(uuid())
+  titulo                  String
+  empresaId               String
+  estado                  EstadoTarea     @default(por_iniciar)
+  prioridad               Prioridad       @default(media)
+  fechaInicio             DateTime
+  fechaVencimiento        DateTime
+  tipoTareaId             String?
+  tipoObligacionId        String?
+  periodicidadId          String?
+  auditoria               EstadoAuditoria @default(pendiente)
+  requiereRevisionTecnica Boolean         @default(false)
+  generaPago              Boolean         @default(false)
+  generaIneficacia        Boolean         @default(false)
+  requiereSoporte         Boolean         @default(false)
+  soporteLink             String?
+  interno                 Boolean         @default(false) // true = no se muestra en calendario/impresión para cliente
+  observaciones           String?
+  creadoPorId             String?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  empresa        Empresa         @relation(fields: [empresaId], references: [id])
+  tipoTarea      TipoTarea?      @relation(fields: [tipoTareaId], references: [id])
+  tipoObligacion TipoObligacion? @relation(fields: [tipoObligacionId], references: [id])
+  periodicidad   Periodicidad?   @relation(fields: [periodicidadId], references: [id])
+  creadoPor      Usuario?        @relation("TareasCreadas", fields: [creadoPorId], references: [id])
+
+  asignados TareaAsignado[]
+  etiquetas TareaEtiqueta[]
+  subtareas Subtarea[]
+
+  @@index([fechaVencimiento])
+  @@index([estado])
+  @@index([empresaId])
+  @@map("tareas")
+}
+
+model TareaAsignado {
+  tareaId   String
+  usuarioId String
+  tarea     Tarea   @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@id([tareaId, usuarioId])
+  @@map("tarea_asignados")
+}
+
+model TareaEtiqueta {
+  tareaId    String
+  etiquetaId String
+  tarea      Tarea    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  etiqueta   Etiqueta @relation(fields: [etiquetaId], references: [id])
+
+  @@id([tareaId, etiquetaId])
+  @@map("tarea_etiquetas")
+}
+
+// Regla de negocio: una tarea no puede pasar a "terminado"/"auditado"
+// si alguna subtarea sigue en estado "pendiente". Validar en el backend.
+model Subtarea {
+  id      String         @id @default(uuid())
+  tareaId String
+  texto   String
+  estado  EstadoSubtarea @default(pendiente)
+  orden   Int            @default(0)
+  tarea   Tarea          @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+
+  @@map("subtareas")
+}
+
+// ---------- PAGOS (seguimiento de obligaciones) ----------
+
+model Pago {
+  id               String          @id @default(uuid())
+  empresaId        String
+  obligacionId     String?
+  obligacionTexto  String? // usar si la obligación no está en el catálogo
+  periodicidad     String?
+  fechaVencimiento DateTime
+  valor            Decimal         @default(0) @db.Decimal(14, 2)
+  estadoTarea      EstadoTareaPago @default(por_iniciar)
+  estadoPago       EstadoPago      @default(pendiente)
+  createdAt        DateTime        @default(now())
+
+  empresa    Empresa         @relation(fields: [empresaId], references: [id])
+  obligacion TipoObligacion? @relation(fields: [obligacionId], references: [id])
+
+  @@index([fechaVencimiento])
+  @@index([empresaId])
+  @@map("pagos")
+}
+
+// ---------- VENCIMIENTOS (calendario tributario general) ----------
+
+model Vencimiento {
+  id               String   @id @default(uuid())
+  obligacionId     String?
+  municipio        String?
+  periodo          String?
+  fechaVencimiento DateTime
+  nitRango         String?
+
+  obligacion TipoObligacion? @relation(fields: [obligacionId], references: [id])
+
+  @@map("vencimientos")
+}
+
+// ---------- PARÁMETROS DEL LIQUIDADOR DE INTERESES (fila única) ----------
+
+model ParametrosLiquidacion {
+  id                        String  @id @default(uuid())
+  tasaMoraMensual           Decimal @default(0.2679) @db.Decimal(6, 4)
+  valorUvt                  Decimal @default(52374) @db.Decimal(12, 2)
+  smmlv                     Decimal @default(1423500) @db.Decimal(12, 2)
+  sancionMinimaUvt          Decimal @default(10) @db.Decimal(6, 2)
+  pctSancionExtemporaneidad Decimal @default(0.05) @db.Decimal(5, 4)
+
+  @@map("parametros_liquidacion")
+}
+
+// ---------- APARIENCIA (fila única de configuración de marca) ----------
+
+model Apariencia {
+  id            String @id @default(uuid())
+  nombreApp     String @default("Planeador")
+  subtitulo     String @default("Sistema de Gestión y Planificación")
+  colorPrimario String @default("#34C98B")
+
+  @@map("apariencia")
+}

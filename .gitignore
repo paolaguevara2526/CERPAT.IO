@@ -14,6 +14,14 @@ out/
 .env
 .env.local
 .env.*.local
+.env.production
+
+# Deploy (Vercel / Railway)
+.vercel/
+.railway/
+
+# Prisma (bases de datos locales)
+prisma/*.db
 
 # Logs
 npm-debug.log*
