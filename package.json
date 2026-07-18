@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:import-clientes": "tsx prisma/import-clientes.ts",
     "db:studio": "prisma studio"
   },
   "devDependencies": {
