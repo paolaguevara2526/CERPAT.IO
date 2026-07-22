@@ -33,6 +33,8 @@ _Última actualización: 2026-07-18._
 - [x] Multi-tenancy + root en el modelo de datos.
 - [x] 90 clientes reales en Postgres.
 - [x] Primer cableado real (`/clientes`).
+- [x] Sistema de temas (Actual / Sereno / Enfoque) en Apariencia.
+- [x] Matrices Excel para cargar clientes y usuarios (entregadas al equipo).
 
 ### Fase 2 — Autenticación y aislamiento (siguiente)
 - [ ] Auth (Auth.js/Clerk): login, sesión, hash de contraseñas (bcrypt/argon2).
@@ -57,6 +59,38 @@ _Última actualización: 2026-07-18._
 
 ### Fase 5 — Portal de clientes (futuro)
 - [ ] Aislamiento adicional por empresa cliente (cada cliente ve solo lo suyo) sobre el modelo multi-tenant.
+
+## En diseño — Plan de Trabajo Contable (cumplimiento) 🚧
+
+Dirección nueva (idea del equipo): en vez de depender de que cada usuario cargue
+tareas, el sistema **genera el plan de trabajo por cliente** a partir de una
+plantilla de actividades contables recurrentes, y mide **cumplimiento / atraso**
+por cliente y por asesor.
+
+**Concepto en 3 capas:**
+1. **Catálogo de actividades del plan** (definido una vez): p. ej. conciliación
+   bancaria, cartera, caja, depreciación, amortización, anticipos, conciliación
+   de impuestos, obligaciones financieras, parafiscales/seguridad social — cada
+   una con grupo, periodicidad, evidencia esperada y si requiere auditoría.
+2. **Generación automática de tareas** por *cliente × actividad × período*, con
+   fecha límite según periodicidad, asignadas al asesor del cliente.
+3. **Ejecución + reporte:** el asesor marca Ejecutada (con evidencia), el auditor
+   marca Auditada; la cuadrícula semáforo y las métricas (atraso/adelanto) se
+   calculan solas.
+
+**Decisiones tomadas:**
+- Asignación del plan **por plantilla de tipo de servicio** (Outsourcing /
+  Asesoría Contable / Revisoría), ajustable por excepción.
+- Estados calzan con el ciclo actual de `Tarea`: Programado (por_iniciar/en_curso)
+  → Ejecutado (terminado) → Auditado (auditado). RAG derivado de fechas.
+
+**Cambios de datos previstos (aún no implementados):** entidad `ActividadPlan`
+(plantilla), vínculo actividad↔cliente (o por servicio), y en `Tarea` un
+`actividadPlanId` + `periodo` para armar la cuadrícula.
+
+**Mockup de referencia:** [`mockups/plan-trabajo-cumplimiento.html`](./mockups/plan-trabajo-cumplimiento.html)
+(cuadrícula semáforo + métricas por asesor y cliente). Próximo paso: afinar el
+mockup con el equipo y luego el modelo de datos + generación.
 
 ## Deuda técnica / notas
 - El endpoint `/empresas` resuelve la **organización demo fija** (`slug: cerpat`) hasta que exista auth.
