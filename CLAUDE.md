@@ -4,8 +4,17 @@ Guía para Claude Code al trabajar en el repositorio del **Planeador CERPAT**.
 
 ## Qué es este proyecto
 
-Monorepo del Planeador CERPAT. Ver [`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md)
+Monorepo del Planeador CERPAT. **Empieza por [`docs/estado-y-plan.md`](./docs/estado-y-plan.md)**
+(estado en producción y roadmap vivo), y luego [`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md)
 para el contexto de negocio completo antes de implementar funcionalidad nueva.
+
+**Estado actual (resumen):** infraestructura desplegada y en producción — frontend en
+Vercel con dominio `cerpat.io`, API Express + PostgreSQL en Railway, esquema
+**multi-tenant** (`Organizacion` = firma; rol root de plataforma) con **90 clientes reales**
+cargados. La raíz `cerpat.io` sirve hoy el prototipo (localStorage) con **sistema de temas**
+(Apariencia); `cerpat.io/clientes` es la primera vista cableada a la API. En diseño: el
+**Plan de Trabajo Contable** (actividades recurrentes por cliente + seguimiento de
+cumplimiento) — ver `docs/estado-y-plan.md` y `docs/mockups/`.
 
 ## Estructura
 
@@ -16,8 +25,10 @@ para el contexto de negocio completo antes de implementar funcionalidad nueva.
 - `prototipo-referencia/` — Prototipo HTML de referencia (`planeador-cerpat.html`).
   Es la **especificación viva** del comportamiento esperado de cada pantalla:
   ábrelo antes de construir cualquier vista.
-- `docs/` — Documentación de arquitectura, modelo de datos y reglas de negocio
-  (incluye `arquitectura.mermaid`, el diagrama del sistema).
+- `docs/` — Documentación: `estado-y-plan.md` (estado + roadmap), `arquitectura.md`
+  (+ `arquitectura.mermaid` y ADR-0001 multi-tenancy), `modelo-de-datos.md`,
+  `reglas-de-negocio.md`, `data/` (catálogos base, p. ej. plan de trabajo) y
+  `mockups/` (bocetos de vistas aprobadas con el equipo).
 
 El stack tecnológico ya está definido (ver
 [`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md) §2): Next.js en
@@ -30,6 +41,8 @@ nunca debe poder saltarse una validación.
 - Todo cambio de negocio relevante (reglas, entidades, decisiones de
   arquitectura) debe reflejarse en `docs/` — no dejar esa información solo en
   el historial de commits o en la conversación.
+- Mantén `docs/estado-y-plan.md` al día: márcalo cuando completes una fase o
+  tomes una decisión de producto, para que cada sesión retome con contexto real.
 - Antes de introducir una entidad o relación nueva, revisa
   [`docs/modelo-de-datos.md`](./docs/modelo-de-datos.md) y `prisma/schema.prisma`
   (fuente de verdad del esquema) para mantenerlo consistente.
