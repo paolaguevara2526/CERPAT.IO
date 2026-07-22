@@ -105,8 +105,8 @@
     <div class="ctx">
       <span class="chip">Plantilla: <b>Outsourcing contable</b></span>
       <span class="chip">Cliente: <b>Ecoconcretos S.A.S</b></span>
-      <span class="chip">Asesor: <b>Katherine Díaz</b></span>
       <span class="chip">Año <b>2026</b> · corte a Julio</span>
+      <span class="chip">Seguimiento por: <b>área · asesor · auxiliar</b></span>
     </div>
   </header>
 
@@ -146,8 +146,16 @@
     <!-- Lateral -->
     <div style="display:flex;flex-direction:column;gap:18px;">
       <div class="card">
-        <div class="hd"><div class="t">Cumplimiento por asesor</div></div>
+        <div class="hd"><div class="t">Cumplimiento por área</div></div>
+        <div class="pad" id="areas"></div>
+      </div>
+      <div class="card">
+        <div class="hd"><div class="t">Por asesor</div><div class="m">responsable</div></div>
         <div class="pad" id="asesores"></div>
+      </div>
+      <div class="card">
+        <div class="hd"><div class="t">Por auxiliar</div><div class="m">ejecutor</div></div>
+        <div class="pad" id="auxiliares"></div>
       </div>
       <div class="card">
         <div class="hd"><div class="t">Clientes en riesgo</div><div class="m">nivel de atraso</div></div>
@@ -157,31 +165,41 @@
   </div>
 
   <div class="note">
-    <b>Cómo se llena solo:</b> el sistema genera cada tarea (Programada) según la periodicidad del plan y la asigna al asesor del cliente.
-    El asesor adjunta la evidencia y marca <b>Ejecutada</b>; el auditor marca <b>Auditada</b>. Esta cuadrícula y todas las métricas
-    (atraso/adelanto por cliente y por asesor) se calculan a partir de esas marcas — nadie llena la matriz a mano.
+    <b>Cómo se llena solo:</b> el plan está organizado por <b>área</b> (Impuestos · Informes · Cumplimiento · Nómina · Tesorería);
+    cada área tiene un <b>asesor</b> (responsable) y un <b>auxiliar</b> (ejecutor) por cliente. El sistema genera cada tarea (Programada)
+    según la periodicidad; el auxiliar la ejecuta con evidencia, el asesor/auditor la marca <b>Auditada</b>. La cuadrícula y las métricas
+    (cumplimiento y atraso <b>por área, por asesor y por auxiliar</b>) se calculan solas — nadie llena la matriz a mano.
   </div>
 </div>
 
 <script>
-  // Actividades reales del plan (de tu cronograma), con grupo y periodicidad.
+  // Plan agrupado por ÁREA, con asesor (responsable) y auxiliar (ejecutor).
   const NOW = 6; // Julio (0=Ene)
   const groups = [
-    {g:'Estados Financieros', items:[
-      {n:'Conciliación bancaria', p:'Mensual', per:1},
-      {n:'Conciliar cartera', p:'Bimestral', per:2},
-      {n:'Conciliación caja', p:'Mensual', per:1},
+    {g:'Impuestos', resp:'Katherine Díaz', aux:'Laura Peña', items:[
+      {n:'Retención en la fuente', p:'Mensual', per:1},
+      {n:'IVA', p:'Bimestral', per:2},
+      {n:'Conciliación de impuestos (ret/IVA)', p:'Trimestral', per:3},
+      {n:'Retención de ICA', p:'Bimestral', per:2},
+    ]},
+    {g:'Informes', resp:'Hugo Beltrán', aux:'Diego Rojas', items:[
+      {n:'Estados financieros trimestrales', p:'Trimestral', per:3},
       {n:'Depreciación activos fijos', p:'Mensual', per:1},
       {n:'Amortización intangibles', p:'Mensual', per:1},
-      {n:'Anticipos (clientes/proveedores)', p:'Mensual', per:1},
     ]},
-    {g:'Impuestos', items:[
-      {n:'Conciliación de impuestos', p:'Trimestral', per:3},
-      {n:'Obligaciones financieras', p:'Mensual', per:1},
+    {g:'Cumplimiento', resp:'Tania Castiblanco', aux:'Marcela Ruiz', items:[
+      {n:'RUB — beneficiarios finales', p:'Trimestral', per:3},
+      {n:'Renovación Cámara de Comercio', p:'Anual', per:12},
+      {n:'Proveedores ficticios', p:'Cuatrimestral', per:4},
     ]},
-    {g:'Laboral', items:[
+    {g:'Nómina', resp:'Joath Casanova', aux:'Andrés Gil', items:[
+      {n:'Revisar nómina mensual (doc. soporte)', p:'Mensual', per:1},
       {n:'Parafiscales y seguridad social', p:'Mensual', per:1},
-      {n:'Liquidación de nómina', p:'Mensual', per:1},
+    ]},
+    {g:'Tesorería', resp:'Alexandra García', aux:'Paula Mora', items:[
+      {n:'Conciliación bancaria', p:'Mensual', per:1},
+      {n:'Conciliación caja', p:'Mensual', per:1},
+      {n:'Anticipos de clientes', p:'Semestral', per:6},
     ]},
   ];
   // patrón de estado por mes: v=ejecutada/auditada ok, r=vencida, empty=no aplica
@@ -201,7 +219,7 @@
   const body=document.getElementById('mbody');
   let html='';
   groups.forEach(grp=>{
-    html+=`<tr class="grp"><td colspan="13">${grp.g}</td></tr>`;
+    html+=`<tr class="grp"><td colspan="13">${grp.g} &nbsp;·&nbsp; Asesor: ${grp.resp} &nbsp;·&nbsp; Auxiliar: ${grp.aux}</td></tr>`;
     grp.items.forEach(it=>{
       const st=statuses(it.per);
       html+=`<tr><td class="m-actividad"><div class="an">${it.n}</div><div class="ap">${it.p}</div></td>`;
@@ -214,14 +232,23 @@
   });
   body.innerHTML=html;
 
-  const asesores=[
+  function renderBars(id,list){
+    document.getElementById(id).innerHTML=list.map(a=>{
+      const c=a.v>=85?'var(--ok)':a.v>=70?'var(--warn)':'var(--bad)';
+      return `<div class="bar-row"><div class="nm">${a.n}</div><div class="track"><div class="fill" style="width:${a.v}%;background:${c}"></div></div><div class="pct">${a.v}%</div></div>`;
+    }).join('');
+  }
+  renderBars('areas',[
+    {n:'Impuestos',v:74},{n:'Informes',v:88},{n:'Cumplimiento',v:61},{n:'Nómina',v:93},{n:'Tesorería',v:80},
+  ]);
+  renderBars('asesores',[
     {n:'Katherine Díaz',v:78},{n:'Hugo Beltrán',v:91},{n:'Joath Casanova',v:64},
     {n:'Tania Castiblanco',v:83},{n:'Alexandra García',v:72},
-  ];
-  document.getElementById('asesores').innerHTML=asesores.map(a=>{
-    const c=a.v>=85?'var(--ok)':a.v>=70?'var(--warn)':'var(--bad)';
-    return `<div class="bar-row"><div class="nm">${a.n}</div><div class="track"><div class="fill" style="width:${a.v}%;background:${c}"></div></div><div class="pct">${a.v}%</div></div>`;
-  }).join('');
+  ]);
+  renderBars('auxiliares',[
+    {n:'Laura Peña',v:70},{n:'Diego Rojas',v:90},{n:'Marcela Ruiz',v:58},
+    {n:'Andrés Gil',v:95},{n:'Paula Mora',v:81},
+  ]);
 
   const clientes=[
     {n:'Consultec Inc S.A.S',as:'Joath Casanova',v:52,t:'Atrasado',cls:'t-bad'},

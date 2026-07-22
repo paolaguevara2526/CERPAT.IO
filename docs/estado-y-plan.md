@@ -83,22 +83,46 @@ por cliente y por asesor.
   Asesoría Contable / Revisoría), ajustable por excepción.
 - El catálogo base es una **lista maestra**; para **cada cliente** se puede
   **agregar o retirar** actividades y **ajustar la periodicidad** que corresponda.
-- **Seguimiento mensual** por actividad/cliente: Programado → Ejecutado → Auditado.
-- Estados calzan con el ciclo actual de `Tarea`. RAG derivado de fechas.
+- **Área** como dimensión organizacional: la firma trabaja por secciones —
+  **Impuestos, Informes, Cumplimiento, Nómina, Tesorería**. Cada actividad
+  pertenece a un área (distinta del "grupo contable" temático).
+- Cada actividad/cliente distingue **Asesor (responsable)** de **Auxiliar
+  (ejecutor)**. Lo práctico: asignar asesor+auxiliar **por cliente × área** y que
+  las tareas hereden esos responsables.
+- **Seguimiento en 3 ejes**: por **área**, por **asesor** y por **auxiliar**
+  (además de por cliente). Ciclo mensual Programado → Ejecutado → Auditado; RAG
+  derivado de fechas.
 
-**Catálogo base (34 actividades, 4 grupos):**
+**Catálogo base (34 actividades, 4 grupos contables + área):**
 [`data/plan-trabajo-actividades.csv`](./data/plan-trabajo-actividades.csv) —
-Estados Financieros, Impuestos Nacionales (DIAN), Impuestos Municipales,
-Obligaciones Mercantiles (transcrito del cronograma del equipo; revisar/ajustar).
+columnas `grupo`, `area`, `codigo`, `actividad`, `documento_formato`,
+`periodicidad_sugerida`. Grupos: Estados Financieros, Impuestos Nacionales (DIAN),
+Impuestos Municipales, Obligaciones Mercantiles. El mapeo a **área** es una
+propuesta (Impuestos 12 · Cumplimiento 10 · Tesorería 6 · Informes 4 · Nómina 2):
+revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
+
+**Mockup:** [`mockups/plan-trabajo-cumplimiento.html`](./mockups/plan-trabajo-cumplimiento.html)
+— cuadrícula semáforo por área + tarjetas de cumplimiento por área/asesor/auxiliar.
+
+**Calendario (conexión):**
+- **Base:** el plan alimenta el **Calendario** y **Mi Día** internos de la app,
+  filtrables por área/asesor/auxiliar (una vista "Mi Día" por persona).
+- **Opcional (fase 4):** sincronizar los vencimientos de cada persona a su
+  **Outlook (M365)** o **Google Calendar** (one-way vía n8n/Graph), o un **feed
+  `.ics` suscribible** por persona/área.
 
 **Cambios de datos previstos (aún no implementados):**
-- `ActividadPlan` — catálogo base (grupo, código, actividad, descripción,
-  documento/evidencia, periodicidad sugerida, requiereAuditoria), por organización.
-- `PlanClienteActividad` — vínculo empresa↔actividad: `activa` (agregar/retirar
-  por cliente) + `periodicidad` propia del cliente + asesor responsable.
-- `SeguimientoMensual` (o vía `Tarea` con `actividadPlanId` + `periodo` año-mes):
-  estado Programado/Ejecutado/Auditado por cliente × actividad × mes, base de la
-  cuadrícula semáforo y las métricas.
+- `Area` — catálogo de áreas de la firma (Impuestos, Informes, Cumplimiento,
+  Nómina, Tesorería), por organización.
+- `ActividadPlan` — catálogo base (grupo, **areaId**, código, actividad,
+  descripción, documento/evidencia, periodicidad sugerida, requiereAuditoria).
+- `PlanClienteActividad` — vínculo empresa↔actividad: `activa` (agregar/retirar) +
+  `periodicidad` propia del cliente.
+- `AsignacionClienteArea` — por empresa × área: **asesor** (responsable) y
+  **auxiliar** (ejecutor); las tareas heredan de aquí.
+- `SeguimientoMensual` (o `Tarea` con `actividadPlanId` + `periodo` + `areaId` +
+  `asesorId`/`auxiliarId`): estado Programado/Ejecutado/Auditado por cliente ×
+  actividad × mes — base de la cuadrícula y de las métricas por 3 ejes.
 
 **Mockup de referencia:** [`mockups/plan-trabajo-cumplimiento.html`](./mockups/plan-trabajo-cumplimiento.html)
 (cuadrícula semáforo + métricas por asesor y cliente). Próximo paso: afinar el
