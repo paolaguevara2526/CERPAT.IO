@@ -81,12 +81,24 @@ por cliente y por asesor.
 **Decisiones tomadas:**
 - Asignación del plan **por plantilla de tipo de servicio** (Outsourcing /
   Asesoría Contable / Revisoría), ajustable por excepción.
-- Estados calzan con el ciclo actual de `Tarea`: Programado (por_iniciar/en_curso)
-  → Ejecutado (terminado) → Auditado (auditado). RAG derivado de fechas.
+- El catálogo base es una **lista maestra**; para **cada cliente** se puede
+  **agregar o retirar** actividades y **ajustar la periodicidad** que corresponda.
+- **Seguimiento mensual** por actividad/cliente: Programado → Ejecutado → Auditado.
+- Estados calzan con el ciclo actual de `Tarea`. RAG derivado de fechas.
 
-**Cambios de datos previstos (aún no implementados):** entidad `ActividadPlan`
-(plantilla), vínculo actividad↔cliente (o por servicio), y en `Tarea` un
-`actividadPlanId` + `periodo` para armar la cuadrícula.
+**Catálogo base (34 actividades, 4 grupos):**
+[`data/plan-trabajo-actividades.csv`](./data/plan-trabajo-actividades.csv) —
+Estados Financieros, Impuestos Nacionales (DIAN), Impuestos Municipales,
+Obligaciones Mercantiles (transcrito del cronograma del equipo; revisar/ajustar).
+
+**Cambios de datos previstos (aún no implementados):**
+- `ActividadPlan` — catálogo base (grupo, código, actividad, descripción,
+  documento/evidencia, periodicidad sugerida, requiereAuditoria), por organización.
+- `PlanClienteActividad` — vínculo empresa↔actividad: `activa` (agregar/retirar
+  por cliente) + `periodicidad` propia del cliente + asesor responsable.
+- `SeguimientoMensual` (o vía `Tarea` con `actividadPlanId` + `periodo` año-mes):
+  estado Programado/Ejecutado/Auditado por cliente × actividad × mes, base de la
+  cuadrícula semáforo y las métricas.
 
 **Mockup de referencia:** [`mockups/plan-trabajo-cumplimiento.html`](./mockups/plan-trabajo-cumplimiento.html)
 (cuadrícula semáforo + métricas por asesor y cliente). Próximo paso: afinar el

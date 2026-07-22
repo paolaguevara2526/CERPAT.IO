@@ -1,0 +1,35 @@
+grupo,codigo,actividad,descripcion,documento_formato,periodicidad_sugerida
+Estados Financieros,EF-01,Conciliación bancaria,Verificar la conciliación de cada cuenta bancaria e identificar pendientes,0 Conciliación Bancaria-Banco-Cuenta,Mensual
+Estados Financieros,EF-02,Conciliar cartera,Verificar pagos de cartera; identificar retenciones/descuentos no tenidos en cuenta,Matriz Seguimiento Cuentas por Cobrar,Bimestral
+Estados Financieros,EF-03,Conciliación caja,Conciliar el movimiento de la caja de la empresa,0 Conciliación cajas-Mes-Año,Mensual
+Estados Financieros,EF-04,Depreciación activos fijos,Registro depreciación según anexo de activos fijos,0 Depreciación-Mes-Año,Mensual
+Estados Financieros,EF-05,Amortización intangibles,Registro amortización según anexo de intangibles,0 Amortización-Mes-Año,Mensual
+Estados Financieros,EF-06,Anticipos (verificación de saldos),Verificar que los anticipos correspondan y no sean gastos sin legalizar,Consecutivo-Anticipos-Mes-Año,Mensual
+Estados Financieros,EF-07,Circularización proveedores y clientes,Solicitar estados de cuenta para corroborar saldos con contabilidad,—,Semestral
+Estados Financieros,EF-08,Conciliación de impuestos (retenciones/IVA),Comparativo de retenciones e impuesto a las ventas,OPE-F-58 Comparativo de retenciones,Trimestral
+Estados Financieros,EF-09,Obligaciones financieras,Verificar aplicación de créditos (capital e intereses) según extractos,Extractos bancarios de obligaciones,Mensual
+Estados Financieros,EF-10,Obligaciones laborales y seguridad social,Verificar cierre de liquidaciones y saldos según planilla,"Revisión Parafiscales, provisiones-Mes",Mensual
+Estados Financieros,EF-11,Anticipo de clientes,Verificar saldos de anticipos de clientes,Revisión anticipos Clientes-Período,Semestral
+Estados Financieros,EF-12,Requisitos de Revisor Fiscal,Confirmar topes y requisitos según cifras del año gravable anterior,Verificar requisitos según topes,Anual
+Estados Financieros,EF-13,Estados financieros trimestrales,Elaboración de EEFF trimestrales para revisión de utilidad y bancos,Informes Financieros Trimestrales / FOR-PS-65,Trimestral
+Estados Financieros,EF-14,Informes a Superintendencia,Revisar responsabilidades y vencimientos ante superintendencias,—,Anual
+Estados Financieros,EF-15,Facturación electrónica (control),"Control de facturación electrónica, consecutivos y resoluciones",Claves DIAN / Resoluciones Facturación,Semestral
+Estados Financieros,EF-16,Revisar nómina mensual (documento soporte),Revisar nómina para envío de documento soporte de pago de nómina electrónica,Revisión nómina electrónica-Mes,Mensual
+Impuestos Nacionales (DIAN),IN-01,Retención en la fuente,Liquidación de retención en la fuente mensual,OPE-F-50 Anexo Retención en la Fuente,Mensual
+Impuestos Nacionales (DIAN),IN-02,IVA,Identificar periodicidad y actividades gravadas; revisión y liquidación,OPE-F-51 Anexo de IVA,Bimestral
+Impuestos Nacionales (DIAN),IN-03,Declaración de renta,Elaboración y liquidación de renta; certificados y retenciones,Liquidador de Renta anual,Anual
+Impuestos Nacionales (DIAN),IN-04,Conciliación fiscal,Conciliación fiscal como anexo a la declaración de renta,Plantilla Régimen / F260,Anual
+Impuestos Nacionales (DIAN),IN-05,Información exógena DIAN,Elaboración y presentación de información exógena,Prevalidador Información Exógena,Anual
+Impuestos Nacionales (DIAN),IN-06,Anticipo Régimen Simple (RST),Anticipo bimestral del Régimen Simple de Tributación,Anexo Anticipo RST formulario 2593,Bimestral
+Impuestos Nacionales (DIAN),IN-07,Declaración consolidada RST,Elaboración y liquidación de declaración consolidada del Régimen Simple,Consolidado RST formulario 260,Anual
+Impuestos Nacionales (DIAN),IN-08,RUB (Registro Único de Beneficiarios),Registrar o actualizar información de beneficiarios finales,Formulario 2687,Trimestral
+Impuestos Nacionales (DIAN),IN-09,Cumplimiento requisitos RST,Verificar antes del 31 de enero los requisitos para seguir en RST,Requisitos ART 905 RST,Anual
+Impuestos Nacionales (DIAN),IN-10,Proveedores ficticios,Verificar listado de proveedores ficticios DIAN contra el sistema contable,Resolución DIAN proveedores ficticios,Cuatrimestral
+Impuestos Municipales,IM-01,Retención de ICA (Rete ICA),Revisar estatutos por ciudad y obligación de ser agente de retención de ICA,OPE-F-52 Anexo Retención de ICA,Bimestral
+Impuestos Municipales,IM-02,Industria y comercio (ICA),Identificar municipios donde se presta servicio; revisar estatutos y periodicidad,Matriz Seguimiento / Estatutos,Mensual
+Impuestos Municipales,IM-03,Información exógena municipios (Rete ICA),Información exógena de industria y comercio por municipio,Formato Exógena de cada Municipio,Anual
+Impuestos Municipales,IM-04,Actualización de datos ante municipios,"Actualizar nombre, dirección, correo, etc. en sistemas de las alcaldías",Formato actualización de ICA Municipio,Semestral
+Impuestos Municipales,IM-05,Revisión de municipios (certificados de retención),Revisar municipios donde practicaron retención a clientes y registrar certificados,Formatos Solicitud de certificados,Semestral
+Obligaciones Mercantiles,OM-01,Renovación Cámara de Comercio,"Verificar direcciones, contactos, sucursales y establecimientos; renovar",Formulario Renovación Cámara de Comercio,Anual
+Obligaciones Mercantiles,OM-02,Renovación de proponentes,Renovación del registro de proponentes,Formulario Renovación de Proponentes,Anual
+Obligaciones Mercantiles,OM-03,Actualización libro de actas y accionistas,Revisar que actas y accionistas estén debidamente registrados y actualizados,Formato Relación de Actas,Semestral
