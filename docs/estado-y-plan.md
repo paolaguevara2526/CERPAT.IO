@@ -144,6 +144,24 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
 - **Agregar/quitar actividades por área en cada cliente:** la gestión del plan de
   cada cliente se hace por área (activar/desactivar actividades vía
   `PlanClienteActividad.activa`).
+- **Tamaño por área con tallas:** la talla (S/M/L/XL) es **por empresa × área**
+  (una empresa puede ser L en Tesorería y S en Nómina) → campo `talla` en
+  `AsignacionClienteArea`.
+
+**Estado de implementación:**
+- ✅ **Fase 1 — modelo de datos (schema Prisma):** agregadas `Area`,
+  `ActividadPlan`, `SubtareaPlantilla`, `PlanClienteActividad`,
+  `AsignacionClienteArea` (asesor/auxiliar/talla), y campos de plan en `Tarea`
+  (`actividadPlanId`, `areaId`, `periodo`, `asesorId`, `auxiliarId`,
+  `comprobanteDesde/Hasta`, `cantidadRegistros`). Valida y genera cliente.
+  **Aún no aplicado a la BD** (db push pendiente). El rol Coordinador es una fila
+  de `Rol` (seed).
+- ⬜ Fase 2 — aplicar a la BD (`db push`) + sembrar el catálogo (`ActividadPlan`
+  desde el CSV) + áreas + rol Coordinador.
+- ⬜ Fase 3 — generación automática de tareas por cliente×actividad×período.
+- ⬜ Fase 4 — vistas: gestión del plan por cliente/área, ejecución
+  (subtareas + comprobantes) y **Panel de Coordinación** (indicadores, solo lectura).
+- ⬜ Fase 5 — calendario (interno + sync opcional Outlook/Google).
 
 **Mockup de referencia:** [`mockups/plan-trabajo-cumplimiento.html`](./mockups/plan-trabajo-cumplimiento.html)
 (cuadrícula semáforo + métricas por asesor y cliente). Próximo paso: afinar el

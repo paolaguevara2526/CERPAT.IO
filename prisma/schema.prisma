@@ -94,6 +94,12 @@ model Organizacion {
   parametros ParametrosLiquidacion?
   apariencia Apariencia?
 
+  // Plan de trabajo
+  areas            Area[]
+  actividadesPlan  ActividadPlan[]
+  planesCliente    PlanClienteActividad[]
+  asignacionesArea AsignacionClienteArea[]
+
   @@map("organizaciones")
 }
 
@@ -115,6 +121,10 @@ model Usuario {
   tareasCreadas Tarea[]         @relation("TareasCreadas")
   asignaciones  TareaAsignado[]
   asesor        Asesor?
+  tareasComoAsesor   Tarea[]                 @relation("TareaAsesor")
+  tareasComoAuxiliar Tarea[]                 @relation("TareaAuxiliar")
+  areasComoAsesor    AsignacionClienteArea[] @relation("AsesorArea")
+  areasComoAuxiliar  AsignacionClienteArea[] @relation("AuxiliarArea")
 
   // Email único por organización (dos firmas distintas pueden repetir email).
   @@unique([organizacionId, email])
@@ -188,6 +198,8 @@ model Empresa {
 
   tareas Tarea[]
   pagos  Pago[]
+  planActividades  PlanClienteActividad[]
+  asignacionesArea AsignacionClienteArea[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -342,6 +354,15 @@ model Tarea {
   interno                 Boolean         @default(false) // true = no se muestra en calendario/impresión para cliente
   observaciones           String?
   creadoPorId             String?
+  // Vínculo al Plan de Trabajo (las tareas generadas por el plan lo llevan)
+  actividadPlanId   String?
+  areaId            String?
+  periodo           String? // "YYYY-MM" del período del plan
+  asesorId          String? // responsable (heredado de la asignación cliente×área)
+  auxiliarId        String? // ejecutor
+  comprobanteDesde  String? // registro en software: comprobante inicial
+  comprobanteHasta  String? // comprobante final
+  cantidadRegistros Int? //    # de registros realizados
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 
@@ -351,6 +372,10 @@ model Tarea {
   tipoObligacion TipoObligacion? @relation(fields: [tipoObligacionId], references: [id])
   periodicidad   Periodicidad?   @relation(fields: [periodicidadId], references: [id])
   creadoPor      Usuario?        @relation("TareasCreadas", fields: [creadoPorId], references: [id])
+  actividadPlan  ActividadPlan?  @relation(fields: [actividadPlanId], references: [id])
+  area           Area?           @relation(fields: [areaId], references: [id])
+  asesor         Usuario?        @relation("TareaAsesor", fields: [asesorId], references: [id])
+  auxiliar       Usuario?        @relation("TareaAuxiliar", fields: [auxiliarId], references: [id])
 
   asignados TareaAsignado[]
   etiquetas TareaEtiqueta[]
@@ -360,6 +385,8 @@ model Tarea {
   @@index([fechaVencimiento])
   @@index([estado])
   @@index([empresaId])
+  @@index([actividadPlanId])
+  @@index([areaId])
   @@map("tareas")
 }
 
@@ -467,4 +494,104 @@ model Apariencia {
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
 
   @@map("apariencia")
+}
+
+// ---------- PLAN DE TRABAJO CONTABLE ----------
+// Unifica con el planeador: ActividadPlan (plantilla) genera Tarea (entidad ya
+// existente que aparece en Calendario/Tablero/Lista/Mi Día). El rol "Coordinador"
+// es una fila de Rol (no requiere esquema). Ver docs/estado-y-plan.md.
+
+// Área organizacional de la firma (Impuestos, Informes, Cumplimiento, Nómina, Tesorería)
+model Area {
+  id             String @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int    @default(0)
+
+  organizacion Organizacion            @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  actividades  ActividadPlan[]
+  asignaciones AsignacionClienteArea[]
+  tareas       Tarea[]
+
+  @@unique([organizacionId, nombre])
+  @@index([organizacionId])
+  @@map("areas")
+}
+
+// Catálogo base de actividades del plan (plantilla maestra)
+model ActividadPlan {
+  id                 String  @id @default(uuid())
+  organizacionId     String
+  areaId             String?
+  grupo              String? // grupo contable (Estados Financieros, Impuestos DIAN, ...)
+  codigo             String
+  nombre             String
+  descripcion        String?
+  documentoFormato   String?
+  periodicidad       String? // periodicidad sugerida (texto del catálogo)
+  esRegistroSoftware Boolean @default(false)
+  requiereAuditoria  Boolean @default(false)
+  orden              Int     @default(0)
+  activo             Boolean @default(true)
+
+  organizacion Organizacion           @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  area         Area?                  @relation(fields: [areaId], references: [id])
+  subtareas    SubtareaPlantilla[]
+  planes       PlanClienteActividad[]
+  tareas       Tarea[]
+
+  @@unique([organizacionId, codigo])
+  @@index([organizacionId])
+  @@map("actividades_plan")
+}
+
+// Checklist plantilla de una actividad → se copia a Subtarea al generar la tarea
+model SubtareaPlantilla {
+  id              String @id @default(uuid())
+  actividadPlanId String
+  texto           String
+  orden           Int    @default(0)
+
+  actividad ActividadPlan @relation(fields: [actividadPlanId], references: [id], onDelete: Cascade)
+
+  @@map("subtareas_plantilla")
+}
+
+// Qué actividades del catálogo aplican a cada cliente (agregar/quitar por área)
+model PlanClienteActividad {
+  id              String  @id @default(uuid())
+  organizacionId  String
+  empresaId       String
+  actividadPlanId String
+  activa          Boolean @default(true)
+  periodicidad    String? // periodicidad propia del cliente (override del catálogo)
+
+  organizacion Organizacion  @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  actividad    ActividadPlan @relation(fields: [actividadPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, actividadPlanId])
+  @@index([organizacionId])
+  @@map("plan_cliente_actividad")
+}
+
+// Por empresa × área: asesor (responsable), auxiliar (ejecutor) y talla (tamaño)
+model AsignacionClienteArea {
+  id             String  @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  areaId         String
+  asesorId       String?
+  auxiliarId     String?
+  talla          String? // S / M / L / XL — tamaño de la empresa por área
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  area         Area         @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  asesor       Usuario?     @relation("AsesorArea", fields: [asesorId], references: [id])
+  auxiliar     Usuario?     @relation("AuxiliarArea", fields: [auxiliarId], references: [id])
+
+  @@unique([empresaId, areaId])
+  @@index([organizacionId])
+  @@map("asignacion_cliente_area")
 }
