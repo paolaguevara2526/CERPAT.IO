@@ -38,7 +38,7 @@ async function main() {
   });
 
   // ---------- Roles (por organización) ----------
-  const roles = ['Administrador', 'Asesor', 'Auditor', 'Auxiliar'];
+  const roles = ['Administrador', 'Asesor', 'Auditor', 'Auxiliar', 'Coordinador'];
   const rolIds: Record<string, string> = {};
   for (const [i, nombre] of roles.entries()) {
     const id = `seed-rol-${i}`;
@@ -134,6 +134,16 @@ async function main() {
     });
   }
 
+  // ---------- Áreas de la firma (Plan de Trabajo) ----------
+  const areas = ['Impuestos', 'Informes', 'Cumplimiento', 'Nómina', 'Tesorería'];
+  for (const [i, nombre] of areas.entries()) {
+    await prisma.area.upsert({
+      where: { organizacionId_nombre: { organizacionId: ORG_ID, nombre } },
+      update: {},
+      create: { organizacionId: ORG_ID, nombre, orden: i + 1 },
+    });
+  }
+
   // ---------- Parámetros del liquidador (fila única por organización) ----------
   await prisma.parametrosLiquidacion.upsert({
     where: { organizacionId: ORG_ID },
@@ -155,7 +165,7 @@ async function main() {
     create: { organizacionId: ORG_ID, nombreApp: 'Planeador', subtitulo: 'Sistema de Gestión y Planificación', colorPrimario: '#34C98B' },
   });
 
-  console.log('✓ Seed completado: root de plataforma, organización demo (CERPAT), roles y catálogos base cargados.');
+  console.log('✓ Seed completado: root, organización demo (CERPAT), roles (incl. Coordinador), áreas y catálogos base cargados.');
 }
 
 main()
