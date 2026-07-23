@@ -100,13 +100,14 @@
 
 <div class="wrap">
   <header class="top">
-    <div class="eyebrow">Planeador CERPAT · Propuesta de vista</div>
-    <h1>Plan de Trabajo &amp; Cumplimiento</h1>
+    <div class="eyebrow">Planeador CERPAT · Panel de Coordinación</div>
+    <h1>Indicadores de Cumplimiento</h1>
     <div class="ctx">
-      <span class="chip">Plantilla: <b>Outsourcing contable</b></span>
-      <span class="chip">Cliente: <b>Ecoconcretos S.A.S</b></span>
+      <span class="chip">Perfil: <b>Coordinador</b> · solo consulta</span>
       <span class="chip">Año <b>2026</b> · corte a Julio</span>
       <span class="chip">Seguimiento por: <b>área · asesor · auxiliar</b></span>
+      <span class="chip">Carga <b>ponderada por tamaño</b> de empresa</span>
+      <span class="chip">Actividades: <b>agregar/quitar por área</b> en cada cliente</span>
     </div>
   </header>
 
@@ -158,17 +159,55 @@
         <div class="pad" id="auxiliares"></div>
       </div>
       <div class="card">
-        <div class="hd"><div class="t">Clientes en riesgo</div><div class="m">nivel de atraso</div></div>
+        <div class="hd"><div class="t">Registros procesados</div><div class="m">comprobantes · mes</div></div>
+        <div class="pad" id="registros"></div>
+      </div>
+      <div class="card">
+        <div class="hd"><div class="t">Clientes en riesgo</div><div class="m">tamaño · atraso</div></div>
         <div class="pad" id="clientes"></div>
       </div>
     </div>
   </div>
 
-  <div class="note">
+  <h2 class="sec">Cómo se ejecuta cada actividad (vista del auxiliar/asesor — no del coordinador)</h2>
+  <div class="card">
+    <div class="hd"><div class="t">Causación de compras · <span style="color:var(--sub);font-weight:600;">Informes</span></div><div class="m">Auxiliar: Diego Rojas · Mensual</div></div>
+    <div class="pad" style="display:grid;grid-template-columns:1.2fr 1fr;gap:22px;">
+      <div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);margin-bottom:8px;">Subtareas (checklist)</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:13px;">
+          <div style="display:flex;gap:9px;align-items:center;"><span style="width:16px;height:16px;border-radius:4px;background:var(--ok-bg);color:var(--ok);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">✓</span> Descargar soportes del período</div>
+          <div style="display:flex;gap:9px;align-items:center;"><span style="width:16px;height:16px;border-radius:4px;background:var(--ok-bg);color:var(--ok);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;">✓</span> Verificar IVA y retenciones</div>
+          <div style="display:flex;gap:9px;align-items:center;color:var(--sub);"><span style="width:16px;height:16px;border-radius:4px;background:var(--future);display:inline-flex;"></span> Cruce con extractos bancarios</div>
+        </div>
+        <div style="font-size:11.5px;color:var(--sub);margin-top:10px;">La tarea no pasa a <b>Ejecutada</b> mientras queden subtareas pendientes.</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);margin-bottom:8px;">Registro en el software</div>
+        <div style="display:flex;gap:10px;">
+          <div style="flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;">
+            <div style="font-size:10.5px;color:var(--sub);">Comprobante inicial</div>
+            <div style="font-family:var(--mono);font-weight:700;font-size:15px;">CE-1045</div>
+          </div>
+          <div style="flex:1;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;">
+            <div style="font-size:10.5px;color:var(--sub);">Comprobante final</div>
+            <div style="font-family:var(--mono);font-weight:700;font-size:15px;">CE-1290</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;align-items:baseline;gap:8px;">
+          <span style="font-size:26px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;">246</span>
+          <span style="font-size:12.5px;color:var(--sub);">registros realizados este mes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:22px;">
     <b>Cómo se llena solo:</b> el plan está organizado por <b>área</b> (Impuestos · Informes · Cumplimiento · Nómina · Tesorería);
     cada área tiene un <b>asesor</b> (responsable) y un <b>auxiliar</b> (ejecutor) por cliente. El sistema genera cada tarea (Programada)
-    según la periodicidad; el auxiliar la ejecuta con evidencia, el asesor/auditor la marca <b>Auditada</b>. La cuadrícula y las métricas
-    (cumplimiento y atraso <b>por área, por asesor y por auxiliar</b>) se calculan solas — nadie llena la matriz a mano.
+    según la periodicidad; el auxiliar completa las <b>subtareas</b> y (en actividades de registro) captura el <b>rango de comprobantes</b>
+    → el sistema cuenta los <b>registros</b>. La carga se <b>pondera por el tamaño de la empresa</b> (S/M/L/XL) para comparar justo.
+    Este <b>Panel de Coordinación es solo consulta</b> (perfil Coordinador); la ejecución vive en la vista operativa de cada asesor/auxiliar.
   </div>
 </div>
 
@@ -219,7 +258,7 @@
   const body=document.getElementById('mbody');
   let html='';
   groups.forEach(grp=>{
-    html+=`<tr class="grp"><td colspan="13">${grp.g} &nbsp;·&nbsp; Asesor: ${grp.resp} &nbsp;·&nbsp; Auxiliar: ${grp.aux}</td></tr>`;
+    html+=`<tr class="grp"><td colspan="13"><span style="float:right;font-weight:700;color:var(--accent);font-size:10.5px;letter-spacing:0;text-transform:none;">＋ agregar · − quitar</span>${grp.g} &nbsp;·&nbsp; Asesor: ${grp.resp} &nbsp;·&nbsp; Auxiliar: ${grp.aux}</td></tr>`;
     grp.items.forEach(it=>{
       const st=statuses(it.per);
       html+=`<tr><td class="m-actividad"><div class="an">${it.n}</div><div class="ap">${it.p}</div></td>`;
@@ -250,14 +289,21 @@
     {n:'Andrés Gil',v:95},{n:'Paula Mora',v:81},
   ]);
 
+  // Registros procesados (comprobantes del mes) por auxiliar
+  document.getElementById('registros').innerHTML=[
+    {n:'Laura Peña',r:1240},{n:'Diego Rojas',r:2110},{n:'Marcela Ruiz',r:640},
+    {n:'Andrés Gil',r:980},{n:'Paula Mora',r:1520},
+  ].map(a=>`<div class="bar-row"><div class="nm">${a.n}</div><div class="track"><div class="fill" style="width:${Math.min(100,a.r/24)}%;background:var(--accent)"></div></div><div class="pct" style="width:auto;min-width:48px">${a.r.toLocaleString('es-CO')}</div></div>`).join('');
+
+  const TAMcolor={S:'var(--future-ink)',M:'var(--warn)',L:'var(--bad)',XL:'var(--bad)'};
   const clientes=[
-    {n:'Consultec Inc S.A.S',as:'Joath Casanova',v:52,t:'Atrasado',cls:'t-bad'},
-    {n:'AP Consultores S.A.S',as:'Hugo Beltrán',v:66,t:'En riesgo',cls:'t-warn'},
-    {n:'Ecoconcretos S.A.S',as:'Katherine Díaz',v:78,t:'En riesgo',cls:'t-warn'},
-    {n:'Grasscol S.A.S',as:'Alexandra García',v:94,t:'Al día',cls:'t-ok'},
-    {n:'Transportes El Llano S.A.S',as:'Tania Castiblanco',v:97,t:'Al día',cls:'t-ok'},
+    {n:'Consultec Inc S.A.S',as:'Joath Casanova',v:52,tam:'L',t:'Atrasado',cls:'t-bad'},
+    {n:'AP Consultores S.A.S',as:'Hugo Beltrán',v:66,tam:'M',t:'En riesgo',cls:'t-warn'},
+    {n:'Ecoconcretos S.A.S',as:'Katherine Díaz',v:78,tam:'XL',t:'En riesgo',cls:'t-warn'},
+    {n:'Grasscol S.A.S',as:'Alexandra García',v:94,tam:'S',t:'Al día',cls:'t-ok'},
+    {n:'Transportes El Llano S.A.S',as:'Tania Castiblanco',v:97,tam:'M',t:'Al día',cls:'t-ok'},
   ];
   document.getElementById('clientes').innerHTML=clientes.map(c=>
-    `<div class="cli"><div class="l"><div class="nm">${c.n}</div><div class="as">${c.as} · ${c.v}% cumplimiento</div></div><span class="tag ${c.cls}">${c.t}</span></div>`
+    `<div class="cli"><div class="l"><div class="nm">${c.n} <span title="Tamaño" style="font-size:10px;font-weight:800;color:${TAMcolor[c.tam]};border:1px solid var(--line);border-radius:5px;padding:0 5px;">${c.tam}</span></div><div class="as">${c.as} · ${c.v}% cumplimiento</div></div><span class="tag ${c.cls}">${c.t}</span></div>`
   ).join('');
 </script>

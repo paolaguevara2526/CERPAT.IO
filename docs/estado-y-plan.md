@@ -124,6 +124,27 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
   `asesorId`/`auxiliarId`): estado Programado/Ejecutado/Auditado por cliente ×
   actividad × mes — base de la cuadrícula y de las métricas por 3 ejes.
 
+**Iteración 2 — mejoras del equipo (en el mockup, por implementar):**
+- **Subtareas por actividad:** `SubtareaPlantilla` (por `ActividadPlan`, ordenada)
+  → se copia a `Subtarea` de la tarea al generarla. Regla ya existente: no se
+  marca Ejecutada/Auditada con subtareas pendientes.
+- **Registro en software (comprobantes):** bandera `esRegistroSoftware` en
+  `ActividadPlan`; en la ejecución se capturan `comprobanteDesde` /
+  `comprobanteHasta` → `cantidadRegistros`. Métrica: **registros por auxiliar**
+  (causación de compras/ventas/egresos, etc.).
+- **Tamaño/complejidad de empresa:** `Empresa.tamano` (S/M/L/XL) — arranque
+  manual por el coordinador; opcional afinar con drivers por área (Tesorería
+  #bancos/#movimientos, Nómina #empleados, Impuestos #municipios…) → un
+  `factorComplejidad` que **pondera la carga y el cumplimiento** para comparar
+  justo entre asesores.
+- **Panel de Coordinación (solo consulta):** los indicadores de cumplimiento/
+  seguimiento viven en una vista aparte, restringida a un rol **Coordinador**;
+  la ejecución (subtareas, comprobantes, evidencia) vive en la vista operativa de
+  cada asesor/auxiliar.
+- **Agregar/quitar actividades por área en cada cliente:** la gestión del plan de
+  cada cliente se hace por área (activar/desactivar actividades vía
+  `PlanClienteActividad.activa`).
+
 **Mockup de referencia:** [`mockups/plan-trabajo-cumplimiento.html`](./mockups/plan-trabajo-cumplimiento.html)
 (cuadrícula semáforo + métricas por asesor y cliente). Próximo paso: afinar el
 mockup con el equipo y luego el modelo de datos + generación.
