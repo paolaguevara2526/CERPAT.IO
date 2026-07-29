@@ -41,6 +41,16 @@ async function main() {
     select: { empresaId: true, actividadPlanId: true, periodicidad: true },
   });
 
+  // Asignaciones cliente×área (asesor responsable / auxiliar ejecutor), para
+  // heredarlas en cada tarea generada. Clave: `${empresaId}|${areaId}`.
+  const asignaciones = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: ORG_ID },
+    select: { empresaId: true, areaId: true, asesorId: true, auxiliarId: true },
+  });
+  const asignPorEmpresaArea = new Map(
+    asignaciones.map((a) => [`${a.empresaId}|${a.areaId}`, { asesorId: a.asesorId, auxiliarId: a.auxiliarId }]),
+  );
+
   // Tareas del plan ya existentes para este período (para no duplicar).
   const existentes = await prisma.tarea.findMany({
     where: { organizacionId: ORG_ID, periodo, actividadPlanId: { not: null } },
@@ -58,6 +68,7 @@ async function main() {
     const per = p.periodicidad || act.periodicidad;
     if (!aplicaEnMes(per, month)) continue;
     if (yaExiste.has(`${p.empresaId}|${p.actividadPlanId}`)) continue;
+    const asign = act.areaId ? asignPorEmpresaArea.get(`${p.empresaId}|${act.areaId}`) : undefined;
     tareas.push({
       organizacionId: ORG_ID,
       titulo: act.nombre,
@@ -67,7 +78,8 @@ async function main() {
       actividadPlanId: p.actividadPlanId,
       areaId: act.areaId,
       periodo,
-      // asesorId/auxiliarId quedan null hasta cargar usuarios y asignaciones por área.
+      asesorId: asign?.asesorId ?? null,
+      auxiliarId: asign?.auxiliarId ?? null,
     });
   }
 

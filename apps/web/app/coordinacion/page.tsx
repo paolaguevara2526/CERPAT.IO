@@ -16,12 +16,15 @@ const BRAND = '#34C98B';
 type Kpis = { total: number; ejecutadas: number; vencidas: number; porAuditar: number; cumplimiento: number };
 type PorArea = { area: string; total: number; ejecutadas: number; cumplimiento: number };
 type PorCliente = { empresa: string; total: number; ejecutadas: number; vencidas: number; cumplimiento: number };
+type PorPersona = { nombre: string; total: number; ejecutadas: number; vencidas: number; cumplimiento: number };
 type Respuesta = {
   organizacion: { nombre: string } | null;
   periodo: string | null;
   kpis: Kpis | null;
   porArea: PorArea[];
   porCliente: PorCliente[];
+  porAsesor?: PorPersona[];
+  porAuxiliar?: PorPersona[];
 };
 
 async function getCumplimiento(periodo?: string): Promise<{ data: Respuesta | null; error: string | null }> {
@@ -54,6 +57,8 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
   const kpis = data?.kpis;
   const porArea = data?.porArea ?? [];
   const porCliente = data?.porCliente ?? [];
+  const porAsesor = data?.porAsesor ?? [];
+  const porAuxiliar = data?.porAuxiliar ?? [];
   const enRiesgo = porCliente.filter((c) => c.cumplimiento < 60 || c.vencidas > 0).slice(0, 15);
 
   const kpiCards = kpis
@@ -137,6 +142,48 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
               )}
             </div>
 
+            {/* Por asesor y por auxiliar */}
+            {(porAsesor.length > 0 || porAuxiliar.length > 0) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 20, marginBottom: 28 }}>
+                {[
+                  { titulo: 'Seguimiento por asesor', sub: 'responsable del área', filas: porAsesor },
+                  { titulo: 'Seguimiento por auxiliar', sub: 'ejecutor', filas: porAuxiliar },
+                ].map((bloque) => (
+                  <div key={bloque.titulo}>
+                    <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 4px' }}>{bloque.titulo}</h2>
+                    <div style={{ fontSize: 12.5, color: '#667085', margin: '0 0 12px' }}>{bloque.sub}</div>
+                    <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', overflow: 'hidden' }}>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr>
+                              {['Persona', 'Tareas', 'Venc.', '%'].map((h) => (
+                                <th key={h} style={{ textAlign: h === 'Persona' ? 'left' : 'right', textTransform: 'uppercase', fontSize: 10.5, letterSpacing: 0.3, color: '#667085', fontWeight: 800, padding: '10px 12px', borderBottom: '1px solid #E4E7EC', whiteSpace: 'nowrap' }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {bloque.filas.length === 0 ? (
+                              <tr><td colSpan={4} style={{ padding: 24, textAlign: 'center', color: '#667085' }}>Sin asignaciones todavía.</td></tr>
+                            ) : (
+                              bloque.filas.map((p) => (
+                                <tr key={p.nombre}>
+                                  <td style={{ padding: '9px 12px', borderBottom: '1px solid #F0F1F3', fontWeight: 600 }}>{p.nombre}</td>
+                                  <td style={{ padding: '9px 12px', borderBottom: '1px solid #F0F1F3', color: '#475467', textAlign: 'right' }}>{p.total}</td>
+                                  <td style={{ padding: '9px 12px', borderBottom: '1px solid #F0F1F3', textAlign: 'right', fontWeight: 700, color: p.vencidas > 0 ? '#E85D4E' : '#475467' }}>{p.vencidas}</td>
+                                  <td style={{ padding: '9px 12px', borderBottom: '1px solid #F0F1F3', textAlign: 'right', fontWeight: 800, color: colorCumplimiento(p.cumplimiento) }}>{p.cumplimiento}%</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Clientes en riesgo */}
             <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 14px' }}>
               Clientes en riesgo <span style={{ fontWeight: 500, fontSize: 13, color: '#667085' }}>(bajo cumplimiento o con tareas vencidas)</span>
@@ -171,9 +218,8 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
             </div>
 
             <p style={{ fontSize: 12.5, color: '#667085', marginTop: 16, lineHeight: 1.6 }}>
-              Vista de solo consulta para perfiles de coordinación. El seguimiento por asesor y por auxiliar se activará cuando se
-              carguen los usuarios y sus asignaciones por área. El cumplimiento se actualiza a medida que el equipo marca las tareas
-              como ejecutadas y auditadas.
+              Vista de solo consulta para perfiles de coordinación. El seguimiento por asesor y por auxiliar refleja las asignaciones
+              por área de cada cliente. El cumplimiento se actualiza a medida que el equipo marca las tareas como ejecutadas y auditadas.
             </p>
           </>
         )}

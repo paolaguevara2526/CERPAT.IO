@@ -170,6 +170,13 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
   cargo, área, rol); los datos sensibles de RR. HH. no entran al repo. Con esto
   se podrán poblar las asignaciones asesor/auxiliar por área y activar esos ejes
   en el Panel de Coordinación. Falta el bootstrap de autenticación (claves).
+- 🟡 Asignaciones por área (asesor/auxiliar) — asignación automática "por área
+  del empleado": `db:plan-asignaciones` reparte round-robin, por empresa×área,
+  el asesor responsable y el auxiliar ejecutor entre las personas de esa área
+  (`AsignacionClienteArea`), y rellena esos ejes en las tareas ya generadas.
+  `plan-generar` hereda la asignación en meses futuros. El Panel de Coordinación
+  ya muestra **seguimiento por asesor y por auxiliar**. Es un punto de partida
+  aproximado; se ajusta por cliente cuando haga falta.
 - ⬜ Fase 5 — calendario (interno + sync opcional Outlook/Google).
 
 **Mockup de referencia:** [`mockups/plan-trabajo-cumplimiento.html`](./mockups/plan-trabajo-cumplimiento.html)
