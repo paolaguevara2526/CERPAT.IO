@@ -2,7 +2,7 @@
 
 Documento vivo del estado en producción y el roadmap. Actualizar en cada avance.
 
-_Última actualización: 2026-07-18._
+_Última actualización: 2026-07-29._
 
 ## En producción hoy
 
@@ -23,6 +23,14 @@ _Última actualización: 2026-07-18._
 - **Multi-tenant (SaaS multi-firma):** cada firma contable es una `Organizacion` aislada; todo el dominio lleva `organizacionId`. **Root de plataforma** (`Usuario.esRootPlataforma`) por encima. Ver [`arquitectura.md`](./arquitectura.md) → ADR-0001.
 - **Regla de aislamiento:** el backend filtra por `organizacionId` de la sesión en cada consulta; nunca confiar en el cliente.
 - Stack: Next.js (Vercel) · Express/TS (Railway) · PostgreSQL/Prisma · auth Auth.js/Clerk (pendiente) · n8n (pendiente) · Microsoft 365 correo (pendiente) · Sentry (pendiente).
+- **Identidad de dominio: todo en `cerpat.io`.** La firma perdió el manejo de
+  `cerpat.com`, así que se consolida la identidad (web **y correo**) en
+  `cerpat.io`, dominio que el equipo sí controla (Hostinger → Vercel). En el repo
+  ya se cambiaron los correos `@cerpat.com` → `@cerpat.io` (usuarios/personal,
+  seed y casillas de la firma usadas como contacto de clientes). **Pendiente
+  operativo del equipo:** migrar las casillas reales (Microsoft 365) a
+  `@cerpat.io`; hasta entonces esos buzones aún no reciben correo. Los correos de
+  terceros (clientes) no se tocan.
 
 ## Roadmap
 

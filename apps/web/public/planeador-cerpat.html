@@ -299,7 +299,7 @@ select.status-select{border:1px solid var(--line);border-radius:6px;padding:5px 
     <div class="login-logo">✓</div>
     <div class="login-title">Planeador</div>
     <div class="login-sub">Inicia sesión para continuar</div>
-    <div class="field" style="margin-top:18px;"><label>Correo electrónico</label><input id="lg-email" type="email" placeholder="tucorreo@cerpat.com" onkeydown="if(event.key==='Enter') document.getElementById('lg-password').focus();"></div>
+    <div class="field" style="margin-top:18px;"><label>Correo electrónico</label><input id="lg-email" type="email" placeholder="tucorreo@cerpat.io" onkeydown="if(event.key==='Enter') document.getElementById('lg-password').focus();"></div>
     <div class="field"><label>Contraseña</label><input id="lg-password" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin();"></div>
     <div id="login-error" style="display:none;color:var(--red);font-size:12.5px;font-weight:700;margin-bottom:8px;">Correo o contraseña incorrectos.</div>
     <button class="btn" style="width:100%;padding:11px;" onclick="doLogin()">Iniciar sesión</button>
@@ -529,7 +529,7 @@ select.status-select{border:1px solid var(--line);border-radius:6px;padding:5px 
     <div class="modal-head"><div class="modal-title" id="usuario-modal-title">Nuevo usuario</div><button class="modal-close" onclick="closeModal('modal-usuario')">×</button></div>
     <div class="modal-body">
       <div class="field"><label>Nombre completo</label><input id="us-nombre" type="text" placeholder="Ej. María Torres"></div>
-      <div class="field"><label>Correo electrónico</label><input id="us-email" type="email" placeholder="Ej. maria@cerpat.com"></div>
+      <div class="field"><label>Correo electrónico</label><input id="us-email" type="email" placeholder="Ej. maria@cerpat.io"></div>
       <div class="field"><label>Contraseña</label><input id="us-password" type="text" placeholder="Ej. cerpat2026"></div>
       <div class="field"><label>Roles</label>
         <div class="check-row">
@@ -812,10 +812,10 @@ function seedData(){
 function defaultAdmin(){
   return {
     usuarios: [
-      {id:1, nombre:'Tu Usuario', email:'admin@cerpat.com', password:'admin123', roles:['Administrador'], activo:true},
-      {id:2, nombre:'Diana Ardila', email:'diana.ardila@cerpat.com', password:'cerpat2026', roles:['Asesor'], activo:true},
-      {id:3, nombre:'Jorge Gil', email:'jorge.gil@cerpat.com', password:'cerpat2026', roles:['Asesor','Auditor'], activo:true},
-      {id:4, nombre:'Katherine Díaz', email:'katherine.diaz@cerpat.com', password:'cerpat2026', roles:['Auxiliar'], activo:false}
+      {id:1, nombre:'Tu Usuario', email:'admin@cerpat.io', password:'admin123', roles:['Administrador'], activo:true},
+      {id:2, nombre:'Diana Ardila', email:'diana.ardila@cerpat.io', password:'cerpat2026', roles:['Asesor'], activo:true},
+      {id:3, nombre:'Jorge Gil', email:'jorge.gil@cerpat.io', password:'cerpat2026', roles:['Asesor','Auditor'], activo:true},
+      {id:4, nombre:'Katherine Díaz', email:'katherine.diaz@cerpat.io', password:'cerpat2026', roles:['Auxiliar'], activo:false}
     ],
     empresas: [
       {id:1, nombre:'Ecoconcretos S.A.S', nit:'900123456-1', tipo:'Persona Jurídica', sector:'Construcción', regimen:'Régimen Ordinario', periodicidadIva:'Bimestral', municipio:'Villavicencio'},
@@ -878,13 +878,13 @@ data.tasks.forEach(t=>{
 (function ensureAccessSafety(){
   const hayAdminActivo = data.admin.usuarios.some(u=>u.activo && u.password && (u.roles||[]).includes('Administrador'));
   if(!hayAdminActivo){
-    let admin = data.admin.usuarios.find(u=>u.email==='admin@cerpat.com');
+    let admin = data.admin.usuarios.find(u=>u.email==='admin@cerpat.io');
     if(admin){
       admin.activo = true;
       admin.password = 'admin123';
       if(!(admin.roles||[]).includes('Administrador')) admin.roles = (admin.roles||[]).concat('Administrador');
     } else {
-      data.admin.usuarios.push({id:(data.nextId=(data.nextId||200)+1), nombre:'Tu Usuario', email:'admin@cerpat.com', password:'admin123', roles:['Administrador'], activo:true});
+      data.admin.usuarios.push({id:(data.nextId=(data.nextId||200)+1), nombre:'Tu Usuario', email:'admin@cerpat.io', password:'admin123', roles:['Administrador'], activo:true});
     }
   }
 })();
@@ -1472,7 +1472,7 @@ function downloadTaskTemplate(){
 function downloadUserTemplate(){
   const rows = [
     ['Nombre','Email','Password','Roles','Activo'],
-    ['María Torres','maria.torres@cerpat.com','cerpat2026','Asesor','Sí']
+    ['María Torres','maria.torres@cerpat.io','cerpat2026','Asesor','Sí']
   ];
   downloadCsvGeneric(rows, 'plantilla-usuarios-masivos.csv');
 }
