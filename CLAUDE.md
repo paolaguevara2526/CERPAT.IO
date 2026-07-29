@@ -14,7 +14,8 @@ Vercel con dominio `cerpat.io`, API Express + PostgreSQL en Railway, esquema
 cargados. La raíz `cerpat.io` sirve hoy el prototipo (localStorage) con **sistema de temas**
 (Apariencia); `cerpat.io/clientes` es la primera vista cableada a la API. En diseño: el
 **Plan de Trabajo Contable** (actividades recurrentes por cliente + seguimiento de
-cumplimiento) — ver `docs/estado-y-plan.md` y `docs/mockups/`.
+cumplimiento) y el **Módulo de Hallazgos y Planes de Acción** (revisoría fiscal) —
+ver `docs/estado-y-plan.md`, `docs/mockups/` y la sección de más abajo.
 
 ## Estructura
 
@@ -27,8 +28,9 @@ cumplimiento) — ver `docs/estado-y-plan.md` y `docs/mockups/`.
   ábrelo antes de construir cualquier vista.
 - `docs/` — Documentación: `estado-y-plan.md` (estado + roadmap), `arquitectura.md`
   (+ `arquitectura.mermaid` y ADR-0001 multi-tenancy), `modelo-de-datos.md`,
-  `reglas-de-negocio.md`, `data/` (catálogos base, p. ej. plan de trabajo) y
-  `mockups/` (bocetos de vistas aprobadas con el equipo).
+  `reglas-de-negocio.md`, `data/` (catálogos base, p. ej. plan de trabajo),
+  `mockups/` (bocetos de vistas aprobadas con el equipo) y
+  `plantillas/` (plantillas Excel para importar/exportar, p. ej. plan de acción).
 
 El stack tecnológico ya está definido (ver
 [`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md) §2): Next.js en
@@ -54,6 +56,39 @@ nunca debe poder saltarse una validación.
 - Nunca subir credenciales al código: usar variables de entorno (ver los
   `.env.example`). Contraseñas siempre con hash, nunca en texto plano.
 - Mantén los documentos en español, consistente con el resto del repositorio.
+
+## Módulo de Hallazgos y Planes de Acción (en diseño)
+
+Portal para que los clientes de la **revisoría fiscal** consulten sus hallazgos de
+auditoría y el estado de sus planes de acción, pensado para presentar a la **asamblea /
+junta directiva**. Mockup de referencia (HTML autocontenido, sin backend aún):
+[`docs/mockups/dashboard-asamblea-hallazgos.html`](./docs/mockups/dashboard-asamblea-hallazgos.html).
+
+- **Acceso reservado por empresa (login).** Cada empresa cliente entra con su propio
+  usuario/contraseña y ve **solo su información**; la autenticación real va en el backend
+  con contraseñas cifradas y permisos verificados por endpoint (no ocultando UI).
+- **Perfiles previstos:**
+  - *Revisor Fiscal (Auditor, CERPAT)* — **alimenta** la matriz: crea/edita hallazgos,
+    define normatividad, riesgo y prioridad sugerida, y **verifica** los cierres. Tiene
+    dashboard resumen por cliente.
+  - *Cliente · Asamblea/Gerencia* — **solo lectura** del dashboard (decisión de producto
+    vigente: por ahora el cliente no edita; el plan lo carga CERPAT).
+  - (Futuro) *Cliente · Responsable de área* — registraría su plan y evidencia.
+- **Flujo:** el Revisor crea el hallazgo → se registra el plan (responsable + plazo) →
+  se ejecuta y adjunta evidencia → el Revisor verifica → pasa a *Resuelto*.
+- **Vistas:** consolidado de grupo (varias empresas), dashboard por empresa (KPIs, nivel
+  de resolución, hallazgos por área) y **matriz de auditoría**. Columnas de la matriz:
+  Hallazgo · Descripción situación · Normatividad · Riesgo · Prioridad (Sugerida) ·
+  Responsable · Acción o plan de remediación · Plazo · Estado · Observaciones seguimiento.
+- **Import/Export Excel.** El Revisor puede importar/exportar el plan; la plantilla base
+  está en [`docs/plantillas/plantilla-plan-de-accion-hallazgos.xlsx`](./docs/plantillas/plantilla-plan-de-accion-hallazgos.xlsx)
+  (mismas columnas que la matriz, con listas desplegables). El portal usa CSV para el
+  intercambio (formato nativo de Excel).
+- **Pendiente:** modelar entidades (`Hallazgo`, `PlanDeAccion`, área, responsable,
+  evidencia, verificación) en `prisma/schema.prisma` y documentarlas en
+  `docs/modelo-de-datos.md` y `docs/reglas-de-negocio.md` antes de cablear a la API.
+- **Marca:** el isotipo del portal es una reconstrucción provisional; falta incrustar el
+  logo oficial de CERPAT en vector (`.svg`).
 
 ## Comandos
 
