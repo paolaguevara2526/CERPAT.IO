@@ -52,13 +52,13 @@ async function main() {
 
   // ---------- Administrador de la organización ----------
   await prisma.usuario.upsert({
-    where: { organizacionId_email: { organizacionId: ORG_ID, email: 'admin@cerpat.com' } },
+    where: { organizacionId_email: { organizacionId: ORG_ID, email: 'admin@cerpat.io' } },
     update: {},
     create: {
       id: 'seed-admin',
       organizacionId: ORG_ID,
       nombre: 'Administrador CERPAT',
-      email: 'admin@cerpat.com',
+      email: 'admin@cerpat.io',
       passwordHash: '', // marcador: se fija en el bootstrap de auth
       activo: true,
       roles: { create: [{ rolId: rolIds['Administrador'] }] },
