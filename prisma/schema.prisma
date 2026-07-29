@@ -111,6 +111,8 @@ model Usuario {
   nombre          String
   email           String
   passwordHash    String
+  cargo           String? // cargo en la firma (texto libre: "Asesor Junior", "Lider Tesoreria"...)
+  area            String? // área organizativa del empleado (Impuestos, Informes, Nómina...)
   activo          Boolean  @default(true)
   esRootPlataforma Boolean @default(false)
   createdAt       DateTime @default(now())

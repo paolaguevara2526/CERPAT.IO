@@ -153,14 +153,23 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
   `ActividadPlan`, `SubtareaPlantilla`, `PlanClienteActividad`,
   `AsignacionClienteArea` (asesor/auxiliar/talla), y campos de plan en `Tarea`
   (`actividadPlanId`, `areaId`, `periodo`, `asesorId`, `auxiliarId`,
-  `comprobanteDesde/Hasta`, `cantidadRegistros`). Valida y genera cliente.
-  **Aún no aplicado a la BD** (db push pendiente). El rol Coordinador es una fila
-  de `Rol` (seed).
-- ⬜ Fase 2 — aplicar a la BD (`db push`) + sembrar el catálogo (`ActividadPlan`
-  desde el CSV) + áreas + rol Coordinador.
-- ⬜ Fase 3 — generación automática de tareas por cliente×actividad×período.
-- ⬜ Fase 4 — vistas: gestión del plan por cliente/área, ejecución
-  (subtareas + comprobantes) y **Panel de Coordinación** (indicadores, solo lectura).
+  `comprobanteDesde/Hasta`, `cantidadRegistros`). El rol Coordinador es una fila
+  de `Rol` (seed). Aplicado a la BD.
+- ✅ Fase 2 — aplicado a la BD (`db push`) + catálogo sembrado (34 `ActividadPlan`
+  desde el CSV) + 5 áreas + rol Coordinador.
+- ✅ Fase 3 — asignación del plan a los 90 clientes (3060 `PlanClienteActividad`)
+  y generación de tareas por período (2070 `Tarea` para 2026-07).
+- 🟡 Fase 4 — en curso. Hecho: **Panel de Coordinación** con datos reales
+  (`GET /plan/cumplimiento` + vista `/coordinacion`, solo consulta: KPIs,
+  cumplimiento por área y clientes en riesgo). Pendiente: gestión del plan por
+  cliente/área y ejecución (subtareas + comprobantes).
+- 🟡 Usuarios / personal — cargado el catálogo de personal desde la base de la
+  firma: 26 usuarios (Paola Guevara como root/administradora + 25 empleados
+  activos) con su cargo, área y rol (Administrador, Asesor, Auxiliar, Auditor,
+  Coordinador). Sólo se importan campos operativos (nombre, correo corporativo,
+  cargo, área, rol); los datos sensibles de RR. HH. no entran al repo. Con esto
+  se podrán poblar las asignaciones asesor/auxiliar por área y activar esos ejes
+  en el Panel de Coordinación. Falta el bootstrap de autenticación (claves).
 - ⬜ Fase 5 — calendario (interno + sync opcional Outlook/Google).
 
 **Mockup de referencia:** [`mockups/plan-trabajo-cumplimiento.html`](./mockups/plan-trabajo-cumplimiento.html)

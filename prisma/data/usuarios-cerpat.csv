@@ -1,0 +1,27 @@
+nombre,email,cargo,area,rol,es_root
+Paola Guevara,gerencia@cerpat.com,Gerente,Gerencia,Administrador,si
+Lidis Johanna Pardo Zabala,administrativo@cerpat.com,Auxiliar Cumplimiento,Administrativa,Auxiliar,no
+Jeni Alexandra Barrera Casallas,j.barrera@cerpat.com,Auxiliar Cumplimiento,Informes,Auxiliar,no
+Jhonier Alexis Quezada Soler,j.quezada@cerpat.com,Auxiliar Cumplimiento,Impuestos,Auxiliar,no
+Rudy Carolina Rodriguez Bejarano,asesoria@cerpat.com,Auxiliar Cumplimiento,Impuestos,Auxiliar,no
+Alchel Deyanira Vargas Murcia,d.vargas@cerpat.com,Auxiliar Cumplimiento,Nómina,Auxiliar,no
+Duvan Felipe Rojas Montes,auxcumplimiento@cerpat.com,Auxiliar Cumplimiento,Cumplimiento,Auxiliar,no
+Adriana Liseth Novoa Roldan,a.novoa@cerpat.com,Auxiliar Contable,Informes,Auxiliar,no
+Diana Carolina Sierra Castellanos,tesoreria@cerpat.com,Lider Tesoreria,Tesorería,Coordinador,no
+Miguel Angel Cardenas Quintero,m.cardenas@cerpat.com,Asesor Junior,Impuestos,Asesor,no
+Nicolas Cardenas Lozano,n.cardenas@cerpat.com,Asesor Junior,Informes,Asesor,no
+Gustavo Adolfo Vega Gutierrez,g.vega@cerpat.com,Asesor Senior,Informes,Asesor,no
+William Andres Correa Valero,cumplimiento@cerpat.com,Lider Cumplimiento,Cumplimiento,Coordinador,no
+Joath Sebastian Casanova Ibarra,j.casanova@cerpat.com,Asesor Junior,Impuestos,Asesor,no
+Jonathan Leonardo Gonzalez Hernandez,j.gonzalez@cerpat.com,Asesor Junior,Impuestos,Asesor,no
+Julieth Alexandra Garcia,j.garcia@cerpat.com,Asesor Senior,Informes,Asesor,no
+Hugo Marin Beltran Amaya,h.beltran@cerpat.com,Asesor Junior,Informes,Asesor,no
+Diego Alejandro Barrera Gutierrez,asesornomina1@cerpat.com,Asesor Junior,Nómina,Asesor,no
+Alicia Carolina Patiño Romero,a.patino@cerpat.com,Asesor Junior,Impuestos,Asesor,no
+Denisse Sofia Hernandez Moreno,auxcontable01@cerpat.com,Auxiliar Contable,Informes,Auxiliar,no
+Karen Dayana Guzman Ordoñez,auxcontable05@cerpat.com,Auxiliar Contable,Informes,Auxiliar,no
+Stefania Cupa Cortes,s.cupa@cerpat.com,Asesor Junior,Impuestos,Asesor,no
+Adriana Patricia Barrera Torres,auxcontable02@cerpat.com,Auxiliar Contable,Informes,Auxiliar,no
+Ivan Mauricio Suarez Ruiz,auxcontable03@cerpat.com,Auxiliar Contable,Informes,Auxiliar,no
+Sara Sofia Caro Chavez,auxcontable04@cerpat.com,Auxiliar Contable - SENA,Informes,Auxiliar,no
+Paula Andrea Sarmiento Linares,asistenteauditoria@cerpat.com,Asistente de Auditoria,Auditoria,Auditor,no
