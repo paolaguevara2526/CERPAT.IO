@@ -283,6 +283,43 @@
   .note b{color:var(--ink);}
   footer{margin-top:30px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--sub);
     display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  /* ===== Vista Revisor Fiscal: barra + acciones ===== */
+  .rf-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0 12px;}
+  .rf-count{font-size:12.5px;color:var(--sub);} .rf-count b{color:var(--ink);font-variant-numeric:tabular-nums;}
+  .btn-primary{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px 16px;font-weight:800;
+    font-size:13.5px;cursor:pointer;font-family:inherit;box-shadow:var(--shadow);}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .btn-ghost{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:10px 15px;
+    font-weight:700;font-size:13.5px;cursor:pointer;color:var(--ink);font-family:inherit;box-shadow:var(--shadow);}
+  .btn-ghost:hover{border-color:var(--accent);}
+  .rf-actions{display:flex;gap:6px;white-space:nowrap;}
+  .ibtn{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:5px 9px;font-size:12px;
+    font-weight:700;cursor:pointer;color:var(--ink);font-family:inherit;}
+  .ibtn:hover{border-color:var(--accent);color:var(--accent);}
+  .ibtn.del:hover{border-color:var(--bad);color:var(--bad);}
+
+  /* ===== Modal / formulario ===== */
+  .modal-overlay{position:fixed;inset:0;background:rgba(8,12,22,.55);backdrop-filter:blur(3px);z-index:60;
+    display:grid;place-items:center;padding:20px;}
+  .modal-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);
+    width:100%;max-width:660px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+  .modal-hd{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line);}
+  .modal-hd .mt{font-weight:800;font-size:16px;letter-spacing:-.01em;}
+  .modal-hd .ms{font-size:12px;color:var(--sub);margin-top:2px;}
+  .modal-x{border:none;background:none;font-size:17px;color:var(--sub);cursor:pointer;line-height:1;padding:4px;border-radius:6px;}
+  .modal-x:hover{background:var(--surface-2);color:var(--ink);}
+  .modal-body{padding:18px 20px;overflow-y:auto;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-grid .full{grid-column:1/-1;}
+  @media(max-width:560px){.form-grid{grid-template-columns:1fr;}}
+  .ff label{display:block;font-size:11.5px;font-weight:700;color:var(--sub);margin-bottom:6px;}
+  .ff input,.ff select,.ff textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+    font-size:13.5px;background:var(--surface-2);color:var(--ink);font-family:inherit;}
+  .ff textarea{resize:vertical;min-height:62px;line-height:1.5;}
+  .ff input:focus,.ff select:focus,.ff textarea:focus{outline:2px solid var(--accent);outline-offset:1px;
+    border-color:var(--accent);background:var(--surface);}
+  .modal-ft{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--line);background:var(--surface-2);}
+
   @media (prefers-reduced-motion:reduce){*{transition:none !important;}}
 </style>
 
@@ -323,6 +360,7 @@
         <div class="dh-t">Accesos de demostración (toca para autocompletar)</div>
         <div class="demo-acc" data-u="andina" data-p="Demo2026"><span class="da-n">Grupo Andino <small style="color:var(--sub)">— ve las 5 empresas</small></span><code>andina / Demo2026</code></div>
         <div class="demo-acc" data-u="distriandina" data-p="Demo2026"><span class="da-n">Distribuidora Andina <small style="color:var(--sub)">— solo su empresa</small></span><code>distriandina / Demo2026</code></div>
+        <div class="demo-acc" data-u="revisor" data-p="Demo2026"><span class="da-n">Revisor Fiscal <small style="color:var(--sub)">— alimenta la matriz</small></span><code>revisor / Demo2026</code></div>
       </div>
       <div class="secure-note">🔒 Conexión segura · las contraseñas se almacenan cifradas</div>
     </form>
@@ -497,6 +535,74 @@
         <span>Acceso del cliente · solo consulta</span>
       </footer>
     </section>
+
+    <!-- ===== VISTA REVISOR FISCAL (edición) ===== -->
+    <section id="viewRF" class="hidden">
+      <header class="head">
+        <div class="eyebrow">Espacio del Revisor Fiscal · CERPAT</div>
+        <h1>Gestión de hallazgos</h1>
+        <p class="lede">Desde aquí el revisor fiscal <b>alimenta la matriz</b>: crea y edita los hallazgos, define
+          normatividad, riesgo y prioridad, registra el plan de remediación y deja las observaciones de seguimiento.
+          El cliente ve todo esto en modo <b>solo lectura</b>.</p>
+        <div class="ctx">
+          <span class="chip">Empresa: <b>Distribuidora Andina S.A.S.</b></span>
+          <span class="chip live">Edición habilitada</span>
+          <span class="chip">Perfil: <b>Auditor / Revisor Fiscal</b></span>
+        </div>
+      </header>
+
+      <div class="rf-bar">
+        <button class="btn-primary" id="newHall" type="button">＋ Nuevo hallazgo</button>
+        <span class="rf-count">Hallazgos cargados: <b id="rfCount">0</b></span>
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="viewAsClient" type="button">👁 Ver como cliente</button>
+      </div>
+
+      <div class="matrix-card">
+        <div class="matrix-scroll">
+          <table class="matrix" style="min-width:1520px">
+            <thead><tr>
+              <th>Hallazgo</th><th>Descripción situación</th><th>Normatividad</th><th>Riesgo</th><th>Prioridad (Sugerida)</th><th>Responsable</th><th>Acción o plan de remediación</th><th>Plazo</th><th>Estado</th><th>Observaciones seguimiento</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="rfBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="note"><b>Demostración.</b> Lo que crees, edites o elimines aquí se refleja al instante en la vista
+        del cliente, pero <b>no se guarda</b> — es un mockup sin backend. En la versión real cada acción quedaría
+        registrada con usuario y fecha, y validada en el servidor.</div>
+
+      <footer>
+        <span>Planeador CERPAT · Módulo de Hallazgos — <b>diseño de referencia</b></span>
+        <span>Perfil: Revisor Fiscal · edición</span>
+      </footer>
+    </section>
+  </div>
+
+  <!-- ===== Modal de hallazgo ===== -->
+  <div class="modal-overlay hidden" id="editModal">
+    <div class="modal-card">
+      <div class="modal-hd"><div><div class="mt" id="modalTitle">Nuevo hallazgo</div><div class="ms">Los campos con * son obligatorios en la versión real.</div></div><button class="modal-x" id="modalX" type="button">✕</button></div>
+      <div class="modal-body">
+        <form id="hallForm" class="form-grid" autocomplete="off">
+          <div class="ff"><label>Código *</label><input id="f_code" placeholder="p. ej. TES-05"></div>
+          <div class="ff"><label>Área *</label><select id="f_area"></select></div>
+          <div class="ff full"><label>Hallazgo (título) *</label><input id="f_titulo" placeholder="Resumen corto del hallazgo"></div>
+          <div class="ff full"><label>Descripción de la situación *</label><textarea id="f_desc" placeholder="Qué se encontró y por qué es un hallazgo"></textarea></div>
+          <div class="ff"><label>Normatividad</label><input id="f_norma" placeholder="p. ej. Art. 771-2 E.T."></div>
+          <div class="ff"><label>Nivel de riesgo *</label><select id="f_sev"></select></div>
+          <div class="ff full"><label>Descripción del riesgo</label><input id="f_riesgo" placeholder="Impacto o consecuencia del hallazgo"></div>
+          <div class="ff"><label>Prioridad sugerida *</label><select id="f_prio"></select></div>
+          <div class="ff"><label>Estado *</label><select id="f_estado"></select></div>
+          <div class="ff"><label>Responsable</label><input id="f_resp" placeholder="Nombre del responsable"></div>
+          <div class="ff"><label>Cargo</label><input id="f_rol" placeholder="p. ej. Contadora"></div>
+          <div class="ff full"><label>Acción o plan de remediación</label><textarea id="f_plan" placeholder="Qué se hará (o hizo) para resolverlo"></textarea></div>
+          <div class="ff"><label>Plazo</label><input id="f_plazo" placeholder="p. ej. 20 ago 2026"></div>
+          <div class="ff full"><label>Observaciones de seguimiento</label><textarea id="f_obs" placeholder="Avance, verificación, evidencia…"></textarea></div>
+        </form>
+      </div>
+      <div class="modal-ft"><button class="btn-ghost" id="modalCancel" type="button">Cancelar</button><button class="btn-primary" id="modalSave" type="button">Guardar hallazgo</button></div>
+    </div>
   </div>
 </div>
 
@@ -579,11 +685,12 @@
   var sevBg={alto:'sev-alto',medio:'sev-medio',bajo:'sev-bajo'};
   var prioBg={Alta:'prio-alta',Media:'prio-media',Baja:'prio-baja'};
   function observaciones(d){
-    if(d.estado==='resuelto') return 'Cerrado el <b>'+esc(d.cierre)+'</b> ('+esc(d.cierreNota)+'). Verificado por '+esc(d.verifica)+(d.ev?'. Soporte: '+esc(d.ev):'')+'.';
+    if(d.obsManual) return esc(d.obsManual);
+    if(d.estado==='resuelto') return 'Cerrado el <b>'+esc(d.cierre||'—')+'</b>'+(d.cierreNota?' ('+esc(d.cierreNota)+')':'')+'. Verificado por '+esc(d.verifica||'—')+(d.ev?'. Soporte: '+esc(d.ev):'')+'.';
     if(d.estado==='proceso') return 'En gestión'+(d.avance?': avance <b>'+esc(d.avance)+'</b>':'')+'. Pendiente de cierre y verificación.';
     return esc(d.nota||'Sin movimiento reportado.');
   }
-  function ini(n){return n.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();}
+  function ini(n){n=(n||'').trim();if(!n)return '—';return n.split(/\s+/).map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();}
   function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
   var currentFilter='todos';
@@ -602,15 +709,15 @@
           '<div class="kv"><span class="k">Prioridad</span><span class="v"><span class="prio '+prioBg[d.prio]+'">'+d.prio+'</span> <span style="color:var(--sub);font-weight:500">(sugerida por RF)</span></span></div>'+
           (d.avance?'<div class="kv"><span class="k">Avance</span><span class="v" style="color:var(--warn)">En curso · '+esc(d.avance)+'</span></div>':'')+'</div></div>';
       if(d.estado==='resuelto'){
-        detail+='<div class="block resolved" style="margin-top:16px"><h4><span class="ic">✓</span>Cómo se resolvió</h4><p>'+esc(d.accion)+'</p>'+
+        detail+='<div class="block resolved" style="margin-top:16px"><h4><span class="ic">✓</span>Cómo se resolvió</h4><p>'+esc(d.accion||d.obsManual||d.plan||'—')+'</p>'+
           '<div class="plan-grid" style="margin-top:12px">'+
-            '<div><div class="kv"><span class="k">Fecha de cierre</span><span class="v">'+esc(d.cierre)+' · <span style="color:var(--ok);font-weight:700">'+esc(d.cierreNota)+'</span></span></div>'+
-              '<div class="kv"><span class="k">Cerrado por</span><span class="v who"><span class="ava">'+ini(d.resp)+'</span>'+esc(d.resp)+'</span></div></div>'+
-            '<div><div class="kv"><span class="k">Verificado por</span><span class="v who"><span class="ava" style="background:var(--accent)">CG</span>'+esc(d.verifica)+'</span></div>'+
+            '<div>'+(d.cierre?'<div class="kv"><span class="k">Fecha de cierre</span><span class="v">'+esc(d.cierre)+(d.cierreNota?' · <span style="color:var(--ok);font-weight:700">'+esc(d.cierreNota)+'</span>':'')+'</span></div>':'')+
+              '<div class="kv"><span class="k">Cerrado por</span><span class="v who"><span class="ava">'+ini(d.resp)+'</span>'+esc(d.resp||'—')+'</span></div></div>'+
+            '<div>'+(d.verifica?'<div class="kv"><span class="k">Verificado por</span><span class="v who"><span class="ava" style="background:var(--accent)">CG</span>'+esc(d.verifica)+'</span></div>':'')+
               '<div class="kv"><span class="k">Estado</span><span class="v" style="color:var(--ok)">Cerrado con evidencia</span></div></div></div>'+
           (d.ev?'<a class="evidence" href="#" onclick="return false">📎 Ver soporte: '+esc(d.ev)+'</a>':'')+'</div>';
       } else if(d.estado==='vencido'){
-        detail+='<div class="overdue-note"><span>⚠</span><span>'+esc(d.nota)+'</span></div>';
+        detail+='<div class="overdue-note"><span>⚠</span><span>'+esc(d.nota||d.obsManual||'Vencido. Pendiente de acción.')+'</span></div>';
       }
       return '<details class="finding" data-sev="'+d.sev+'"><summary>'+
         '<span class="fcode">'+d.code+'</span>'+
@@ -628,12 +735,12 @@
       var e=estadoMap[d.estado];
       var plazo='<span>'+esc(d.plazo)+'</span>';
       if(d.estado==='vencido') plazo+='<span class="late">⚠ vencido</span>';
-      else if(d.estado==='resuelto') plazo+='<span class="early">✓ cerrado '+esc(d.cierre)+'</span>';
+      else if(d.estado==='resuelto'&&d.cierre) plazo+='<span class="early">✓ cerrado '+esc(d.cierre)+'</span>';
       return '<tr>'+
-        '<td class="mx-hall"><div class="mx-code">'+d.code+'</div><div>'+esc(d.titulo)+'</div><div class="mx-area">'+esc(d.area)+'</div></td>'+
+        '<td class="mx-hall"><div class="mx-code">'+esc(d.code)+'</div><div>'+esc(d.titulo)+'</div><div class="mx-area">'+esc(d.area)+'</div></td>'+
         '<td class="mx-desc">'+esc(d.hallazgo)+'</td>'+
-        '<td class="mx-norm">'+esc(d.norma)+'</td>'+
-        '<td class="mx-riesgo"><span class="risk-lvl '+sevBg[d.sev]+'">Riesgo '+sevTxt[d.sev]+'</span><div>'+esc(d.riesgo)+'</div></td>'+
+        '<td class="mx-norm">'+esc(d.norma||'—')+'</td>'+
+        '<td class="mx-riesgo"><span class="risk-lvl '+sevBg[d.sev]+'">Riesgo '+sevTxt[d.sev]+'</span><div>'+esc(d.riesgo||'')+'</div></td>'+
         '<td><span class="prio '+prioBg[d.prio]+'">'+d.prio+'</span></td>'+
         '<td class="mx-resp">'+esc(d.resp)+'<div class="mx-area">'+esc(d.respRol)+'</div></td>'+
         '<td class="mx-accion">'+esc(d.plan)+'</td>'+
@@ -648,10 +755,13 @@
   function renderAll(){renderCards();renderMatrix();}
 
   // contadores
-  ['todos','resuelto','proceso','vencido'].forEach(function(f){
-    var n=f==='todos'?DATA.length:DATA.filter(function(d){return d.estado===f;}).length;
-    var el=document.querySelector('[data-c="'+f+'"]'); if(el) el.textContent=n;
-  });
+  function updateCounts(){
+    ['todos','resuelto','proceso','vencido'].forEach(function(f){
+      var n=f==='todos'?DATA.length:DATA.filter(function(d){return d.estado===f;}).length;
+      var el=document.querySelector('[data-c="'+f+'"]'); if(el) el.textContent=n;
+    });
+  }
+  updateCounts();
 
   // filtros
   document.querySelectorAll('.tab').forEach(function(t){
@@ -678,21 +788,108 @@
   function animRing(){ring.style.transition='none';ring.style.strokeDashoffset=RC;
     requestAnimationFrame(function(){requestAnimationFrame(function(){ring.style.transition='';ring.style.strokeDashoffset=RC*(1-0.63);});});}
 
-  // navegación
-  var vGrupo=document.getElementById('viewGrupo'),vEmp=document.getElementById('viewEmpresa'),
-      back=document.getElementById('backGroup'),crumb=document.getElementById('crumbName'),
-      empEye=document.getElementById('empEyebrow');
-  var scopeEmp=false;
-  function showGroup(){vEmp.classList.add('hidden');vGrupo.classList.remove('hidden');back.classList.add('hidden');
-    crumb.textContent='Grupo Empresarial Andino';scrollTo(0,0);}
-  function showEmp(name){vGrupo.classList.add('hidden');vEmp.classList.remove('hidden');
-    back.classList.toggle('hidden',scopeEmp);crumb.textContent=name;empEye.textContent=name;
-    renderAll();scrollTo(0,0);animRing();}
-  document.querySelectorAll('.emp-row').forEach(function(r){r.addEventListener('click',function(){showEmp(r.dataset.emp);});});
-  back.addEventListener('click',showGroup);
+  // ---------- Vista Revisor Fiscal: matriz editable ----------
+  var AREAS=['Tesorería','Contabilidad','Nómina','Cartera','Inventarios','Tributaria','Cumplimiento','Otra'];
+  function rowRF(d,idx){
+    var e=estadoMap[d.estado];
+    var plazo='<span>'+esc(d.plazo||'—')+'</span>';
+    if(d.estado==='vencido') plazo+='<span class="late">⚠ vencido</span>';
+    else if(d.estado==='resuelto'&&d.cierre) plazo+='<span class="early">✓ cerrado '+esc(d.cierre)+'</span>';
+    return '<tr>'+
+      '<td class="mx-hall"><div class="mx-code">'+esc(d.code)+'</div><div>'+esc(d.titulo)+'</div><div class="mx-area">'+esc(d.area)+'</div></td>'+
+      '<td class="mx-desc">'+esc(d.hallazgo)+'</td>'+
+      '<td class="mx-norm">'+esc(d.norma||'—')+'</td>'+
+      '<td class="mx-riesgo"><span class="risk-lvl '+sevBg[d.sev]+'">Riesgo '+sevTxt[d.sev]+'</span><div>'+esc(d.riesgo||'')+'</div></td>'+
+      '<td><span class="prio '+prioBg[d.prio]+'">'+esc(d.prio)+'</span></td>'+
+      '<td class="mx-resp">'+esc(d.resp||'—')+'<div class="mx-area">'+esc(d.respRol||'')+'</div></td>'+
+      '<td class="mx-accion">'+esc(d.plan||'—')+'</td>'+
+      '<td class="mx-plazo">'+plazo+'</td>'+
+      '<td><span class="pill '+e.pill+'">'+e.txt+'</span></td>'+
+      '<td class="mx-obs">'+observaciones(d)+'</td>'+
+      '<td class="rf-actions"><button class="ibtn" data-edit="'+idx+'">Editar</button><button class="ibtn del" data-del="'+idx+'">Eliminar</button></td>'+
+    '</tr>';
+  }
+  function renderRF(){
+    document.getElementById('rfBody').innerHTML=DATA.map(function(d,i){return rowRF(d,i);}).join('');
+    document.getElementById('rfCount').textContent=DATA.length;
+  }
+
+  // ---------- Navegación ----------
+  var vLogin=document.getElementById('viewLogin'),app=document.getElementById('app'),
+      vGrupo=document.getElementById('viewGrupo'),vEmp=document.getElementById('viewEmpresa'),vRF=document.getElementById('viewRF'),
+      back=document.getElementById('backGroup'),crumb=document.getElementById('crumbName'),empEye=document.getElementById('empEyebrow');
+  var scopeEmp=false, backFn=null;
+  function hideViews(){vGrupo.classList.add('hidden');vEmp.classList.add('hidden');vRF.classList.add('hidden');}
+  function setBack(show,label,fn){back.classList.toggle('hidden',!show);if(label)back.textContent=label;backFn=fn||null;}
+  function showGroup(){hideViews();vGrupo.classList.remove('hidden');setBack(false);crumb.textContent='Grupo Empresarial Andino';scrollTo(0,0);}
+  function showEmp(name,opts){opts=opts||{};hideViews();vEmp.classList.remove('hidden');
+    setBack(!opts.hideBack,opts.backLabel||'← Grupo Andino',opts.backFn||showGroup);
+    crumb.textContent=name;empEye.textContent=name;renderAll();scrollTo(0,0);animRing();}
+  function showRF(){hideViews();vRF.classList.remove('hidden');setBack(false);crumb.textContent='Revisor Fiscal';renderRF();scrollTo(0,0);}
+  document.querySelectorAll('.emp-row').forEach(function(r){r.addEventListener('click',function(){showEmp(r.dataset.emp,{hideBack:scopeEmp});});});
+  back.addEventListener('click',function(){if(backFn)backFn();});
+  document.getElementById('viewAsClient').addEventListener('click',function(){
+    showEmp('Distribuidora Andina S.A.S.',{backLabel:'← Revisor Fiscal',backFn:showRF});
+  });
+
+  // ---------- Modal de hallazgo ----------
+  var modal=document.getElementById('editModal'), editIndex=-1;
+  function opt(v,l,sel){return '<option value="'+v+'"'+(sel?' selected':'')+'>'+l+'</option>';}
+  function fillSelects(d){
+    document.getElementById('f_area').innerHTML=AREAS.map(function(a){return opt(a,a,d&&d.area===a);}).join('');
+    document.getElementById('f_sev').innerHTML=[['alto','Alto'],['medio','Medio'],['bajo','Bajo']].map(function(x){return opt(x[0],x[1],d&&d.sev===x[0]);}).join('');
+    document.getElementById('f_prio').innerHTML=['Alta','Media','Baja'].map(function(x){return opt(x,x,d&&d.prio===x);}).join('');
+    document.getElementById('f_estado').innerHTML=[['proceso','En gestión'],['resuelto','Resuelto'],['vencido','Vencido']].map(function(x){return opt(x[0],x[1],d?d.estado===x[0]:x[0]==='proceso');}).join('');
+  }
+  function val(id){return document.getElementById(id).value;}
+  function openModal(i){
+    editIndex=(typeof i==='number'&&i>=0)?i:-1;
+    var d=editIndex>=0?DATA[editIndex]:null;
+    document.getElementById('modalTitle').textContent=d?'Editar hallazgo':'Nuevo hallazgo';
+    fillSelects(d);
+    document.getElementById('f_code').value=d?d.code:'';
+    document.getElementById('f_titulo').value=d?d.titulo:'';
+    document.getElementById('f_desc').value=d?d.hallazgo:'';
+    document.getElementById('f_norma').value=d?(d.norma||''):'';
+    document.getElementById('f_riesgo').value=d?(d.riesgo||''):'';
+    document.getElementById('f_resp').value=d?(d.resp||''):'';
+    document.getElementById('f_rol').value=d?(d.respRol||''):'';
+    document.getElementById('f_plan').value=d?(d.plan||''):'';
+    document.getElementById('f_plazo').value=d?(d.plazo||''):'';
+    document.getElementById('f_obs').value=d?(d.obsManual||d.nota||d.avance||''):'';
+    modal.classList.remove('hidden');
+  }
+  function closeModal(){modal.classList.add('hidden');}
+  function saveModal(){
+    var obj={
+      code:val('f_code').trim()||'S/C', area:val('f_area'),
+      titulo:val('f_titulo').trim()||'(sin título)', hallazgo:val('f_desc').trim(),
+      norma:val('f_norma').trim(), sev:val('f_sev'), riesgo:val('f_riesgo').trim(),
+      prio:val('f_prio'), resp:val('f_resp').trim(), respRol:val('f_rol').trim(),
+      plan:val('f_plan').trim(), plazo:val('f_plazo').trim(), estado:val('f_estado'),
+      obsManual:val('f_obs').trim()
+    };
+    if(editIndex>=0){
+      var prev=DATA[editIndex];
+      ['accion','cierre','cierreNota','verifica','ev','avance','nota'].forEach(function(k){if(prev[k]!==undefined)obj[k]=prev[k];});
+      DATA[editIndex]=obj;
+    } else { DATA.unshift(obj); }
+    closeModal(); renderRF(); renderAll(); updateCounts();
+  }
+  document.getElementById('newHall').addEventListener('click',function(){openModal(-1);});
+  document.getElementById('modalSave').addEventListener('click',saveModal);
+  document.getElementById('modalCancel').addEventListener('click',closeModal);
+  document.getElementById('modalX').addEventListener('click',closeModal);
+  modal.addEventListener('click',function(e){if(e.target===modal)closeModal();});
+  document.getElementById('rfBody').addEventListener('click',function(e){
+    var ed=e.target.getAttribute('data-edit'), dl=e.target.getAttribute('data-del');
+    if(ed!==null){openModal(parseInt(ed,10));}
+    else if(dl!==null){var i=parseInt(dl,10);
+      if(confirm('¿Eliminar el hallazgo '+(DATA[i].code||'')+'?')){DATA.splice(i,1);renderRF();renderAll();updateCounts();}}
+  });
 
   // ---------- Login ----------
-  var ACC={andina:{p:'Demo2026',scope:'group'},distriandina:{p:'Demo2026',scope:'emp',emp:'Distribuidora Andina S.A.S.'}};
+  var ACC={andina:{p:'Demo2026',scope:'group'},distriandina:{p:'Demo2026',scope:'emp',emp:'Distribuidora Andina S.A.S.'},revisor:{p:'Demo2026',scope:'rf'}};
   document.querySelectorAll('.demo-acc').forEach(function(a){
     a.addEventListener('click',function(){document.getElementById('usr').value=a.dataset.u;document.getElementById('pwd').value=a.dataset.p;});
   });
@@ -702,13 +899,13 @@
     var acc=ACC[u];
     if(!acc||acc.p!==p){document.getElementById('loginErr').classList.add('show');return;}
     document.getElementById('loginErr').classList.remove('show');
-    document.getElementById('viewLogin').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    if(acc.scope==='emp'){scopeEmp=true;showEmp(acc.emp);}else{scopeEmp=false;showGroup();}
+    vLogin.classList.add('hidden'); app.classList.remove('hidden');
+    if(acc.scope==='emp'){scopeEmp=true;showEmp(acc.emp,{hideBack:true});}
+    else if(acc.scope==='rf'){scopeEmp=false;showRF();}
+    else {scopeEmp=false;showGroup();}
   });
   document.getElementById('logoutBtn').addEventListener('click',function(){
-    document.getElementById('app').classList.add('hidden');
-    document.getElementById('viewLogin').classList.remove('hidden');
+    app.classList.add('hidden'); vLogin.classList.remove('hidden');
     document.getElementById('pwd').value='';scrollTo(0,0);
   });
 })();
