@@ -329,8 +329,8 @@
     <div>
       <div style="display:flex;align-items:center;gap:12px">
         <svg class="logo-mark lg" viewBox="0 0 100 100" aria-hidden="true">
-          <path d="M50 12 L84 58 L16 58 Z" fill="#4ED39B"/>
-          <path d="M16 58 L84 58 L50 92 Z" fill="#8BEBBF"/>
+          <path fill-rule="evenodd" fill="#4AD695" d="M50 6 L92 48 L8 48 Z M38 26 L62 26 L62 48 L38 48 Z"/>
+          <path fill="#4AD695" d="M34 53 L66 53 L50 90 Z"/>
         </svg>
         <span class="wordmark" style="color:#fff;font-size:26px">cerpat</span>
       </div>
@@ -373,8 +373,8 @@
     <div class="topbar-in">
       <div class="brand">
         <svg class="logo-mark" viewBox="0 0 100 100" aria-hidden="true">
-          <path d="M50 12 L84 58 L16 58 Z" fill="#2FB77D"/>
-          <path d="M16 58 L84 58 L50 92 Z" fill="#6FDDA8"/>
+          <path fill-rule="evenodd" fill="#3ACE8C" d="M50 6 L92 48 L8 48 Z M38 26 L62 26 L62 48 L38 48 Z"/>
+          <path fill="#3ACE8C" d="M34 53 L66 53 L50 90 Z"/>
         </svg>
         <span class="wordmark">cerpat<small>Portal de Hallazgos</small></span>
       </div>
@@ -553,6 +553,9 @@
 
       <div class="rf-bar">
         <button class="btn-primary" id="newHall" type="button">＋ Nuevo hallazgo</button>
+        <button class="btn-ghost" id="importBtn" type="button">⬆ Importar Excel</button>
+        <button class="btn-ghost" id="exportBtn" type="button">⬇ Exportar Excel</button>
+        <input type="file" id="importFile" accept=".csv,text/csv" class="hidden">
         <span class="rf-count">Hallazgos cargados: <b id="rfCount">0</b></span>
         <span class="spacer"></span>
         <button class="btn-ghost" id="viewAsClient" type="button">👁 Ver como cliente</button>
@@ -886,6 +889,65 @@
     if(ed!==null){openModal(parseInt(ed,10));}
     else if(dl!==null){var i=parseInt(dl,10);
       if(confirm('¿Eliminar el hallazgo '+(DATA[i].code||'')+'?')){DATA.splice(i,1);renderRF();renderAll();updateCounts();}}
+  });
+
+  // ---------- Importar / Exportar Excel (CSV) ----------
+  var COLS=['Código','Área','Hallazgo','Descripción situación','Normatividad','Nivel de riesgo',
+    'Descripción del riesgo','Prioridad (Sugerida)','Responsable','Cargo','Acción o plan de remediación',
+    'Plazo','Estado','Observaciones seguimiento'];
+  var estLbl={proceso:'En gestión',resuelto:'Resuelto',vencido:'Vencido'};
+  var sevLbl={alto:'Alto',medio:'Medio',bajo:'Bajo'};
+  function stripTags(s){return (s||'').replace(/<[^>]*>/g,'');}
+  function csvCell(s){s=(s==null?'':''+s);return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+  function toCSV(){
+    var rows=DATA.map(function(d){return [d.code,d.area,d.titulo,d.hallazgo,d.norma,sevLbl[d.sev],d.riesgo,
+      d.prio,d.resp,d.respRol,d.plan,d.plazo,estLbl[d.estado],(d.obsManual||stripTags(observaciones(d)))]
+      .map(csvCell).join(';');});
+    return '﻿'+'sep=;\n'+COLS.join(';')+'\n'+rows.join('\n');
+  }
+  function download(name,content){
+    var b=new Blob([content],{type:'text/csv;charset=utf-8;'}), u=URL.createObjectURL(b),
+        a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(u);
+  }
+  function parseCSV(text){
+    text=text.replace(/^﻿/,'').replace(/^sep=(.)\r?\n/i,'');
+    // detectar separador: ; o , (el que más aparezca fuera de comillas en la 1a línea)
+    var first=text.split(/\r?\n/)[0]||'';
+    var delim=((first.split(';').length-1)>=(first.split(',').length-1))?';':',';
+    var rows=[],cur=[],v='',q=false,i,c;
+    for(i=0;i<text.length;i++){c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){v+='"';i++;} else q=false; } else v+=c; }
+      else { if(c==='"')q=true; else if(c===delim){cur.push(v);v='';}
+        else if(c==='\n'){cur.push(v);rows.push(cur);cur=[];v='';}
+        else if(c!=='\r')v+=c; } }
+    if(v!==''||cur.length){cur.push(v);rows.push(cur);}
+    return rows;
+  }
+  function importCSV(text){
+    var rows=parseCSV(text); if(rows.length<2){alert('El archivo no tiene filas de datos.');return;}
+    var estV={'en gestión':'proceso','en gestion':'proceso','proceso':'proceso','resuelto':'resuelto','vencido':'vencido'};
+    var sevV={'alto':'alto','medio':'medio','bajo':'bajo'};
+    function prio(p){p=(p||'').trim().toLowerCase();return p==='alta'?'Alta':(p==='baja'?'Baja':'Media');}
+    var out=[];
+    for(var r=1;r<rows.length;r++){var a=rows[r];
+      if(!a.length||(a.length===1&&!(''+a[0]).trim()))continue;
+      out.push({code:(a[0]||'').trim()||'S/C',area:(a[1]||'').trim()||'Otra',titulo:(a[2]||'').trim()||'(sin título)',
+        hallazgo:(a[3]||'').trim(),norma:(a[4]||'').trim(),sev:sevV[(a[5]||'').trim().toLowerCase()]||'medio',
+        riesgo:(a[6]||'').trim(),prio:prio(a[7]),resp:(a[8]||'').trim(),respRol:(a[9]||'').trim(),
+        plan:(a[10]||'').trim(),plazo:(a[11]||'').trim(),estado:estV[(a[12]||'').trim().toLowerCase()]||'proceso',
+        obsManual:(a[13]||'').trim()});
+    }
+    if(!out.length){alert('No se encontraron hallazgos válidos en el archivo.');return;}
+    DATA.length=0; out.forEach(function(o){DATA.push(o);});
+    renderRF(); renderAll(); updateCounts();
+    alert('Se importaron '+out.length+' hallazgos desde el archivo.');
+  }
+  document.getElementById('exportBtn').addEventListener('click',function(){download('plan-de-accion-cerpat.csv',toCSV());});
+  document.getElementById('importBtn').addEventListener('click',function(){document.getElementById('importFile').click();});
+  document.getElementById('importFile').addEventListener('change',function(ev){
+    var f=ev.target.files[0]; if(!f)return; var rd=new FileReader();
+    rd.onload=function(){importCSV(rd.result); ev.target.value='';}; rd.readAsText(f,'utf-8');
   });
 
   // ---------- Login ----------
