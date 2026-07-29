@@ -16,8 +16,15 @@ _Última actualización: 2026-07-29._
 | Datos | organización **CERPAT** + **90 clientes reales** cargados | ✅ |
 
 ### Vistas publicadas
-- **`cerpat.io/`** — prototipo funcional del planeador (datos locales `localStorage`, especificación viva).
-- **`cerpat.io/clientes`** — primera vista **cableada**: web → API `GET /empresas` → Postgres, muestra los 90 clientes reales (sin correos, por privacidad).
+- **`cerpat.io/`** — **home institucional** de la firma (reemplaza el sitio WordPress
+  que vivía en `cerpat.com`): hero, servicios por área, «Sobre CERPAT», contacto
+  (tel. 312 432 4791, Villavicencio) y acceso al planeador. Página estática propia.
+- **`cerpat.io/app`** — prototipo funcional del planeador (datos locales `localStorage`, especificación viva).
+- **`cerpat.io/clientes`** — vista **cableada**: web → API `GET /empresas` → Postgres, 90 clientes reales (sin correos, por privacidad).
+- **`cerpat.io/coordinacion`** — **Panel de Coordinación** (solo consulta): KPIs de
+  cumplimiento del plan por área, asesor, auxiliar y clientes en riesgo
+  (API `GET /plan/cumplimiento`). Los ejes asesor/auxiliar se llenan al cargar
+  usuarios y asignaciones en la BD.
 
 ## Arquitectura decidida
 - **Multi-tenant (SaaS multi-firma):** cada firma contable es una `Organizacion` aislada; todo el dominio lleva `organizacionId`. **Root de plataforma** (`Usuario.esRootPlataforma`) por encima. Ver [`arquitectura.md`](./arquitectura.md) → ADR-0001.
