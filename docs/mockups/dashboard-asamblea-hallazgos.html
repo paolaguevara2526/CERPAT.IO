@@ -49,11 +49,11 @@
   .topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 84%,transparent);
     backdrop-filter:blur(10px);border-bottom:1px solid var(--line);}
   .topbar-in{max-width:1200px;margin:0 auto;padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-  .brand{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:-.01em;}
-  .brand .mark{width:34px;height:34px;border-radius:9px;background:var(--navy);color:var(--gold);
-    display:grid;place-items:center;font-family:var(--serif);font-size:18px;font-weight:600;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),var(--shadow);}
-  .brand small{display:block;font-weight:600;font-size:10.5px;color:var(--sub);letter-spacing:.03em;margin-top:-2px;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .logo-mark{width:30px;height:30px;display:block;flex-shrink:0;}
+  .logo-mark.lg{width:46px;height:46px;}
+  .wordmark{font-weight:800;font-size:21px;letter-spacing:-.02em;color:var(--navy);line-height:1;}
+  .wordmark small{display:block;font-weight:600;font-size:10px;color:var(--sub);letter-spacing:.03em;margin-top:2px;}
   .spacer{flex:1;}
   .backbtn{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:8px 13px;
     font-family:inherit;font-weight:700;font-size:13px;color:var(--accent);cursor:pointer;box-shadow:var(--shadow);}
@@ -252,7 +252,7 @@
   /* ===== Matriz ===== */
   .matrix-card{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden;}
   .matrix-scroll{overflow-x:auto;}
-  table.matrix{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px;min-width:960px;}
+  table.matrix{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px;min-width:1400px;}
   table.matrix thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:10px;
     text-transform:uppercase;letter-spacing:.05em;color:var(--sub);font-weight:800;padding:12px 13px;
     border-bottom:1px solid var(--line);white-space:nowrap;z-index:1;}
@@ -268,9 +268,15 @@
   .mx-plazo{white-space:nowrap;font-variant-numeric:tabular-nums;}
   .mx-plazo .late{color:var(--bad);font-weight:700;font-size:11px;display:block;margin-top:2px;}
   .mx-plazo .early{color:var(--ok);font-weight:700;font-size:11px;display:block;margin-top:2px;}
-  .mx-accion{max-width:250px;line-height:1.5;}
+  .mx-accion{max-width:240px;line-height:1.5;}
+  .mx-desc{max-width:230px;line-height:1.5;}
+  .mx-obs{max-width:230px;line-height:1.5;color:var(--sub);}
+  .mx-obs b{color:var(--ink);font-weight:600;}
   .risk-lvl{display:inline-block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
     padding:2px 7px;border-radius:5px;margin-bottom:5px;}
+  .prio{display:inline-block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;
+    padding:3px 9px;border-radius:20px;white-space:nowrap;}
+  .prio-alta{background:var(--bad-bg);color:var(--bad);} .prio-media{background:var(--warn-bg);color:var(--warn);} .prio-baja{background:var(--low-bg);color:var(--low);}
 
   .note{margin-top:30px;font-size:13px;color:var(--sub);background:var(--surface);border:1px solid var(--line);
     border-left:3px solid var(--gold);border-radius:12px;padding:15px 17px;line-height:1.6;}
@@ -284,7 +290,13 @@
 <div id="viewLogin" class="login-screen">
   <aside class="login-aside">
     <div>
-      <div class="la-mark">C</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <svg class="logo-mark lg" viewBox="0 0 120 120" aria-hidden="true">
+          <path fill-rule="evenodd" d="M15 74 L60 20 L105 74 Z M60 43 L75 56 L60 69 L45 56 Z" fill="#4ED39B"/>
+          <path d="M44 80 L76 80 L60 106 Z" fill="#8BEBBF"/>
+        </svg>
+        <span class="wordmark" style="color:#fff;font-size:26px">cerpat</span>
+      </div>
       <div class="la-eye">Revisoría Fiscal · CERPAT</div>
       <h1 class="la-h" style="color:#fff">Portal de hallazgos y planes de acción</h1>
       <p class="la-p">Cada compañía accede únicamente a su propia información de auditoría. Un espacio
@@ -292,7 +304,7 @@
       <div class="la-feats">
         <div class="la-feat"><span class="ck">✓</span><span>Acceso independiente por empresa — la información no se cruza entre clientes.</span></div>
         <div class="la-feat"><span class="ck">✓</span><span>Tablero para asamblea: hallazgos, planes de acción y nivel de resolución.</span></div>
-        <div class="la-feat"><span class="ck">✓</span><span>Matriz de auditoría: hallazgo, normatividad, riesgo, responsable, plazo y acción tomada.</span></div>
+        <div class="la-feat"><span class="ck">✓</span><span>Matriz de auditoría: descripción, riesgo, prioridad, plan de remediación, plazo y observaciones de seguimiento.</span></div>
       </div>
     </div>
     <div class="la-foot">Información confidencial. Uso exclusivo del cliente y su revisor fiscal.</div>
@@ -321,7 +333,13 @@
 <div id="app" class="hidden">
   <div class="topbar">
     <div class="topbar-in">
-      <div class="brand"><span class="mark">C</span><span>CERPAT<small>Portal de Hallazgos</small></span></div>
+      <div class="brand">
+        <svg class="logo-mark" viewBox="0 0 120 120" aria-hidden="true">
+          <path fill-rule="evenodd" d="M15 74 L60 20 L105 74 Z M60 43 L75 56 L60 69 L45 56 Z" fill="#37C08A"/>
+          <path d="M44 80 L76 80 L60 106 Z" fill="#6FE0AE"/>
+        </svg>
+        <span class="wordmark">cerpat<small>Portal de Hallazgos</small></span>
+      </div>
       <span class="spacer"></span>
       <button class="backbtn hidden" id="backGroup" type="button">← Grupo Andino</button>
       <span class="selector"><span class="cdot"></span> <span id="crumbName">—</span></span>
@@ -462,17 +480,17 @@
         <div class="matrix-scroll">
           <table class="matrix">
             <thead><tr>
-              <th>Hallazgo</th><th>Normatividad</th><th>Riesgo</th><th>Responsable</th><th>Plazo</th><th>Acción tomada</th><th>Estado</th>
+              <th>Hallazgo</th><th>Descripción situación</th><th>Normatividad</th><th>Riesgo</th><th>Prioridad (Sugerida)</th><th>Responsable</th><th>Acción o plan de remediación</th><th>Plazo</th><th>Estado</th><th>Observaciones seguimiento</th>
             </tr></thead>
             <tbody id="matrixBody"></tbody>
           </table>
         </div>
       </div>
 
-      <div class="note"><b>Cómo leer la matriz.</b> Cada fila es un hallazgo de la revisoría con su base
-        <b>normativa</b>, el <b>riesgo</b> asociado, el <b>responsable</b> y <b>plazo</b> que definió el área, y la
-        <b>acción tomada</b>. Cuando el área cierra el hallazgo y adjunta evidencia, la revisoría lo verifica y pasa
-        a “Resuelto”.</div>
+      <div class="note"><b>Cómo leer la matriz.</b> Cada fila es un hallazgo con la <b>descripción de la situación</b>,
+        su base <b>normativa</b>, el <b>riesgo</b> y la <b>prioridad sugerida</b> por la revisoría, el <b>responsable</b>,
+        el <b>plan de remediación</b>, el <b>plazo</b>, el <b>estado</b> y las <b>observaciones de seguimiento</b>.
+        Cuando el área cierra el hallazgo y adjunta evidencia, la revisoría lo verifica y pasa a “Resuelto”.</div>
 
       <footer>
         <span>Planeador CERPAT · Módulo de Hallazgos — <b>diseño de referencia</b></span>
@@ -492,7 +510,7 @@
 
   // ---------- Datos ----------
   var DATA=[
-    {code:'TES-01',area:'Tesorería',sev:'alto',estado:'resuelto',
+    {code:'TES-01',area:'Tesorería',sev:'alto',prio:'Alta',estado:'resuelto',
       titulo:'Conciliaciones bancarias sin realizar durante tres meses',
       norma:'Art. 2 Ley 43/1990 · NIA 500',
       riesgo:'Sobre o subestimación del disponible reportado en los estados financieros.',
@@ -501,7 +519,7 @@
       plan:'Conciliación mensual con corte al día 5 y un backup designado en tesorería.',
       accion:'Se conciliaron los tres meses pendientes y se documentó el procedimiento; partidas conciliatorias en cero.',
       cierre:'8 may 2026',cierreNota:'7 días antes',verifica:'Carlos Gómez · CERPAT',ev:'conciliaciones_feb-abr.pdf'},
-    {code:'CUM-02',area:'Cumplimiento',sev:'alto',estado:'vencido',
+    {code:'CUM-02',area:'Cumplimiento',sev:'alto',prio:'Alta',estado:'vencido',
       titulo:'Gastos sobre el tope sin aprobación de la junta directiva',
       norma:'Art. 23 Ley 222/1995 · Estatutos art. 45',
       riesgo:'Extralimitación de facultades y responsabilidad de los administradores.',
@@ -510,7 +528,7 @@
       plan:'Política de aprobaciones y regularización en acta de las operaciones ya ejecutadas.',
       accion:'Sin evidencia de cierre. Vencido hace 29 días; la revisoría reiteró la observación.',
       nota:'Vencido hace 29 días. La fecha compromiso pasó sin evidencia. Se solicita reprogramación con aprobación de junta.'},
-    {code:'CON-03',area:'Contabilidad',sev:'medio',estado:'proceso',
+    {code:'CON-03',area:'Contabilidad',sev:'medio',prio:'Media',estado:'proceso',
       titulo:'Facturas de venta registradas sin soporte de causación',
       norma:'Art. 771-2 E.T. · Dec. 2420/2015',
       riesgo:'Rechazo de costos/deducciones y pérdida de trazabilidad de los ingresos.',
@@ -518,7 +536,7 @@
       hallazgo:'En una muestra de 20 facturas, 6 registros no tenían documento soporte adjunto en el sistema.',
       plan:'Digitalizar los soportes faltantes y activar validación obligatoria de anexo en el ERP.',
       accion:'En curso: 12 de 20 soportes adjuntados; validación en ERP activada.',avance:'12 de 20 al día'},
-    {code:'NOM-01',area:'Nómina',sev:'medio',estado:'resuelto',
+    {code:'NOM-01',area:'Nómina',sev:'medio',prio:'Media',estado:'resuelto',
       titulo:'Aportes a seguridad social pagados de forma extemporánea',
       norma:'Art. 3 Ley 1393/2010 · Dec. 1990/2016',
       riesgo:'Intereses de mora y sanciones ante la UGPP.',
@@ -527,7 +545,7 @@
       plan:'Débito automático de la planilla y alerta 3 días antes del vencimiento.',
       accion:'Débito automático activado y pago de intereses; planillas de marzo a mayo dentro del plazo legal.',
       cierre:'2 abr 2026',cierreNota:'a tiempo',verifica:'Carlos Gómez · CERPAT',ev:'planillas_mar-may.pdf'},
-    {code:'CAR-01',area:'Cartera',sev:'alto',estado:'vencido',
+    {code:'CAR-01',area:'Cartera',sev:'alto',prio:'Alta',estado:'vencido',
       titulo:'Cartera vencida a más de 360 días sin provisión contable',
       norma:'NIIF 9 · Art. 145 E.T.',
       riesgo:'Sobrestimación del activo y del resultado del ejercicio.',
@@ -536,7 +554,7 @@
       plan:'Calcular y contabilizar la provisión según política y depurar la cartera incobrable.',
       accion:'Sin movimiento reportado. Impacto directo en los estados financieros de la asamblea.',
       nota:'Vencido hace 14 días. Sin movimiento reportado. Impacto directo en los estados financieros presentados a la asamblea.'},
-    {code:'INV-02',area:'Inventarios',sev:'bajo',estado:'proceso',
+    {code:'INV-02',area:'Inventarios',sev:'bajo',prio:'Baja',estado:'proceso',
       titulo:'Diferencias entre el inventario físico y el kárdex del sistema',
       norma:'NIC 2 · Art. 62 E.T.',
       riesgo:'Inexactitud del inventario y del costo de ventas.',
@@ -544,7 +562,7 @@
       hallazgo:'La toma física arrojó diferencias en 18 referencias frente al saldo del sistema, sin ajuste registrado.',
       plan:'Investigar diferencias, ajustar el kárdex y programar conteos cíclicos trimestrales.',
       accion:'En curso: 11 de 18 referencias aclaradas; conteos cíclicos programados.',avance:'11 de 18 aclaradas'},
-    {code:'TRI-04',area:'Tributaria',sev:'bajo',estado:'resuelto',
+    {code:'TRI-04',area:'Tributaria',sev:'bajo',prio:'Media',estado:'resuelto',
       titulo:'Retención en la fuente no practicada en algunos pagos a proveedores',
       norma:'Art. 365 E.T. · Dec. 1625/2016',
       riesgo:'Responsabilidad por la retención no practicada y sanción asociada.',
@@ -559,6 +577,12 @@
   var sevTxt={alto:'Alto',medio:'Medio',bajo:'Bajo'};
   var sevColor={alto:'var(--bad)',medio:'var(--warn)',bajo:'var(--low)'};
   var sevBg={alto:'sev-alto',medio:'sev-medio',bajo:'sev-bajo'};
+  var prioBg={Alta:'prio-alta',Media:'prio-media',Baja:'prio-baja'};
+  function observaciones(d){
+    if(d.estado==='resuelto') return 'Cerrado el <b>'+esc(d.cierre)+'</b> ('+esc(d.cierreNota)+'). Verificado por '+esc(d.verifica)+(d.ev?'. Soporte: '+esc(d.ev):'')+'.';
+    if(d.estado==='proceso') return 'En gestión'+(d.avance?': avance <b>'+esc(d.avance)+'</b>':'')+'. Pendiente de cierre y verificación.';
+    return esc(d.nota||'Sin movimiento reportado.');
+  }
   function ini(n){return n.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();}
   function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -575,6 +599,7 @@
         '<div class="block"><h4><span class="ic" style="background:var(--navy-soft);color:var(--navy)">✎</span>Plan de acción del cliente</h4><p>'+esc(d.plan)+'</p>'+
           '<div class="kv" style="margin-top:10px"><span class="k">Responsable</span><span class="v who"><span class="ava">'+ini(d.resp)+'</span>'+esc(d.resp)+' · '+esc(d.respRol)+'</span></div>'+
           '<div class="kv"><span class="k">Plazo</span><span class="v">'+esc(d.plazo)+'</span></div>'+
+          '<div class="kv"><span class="k">Prioridad</span><span class="v"><span class="prio '+prioBg[d.prio]+'">'+d.prio+'</span> <span style="color:var(--sub);font-weight:500">(sugerida por RF)</span></span></div>'+
           (d.avance?'<div class="kv"><span class="k">Avance</span><span class="v" style="color:var(--warn)">En curso · '+esc(d.avance)+'</span></div>':'')+'</div></div>';
       if(d.estado==='resuelto'){
         detail+='<div class="block resolved" style="margin-top:16px"><h4><span class="ic">✓</span>Cómo se resolvió</h4><p>'+esc(d.accion)+'</p>'+
@@ -606,12 +631,15 @@
       else if(d.estado==='resuelto') plazo+='<span class="early">✓ cerrado '+esc(d.cierre)+'</span>';
       return '<tr>'+
         '<td class="mx-hall"><div class="mx-code">'+d.code+'</div><div>'+esc(d.titulo)+'</div><div class="mx-area">'+esc(d.area)+'</div></td>'+
+        '<td class="mx-desc">'+esc(d.hallazgo)+'</td>'+
         '<td class="mx-norm">'+esc(d.norma)+'</td>'+
         '<td class="mx-riesgo"><span class="risk-lvl '+sevBg[d.sev]+'">Riesgo '+sevTxt[d.sev]+'</span><div>'+esc(d.riesgo)+'</div></td>'+
+        '<td><span class="prio '+prioBg[d.prio]+'">'+d.prio+'</span></td>'+
         '<td class="mx-resp">'+esc(d.resp)+'<div class="mx-area">'+esc(d.respRol)+'</div></td>'+
+        '<td class="mx-accion">'+esc(d.plan)+'</td>'+
         '<td class="mx-plazo">'+plazo+'</td>'+
-        '<td class="mx-accion">'+esc(d.accion)+'</td>'+
         '<td><span class="pill '+e.pill+'">'+e.txt+'</span></td>'+
+        '<td class="mx-obs">'+observaciones(d)+'</td>'+
       '</tr>';
     }).join('');
     document.getElementById('matrixBody').innerHTML=html;
