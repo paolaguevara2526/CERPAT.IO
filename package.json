@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:import-clientes": "tsx prisma/import-clientes.ts",
+    "db:import-usuarios": "tsx prisma/import-usuarios.ts",
     "db:import-plan": "tsx prisma/import-plan.ts",
     "db:plan-asignar": "tsx prisma/plan-asignar.ts",
     "db:plan-generar": "tsx prisma/plan-generar.ts",
