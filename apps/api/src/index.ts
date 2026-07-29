@@ -8,6 +8,7 @@ import cors from 'cors';
 import { healthRouter } from './routes/health.js';
 import { tareasRouter } from './routes/tareas.js';
 import { empresasRouter } from './routes/empresas.js';
+import { planRouter } from './routes/plan.js';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.use('/health', healthRouter);
 app.use('/tareas', tareasRouter);
 app.use('/empresas', empresasRouter);
+app.use('/plan', planRouter);
 
 // TODO (Claude Code): agregar aquí, en el mismo patrón, los routers de:
 // /auth, /usuarios, /empresas, /pagos, /catalogos, /vencimientos, /parametros, /auditoria
