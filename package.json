@@ -17,6 +17,7 @@
     "db:import-plan": "tsx prisma/import-plan.ts",
     "db:plan-asignar": "tsx prisma/plan-asignar.ts",
     "db:plan-generar": "tsx prisma/plan-generar.ts",
+    "db:plan-asignaciones": "tsx prisma/plan-asignaciones.ts",
     "db:studio": "prisma studio"
   },
   "devDependencies": {
