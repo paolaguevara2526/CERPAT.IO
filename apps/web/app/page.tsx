@@ -30,6 +30,24 @@ const SERVICIOS = [
 
 const linkStyle: React.CSSProperties = { color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 14.5, opacity: 0.92 };
 
+// Logotipo CERPAT: emblema verde (diamante con flecha ascendente en negativo) +
+// palabra "cerpat". Recreado a partir del logo de la firma; para el asset exacto
+// basta reemplazar el <svg> por la imagen original.
+function Logo({ wordColor = '#fff', size = 32 }: { wordColor?: string; size?: number }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+      <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true" style={{ flexShrink: 0 }}>
+        <path
+          fill={BRAND}
+          fillRule="evenodd"
+          d="M50 5 L95 50 L50 95 L5 50 Z M50 38 L34 54 H43 V72 H57 V54 H66 Z"
+        />
+      </svg>
+      <span style={{ fontWeight: 800, fontSize: size * 0.66, letterSpacing: 0.3, color: wordColor, lineHeight: 1 }}>cerpat</span>
+    </span>
+  );
+}
+
 export default function HomePage() {
   return (
     <main style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', margin: 0, color: INK, background: '#fff' }}>
@@ -37,8 +55,7 @@ export default function HomePage() {
       <header style={{ background: `linear-gradient(135deg, ${NAVY}, ${NAVY_DARK})`, color: '#fff' }}>
         <nav style={{ maxWidth: 1120, margin: '0 auto', padding: '18px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ display: 'inline-flex', width: 34, height: 34, borderRadius: 9, background: BRAND, color: NAVY_DARK, fontWeight: 900, alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>C</span>
-            <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.5 }}>CERPAT</span>
+            <Logo wordColor="#fff" size={36} />
             <span style={{ fontSize: 12, opacity: 0.7, fontWeight: 600, marginLeft: 2 }}>Contadores</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
@@ -112,8 +129,8 @@ export default function HomePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 22 }}>
           {[
             { icono: '✉️', titulo: 'Correo', valor: 'contacto@cerpat.io', href: 'mailto:contacto@cerpat.io' },
-            { icono: '📍', titulo: 'Ubicación', valor: 'Villavicencio, Meta — Colombia', href: null },
-            { icono: '📞', titulo: 'Teléfono', valor: '[PENDIENTE: confirmar]', href: null },
+            { icono: '📍', titulo: 'Ubicación', valor: 'Calle 26b No 39-24, Piso 4 · Barrio 7 de Agosto, Villavicencio (Meta)', href: null },
+            { icono: '📞', titulo: 'Teléfono', valor: '312 432 4791', href: 'tel:+573124324791' },
           ].map((c) => (
             <div key={c.titulo} style={{ background: '#fff', border: '1px solid #EAECF0', borderRadius: 16, padding: '26px 24px', textAlign: 'center' }}>
               <div style={{ fontSize: 26, marginBottom: 10 }}>{c.icono}</div>
@@ -133,8 +150,8 @@ export default function HomePage() {
       <footer style={{ background: NAVY_DARK, color: '#fff', padding: '30px 28px' }}>
         <div style={{ maxWidth: 1120, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ display: 'inline-flex', width: 28, height: 28, borderRadius: 8, background: BRAND, color: NAVY_DARK, fontWeight: 900, alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>C</span>
-            <span style={{ fontWeight: 800 }}>CERPAT Contadores</span>
+            <Logo wordColor="#fff" size={30} />
+            <span style={{ fontWeight: 600, opacity: 0.8, fontSize: 13 }}>Contadores</span>
           </div>
           <div style={{ fontSize: 13.5, opacity: 0.75 }}>© {new Date().getFullYear()} CERPAT · Villavicencio, Meta</div>
         </div>
