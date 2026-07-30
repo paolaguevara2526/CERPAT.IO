@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 const BRAND = '#34C98B';
 const NAVY = '#2E5090';
-const NAVY_DARK = '#16294A';
+const NAVY_DARK = '#0F1D33';
 const INK = '#101828';
 
 const SERVICIOS = [
