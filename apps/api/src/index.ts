@@ -6,6 +6,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { healthRouter } from './routes/health.js';
+import { authRouter } from './routes/auth.js';
 import { tareasRouter } from './routes/tareas.js';
 import { empresasRouter } from './routes/empresas.js';
 import { usuariosRouter } from './routes/usuarios.js';
@@ -17,6 +18,7 @@ app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') ?? '*' }));
 app.use(express.json());
 
 app.use('/health', healthRouter);
+app.use('/auth', authRouter);
 app.use('/tareas', tareasRouter);
 app.use('/empresas', empresasRouter);
 app.use('/usuarios', usuariosRouter);

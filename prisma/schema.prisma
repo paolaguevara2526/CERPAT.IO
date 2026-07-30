@@ -115,6 +115,8 @@ model Usuario {
   area            String? // área organizativa del empleado (Impuestos, Informes, Nómina...)
   activo          Boolean  @default(true)
   esRootPlataforma Boolean @default(false)
+  debeCambiarPassword Boolean @default(false) // fuerza cambio de clave en el próximo ingreso
+  ultimoLogin      DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
