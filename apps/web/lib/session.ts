@@ -12,6 +12,19 @@ export type SessionUser = {
   esRoot: boolean; debeCambiarPassword: boolean; area?: string | null; cargo?: string | null;
 };
 
+export function getToken(): string | undefined {
+  return cookies().get(COOKIE)?.value;
+}
+
+// Llama a la API incluyendo el token de sesión (para endpoints autenticados).
+export async function apiFetch(path: string): Promise<Response> {
+  const token = getToken();
+  return fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+}
+
 export async function getSessionUser(): Promise<SessionUser | null> {
   const token = cookies().get(COOKIE)?.value;
   if (!token) return null;
