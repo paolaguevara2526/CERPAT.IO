@@ -2,7 +2,7 @@
 
 Documento vivo del estado en producción y el roadmap. Actualizar en cada avance.
 
-_Última actualización: 2026-07-29._
+_Última actualización: 2026-07-30._
 
 ## En producción hoy
 
@@ -19,7 +19,14 @@ _Última actualización: 2026-07-29._
 - **`cerpat.io/`** — **home institucional** de la firma (reemplaza el sitio WordPress
   que vivía en `cerpat.com`): hero, servicios por área, «Sobre CERPAT», contacto
   (tel. 312 432 4791, Villavicencio) y acceso al planeador. Página estática propia.
-- **`cerpat.io/app`** — prototipo funcional del planeador (datos locales `localStorage`, especificación viva).
+- **`cerpat.io/app`** — planeador (prototipo `localStorage`) con el **tema
+  escritorio**: sidebar en azul rey y tres secciones (Planeador / Gestión /
+  Servicios), icono sherpa (🧗) en Usuarios.
+- **`cerpat.io/servicios`** — **Herramientas** para equipo y clientes. Disponibles:
+  **Calculadora de retenciones** (`/servicios/retenciones`) y **Punto de
+  equilibrio** (`/servicios/punto-equilibrio`). En construcción: liquidador de
+  intereses, prestaciones sociales, calendario tributario, portal de documentos.
+- **`cerpat.io/usuarios`** — vista cableada del personal (26 usuarios) desde la BD.
 - **`cerpat.io/clientes`** — vista **cableada**: web → API `GET /empresas` → Postgres, 90 clientes reales (sin correos, por privacidad).
 - **`cerpat.io/coordinacion`** — **Panel de Coordinación** (solo consulta): KPIs de
   cumplimiento del plan por área, asesor, auxiliar y clientes en riesgo
@@ -30,6 +37,12 @@ _Última actualización: 2026-07-29._
 - **Multi-tenant (SaaS multi-firma):** cada firma contable es una `Organizacion` aislada; todo el dominio lleva `organizacionId`. **Root de plataforma** (`Usuario.esRootPlataforma`) por encima. Ver [`arquitectura.md`](./arquitectura.md) → ADR-0001.
 - **Regla de aislamiento:** el backend filtra por `organizacionId` de la sesión en cada consulta; nunca confiar en el cliente.
 - Stack: Next.js (Vercel) · Express/TS (Railway) · PostgreSQL/Prisma · auth Auth.js/Clerk (pendiente) · n8n (pendiente) · Microsoft 365 correo (pendiente) · Sentry (pendiente).
+- **Sistema de diseño "software de escritorio":** paleta **azul rey apagado**
+  (`#2E5090` / `#16294A`) como color primario + **verde CERPAT** (`#34C98B`) como
+  acento/positivo; marco de ventana con controles estilo Windows, botones rectos
+  con relieve 3D sutil y paneles biselados (`apps/web/app/desktop.css`). Lema de
+  marca: *"guiamos a nuestros clientes a la cima"* (motivo del sherpa y de las
+  tendencias ▲ en los KPIs). Logo oficial en `/public`.
 - **Identidad de dominio: todo en `cerpat.io`.** La firma perdió el manejo de
   `cerpat.com`, así que se consolida la identidad (web **y correo**) en
   `cerpat.io`, dominio que el equipo sí controla (Hostinger → Vercel). En el repo
