@@ -1,0 +1,142 @@
+/* desktop.css — estilo compartido "software de escritorio" para CERPAT.
+   Relieve 3D sutil: bevel de 1px (luz arriba, sombra abajo) + sombra baja.
+   Botones rectos (esquinas 4px), paneles biselados, marco de ventana y barra
+   de estado. Tema claro/oscuro por tokens. */
+
+:root {
+  --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  --desk-bg: #e7ebf2;
+  --panel: #ffffff;
+  --panel-2: #f3f6fb;
+  --ink: #191d2c;
+  --muted: #5b6478;
+  --line: #dce1ea;
+  --edge: #cfd6e2;
+  --edge-strong: #bcc4d4;
+  --hi: rgba(255,255,255,0.9);
+  --lo: rgba(20,24,45,0.10);
+
+  --navy: #20259c;
+  --navy-2: #11154f;
+  --green: #34c98b;
+  --green-2: #22a670;
+  --green-edge: #1c8a5e;
+
+  --btn-face: linear-gradient(180deg, #ffffff, #eef1f7);
+  --shadow-win: 0 12px 34px rgba(17,21,79,0.16), 0 2px 7px rgba(17,21,79,0.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --desk-bg: #10121a; --panel: #20242f; --panel-2: #191c26; --ink: #eaecf6; --muted: #9aa3ba;
+    --line: #2c313f; --edge: #363c4c; --edge-strong: #434a5d; --hi: rgba(255,255,255,0.07); --lo: rgba(0,0,0,0.45);
+    --btn-face: linear-gradient(180deg, #333a4d, #262b39);
+    --shadow-win: 0 12px 34px rgba(0,0,0,0.55), 0 2px 7px rgba(0,0,0,0.45);
+  }
+}
+:root[data-theme="light"] {
+  --desk-bg:#e7ebf2; --panel:#fff; --panel-2:#f3f6fb; --ink:#191d2c; --muted:#5b6478;
+  --line:#dce1ea; --edge:#cfd6e2; --edge-strong:#bcc4d4; --hi:rgba(255,255,255,0.9); --lo:rgba(20,24,45,0.10);
+  --btn-face:linear-gradient(180deg,#fff,#eef1f7); --shadow-win:0 12px 34px rgba(17,21,79,0.16),0 2px 7px rgba(17,21,79,0.10);
+}
+:root[data-theme="dark"] {
+  --desk-bg:#10121a; --panel:#20242f; --panel-2:#191c26; --ink:#eaecf6; --muted:#9aa3ba;
+  --line:#2c313f; --edge:#363c4c; --edge-strong:#434a5d; --hi:rgba(255,255,255,0.07); --lo:rgba(0,0,0,0.45);
+  --btn-face:linear-gradient(180deg,#333a4d,#262b39); --shadow-win:0 12px 34px rgba(0,0,0,0.55),0 2px 7px rgba(0,0,0,0.45);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+/* ---------- Botones 3D (relieve sutil) ---------- */
+.dbtn {
+  font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink);
+  background: var(--btn-face);
+  border: 1px solid var(--edge-strong);
+  border-top-color: var(--hi);
+  border-radius: 4px;
+  padding: 8px 14px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  box-shadow: inset 0 1px 0 var(--hi), 0 1px 0 var(--edge-strong), 0 1px 2px var(--lo);
+  transition: transform .05s ease, box-shadow .05s ease, filter .12s ease;
+  user-select: none;
+}
+.dbtn:hover { filter: brightness(1.02); }
+.dbtn:active { transform: translateY(1px); box-shadow: inset 0 1px 2px var(--lo); }
+.dbtn:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.dbtn.primary {
+  color: #063a28; background: linear-gradient(180deg, #52dc9f, var(--green-2));
+  border-color: var(--green-edge); border-top-color: rgba(255,255,255,0.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 1px 0 var(--green-edge), 0 1px 3px rgba(28,138,94,0.4);
+}
+.dbtn.navy {
+  color: #fff; background: linear-gradient(180deg, #2b31b0, var(--navy-2));
+  border-color: var(--navy-2); border-top-color: rgba(255,255,255,0.28);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 1px 0 var(--navy-2), 0 1px 3px var(--lo);
+}
+.dbtn.ghost { background: transparent; border-color: rgba(255,255,255,0.4); color: #fff; box-shadow: none; }
+
+/* ---------- Ventana ---------- */
+.win {
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-win);
+  overflow: hidden;
+}
+.win-bar {
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(180deg, #2a30b6, var(--navy-2));
+  color: #fff; padding: 10px 15px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+}
+.win-lights { display: flex; gap: 8px; }
+.win-lights i { width: 12px; height: 12px; border-radius: 50%; display: block; box-shadow: inset 0 1px 1px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(0,0,0,0.3); }
+.win-lights i.r { background: radial-gradient(circle at 35% 30%, #ff8b7e, #d64b3f); }
+.win-lights i.y { background: radial-gradient(circle at 35% 30%, #ffd979, #d98a00); }
+.win-lights i.g { background: radial-gradient(circle at 35% 30%, #7ff0bf, #17a06a); }
+.win-logo { height: 20px; width: auto; display: block; }
+.win-title { font-weight: 700; font-size: 13.5px; }
+.win-path { margin-left: auto; font-family: var(--mono); font-size: 11.5px; opacity: 0.72; }
+.win-toolbar {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  padding: 11px 14px; background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border-bottom: 1px solid var(--line);
+}
+.win-toolbar .sp { flex: 1; }
+.win-body { padding: 18px; }
+.win-status {
+  display: flex; align-items: center; gap: 12px;
+  padding: 7px 15px; font-family: var(--mono); font-size: 11px; color: var(--muted);
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border-top: 1px solid var(--line); box-shadow: inset 0 1px 0 var(--hi);
+}
+.win-status .sp { flex: 1; }
+.win-status .led { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ---------- Paneles / tiles ---------- */
+.panel {
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 10px;
+  box-shadow: inset 0 1px 0 var(--hi), 0 1px 3px var(--lo); overflow: hidden;
+}
+.panel-head { display: flex; align-items: center; gap: 10px; padding: 11px 15px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, var(--panel), var(--panel-2)); font-weight: 700; font-size: 13px; }
+.tile {
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 10px; padding: 14px 16px;
+  box-shadow: inset 0 1px 0 var(--hi), 0 1px 3px var(--lo);
+}
+.tile .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 800; }
+.tile .v { font-size: 28px; font-weight: 800; margin-top: 3px; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+.tile .s { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+/* ---------- Tabla de datos ---------- */
+.dt-wrap { overflow-x: auto; }
+.dt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.dt th { text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.4px; color: var(--muted); font-weight: 800; padding: 11px 14px; border-bottom: 1px solid var(--edge); white-space: nowrap; background: var(--panel-2); }
+.dt td { padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--ink); }
+.dt tr:last-child td { border-bottom: none; }
+
+/* ---------- Chips ---------- */
+.chip { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 4px; letter-spacing: 0.2px; border: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--hi); }
+
+@media (prefers-reduced-motion: reduce) { .dbtn { transition: none; } }

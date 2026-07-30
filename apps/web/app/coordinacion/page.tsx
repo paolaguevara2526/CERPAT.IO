@@ -1,30 +1,21 @@
 // apps/web/app/coordinacion/page.tsx
 //
-// Panel de Coordinación (solo consulta). Server Component que consulta la API
-// (server-side, sin CORS) y muestra los indicadores de cumplimiento del Plan de
-// Trabajo del período: KPIs, cumplimiento por área y clientes en riesgo.
-//
-// Los ejes asesor/auxiliar quedarán poblados cuando existan usuarios y
-// asignaciones por área; hoy el cumplimiento arranca en 0 % porque las tareas
-// generadas están "por iniciar" hasta que el equipo las marque.
+// Panel de Coordinación (solo consulta) con estilo "software de escritorio"
+// (marco de ventana + relieve 3D sutil, ver desktop.css). Consulta la API
+// server-side y muestra KPIs, cumplimiento por área, seguimiento por asesor/
+// auxiliar y clientes en riesgo del período.
 
 export const dynamic = 'force-dynamic';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api-production-678b8.up.railway.app';
-const BRAND = '#34C98B';
 
 type Kpis = { total: number; ejecutadas: number; vencidas: number; porAuditar: number; cumplimiento: number };
 type PorArea = { area: string; total: number; ejecutadas: number; cumplimiento: number };
 type PorCliente = { empresa: string; total: number; ejecutadas: number; vencidas: number; cumplimiento: number };
 type PorPersona = { nombre: string; total: number; ejecutadas: number; vencidas: number; cumplimiento: number };
 type Respuesta = {
-  organizacion: { nombre: string } | null;
-  periodo: string | null;
-  kpis: Kpis | null;
-  porArea: PorArea[];
-  porCliente: PorCliente[];
-  porAsesor?: PorPersona[];
-  porAuxiliar?: PorPersona[];
+  organizacion: { nombre: string } | null; periodo: string | null; kpis: Kpis | null;
+  porArea: PorArea[]; porCliente: PorCliente[]; porAsesor?: PorPersona[]; porAuxiliar?: PorPersona[];
 };
 
 async function getCumplimiento(periodo?: string): Promise<{ data: Respuesta | null; error: string | null }> {
@@ -44,11 +35,38 @@ function nombrePeriodo(periodo: string | null): string {
   const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   return `${meses[(m - 1) % 12]} ${y}`;
 }
+function colorPct(pct: number): string {
+  if (pct >= 85) return '#22a670';
+  if (pct >= 60) return '#d98a00';
+  return '#d64b3f';
+}
 
-function colorCumplimiento(pct: number): string {
-  if (pct >= 85) return '#34C98B';
-  if (pct >= 60) return '#E0A100';
-  return '#E85D4E';
+function TablaPersonas({ titulo, sub, filas }: { titulo: string; sub: string; filas: PorPersona[] }) {
+  return (
+    <div>
+      <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 2px' }}>{titulo}</h2>
+      <div style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>{sub}</div>
+      <div className="panel">
+        <div className="dt-wrap">
+          <table className="dt">
+            <thead><tr><th>Persona</th><th style={{ textAlign: 'right' }}>Tareas</th><th style={{ textAlign: 'right' }}>Venc.</th><th style={{ textAlign: 'right' }}>%</th></tr></thead>
+            <tbody>
+              {filas.length === 0 ? (
+                <tr><td colSpan={4} style={{ padding: 22, textAlign: 'center', color: 'var(--muted)' }}>Sin asignaciones todavía.</td></tr>
+              ) : filas.map((p) => (
+                <tr key={p.nombre}>
+                  <td style={{ fontWeight: 600 }}>{p.nombre}</td>
+                  <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{p.total}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 700, color: p.vencidas > 0 ? '#d64b3f' : 'var(--muted)' }}>{p.vencidas}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 800, color: colorPct(p.cumplimiento) }}>{p.cumplimiento}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default async function CoordinacionPage({ searchParams }: { searchParams?: { periodo?: string } }) {
@@ -61,169 +79,122 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
   const porAuxiliar = data?.porAuxiliar ?? [];
   const enRiesgo = porCliente.filter((c) => c.cumplimiento < 60 || c.vencidas > 0).slice(0, 15);
 
-  const kpiCards = kpis
-    ? [
-        { label: 'Actividades del período', valor: kpis.total, color: '#20259C', sub: 'tareas del plan generadas' },
-        { label: 'Ejecutadas', valor: kpis.ejecutadas, color: BRAND, sub: 'terminadas o auditadas' },
-        { label: 'Vencidas', valor: kpis.vencidas, color: '#E85D4E', sub: 'sin ejecutar tras vencer' },
-        { label: 'Por auditar', valor: kpis.porAuditar, color: '#E0A100', sub: 'terminadas, falta auditoría' },
-      ]
-    : [];
+  const kpiCards = kpis ? [
+    { k: 'Actividades', v: kpis.total, color: 'var(--navy)', s: 'del período' },
+    { k: 'Ejecutadas', v: kpis.ejecutadas, color: '#22a670', s: 'terminadas/auditadas' },
+    { k: 'Vencidas', v: kpis.vencidas, color: '#d64b3f', s: 'sin ejecutar' },
+    { k: 'Por auditar', v: kpis.porAuditar, color: '#d98a00', s: 'falta auditoría' },
+  ] : [];
 
   return (
-    <main style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', background: '#F5F6F8', minHeight: '100vh', margin: 0, color: '#101828' }}>
-      <header style={{ background: 'linear-gradient(135deg,#20259C,#11154F)', color: '#fff', padding: '28px 32px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ fontSize: 13, opacity: 0.75, fontWeight: 600 }}>Planeador CERPAT · Panel de Coordinación · solo consulta</div>
-          <h1 style={{ margin: '6px 0 0', fontSize: 26, fontWeight: 800 }}>
-            Cumplimiento del Plan de Trabajo{data?.organizacion ? ` · ${data.organizacion.nombre}` : ''}
-          </h1>
-          {data?.periodo && (
-            <div style={{ fontSize: 14, opacity: 0.85, marginTop: 6, textTransform: 'capitalize' }}>Período: {nombrePeriodo(data.periodo)}</div>
-          )}
+    <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 70% -10%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '26px 18px 44px', display: 'flex', justifyContent: 'center' }}>
+      <div className="win" style={{ width: '100%', maxWidth: 1080 }}>
+        <div className="win-bar">
+          <span className="win-lights"><i className="r" /><i className="y" /><i className="g" /></span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />
+          <span className="win-title">Panel de Coordinación{data?.organizacion ? ` · ${data.organizacion.nombre}` : ''}</span>
+          <span className="win-path">cerpat.io/coordinacion</span>
         </div>
-      </header>
 
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 32px 60px' }}>
-        {error ? (
-          <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 12, padding: '18px 20px', fontSize: 14, fontWeight: 600 }}>
-            No se pudo cargar el panel: {error}.
-            <div style={{ fontWeight: 400, marginTop: 6, color: '#7a271d' }}>
-              Verifica que la API (<code>{API_URL}</code>) esté en línea y responda en <code>/plan/cumplimiento</code>.
-            </div>
-          </div>
-        ) : !kpis || kpis.total === 0 ? (
-          <div style={{ background: '#fff', borderRadius: 14, padding: '32px', boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', color: '#667085' }}>
-            No hay tareas del plan generadas para este período. Genera el plan del mes para ver los indicadores.
-          </div>
-        ) : (
-          <>
-            {/* KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 28 }}>
-              {kpiCards.map((k) => (
-                <div key={k.label} style={{ background: '#fff', borderRadius: 14, padding: '18px 20px', boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)' }}>
-                  <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.4, color: '#667085', fontWeight: 800 }}>{k.label}</div>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: k.color, marginTop: 6 }}>{k.valor}</div>
-                  <div style={{ fontSize: 12, color: '#98A2B3', marginTop: 2 }}>{k.sub}</div>
-                </div>
-              ))}
-            </div>
+        <div className="win-toolbar">
+          <span className="dbtn navy">Día</span>
+          <span className="dbtn">Semana</span>
+          <span className="dbtn">Mes</span>
+          <span className="sp" />
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'capitalize' }}>
+            {data?.periodo ? `Período: ${nombrePeriodo(data.periodo)}` : ''}
+          </span>
+        </div>
 
-            {/* Cumplimiento global */}
-            <div style={{ background: '#fff', borderRadius: 14, padding: '20px 24px', boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', marginBottom: 28 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 15, fontWeight: 800 }}>Cumplimiento global</span>
-                <span style={{ fontSize: 22, fontWeight: 800, color: colorCumplimiento(kpis.cumplimiento) }}>{kpis.cumplimiento}%</span>
-              </div>
-              <div style={{ height: 12, borderRadius: 8, background: '#EEF0F3', overflow: 'hidden' }}>
-                <div style={{ width: `${kpis.cumplimiento}%`, height: '100%', background: colorCumplimiento(kpis.cumplimiento), transition: 'width .3s' }} />
-              </div>
+        <div className="win-body">
+          {error ? (
+            <div className="panel" style={{ padding: '18px 20px', color: '#b42318', fontWeight: 600 }}>
+              No se pudo cargar el panel: {error}.
+              <div style={{ fontWeight: 400, marginTop: 6, color: 'var(--muted)' }}>Verifica que la API responda en <code>/plan/cumplimiento</code>.</div>
             </div>
-
-            {/* Por área */}
-            <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 14px' }}>Cumplimiento por área</h2>
-            <div style={{ background: '#fff', borderRadius: 14, padding: '8px 24px 20px', boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', marginBottom: 28 }}>
-              {porArea.length === 0 ? (
-                <p style={{ color: '#667085', padding: '16px 0' }}>Sin áreas asignadas.</p>
-              ) : (
-                porArea.map((a) => (
-                  <div key={a.area} style={{ padding: '14px 0', borderBottom: '1px solid #F0F1F3' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 7 }}>
-                      <span style={{ fontWeight: 700, fontSize: 14 }}>{a.area}</span>
-                      <span style={{ fontSize: 13, color: '#667085' }}>
-                        {a.ejecutadas}/{a.total} · <strong style={{ color: colorCumplimiento(a.cumplimiento) }}>{a.cumplimiento}%</strong>
-                      </span>
-                    </div>
-                    <div style={{ height: 9, borderRadius: 6, background: '#EEF0F3', overflow: 'hidden' }}>
-                      <div style={{ width: `${a.cumplimiento}%`, height: '100%', background: colorCumplimiento(a.cumplimiento) }} />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Por asesor y por auxiliar */}
-            {(porAsesor.length > 0 || porAuxiliar.length > 0) && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 20, marginBottom: 28 }}>
-                {[
-                  { titulo: 'Seguimiento por asesor', sub: 'responsable del área', filas: porAsesor },
-                  { titulo: 'Seguimiento por auxiliar', sub: 'ejecutor', filas: porAuxiliar },
-                ].map((bloque) => (
-                  <div key={bloque.titulo}>
-                    <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 4px' }}>{bloque.titulo}</h2>
-                    <div style={{ fontSize: 12.5, color: '#667085', margin: '0 0 12px' }}>{bloque.sub}</div>
-                    <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', overflow: 'hidden' }}>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                          <thead>
-                            <tr>
-                              {['Persona', 'Tareas', 'Venc.', '%'].map((h) => (
-                                <th key={h} style={{ textAlign: h === 'Persona' ? 'left' : 'right', textTransform: 'uppercase', fontSize: 10.5, letterSpacing: 0.3, color: '#667085', fontWeight: 800, padding: '10px 12px', borderBottom: '1px solid #E4E7EC', whiteSpace: 'nowrap' }}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {bloque.filas.length === 0 ? (
-                              <tr><td colSpan={4} style={{ padding: 24, textAlign: 'center', color: '#667085' }}>Sin asignaciones todavía.</td></tr>
-                            ) : (
-                              bloque.filas.map((p) => (
-                                <tr key={p.nombre}>
-                                  <td style={{ padding: '9px 12px', borderBottom: '1px solid #F0F1F3', fontWeight: 600 }}>{p.nombre}</td>
-                                  <td style={{ padding: '9px 12px', borderBottom: '1px solid #F0F1F3', color: '#475467', textAlign: 'right' }}>{p.total}</td>
-                                  <td style={{ padding: '9px 12px', borderBottom: '1px solid #F0F1F3', textAlign: 'right', fontWeight: 700, color: p.vencidas > 0 ? '#E85D4E' : '#475467' }}>{p.vencidas}</td>
-                                  <td style={{ padding: '9px 12px', borderBottom: '1px solid #F0F1F3', textAlign: 'right', fontWeight: 800, color: colorCumplimiento(p.cumplimiento) }}>{p.cumplimiento}%</td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
+          ) : !kpis || kpis.total === 0 ? (
+            <div className="panel" style={{ padding: 26, color: 'var(--muted)' }}>No hay tareas del plan generadas para este período. Genera el plan del mes para ver los indicadores.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+              {/* KPIs */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 14 }}>
+                {kpiCards.map((c) => (
+                  <div className="tile" key={c.k}><div className="k">{c.k}</div><div className="v" style={{ color: c.color }}>{c.v}</div><div className="s">{c.s}</div></div>
                 ))}
               </div>
-            )}
 
-            {/* Clientes en riesgo */}
-            <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 14px' }}>
-              Clientes en riesgo <span style={{ fontWeight: 500, fontSize: 13, color: '#667085' }}>(bajo cumplimiento o con tareas vencidas)</span>
-            </h2>
-            <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', overflow: 'hidden' }}>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
-                  <thead>
-                    <tr>
-                      {['Cliente', 'Actividades', 'Ejecutadas', 'Vencidas', 'Cumplimiento'].map((h) => (
-                        <th key={h} style={{ textAlign: h === 'Cliente' ? 'left' : 'right', textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.4, color: '#667085', fontWeight: 800, padding: '12px 14px', borderBottom: '1px solid #E4E7EC', whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {enRiesgo.length === 0 ? (
-                      <tr><td colSpan={5} style={{ padding: 32, textAlign: 'center', color: '#667085' }}>Ningún cliente en riesgo este período. 🎉</td></tr>
-                    ) : (
-                      enRiesgo.map((c) => (
-                        <tr key={c.empresa}>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', fontWeight: 600 }}>{c.empresa}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467', textAlign: 'right' }}>{c.total}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467', textAlign: 'right' }}>{c.ejecutadas}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', textAlign: 'right', fontWeight: 700, color: c.vencidas > 0 ? '#E85D4E' : '#475467' }}>{c.vencidas}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', textAlign: 'right', fontWeight: 800, color: colorCumplimiento(c.cumplimiento) }}>{c.cumplimiento}%</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              {/* Cumplimiento global */}
+              <div className="panel" style={{ padding: '16px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+                  <span style={{ fontWeight: 800, fontSize: 14 }}>Cumplimiento global</span>
+                  <span style={{ fontWeight: 800, fontSize: 20, color: colorPct(kpis.cumplimiento) }}>{kpis.cumplimiento}%</span>
+                </div>
+                <div style={{ height: 11, borderRadius: 3, background: 'var(--panel-2)', border: '1px solid var(--line)', overflow: 'hidden', boxShadow: 'inset 0 1px 2px var(--lo)' }}>
+                  <div style={{ width: `${kpis.cumplimiento}%`, height: '100%', background: colorPct(kpis.cumplimiento) }} />
+                </div>
+              </div>
+
+              {/* Por área */}
+              <div>
+                <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 10px' }}>Cumplimiento por área</h2>
+                <div className="panel" style={{ padding: '6px 18px 14px' }}>
+                  {porArea.length === 0 ? <p style={{ color: 'var(--muted)' }}>Sin áreas asignadas.</p> : porArea.map((a) => (
+                    <div key={a.area} style={{ padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13.5 }}>{a.area}</span>
+                        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{a.ejecutadas}/{a.total} · <strong style={{ color: colorPct(a.cumplimiento) }}>{a.cumplimiento}%</strong></span>
+                      </div>
+                      <div style={{ height: 8, borderRadius: 3, background: 'var(--panel-2)', border: '1px solid var(--line)', overflow: 'hidden' }}>
+                        <div style={{ width: `${a.cumplimiento}%`, height: '100%', background: colorPct(a.cumplimiento) }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Por asesor / auxiliar */}
+              {(porAsesor.length > 0 || porAuxiliar.length > 0) && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 20 }}>
+                  <TablaPersonas titulo="Seguimiento por asesor" sub="responsable del área" filas={porAsesor} />
+                  <TablaPersonas titulo="Seguimiento por auxiliar" sub="ejecutor" filas={porAuxiliar} />
+                </div>
+              )}
+
+              {/* Clientes en riesgo */}
+              <div>
+                <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 10px' }}>Clientes en riesgo <span style={{ fontWeight: 500, fontSize: 12.5, color: 'var(--muted)' }}>(bajo cumplimiento o con vencidas)</span></h2>
+                <div className="panel">
+                  <div className="dt-wrap">
+                    <table className="dt">
+                      <thead><tr><th>Cliente</th><th style={{ textAlign: 'right' }}>Activid.</th><th style={{ textAlign: 'right' }}>Ejec.</th><th style={{ textAlign: 'right' }}>Venc.</th><th style={{ textAlign: 'right' }}>Cumpl.</th></tr></thead>
+                      <tbody>
+                        {enRiesgo.length === 0 ? (
+                          <tr><td colSpan={5} style={{ padding: 28, textAlign: 'center', color: 'var(--muted)' }}>Ningún cliente en riesgo este período. 🎉</td></tr>
+                        ) : enRiesgo.map((c) => (
+                          <tr key={c.empresa}>
+                            <td style={{ fontWeight: 600 }}>{c.empresa}</td>
+                            <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{c.total}</td>
+                            <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{c.ejecutadas}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 700, color: c.vencidas > 0 ? '#d64b3f' : 'var(--muted)' }}>{c.vencidas}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 800, color: colorPct(c.cumplimiento) }}>{c.cumplimiento}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
+          )}
+        </div>
 
-            <p style={{ fontSize: 12.5, color: '#667085', marginTop: 16, lineHeight: 1.6 }}>
-              Vista de solo consulta para perfiles de coordinación. El seguimiento por asesor y por auxiliar refleja las asignaciones
-              por área de cada cliente. El cumplimiento se actualiza a medida que el equipo marca las tareas como ejecutadas y auditadas.
-            </p>
-          </>
-        )}
-      </section>
+        <div className="win-status">
+          <span className="led" /> Solo consulta · perfiles de coordinación
+          <span className="sp" />
+          <span>Asesor/auxiliar se activan al cargar usuarios y asignaciones</span>
+        </div>
+      </div>
     </main>
   );
 }
