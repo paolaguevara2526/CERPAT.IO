@@ -9,7 +9,7 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
   {
     titulo: 'Planeador',
     items: [
-      { label: 'Inicio', icon: '🏠', soon: true },
+      { label: 'Inicio', icon: '🏠', href: '/planeador' },
       { label: 'Mi Día', icon: '☆', href: '/planeador/mi-dia' },
       { label: 'Calendario', icon: '📅', soon: true },
       { label: 'Tablero', icon: '▦', href: '/planeador/tablero' },
@@ -44,7 +44,7 @@ export default function PlaneadorSidebar() {
         <div key={sec.titulo}>
           <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 800, opacity: 0.55, padding: '12px 10px 5px' }}>{sec.titulo}</div>
           {sec.items.map((it) => {
-            const active = it.href && (path === it.href || path.startsWith(it.href + '/'));
+            const active = it.href && (path === it.href || (it.href !== '/planeador' && path.startsWith(it.href + '/')));
             const base: React.CSSProperties = {
               display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6,
               fontSize: 13, fontWeight: 600, textDecoration: 'none', color: 'inherit', cursor: it.soon ? 'default' : 'pointer',
