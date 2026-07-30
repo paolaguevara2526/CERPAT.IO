@@ -17,6 +17,7 @@ const EJECUTADA = ['terminado', 'auditado'];
 
 // GET /plan/tareas — lista de tareas reales del plan (autenticado).
 // Filtros: ?periodo=YYYY-MM &estado= &area= &q= (empresa/actividad) &mias=1
+//   &prioridad= &asesorId= &auxiliarId= &estadoPago= &venceDesde=YYYY-MM-DD &venceHasta=
 planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
@@ -26,10 +27,17 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
     ? req.query.periodo
     : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  const estado = typeof req.query.estado === 'string' ? req.query.estado : undefined;
-  const area = typeof req.query.area === 'string' ? req.query.area : undefined;
+  const estado = typeof req.query.estado === 'string' && ESTADOS_VALIDOS.includes(req.query.estado) ? req.query.estado : undefined;
+  const area = typeof req.query.area === 'string' && req.query.area ? req.query.area : undefined;
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
   const mias = req.query.mias === '1' || req.query.mias === 'true';
+  const prioridad = typeof req.query.prioridad === 'string' && ['alta', 'media', 'baja'].includes(req.query.prioridad) ? req.query.prioridad : undefined;
+  const asesorId = typeof req.query.asesorId === 'string' && req.query.asesorId ? req.query.asesorId : undefined;
+  const auxiliarId = typeof req.query.auxiliarId === 'string' && req.query.auxiliarId ? req.query.auxiliarId : undefined;
+  const estadoPago = typeof req.query.estadoPago === 'string' && ESTADOS_PAGO.includes(req.query.estadoPago) ? req.query.estadoPago : undefined;
+  const fecha = (v: unknown) => (typeof v === 'string' && v ? (isNaN(new Date(v).getTime()) ? undefined : new Date(v)) : undefined);
+  const venceDesde = fecha(req.query.venceDesde);
+  const venceHasta = fecha(req.query.venceHasta);
   const uid = req.user!.sub;
 
   const tareas = await prisma.tarea.findMany({
@@ -39,6 +47,11 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
       periodo,
       ...(estado ? { estado: estado as any } : {}),
       ...(area ? { area: { nombre: area } } : {}),
+      ...(prioridad ? { prioridad: prioridad as any } : {}),
+      ...(asesorId ? { asesorId } : {}),
+      ...(auxiliarId ? { auxiliarId } : {}),
+      ...(estadoPago ? { estadoPago: estadoPago as any } : {}),
+      ...(venceDesde || venceHasta ? { fechaVencimiento: { ...(venceDesde ? { gte: venceDesde } : {}), ...(venceHasta ? { lte: venceHasta } : {}) } } : {}),
       ...(mias ? { OR: [{ asesorId: uid }, { auxiliarId: uid }] } : {}),
       ...(q ? { OR: [{ empresa: { nombre: { contains: q, mode: 'insensitive' } } }, { titulo: { contains: q, mode: 'insensitive' } }] } : {}),
     },
