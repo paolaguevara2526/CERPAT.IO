@@ -43,6 +43,19 @@ enum EstadoSubtarea {
   no_realizada
 }
 
+// Revisoría Fiscal · Portal de Hallazgos
+enum RiesgoNivel {
+  alto
+  medio
+  bajo
+}
+
+enum EstadoHallazgo {
+  pendiente
+  en_gestion
+  resuelto
+}
+
 enum EstadoTareaPago {
   por_iniciar
   en_curso
@@ -100,6 +113,10 @@ model Organizacion {
   planesCliente    PlanClienteActividad[]
   asignacionesArea AsignacionClienteArea[]
 
+  // Revisoría Fiscal
+  grupos    GrupoEmpresarial[]
+  hallazgos Hallazgo[]
+
   @@map("organizaciones")
 }
 
@@ -117,12 +134,18 @@ model Usuario {
   esRootPlataforma Boolean @default(false)
   debeCambiarPassword Boolean @default(false) // fuerza cambio de clave en el próximo ingreso
   ultimoLogin      DateTime?
+  // Cliente externo (Revisoría Fiscal): ligado a su empresa o a un grupo empresarial.
+  empresaClienteId String?
+  grupoClienteId   String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   organizacion  Organizacion?   @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   roles         UsuarioRol[]
   tareasCreadas Tarea[]         @relation("TareasCreadas")
+  hallazgosCreados Hallazgo[]   @relation("HallazgosCreados")
+  empresaClienteRel Empresa?         @relation("UsuarioEmpresaCliente", fields: [empresaClienteId], references: [id])
+  grupoClienteRel   GrupoEmpresarial? @relation("UsuarioGrupoCliente", fields: [grupoClienteId], references: [id])
   asignaciones  TareaAsignado[]
   asesor        Asesor?
   tareasComoAsesor   Tarea[]                 @relation("TareaAsesor")
@@ -183,6 +206,7 @@ model Empresa {
   regimenId         String?
   periodicidadIvaId String?
   municipioId       String?
+  grupoId           String? // grupo empresarial (Revisoría Fiscal)
   // Datos operativos y de contacto (base de clientes CERPAT)
   servicio            String? // Asesoría Contable | Outsourcing | Revisoría Contable
   asesorNombre        String? // asesor responsable (texto; puede quedar vinculado a Asesor luego)
@@ -200,14 +224,68 @@ model Empresa {
   regimen         RegimenTributario? @relation(fields: [regimenId], references: [id])
   periodicidadIva PeriodicidadIva?   @relation(fields: [periodicidadIvaId], references: [id])
   municipio       Municipio?         @relation(fields: [municipioId], references: [id])
+  grupo           GrupoEmpresarial?  @relation(fields: [grupoId], references: [id])
 
   tareas Tarea[]
   pagos  Pago[]
+  hallazgos        Hallazgo[]
+  usuariosCliente  Usuario[]              @relation("UsuarioEmpresaCliente")
   planActividades  PlanClienteActividad[]
   asignacionesArea AsignacionClienteArea[]
 
   @@index([organizacionId])
   @@map("empresas")
+}
+
+// ---------- REVISORÍA FISCAL · Portal de Hallazgos ----------
+
+// Grupo empresarial: agrupa varias empresas cliente para la vista consolidada
+// (asamblea/junta). Un usuario cliente puede estar ligado a un grupo (ve todas
+// sus empresas) o a una sola empresa.
+model GrupoEmpresarial {
+  id             String  @id @default(uuid())
+  organizacionId String
+  nombre         String
+
+  organizacion    Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresas        Empresa[]
+  usuariosCliente Usuario[]    @relation("UsuarioGrupoCliente")
+
+  @@unique([organizacionId, nombre])
+  @@index([organizacionId])
+  @@map("grupos_empresariales")
+}
+
+// Hallazgo de revisoría fiscal + su plan de acción. El revisor (rol Auditor) lo
+// alimenta; el cliente lo ve en solo lectura. "Vencido" se deriva (plazo < hoy
+// y estado != resuelto), no se almacena.
+model Hallazgo {
+  id             String         @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  area           String? // área/proceso auditado
+  titulo         String // hallazgo (título corto)
+  descripcion    String? // descripción de la situación
+  normatividad   String?
+  riesgo         RiesgoNivel    @default(medio)
+  prioridad      Prioridad      @default(media) // prioridad sugerida
+  responsable    String?
+  planAccion     String? // acción o plan de remediación
+  plazo          DateTime?
+  estado         EstadoHallazgo @default(pendiente)
+  observaciones  String? // observaciones de seguimiento
+  creadoPorId    String? // revisor que lo registró
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id])
+  creadoPor    Usuario?     @relation("HallazgosCreados", fields: [creadoPorId], references: [id])
+
+  @@index([organizacionId])
+  @@index([empresaId])
+  @@index([estado])
+  @@map("hallazgos")
 }
 
 // ---------- CATÁLOGOS (Administración → Catálogos) ----------

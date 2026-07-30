@@ -23,6 +23,7 @@
     "db:plan-generar": "tsx prisma/plan-generar.ts",
     "db:plan-asignaciones": "tsx prisma/plan-asignaciones.ts",
     "db:plan-marcar-pagos": "tsx prisma/plan-marcar-pagos.ts",
+    "db:roles-sync": "tsx prisma/roles-sync.ts",
     "db:studio": "prisma studio"
   },
   "devDependencies": {
