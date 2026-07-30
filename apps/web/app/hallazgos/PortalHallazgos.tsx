@@ -82,6 +82,11 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
 
   const CSV_HEAD = ['Hallazgo', 'Descripción', 'Normatividad', 'Área', 'Riesgo', 'Prioridad', 'Responsable', 'Plan de acción', 'Plazo', 'Estado', 'Observaciones'];
 
+  function plantilla() {
+    const ejemplo = ['Ej: Conciliación bancaria pendiente', 'Descripción de la situación', 'Art. 000', 'Tesorería', 'alto', 'alta', 'Nombre del responsable', 'Plan de remediación', '2026-08-31', 'pendiente', 'Observación de seguimiento'];
+    descargar('plantilla-hallazgos.csv', toCSV([CSV_HEAD, ejemplo]));
+  }
+
   function exportar(empresaNombre: string) {
     const rows = [CSV_HEAD, ...hallazgos.map((h) => [
       h.titulo, h.descripcion, h.normatividad, h.area, h.riesgo, h.prioridad, h.responsable, h.planAccion,
@@ -201,7 +206,8 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
         <span className="sp" style={{ flex: 1 }} />
         <button className="dbtn" onClick={() => exportar(empresaSel?.nombre ?? 'empresa')} disabled={hallazgos.length === 0} style={{ fontSize: 13 }}>⭳ Exportar</button>
         {esGestor && <>
-          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); }} />
+          <button className="dbtn" onClick={plantilla} style={{ fontSize: 13 }}>Plantilla</button>
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); }} />
           <button className="dbtn" onClick={() => fileRef.current?.click()} disabled={importando} style={{ fontSize: 13 }}>{importando ? 'Importando…' : '⭱ Importar'}</button>
           <button className="dbtn primary" onClick={() => setModal('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo hallazgo</button>
         </>}
