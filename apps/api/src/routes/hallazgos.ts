@@ -171,3 +171,26 @@ hallazgosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (r.count === 0) return res.status(404).json({ error: 'Hallazgo no encontrado.' });
   res.json({ ok: true });
 });
+
+// POST /hallazgos/importar  { empresaId, items: [...] } — carga masiva (revisor).
+hallazgosRouter.post('/importar', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esGestor(req.user!)) return res.status(403).json({ error: 'Solo el revisor fiscal puede importar hallazgos.' });
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresaId = String(req.body?.empresaId ?? '');
+  const empresa = empresaId ? await prisma.empresa.findFirst({ where: { id: empresaId, organizacionId: org.id }, select: { id: true } }) : null;
+  if (!empresa) return res.status(422).json({ error: 'Debes indicar una empresa válida.' });
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  if (items.length === 0) return res.status(422).json({ error: 'No hay filas para importar.' });
+
+  const data = [];
+  let omitidas = 0;
+  for (const it of items) {
+    const { data: d, error } = datosHallazgo(it);
+    if (error || !d.titulo) { omitidas++; continue; }
+    data.push({ organizacionId: org.id, empresaId, creadoPorId: req.user!.sub, ...d });
+  }
+  if (data.length === 0) return res.status(422).json({ error: 'Ninguna fila válida (falta el título del hallazgo).' });
+  const r = await prisma.hallazgo.createMany({ data: data as any });
+  res.status(201).json({ ok: true, creadas: r.count, omitidas });
+});
