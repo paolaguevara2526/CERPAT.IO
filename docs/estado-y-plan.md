@@ -92,9 +92,9 @@ _Última actualización: 2026-07-30._
 Portal para clientes externos (asamblea/gerencia) + revisor fiscal. Ver
 [`docs/revisoria-fiscal.md`](./revisoria-fiscal.md).
 - [x] Fundación: esquema (`GrupoEmpresarial`, `Hallazgo`, `Usuario.empresaClienteId/grupoClienteId`, `Empresa.grupoId`, enums `RiesgoNivel`/`EstadoHallazgo`) + rol `Cliente` (`db:roles-sync`).
-- [ ] API de Hallazgos (CRUD revisor + lectura con aislamiento cliente/grupo).
-- [ ] Vistas React (revisor / empresa / grupo).
-- [ ] Administración: alta de grupos y usuarios `Cliente`.
+- [x] API de Hallazgos (CRUD revisor + lectura con aislamiento cliente/grupo).
+- [x] Vistas React (revisor / empresa / grupo) en `/hallazgos`.
+- [x] Administración: grupos (pestaña Grupos), asignar empresa→grupo y usuarios `Cliente` ligados a empresa/grupo.
 
 ## En diseño — Plan de Trabajo Contable (cumplimiento) 🚧
 

@@ -64,6 +64,7 @@ const CATALOGOS: Record<string, CatCfg> = {
   'tipos-obligacion': { delegate: prisma.tipoObligacion, conOrden: true },
   periodicidades: { delegate: prisma.periodicidad, conOrden: true },
   etiquetas: { delegate: prisma.etiqueta, conOrden: false },
+  grupos: { delegate: prisma.grupoEmpresarial, conOrden: false }, // grupos empresariales (Revisoría Fiscal)
 };
 
 adminRouter.get('/catalogos/:tipo', requireAuth, async (req, res) => {
@@ -329,7 +330,8 @@ adminRouter.get('/usuarios', requireAuth, soloAdmin, async (_req, res) => {
     orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
     select: {
       id: true, nombre: true, email: true, cargo: true, area: true, activo: true, esRootPlataforma: true,
-      debeCambiarPassword: true, roles: { select: { rolId: true, rol: { select: { nombre: true } } } },
+      debeCambiarPassword: true, empresaClienteId: true, grupoClienteId: true,
+      roles: { select: { rolId: true, rol: { select: { nombre: true } } } },
     },
   });
   res.json({ total: usuarios.length, usuarios: usuarios.map((u) => ({ ...u, esRoot: u.esRootPlataforma, roles: u.roles.map((r) => ({ id: r.rolId, nombre: r.rol.nombre })), esRootPlataforma: undefined })) });
@@ -353,6 +355,7 @@ adminRouter.post('/usuarios', requireAuth, soloAdmin, async (req, res) => {
       data: {
         organizacionId: id, nombre, email, passwordHash: hashPassword(temporal), debeCambiarPassword: true,
         cargo: req.body?.cargo?.trim() || null, area: req.body?.area?.trim() || null, activo: req.body?.activo !== false,
+        empresaClienteId: req.body?.empresaClienteId || null, grupoClienteId: req.body?.grupoClienteId || null,
         ...(rolIds.length ? { roles: { create: rolIds.map((rolId) => ({ rolId })) } } : {}),
       },
       select: { id: true },
@@ -379,6 +382,8 @@ adminRouter.patch('/usuarios/:id', requireAuth, soloAdmin, async (req, res) => {
     if (u.esRootPlataforma && req.body.activo === false) return res.status(403).json({ error: 'No se puede desactivar al usuario root.' });
     data.activo = !!req.body.activo;
   }
+  if ('empresaClienteId' in req.body) data.empresaClienteId = req.body.empresaClienteId || null;
+  if ('grupoClienteId' in req.body) data.grupoClienteId = req.body.grupoClienteId || null;
 
   const cambiarRoles = Array.isArray(req.body?.roles);
   try {
@@ -433,6 +438,7 @@ function datosEmpresa(body: any): Record<string, any> {
   for (const c of ['nit', 'servicio', 'asesorNombre'] as const) if (c in (body ?? {})) data[c] = typeof body[c] === 'string' && body[c].trim() ? body[c].trim() : null;
   for (const e of EMAILS_EMPRESA) if (e in (body ?? {})) data[e] = typeof body[e] === 'string' && body[e].trim() ? body[e].trim() : null;
   if ('activo' in (body ?? {})) data.activo = !!body.activo;
+  if ('grupoId' in (body ?? {})) data.grupoId = body.grupoId || null;
   return data;
 }
 
@@ -444,7 +450,7 @@ adminRouter.get('/empresas', requireAuth, soloAdmin, async (req, res) => {
     where: { organizacionId: id, ...(incluirInactivos ? {} : { activo: true }) },
     orderBy: { nombre: 'asc' },
     select: {
-      id: true, nombre: true, nit: true, servicio: true, asesorNombre: true, activo: true,
+      id: true, nombre: true, nit: true, servicio: true, asesorNombre: true, activo: true, grupoId: true,
       emailRepresentante: true, emailAdministracion: true, emailContabilidad: true, emailTalentoHumano: true, emailTesoreria: true,
     },
   });

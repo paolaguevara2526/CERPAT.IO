@@ -5,12 +5,14 @@
 import { useEffect, useState, useCallback } from 'react';
 
 type Rol = { id: string; nombre: string };
+type Opcion = { id: string; nombre: string };
 type Usuario = {
   id: string; nombre: string; email: string; cargo: string | null; area: string | null;
   activo: boolean; esRoot: boolean; debeCambiarPassword: boolean; roles: { id: string; nombre: string }[];
+  empresaClienteId: string | null; grupoClienteId: string | null;
 };
-type Form = { nombre: string; email: string; cargo: string; area: string; roles: string[]; activo: boolean; passwordTemporal: string };
-const VACIO: Form = { nombre: '', email: '', cargo: '', area: '', roles: [], activo: true, passwordTemporal: '' };
+type Form = { nombre: string; email: string; cargo: string; area: string; roles: string[]; activo: boolean; passwordTemporal: string; empresaClienteId: string; grupoClienteId: string };
+const VACIO: Form = { nombre: '', email: '', cargo: '', area: '', roles: [], activo: true, passwordTemporal: '', empresaClienteId: '', grupoClienteId: '' };
 
 const ROL_COLOR: Record<string, string> = { Administrador: '#20259c', Coordinador: '#7a5af8', Asesor: '#0e9f6e', Auxiliar: '#3f83f8', Auditor: '#d98a00' };
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
@@ -19,6 +21,8 @@ const lbl: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight:
 export default function UsuariosPanel() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [roles, setRoles] = useState<Rol[]>([]);
+  const [empresas, setEmpresas] = useState<Opcion[]>([]);
+  const [grupos, setGrupos] = useState<Opcion[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -37,6 +41,8 @@ export default function UsuariosPanel() {
   useEffect(() => {
     cargar();
     fetch('/api/admin/roles', { cache: 'no-store' }).then((r) => r.json()).then((d) => setRoles(d.roles ?? [])).catch(() => {});
+    fetch('/api/admin/empresas', { cache: 'no-store' }).then((r) => r.json()).then((d) => setEmpresas((d.items ?? []).map((e: any) => ({ id: e.id, nombre: e.nombre })))).catch(() => {});
+    fetch('/api/admin/catalogos/grupos', { cache: 'no-store' }).then((r) => r.json()).then((d) => setGrupos(d.items ?? [])).catch(() => {});
   }, [cargar]);
 
   async function toggleActivo(u: Usuario) {
@@ -97,19 +103,22 @@ export default function UsuariosPanel() {
         </div>
       </div>
 
-      {editar && <Editor usuario={editar} roles={roles} onClose={() => setEditar(null)} onGuardado={(msg) => { setEditar(null); setAviso(msg ?? null); cargar(); }} onError={setError} />}
+      {editar && <Editor usuario={editar} roles={roles} empresas={empresas} grupos={grupos} onClose={() => setEditar(null)} onGuardado={(msg) => { setEditar(null); setAviso(msg ?? null); cargar(); }} onError={setError} />}
     </div>
   );
 }
 
 const ic = (color: string): React.CSSProperties => ({ border: 'none', background: 'none', cursor: 'pointer', color, fontSize: 14, padding: '2px 5px' });
 
-function Editor({ usuario, roles, onClose, onGuardado, onError }: { usuario: Usuario | 'nuevo'; roles: Rol[]; onClose: () => void; onGuardado: (msg?: string) => void; onError: (m: string) => void }) {
+function Editor({ usuario, roles, empresas, grupos, onClose, onGuardado, onError }: { usuario: Usuario | 'nuevo'; roles: Rol[]; empresas: Opcion[]; grupos: Opcion[]; onClose: () => void; onGuardado: (msg?: string) => void; onError: (m: string) => void }) {
   const nuevo = usuario === 'nuevo';
   const [form, setForm] = useState<Form>(nuevo ? VACIO : {
     nombre: usuario.nombre, email: usuario.email, cargo: usuario.cargo ?? '', area: usuario.area ?? '',
     roles: usuario.roles.map((r) => r.id), activo: usuario.activo, passwordTemporal: '',
+    empresaClienteId: usuario.empresaClienteId ?? '', grupoClienteId: usuario.grupoClienteId ?? '',
   });
+  const rolCliente = roles.find((r) => r.nombre === 'Cliente');
+  const esCliente = !!rolCliente && form.roles.includes(rolCliente.id);
   const [guardando, setGuardando] = useState(false);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const toggleRol = (id: string) => setForm((f) => ({ ...f, roles: f.roles.includes(id) ? f.roles.filter((x) => x !== id) : [...f.roles, id] }));
@@ -118,13 +127,16 @@ function Editor({ usuario, roles, onClose, onGuardado, onError }: { usuario: Usu
     if (!form.nombre.trim() || (nuevo && !form.email.trim())) { onError('Nombre y correo son obligatorios.'); return; }
     setGuardando(true);
     try {
+      // Alcance de cliente (solo si tiene rol Cliente); si no, se limpia.
+      const empresaClienteId = esCliente ? (form.empresaClienteId || null) : null;
+      const grupoClienteId = esCliente ? (form.grupoClienteId || null) : null;
       if (nuevo) {
-        const res = await fetch('/api/admin/usuarios', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+        const res = await fetch('/api/admin/usuarios', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, empresaClienteId, grupoClienteId }) });
         const d = await res.json();
         if (!res.ok) { onError(d.error || 'No se pudo crear.'); setGuardando(false); return; }
         onGuardado(`Usuario ${form.nombre} creado. Contraseña temporal: ${d.passwordTemporal} (deberá cambiarla al ingresar).`);
       } else {
-        const res = await fetch(`/api/admin/usuarios/${(usuario as Usuario).id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: form.nombre, cargo: form.cargo, area: form.area, roles: form.roles, activo: form.activo }) });
+        const res = await fetch(`/api/admin/usuarios/${(usuario as Usuario).id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: form.nombre, cargo: form.cargo, area: form.area, roles: form.roles, activo: form.activo, empresaClienteId, grupoClienteId }) });
         const d = await res.json();
         if (!res.ok) { onError(d.error || 'No se pudo guardar.'); setGuardando(false); return; }
         onGuardado();
@@ -155,6 +167,24 @@ function Editor({ usuario, roles, onClose, onGuardado, onError }: { usuario: Usu
               ))}
             </div>
           </div>
+          {esCliente && (
+            <div style={{ border: '1px solid var(--edge)', borderRadius: 6, padding: '10px 12px', background: 'var(--panel-2)' }}>
+              <span style={{ ...lbl, marginBottom: 6 }}>Portal de Hallazgos · alcance del cliente</span>
+              <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 8px' }}>Elige <strong>una empresa</strong> (ve solo esa) <strong>o un grupo</strong> (ve el consolidado de sus empresas).</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <label><span style={lbl}>Empresa</span>
+                  <select style={input} value={form.empresaClienteId} onChange={(e) => { set('empresaClienteId', e.target.value); if (e.target.value) set('grupoClienteId', ''); }}>
+                    <option value="">— Ninguna —</option>{empresas.map((em) => <option key={em.id} value={em.id}>{em.nombre}</option>)}
+                  </select>
+                </label>
+                <label><span style={lbl}>Grupo</span>
+                  <select style={input} value={form.grupoClienteId} onChange={(e) => { set('grupoClienteId', e.target.value); if (e.target.value) set('empresaClienteId', ''); }}>
+                    <option value="">— Ninguno —</option>{grupos.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
+                  </select>
+                </label>
+              </div>
+            </div>
+          )}
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={form.activo} onChange={(e) => set('activo', e.target.checked)} /> Usuario activo
           </label>

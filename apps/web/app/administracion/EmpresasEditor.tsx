@@ -5,9 +5,10 @@
 import { useEffect, useState, useCallback } from 'react';
 
 type Empresa = {
-  id: string; nombre: string; nit: string | null; servicio: string | null; asesorNombre: string | null; activo: boolean;
+  id: string; nombre: string; nit: string | null; servicio: string | null; asesorNombre: string | null; activo: boolean; grupoId: string | null;
   emailRepresentante: string | null; emailAdministracion: string | null; emailContabilidad: string | null; emailTalentoHumano: string | null; emailTesoreria: string | null;
 };
+type Grupo = { id: string; nombre: string };
 type Form = Omit<Empresa, 'id' | 'activo'> & { activo: boolean };
 
 const EMAILS: { k: keyof Form; label: string }[] = [
@@ -17,17 +18,19 @@ const EMAILS: { k: keyof Form; label: string }[] = [
   { k: 'emailTalentoHumano', label: 'Talento humano' },
   { k: 'emailTesoreria', label: 'Tesorería' },
 ];
-const vacio = (): Form => ({ nombre: '', nit: '', servicio: '', asesorNombre: '', activo: true, emailRepresentante: '', emailAdministracion: '', emailContabilidad: '', emailTalentoHumano: '', emailTesoreria: '' });
+const vacio = (): Form => ({ nombre: '', nit: '', servicio: '', asesorNombre: '', activo: true, grupoId: '', emailRepresentante: '', emailAdministracion: '', emailContabilidad: '', emailTalentoHumano: '', emailTesoreria: '' });
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 };
 
 export default function EmpresasEditor() {
   const [items, setItems] = useState<Empresa[]>([]);
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [editar, setEditar] = useState<Empresa | 'nuevo' | null>(null);
+  const nombreGrupo = (gid: string | null) => grupos.find((g) => g.id === gid)?.nombre ?? null;
 
   const cargar = useCallback(async () => {
     setCargando(true); setError(null);
@@ -40,6 +43,7 @@ export default function EmpresasEditor() {
   }, [incluirInactivos]);
 
   useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { fetch('/api/admin/catalogos/grupos', { cache: 'no-store' }).then((r) => r.json()).then((d) => setGrupos(d.items ?? [])).catch(() => {}); }, []);
 
   async function toggleActivo(e: Empresa) {
     const res = await fetch(`/api/admin/empresas/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: !e.activo }) });
@@ -70,17 +74,18 @@ export default function EmpresasEditor() {
       <div className="panel">
         <div className="dt-wrap">
           <table className="dt">
-            <thead><tr><th>Cliente</th><th>NIT</th><th>Servicio</th><th>Asesor</th><th>Activo</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>NIT</th><th>Servicio</th><th>Grupo</th><th>Asesor</th><th>Activo</th><th>Acciones</th></tr></thead>
             <tbody>
               {cargando ? (
-                <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
+                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
               ) : filtrada.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin clientes.</td></tr>
+                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin clientes.</td></tr>
               ) : filtrada.map((e) => (
                 <tr key={e.id}>
                   <td style={{ fontWeight: 600 }}>{e.nombre}</td>
                   <td style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 12.5 }}>{e.nit ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{e.servicio ?? '—'}</td>
+                  <td style={{ color: 'var(--muted)' }}>{nombreGrupo(e.grupoId) ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{e.asesorNombre ?? '—'}</td>
                   <td><button onClick={() => toggleActivo(e)} title={e.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>{e.activo ? '🟢' : '⚪'}</button></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
@@ -94,17 +99,17 @@ export default function EmpresasEditor() {
         </div>
       </div>
 
-      {editar && <Editor empresa={editar} onClose={() => setEditar(null)} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
+      {editar && <Editor empresa={editar} grupos={grupos} onClose={() => setEditar(null)} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
     </div>
   );
 }
 
 const ic = (color: string): React.CSSProperties => ({ border: 'none', background: 'none', cursor: 'pointer', color, fontSize: 14, padding: '2px 5px' });
 
-function Editor({ empresa, onClose, onGuardado, onError }: { empresa: Empresa | 'nuevo'; onClose: () => void; onGuardado: () => void; onError: (m: string) => void }) {
+function Editor({ empresa, grupos, onClose, onGuardado, onError }: { empresa: Empresa | 'nuevo'; grupos: Grupo[]; onClose: () => void; onGuardado: () => void; onError: (m: string) => void }) {
   const nuevo = empresa === 'nuevo';
   const [form, setForm] = useState<Form>(nuevo ? vacio() : {
-    nombre: empresa.nombre, nit: empresa.nit ?? '', servicio: empresa.servicio ?? '', asesorNombre: empresa.asesorNombre ?? '', activo: empresa.activo,
+    nombre: empresa.nombre, nit: empresa.nit ?? '', servicio: empresa.servicio ?? '', asesorNombre: empresa.asesorNombre ?? '', activo: empresa.activo, grupoId: empresa.grupoId ?? '',
     emailRepresentante: empresa.emailRepresentante ?? '', emailAdministracion: empresa.emailAdministracion ?? '', emailContabilidad: empresa.emailContabilidad ?? '', emailTalentoHumano: empresa.emailTalentoHumano ?? '', emailTesoreria: empresa.emailTesoreria ?? '',
   });
   const [guardando, setGuardando] = useState(false);
@@ -134,7 +139,15 @@ function Editor({ empresa, onClose, onGuardado, onError }: { empresa: Empresa | 
             <label><span style={lbl}>NIT</span><input style={input} value={form.nit ?? ''} onChange={(e) => set('nit', e.target.value)} /></label>
             <label><span style={lbl}>Servicio</span><input style={input} value={form.servicio ?? ''} onChange={(e) => set('servicio', e.target.value)} placeholder="Outsourcing…" /></label>
           </div>
-          <label><span style={lbl}>Asesor (nombre)</span><input style={input} value={form.asesorNombre ?? ''} onChange={(e) => set('asesorNombre', e.target.value)} /></label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label><span style={lbl}>Asesor (nombre)</span><input style={input} value={form.asesorNombre ?? ''} onChange={(e) => set('asesorNombre', e.target.value)} /></label>
+            <label><span style={lbl}>Grupo empresarial</span>
+              <select style={input} value={form.grupoId ?? ''} onChange={(e) => set('grupoId', e.target.value)}>
+                <option value="">— Sin grupo —</option>
+                {grupos.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
+              </select>
+            </label>
+          </div>
           <div>
             <span style={lbl}>Correos de contacto</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>

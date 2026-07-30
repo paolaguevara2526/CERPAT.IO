@@ -19,6 +19,7 @@ const TABS: Tab[] = [
   { id: 'tipos-obligacion', label: 'Tipos de obligación', tipo: 'tipos-obligacion' },
   { id: 'periodicidades', label: 'Periodicidades', tipo: 'periodicidades' },
   { id: 'etiquetas', label: 'Etiquetas', tipo: 'etiquetas' },
+  { id: 'grupos', label: 'Grupos', tipo: 'grupos' },
 ];
 
 export default function AdminPanel() {
