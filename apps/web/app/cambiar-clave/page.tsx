@@ -26,7 +26,7 @@ export default function CambiarClavePage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'No se pudo cambiar la contraseña.'); setCargando(false); return; }
-      router.replace('/coordinacion');
+      router.replace('/planeador');
     } catch {
       setError('Error de red. Intenta de nuevo.');
       setCargando(false);
