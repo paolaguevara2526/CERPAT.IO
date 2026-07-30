@@ -47,6 +47,41 @@
   --btn-face:linear-gradient(180deg,#333a4d,#262b39); --shadow-win:0 12px 34px rgba(0,0,0,0.55),0 2px 7px rgba(0,0,0,0.45);
 }
 
+/* ============ TEMAS DE COLOR (Apariencia · elegibles por usuario) ============ */
+/* El verde CERPAT (#34c98b) se mantiene constante en todos los temas.          */
+
+/* Claro (por defecto) */
+:root[data-cerpat-theme="claro"] {
+  --desk-bg:#e7ebf2; --panel:#fff; --panel-2:#f3f6fb; --ink:#191d2c; --muted:#5b6478;
+  --line:#dce1ea; --edge:#cfd6e2; --edge-strong:#bcc4d4; --hi:rgba(255,255,255,0.9); --lo:rgba(20,24,45,0.10);
+  --btn-face:linear-gradient(180deg,#fff,#eef1f7); --shadow-win:0 12px 34px rgba(17,21,79,0.16),0 2px 7px rgba(17,21,79,0.10);
+  --navy:#2e5090; --navy-hi:#3a5ea6; --navy-2:#0f1d33;
+}
+
+/* Escritorio (azul rey vivo + verde, claro y frío) — como la imagen */
+:root[data-cerpat-theme="escritorio"] {
+  --desk-bg:#e9edf6; --panel:#ffffff; --panel-2:#f2f5fb; --ink:#151b2b; --muted:#586074;
+  --line:#dbe2ee; --edge:#c9d2e2; --edge-strong:#b4bfd4; --hi:rgba(255,255,255,0.92); --lo:rgba(18,26,48,0.10);
+  --btn-face:linear-gradient(180deg,#fff,#eef2f9); --shadow-win:0 12px 34px rgba(20,32,80,0.16),0 2px 7px rgba(20,32,80,0.10);
+  --navy:#274b9e; --navy-hi:#3560bd; --navy-2:#16295a;
+}
+
+/* Azul profundo (navy oscuro + verde + blanco) */
+:root[data-cerpat-theme="navy"] {
+  --desk-bg:#0a1424; --panel:#12243f; --panel-2:#0e1d33; --ink:#eaf1ff; --muted:#9fb2cf;
+  --line:#20375c; --edge:#284670; --edge-strong:#33517f; --hi:rgba(255,255,255,0.06); --lo:rgba(0,0,0,0.5);
+  --btn-face:linear-gradient(180deg,#1a3157,#12243f); --shadow-win:0 14px 40px rgba(0,0,0,0.55),0 2px 8px rgba(0,0,0,0.45);
+  --navy:#3a5ea6; --navy-hi:#4a72c0; --navy-2:#0b1a30;
+}
+
+/* Oscuro (gris neutro) */
+:root[data-cerpat-theme="oscuro"] {
+  --desk-bg:#10121a; --panel:#20242f; --panel-2:#191c26; --ink:#eaecf6; --muted:#9aa3ba;
+  --line:#2c313f; --edge:#363c4c; --edge-strong:#434a5d; --hi:rgba(255,255,255,0.07); --lo:rgba(0,0,0,0.45);
+  --btn-face:linear-gradient(180deg,#333a4d,#262b39); --shadow-win:0 12px 34px rgba(0,0,0,0.55),0 2px 7px rgba(0,0,0,0.45);
+  --navy:#3a5ea6; --navy-hi:#4a70bd; --navy-2:#0f1d33;
+}
+
 * { box-sizing: border-box; }
 body { margin: 0; }
 
