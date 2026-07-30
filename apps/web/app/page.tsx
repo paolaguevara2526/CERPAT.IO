@@ -30,22 +30,13 @@ const SERVICIOS = [
 
 const linkStyle: React.CSSProperties = { color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 14.5, opacity: 0.92 };
 
-// Logotipo CERPAT: emblema verde (diamante con flecha ascendente en negativo) +
-// palabra "cerpat". Recreado a partir del logo de la firma; para el asset exacto
-// basta reemplazar el <svg> por la imagen original.
-function Logo({ wordColor = '#fff', size = 32 }: { wordColor?: string; size?: number }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-      <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true" style={{ flexShrink: 0 }}>
-        <path
-          fill={BRAND}
-          fillRule="evenodd"
-          d="M50 5 L95 50 L50 95 L5 50 Z M50 38 L34 54 H43 V72 H57 V54 H66 Z"
-        />
-      </svg>
-      <span style={{ fontWeight: 800, fontSize: size * 0.66, letterSpacing: 0.3, color: wordColor, lineHeight: 1 }}>cerpat</span>
-    </span>
-  );
+// Logotipo oficial de CERPAT (emblema verde + palabra "cerpat"). SVG en
+// /public. Variante "blanco" (letras blancas) para fondos oscuros; la normal
+// (letras navy) para fondos claros.
+function Logo({ variant = 'blanco', height = 30 }: { variant?: 'blanco' | 'color'; height?: number }) {
+  const src = variant === 'blanco' ? '/logo-cerpat-blanco.svg' : '/logo-cerpat.svg';
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="CERPAT Contadores" style={{ height, width: 'auto', display: 'block' }} />;
 }
 
 export default function HomePage() {
@@ -55,7 +46,7 @@ export default function HomePage() {
       <header style={{ background: `linear-gradient(135deg, ${NAVY}, ${NAVY_DARK})`, color: '#fff' }}>
         <nav style={{ maxWidth: 1120, margin: '0 auto', padding: '18px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Logo wordColor="#fff" size={36} />
+            <Logo variant="blanco" height={30} />
             <span style={{ fontSize: 12, opacity: 0.7, fontWeight: 600, marginLeft: 2 }}>Contadores</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
@@ -150,7 +141,7 @@ export default function HomePage() {
       <footer style={{ background: NAVY_DARK, color: '#fff', padding: '30px 28px' }}>
         <div style={{ maxWidth: 1120, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Logo wordColor="#fff" size={30} />
+            <Logo variant="blanco" height={26} />
             <span style={{ fontWeight: 600, opacity: 0.8, fontSize: 13 }}>Contadores</span>
           </div>
           <div style={{ fontSize: 13.5, opacity: 0.75 }}>© {new Date().getFullYear()} CERPAT · Villavicencio, Meta</div>
