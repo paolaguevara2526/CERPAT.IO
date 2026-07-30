@@ -259,6 +259,163 @@ planRouter.patch('/tareas/:id/pago', requireAuth, async (req: AuthedRequest, res
   res.json({ ok: true, id: actualizada.id, valorPago: actualizada.valorPago != null ? Number(actualizada.valorPago) : null, estadoPago: actualizada.estadoPago });
 });
 
+// ---------- Crear / editar / eliminar tareas (Coordinador/Administrador/root) ----------
+
+const PRIORIDADES = ['alta', 'media', 'baja'];
+const ESTADOS_SUBTAREA = ['pendiente', 'realizada', 'no_aplica', 'no_realizada'];
+
+function puedeGestionar(u: { esRoot: boolean; roles: string[] }): boolean {
+  return u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r));
+}
+
+// Datos comunes para el formulario de tarea (selects): clientes, áreas, personas.
+planRouter.get('/form-datos', requireAuth, async (_req, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.json({ empresas: [], areas: [], usuarios: [] });
+  const [empresas, areas, usuarios] = await Promise.all([
+    prisma.empresa.findMany({ where: { organizacionId: org.id, activo: true }, orderBy: { nombre: 'asc' }, select: { id: true, nombre: true } }),
+    prisma.area.findMany({ where: { organizacionId: org.id }, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }], select: { id: true, nombre: true } }),
+    prisma.usuario.findMany({ where: { organizacionId: org.id, activo: true }, orderBy: { nombre: 'asc' }, select: { id: true, nombre: true } }),
+  ]);
+  res.json({ empresas, areas, usuarios });
+});
+
+function datosTarea(body: any): { data: Record<string, any>; error?: string } {
+  const data: Record<string, any> = {};
+  if (typeof body?.titulo === 'string' && body.titulo.trim()) data.titulo = body.titulo.trim();
+  if ('empresaId' in (body ?? {}) && body.empresaId) data.empresaId = body.empresaId;
+  if ('areaId' in (body ?? {})) data.areaId = body.areaId || null;
+  if ('asesorId' in (body ?? {})) data.asesorId = body.asesorId || null;
+  if ('auxiliarId' in (body ?? {})) data.auxiliarId = body.auxiliarId || null;
+  if (typeof body?.prioridad === 'string') {
+    if (!PRIORIDADES.includes(body.prioridad)) return { data, error: 'Prioridad inválida.' };
+    data.prioridad = body.prioridad;
+  }
+  if ('periodo' in (body ?? {})) data.periodo = body.periodo && /^\d{4}-\d{2}$/.test(body.periodo) ? body.periodo : (body.periodo ? undefined : null);
+  if (data.periodo === undefined && 'periodo' in (body ?? {})) return { data, error: 'El período debe ser YYYY-MM.' };
+  if ('observaciones' in (body ?? {})) data.observaciones = typeof body.observaciones === 'string' && body.observaciones.trim() ? body.observaciones.trim() : null;
+  if ('generaPago' in (body ?? {})) data.generaPago = !!body.generaPago;
+  if ('requiereRevisionTecnica' in (body ?? {})) data.requiereRevisionTecnica = !!body.requiereRevisionTecnica;
+  for (const f of ['fechaInicio', 'fechaVencimiento'] as const) {
+    if (f in (body ?? {})) {
+      const d = body[f] ? new Date(body[f]) : null;
+      if (!d || isNaN(d.getTime())) return { data, error: `Fecha (${f}) inválida.` };
+      data[f] = d;
+    }
+  }
+  return { data };
+}
+
+// Una tarea con sus ids (para el formulario de edición).
+planRouter.get('/tareas/:id/detalle', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const t = await prisma.tarea.findFirst({
+    where: { id: req.params.id, organizacionId: org?.id },
+    select: {
+      id: true, titulo: true, empresaId: true, areaId: true, asesorId: true, auxiliarId: true,
+      prioridad: true, estado: true, periodo: true, observaciones: true, generaPago: true,
+      requiereRevisionTecnica: true, auditoria: true, fechaInicio: true, fechaVencimiento: true,
+    },
+  });
+  if (!t) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  res.json({ tarea: t });
+});
+
+planRouter.post('/tareas', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede crear tareas.' });
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const { data, error } = datosTarea(req.body);
+  if (error) return res.status(422).json({ error });
+  if (!data.titulo || !data.empresaId) return res.status(422).json({ error: 'Título y cliente son obligatorios.' });
+  if (!data.fechaVencimiento) return res.status(422).json({ error: 'La fecha de vencimiento es obligatoria.' });
+  if (!data.fechaInicio) data.fechaInicio = data.fechaVencimiento;
+
+  const subtareas: string[] = Array.isArray(req.body?.subtareas)
+    ? req.body.subtareas.map((s: any) => String(s ?? '').trim()).filter(Boolean) : [];
+
+  const tarea = await prisma.tarea.create({
+    data: {
+      organizacionId: org.id, creadoPorId: req.user!.sub, ...data,
+      ...(subtareas.length ? { subtareas: { create: subtareas.map((texto, i) => ({ texto, orden: i })) } } : {}),
+    } as any,
+    select: { id: true },
+  });
+  res.status(201).json({ ok: true, id: tarea.id });
+});
+
+planRouter.patch('/tareas/:id', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede editar tareas.' });
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  if (tarea.auditoria === 'aprobada') return res.status(403).json({ error: 'La tarea está bloqueada (aprobada en Auditoría). Debe desbloquearse primero.' });
+  const { data, error } = datosTarea(req.body);
+  if (error) return res.status(422).json({ error });
+  if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+  await prisma.tarea.update({ where: { id: tarea.id }, data });
+  res.json({ ok: true });
+});
+
+planRouter.delete('/tareas/:id', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede eliminar tareas.' });
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const r = await prisma.tarea.deleteMany({ where: { id: req.params.id, organizacionId: org?.id } });
+  if (r.count === 0) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  res.json({ ok: true });
+});
+
+// Subtareas de una tarea
+planRouter.get('/tareas/:id/subtareas', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  const subtareas = await prisma.subtarea.findMany({ where: { tareaId: tarea.id }, orderBy: { orden: 'asc' }, select: { id: true, texto: true, estado: true, orden: true } });
+  res.json({ subtareas });
+});
+
+planRouter.post('/tareas/:id/subtareas', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede agregar subtareas.' });
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  const texto = String(req.body?.texto ?? '').trim();
+  if (!texto) return res.status(422).json({ error: 'El texto de la subtarea es obligatorio.' });
+  const n = await prisma.subtarea.count({ where: { tareaId: tarea.id } });
+  const s = await prisma.subtarea.create({ data: { tareaId: tarea.id, texto, orden: n }, select: { id: true, texto: true, estado: true, orden: true } });
+  res.status(201).json({ ok: true, subtarea: s });
+});
+
+// El ejecutor o coordinación puede cambiar el estado de una subtarea.
+planRouter.patch('/tareas/:id/subtareas/:subId', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true, asesorId: true, auxiliarId: true } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  const u = req.user!;
+  const puede = puedeGestionar(u) || tarea.asesorId === u.sub || tarea.auxiliarId === u.sub;
+  if (!puede) return res.status(403).json({ error: 'No puedes editar las subtareas de esta tarea.' });
+  const data: Record<string, any> = {};
+  if (typeof req.body?.texto === 'string' && req.body.texto.trim()) data.texto = req.body.texto.trim();
+  if (typeof req.body?.estado === 'string') {
+    if (!ESTADOS_SUBTAREA.includes(req.body.estado)) return res.status(400).json({ error: 'Estado de subtarea inválido.' });
+    data.estado = req.body.estado;
+  }
+  if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+  const r = await prisma.subtarea.updateMany({ where: { id: req.params.subId, tareaId: tarea.id }, data });
+  if (r.count === 0) return res.status(404).json({ error: 'Subtarea no encontrada.' });
+  res.json({ ok: true });
+});
+
+planRouter.delete('/tareas/:id/subtareas/:subId', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede eliminar subtareas.' });
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  const r = await prisma.subtarea.deleteMany({ where: { id: req.params.subId, tareaId: tarea.id } });
+  if (r.count === 0) return res.status(404).json({ error: 'Subtarea no encontrada.' });
+  res.json({ ok: true });
+});
+
 planRouter.get('/cumplimiento', async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, periodo: null, kpis: null, porArea: [], porCliente: [] });

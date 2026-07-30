@@ -1,6 +1,8 @@
 // apps/web/app/planeador/lista/page.tsx — Lista de tareas reales del plan.
 
 import { fetchTareas, TareasTabla, ESTADO_META, AREAS, nombrePeriodo } from '../tareas';
+import { getSessionUser } from '@/lib/session';
+import NuevaTareaBoton from '../TareaModal';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,8 +14,9 @@ export default async function ListaPage({ searchParams }: { searchParams?: Recor
   if (estado) qs.set('estado', estado);
   if (area) qs.set('area', area);
   if (q) qs.set('q', q);
-  const { data, error } = await fetchTareas(qs.toString());
+  const [{ data, error }, sesion] = await Promise.all([fetchTareas(qs.toString()), getSessionUser()]);
   const tareas = data?.tareas ?? [];
+  const gestionable = !!sesion && (sesion.esRoot || sesion.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)));
 
   const sel: React.CSSProperties = { padding: '8px 11px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
 
@@ -21,7 +24,10 @@ export default async function ListaPage({ searchParams }: { searchParams?: Recor
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Lista de tareas</h1>
-        <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{data?.periodo ? nombrePeriodo(data.periodo) : ''} · {tareas.length} tareas</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{data?.periodo ? nombrePeriodo(data.periodo) : ''} · {tareas.length} tareas</span>
+          {gestionable && <NuevaTareaBoton />}
+        </div>
       </div>
 
       <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -40,7 +46,7 @@ export default async function ListaPage({ searchParams }: { searchParams?: Recor
       {error ? (
         <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>
       ) : (
-        <TareasTabla tareas={tareas} />
+        <TareasTabla tareas={tareas} gestionable={gestionable} />
       )}
     </>
   );

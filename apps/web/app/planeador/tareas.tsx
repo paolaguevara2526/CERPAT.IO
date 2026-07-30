@@ -3,6 +3,7 @@
 
 import { apiFetch } from '@/lib/session';
 import EstadoSelect from './EstadoSelect';
+import { EditarTareaBoton } from './TareaModal';
 
 export type Tarea = {
   id: string; titulo: string; estado: string; prioridad: string; auditoria: string;
@@ -43,7 +44,8 @@ function fmtFecha(iso: string): string {
   try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return ''; }
 }
 
-export function TareasTabla({ tareas, mostrarAsesor = true }: { tareas: Tarea[]; mostrarAsesor?: boolean }) {
+export function TareasTabla({ tareas, mostrarAsesor = true, gestionable = false }: { tareas: Tarea[]; mostrarAsesor?: boolean; gestionable?: boolean }) {
+  const cols = 6 + (mostrarAsesor ? 1 : 0) + (gestionable ? 1 : 0);
   return (
     <div className="panel">
       <div className="dt-wrap">
@@ -52,11 +54,12 @@ export function TareasTabla({ tareas, mostrarAsesor = true }: { tareas: Tarea[];
             <tr>
               <th>Actividad</th><th>Cliente</th><th>Área</th>
               {mostrarAsesor && <th>Asesor</th>}<th>Auxiliar</th><th>Vence</th><th>Estado</th>
+              {gestionable && <th></th>}
             </tr>
           </thead>
           <tbody>
             {tareas.length === 0 ? (
-              <tr><td colSpan={mostrarAsesor ? 7 : 6} style={{ padding: 34, textAlign: 'center', color: 'var(--muted)' }}>No hay tareas con estos filtros.</td></tr>
+              <tr><td colSpan={cols} style={{ padding: 34, textAlign: 'center', color: 'var(--muted)' }}>No hay tareas con estos filtros.</td></tr>
             ) : tareas.map((t) => (
               <tr key={t.id}>
                 <td style={{ fontWeight: 600 }}>{t.titulo}</td>
@@ -66,6 +69,7 @@ export function TareasTabla({ tareas, mostrarAsesor = true }: { tareas: Tarea[];
                 <td style={{ color: 'var(--muted)' }}>{t.auxiliar ?? '—'}</td>
                 <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtFecha(t.fechaVencimiento)}</td>
                 <td><EstadoSelect id={t.id} estado={t.estado} /></td>
+                {gestionable && <td><EditarTareaBoton id={t.id} /></td>}
               </tr>
             ))}
           </tbody>
