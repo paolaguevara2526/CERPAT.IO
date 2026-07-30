@@ -3,8 +3,9 @@
 // el revisor— edición de la matriz. Todo contra /api/portal/... con el
 // aislamiento validado en el backend.
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import HallazgoModal from './HallazgoModal';
+import { toCSV, parseCSV, descargar, normRiesgo, normPrioridad, normEstado, normFecha } from './csv';
 
 export type Empresa = { id: string; nombre: string; grupo: string | null };
 export type Hallazgo = {
@@ -36,6 +37,9 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Hallazgo | 'nuevo' | null>(null);
   const [busqueda, setBusqueda] = useState('');
+  const [filtro, setFiltro] = useState<'todos' | 'resuelto' | 'en_gestion' | 'vencido'>('todos');
+  const [importando, setImportando] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const cargarBase = useCallback(async () => {
     setCargando(true); setError(null);
@@ -74,6 +78,44 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     const r = await fetch(`/api/portal/${h.id}`, { method: 'DELETE' });
     if (r.ok) { setHallazgos((p) => p.filter((x) => x.id !== h.id)); cargarBase(); }
     else { const d = await r.json(); setError(d.error || 'No se pudo eliminar.'); }
+  }
+
+  const CSV_HEAD = ['Hallazgo', 'Descripción', 'Normatividad', 'Área', 'Riesgo', 'Prioridad', 'Responsable', 'Plan de acción', 'Plazo', 'Estado', 'Observaciones'];
+
+  function exportar(empresaNombre: string) {
+    const rows = [CSV_HEAD, ...hallazgos.map((h) => [
+      h.titulo, h.descripcion, h.normatividad, h.area, h.riesgo, h.prioridad, h.responsable, h.planAccion,
+      h.plazo ? h.plazo.slice(0, 10) : '', h.estado, h.observaciones,
+    ])];
+    descargar(`hallazgos-${empresaNombre.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`, toCSV(rows));
+  }
+
+  async function importar(file: File) {
+    if (!sel) return;
+    setImportando(true); setError(null);
+    try {
+      const filas = parseCSV(await file.text());
+      if (filas.length < 2) { setError('El archivo no tiene filas de datos.'); setImportando(false); return; }
+      const head = filas[0].map((h) => h.trim().toLowerCase());
+      const col = (n: string) => head.findIndex((h) => h.includes(n));
+      const iTit = col('hallazgo') >= 0 ? col('hallazgo') : 0;
+      const idx = { desc: col('descrip'), norm: col('normativ'), area: col('área') >= 0 ? col('área') : col('area'), riesgo: col('riesgo'), prio: col('prioridad'), resp: col('responsable'), plan: col('plan'), plazo: col('plazo'), estado: col('estado'), obs: col('observ') };
+      const items = filas.slice(1).map((f) => ({
+        titulo: (f[iTit] ?? '').trim(),
+        descripcion: idx.desc >= 0 ? f[idx.desc] : '', normatividad: idx.norm >= 0 ? f[idx.norm] : '',
+        area: idx.area >= 0 ? f[idx.area] : '', riesgo: idx.riesgo >= 0 ? normRiesgo(f[idx.riesgo]) : 'medio',
+        prioridad: idx.prio >= 0 ? normPrioridad(f[idx.prio]) : 'media', responsable: idx.resp >= 0 ? f[idx.resp] : '',
+        planAccion: idx.plan >= 0 ? f[idx.plan] : '', plazo: idx.plazo >= 0 ? normFecha(f[idx.plazo]) : '',
+        estado: idx.estado >= 0 ? normEstado(f[idx.estado]) : 'pendiente', observaciones: idx.obs >= 0 ? f[idx.obs] : '',
+      })).filter((x) => x.titulo);
+      if (items.length === 0) { setError('No se encontraron filas con "Hallazgo" (título).'); setImportando(false); return; }
+      const res = await fetch('/api/portal/importar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ empresaId: sel, items }) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'No se pudo importar.');
+      else { await cargarHallazgos(sel); cargarBase(); setError(null); alert(`Importados: ${d.creadas} hallazgo(s)${d.omitidas ? `, ${d.omitidas} omitida(s)` : ''}.`); }
+    } catch { setError('No se pudo leer el archivo.'); }
+    setImportando(false);
+    if (fileRef.current) fileRef.current.value = '';
   }
 
   if (cargando) return <div style={{ color: 'var(--muted)', padding: 16 }}>Cargando…</div>;
@@ -131,13 +173,28 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
 
   // ---- Detalle por empresa (matriz) ----
   const k = resumen?.porEmpresa.find((e) => e.empresaId === sel);
+  const nResueltos = hallazgos.filter((h) => h.estado === 'resuelto').length;
+  const nVencidos = hallazgos.filter((h) => h.vencido).length;
+  const nGestion = hallazgos.filter((h) => !h.vencido && h.estado !== 'resuelto').length;
+  const filtrados = hallazgos.filter((h) => filtro === 'todos' ? true : filtro === 'vencido' ? h.vencido : filtro === 'resuelto' ? h.estado === 'resuelto' : (!h.vencido && h.estado !== 'resuelto'));
+  const TABS: { id: typeof filtro; label: string; n: number }[] = [
+    { id: 'todos', label: 'Todos', n: hallazgos.length },
+    { id: 'resuelto', label: 'Resueltos', n: nResueltos },
+    { id: 'en_gestion', label: 'En gestión', n: nGestion },
+    { id: 'vencido', label: 'Vencidos', n: nVencidos },
+  ];
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-        {multi && <button className="dbtn" onClick={() => setSel(null)} style={{ fontSize: 13 }}>‹ Volver</button>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+        {multi && <button className="dbtn" onClick={() => { setSel(null); setFiltro('todos'); }} style={{ fontSize: 13 }}>‹ Volver</button>}
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>{empresaSel?.nombre ?? 'Hallazgos'}</h1>
         <span className="sp" style={{ flex: 1 }} />
-        {esGestor && <button className="dbtn primary" onClick={() => setModal('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo hallazgo</button>}
+        <button className="dbtn" onClick={() => exportar(empresaSel?.nombre ?? 'empresa')} disabled={hallazgos.length === 0} style={{ fontSize: 13 }}>⭳ Exportar</button>
+        {esGestor && <>
+          <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); }} />
+          <button className="dbtn" onClick={() => fileRef.current?.click()} disabled={importando} style={{ fontSize: 13 }}>{importando ? 'Importando…' : '⭱ Importar'}</button>
+          <button className="dbtn primary" onClick={() => setModal('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo hallazgo</button>
+        </>}
       </div>
       {k && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 16 }}>
@@ -147,15 +204,26 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
           <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: k.vencidos ? '#cf4436' : '#8a94a6' }}>{k.vencidos}</div><div className="s">requieren atención</div></div>
         </div>
       )}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {TABS.map((t) => {
+          const on = filtro === t.id;
+          return (
+            <button key={t.id} onClick={() => setFiltro(t.id)}
+              style={{ border: '1px solid var(--edge-strong)', background: on ? 'var(--navy)' : 'var(--panel)', color: on ? '#fff' : 'var(--ink)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 12.5, fontWeight: 700 }}>
+              {t.label} <span style={{ opacity: 0.7, fontWeight: 800 }}>{t.n}</span>
+            </button>
+          );
+        })}
+      </div>
       <div className="panel" style={{ overflowX: 'auto' }}>
         <table className="dt" style={{ minWidth: 940 }}>
           <thead><tr>
             <th>Hallazgo</th><th>Descripción</th><th>Normatividad</th><th>Riesgo</th><th>Prioridad</th><th>Responsable</th><th>Plan de acción</th><th>Plazo</th><th>Estado</th><th>Observaciones</th>{esGestor && <th></th>}
           </tr></thead>
           <tbody>
-            {hallazgos.length === 0 ? (
-              <tr><td colSpan={esGestor ? 11 : 10} style={{ padding: 26, textAlign: 'center', color: 'var(--muted)' }}>Sin hallazgos registrados para esta empresa.</td></tr>
-            ) : hallazgos.map((h) => {
+            {filtrados.length === 0 ? (
+              <tr><td colSpan={esGestor ? 11 : 10} style={{ padding: 26, textAlign: 'center', color: 'var(--muted)' }}>{hallazgos.length === 0 ? 'Sin hallazgos registrados para esta empresa.' : 'No hay hallazgos con este filtro.'}</td></tr>
+            ) : filtrados.map((h) => {
               const em = ESTADO_META[h.estado] ?? ESTADO_META.pendiente;
               const rm = RIESGO_META[h.riesgo] ?? RIESGO_META.medio;
               return (
