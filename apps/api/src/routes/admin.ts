@@ -422,3 +422,63 @@ adminRouter.delete('/usuarios/:id', requireAuth, soloAdmin, async (req: AuthedRe
     throw e;
   }
 });
+
+// ---------- Empresas / Clientes ----------
+
+const EMAILS_EMPRESA = ['emailRepresentante', 'emailAdministracion', 'emailContabilidad', 'emailTalentoHumano', 'emailTesoreria'] as const;
+
+function datosEmpresa(body: any): Record<string, any> {
+  const data: Record<string, any> = {};
+  if (typeof body?.nombre === 'string' && body.nombre.trim()) data.nombre = body.nombre.trim();
+  for (const c of ['nit', 'servicio', 'asesorNombre'] as const) if (c in (body ?? {})) data[c] = typeof body[c] === 'string' && body[c].trim() ? body[c].trim() : null;
+  for (const e of EMAILS_EMPRESA) if (e in (body ?? {})) data[e] = typeof body[e] === 'string' && body[e].trim() ? body[e].trim() : null;
+  if ('activo' in (body ?? {})) data.activo = !!body.activo;
+  return data;
+}
+
+adminRouter.get('/empresas', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const incluirInactivos = req.query.incluirInactivos === '1' || req.query.incluirInactivos === 'true';
+  const items = await prisma.empresa.findMany({
+    where: { organizacionId: id, ...(incluirInactivos ? {} : { activo: true }) },
+    orderBy: { nombre: 'asc' },
+    select: {
+      id: true, nombre: true, nit: true, servicio: true, asesorNombre: true, activo: true,
+      emailRepresentante: true, emailAdministracion: true, emailContabilidad: true, emailTalentoHumano: true, emailTesoreria: true,
+    },
+  });
+  res.json({ total: items.length, items });
+});
+
+adminRouter.post('/empresas', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const data = datosEmpresa(req.body);
+  if (!data.nombre) return res.status(422).json({ error: 'El nombre del cliente es obligatorio.' });
+  const e = await prisma.empresa.create({ data: { organizacionId: id, activo: true, ...data } as any, select: { id: true } });
+  res.status(201).json({ ok: true, id: e.id });
+});
+
+adminRouter.patch('/empresas/:id', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const data = datosEmpresa(req.body);
+  if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+  const r = await prisma.empresa.updateMany({ where: { id: req.params.id, organizacionId: id }, data });
+  if (r.count === 0) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  res.json({ ok: true });
+});
+
+adminRouter.delete('/empresas/:id', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  try {
+    const r = await prisma.empresa.deleteMany({ where: { id: req.params.id, organizacionId: id } });
+    if (r.count === 0) return res.status(404).json({ error: 'Cliente no encontrado.' });
+    res.json({ ok: true });
+  } catch (e: any) {
+    if (e?.code === 'P2003') return res.status(409).json({ error: 'No se puede eliminar: el cliente tiene tareas o pagos. Desactívalo en su lugar.' });
+    throw e;
+  }
+});
