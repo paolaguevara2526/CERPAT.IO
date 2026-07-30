@@ -5,7 +5,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
-import PlaneadorSidebar from './PlaneadorSidebar';
+import PlaneadorShell from './PlaneadorShell';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
 
   return (
     <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '14px', display: 'flex', justifyContent: 'center' }}>
-      <div className="win" style={{ width: '100%' }}>
+      <div className="win" style={{ width: '100%', minHeight: 'calc(100vh - 28px)', display: 'flex', flexDirection: 'column' }}>
         <div className="win-bar">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />
@@ -35,10 +35,7 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr', minHeight: 520 }}>
-          <PlaneadorSidebar esAdmin={esAdmin} esGestorHallazgos={esGestorHallazgos} />
-          <div style={{ padding: '18px 20px', overflow: 'auto' }}>{children}</div>
-        </div>
+        <PlaneadorShell esAdmin={esAdmin} esGestorHallazgos={esGestorHallazgos}>{children}</PlaneadorShell>
 
         <div className="win-status">
           <span className="led" /> Conectado · {sesion.nombre}
