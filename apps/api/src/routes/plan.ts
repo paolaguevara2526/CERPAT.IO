@@ -9,10 +9,62 @@
 
 import { Router } from 'express';
 import { prisma } from '../db.js';
+import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 
 export const planRouter = Router();
 
 const EJECUTADA = ['terminado', 'auditado'];
+
+// GET /plan/tareas — lista de tareas reales del plan (autenticado).
+// Filtros: ?periodo=YYYY-MM &estado= &area= &q= (empresa/actividad) &mias=1
+planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
+
+  const now = new Date();
+  const periodo = typeof req.query.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.query.periodo)
+    ? req.query.periodo
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const estado = typeof req.query.estado === 'string' ? req.query.estado : undefined;
+  const area = typeof req.query.area === 'string' ? req.query.area : undefined;
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const mias = req.query.mias === '1' || req.query.mias === 'true';
+  const uid = req.user!.sub;
+
+  const tareas = await prisma.tarea.findMany({
+    where: {
+      organizacionId: org.id,
+      actividadPlanId: { not: null },
+      periodo,
+      ...(estado ? { estado: estado as any } : {}),
+      ...(area ? { area: { nombre: area } } : {}),
+      ...(mias ? { OR: [{ asesorId: uid }, { auxiliarId: uid }] } : {}),
+      ...(q ? { OR: [{ empresa: { nombre: { contains: q, mode: 'insensitive' } } }, { titulo: { contains: q, mode: 'insensitive' } }] } : {}),
+    },
+    select: {
+      id: true, titulo: true, estado: true, prioridad: true, auditoria: true,
+      fechaInicio: true, fechaVencimiento: true, periodo: true,
+      empresa: { select: { nombre: true } },
+      area: { select: { nombre: true } },
+      asesor: { select: { nombre: true } },
+      auxiliar: { select: { nombre: true } },
+    },
+    orderBy: [{ fechaVencimiento: 'asc' }, { titulo: 'asc' }],
+    take: 500,
+  });
+
+  res.json({
+    periodo,
+    total: tareas.length,
+    tareas: tareas.map((t) => ({
+      id: t.id, titulo: t.titulo, estado: t.estado, prioridad: t.prioridad, auditoria: t.auditoria,
+      fechaVencimiento: t.fechaVencimiento, periodo: t.periodo,
+      empresa: t.empresa?.nombre ?? null, area: t.area?.nombre ?? null,
+      asesor: t.asesor?.nombre ?? null, auxiliar: t.auxiliar?.nombre ?? null,
+    })),
+  });
+});
 
 planRouter.get('/cumplimiento', async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
