@@ -1,33 +1,19 @@
 // apps/web/app/usuarios/page.tsx
 //
-// Vista de Usuarios (personal) cableada a la API: Server Component que consulta
-// la base real en Postgres. Muestra el listado del personal cargado desde la
-// base de personal de la firma (nombre, cargo, área, rol, estado).
+// Vista de Usuarios (personal) cableada a la API, con estilo "software de
+// escritorio" (marco de ventana + relieve 3D sutil, ver desktop.css).
 //
-// TODO (auth): esta vista debe quedar detrás de login (rol Administrador/
-// Coordinador) — hoy es pública mientras no existe autenticación.
+// TODO (auth): debe quedar detrás de login (rol Administrador/Coordinador).
 
 export const dynamic = 'force-dynamic';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api-production-678b8.up.railway.app';
-const BRAND = '#34C98B';
 
 type Usuario = {
-  id: string;
-  nombre: string;
-  email: string;
-  cargo: string | null;
-  area: string | null;
-  activo: boolean;
-  esRoot: boolean;
-  roles: string[];
+  id: string; nombre: string; email: string; cargo: string | null; area: string | null;
+  activo: boolean; esRoot: boolean; roles: string[];
 };
-
-type Respuesta = {
-  organizacion: { nombre: string; slug: string } | null;
-  total: number;
-  usuarios: Usuario[];
-};
+type Respuesta = { organizacion: { nombre: string; slug: string } | null; total: number; usuarios: Usuario[] };
 
 async function getUsuarios(): Promise<{ data: Respuesta | null; error: string | null }> {
   try {
@@ -40,11 +26,7 @@ async function getUsuarios(): Promise<{ data: Respuesta | null; error: string | 
 }
 
 const ROL_COLOR: Record<string, string> = {
-  Administrador: '#20259C',
-  Coordinador: '#7A5AF8',
-  Asesor: '#0E9F6E',
-  Auxiliar: '#3F83F8',
-  Auditor: '#E0A100',
+  Administrador: '#20259c', Coordinador: '#7a5af8', Asesor: '#0e9f6e', Auxiliar: '#3f83f8', Auditor: '#d98a00',
 };
 
 export default async function UsuariosPage() {
@@ -53,79 +35,83 @@ export default async function UsuariosPage() {
   const activos = usuarios.filter((u) => u.activo).length;
 
   return (
-    <main style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', background: '#F5F6F8', minHeight: '100vh', margin: 0, color: '#101828' }}>
-      <header style={{ background: 'linear-gradient(135deg,#20259C,#11154F)', color: '#fff', padding: '28px 32px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ fontSize: 13, opacity: 0.75, fontWeight: 600 }}>Planeador CERPAT · datos en vivo desde la base</div>
-          <h1 style={{ margin: '6px 0 0', fontSize: 26, fontWeight: 800 }}>Usuarios {data?.organizacion ? `· ${data.organizacion.nombre}` : ''}</h1>
+    <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 70% -10%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '26px 18px 44px', display: 'flex', justifyContent: 'center' }}>
+      <div className="win" style={{ width: '100%', maxWidth: 1080 }}>
+        <div className="win-bar">
+          <span className="win-lights"><i className="r" /><i className="y" /><i className="g" /></span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />
+          <span className="win-title">Usuarios{data?.organizacion ? ` · ${data.organizacion.nombre}` : ''}</span>
+          <span className="win-path">cerpat.io/usuarios</span>
         </div>
-      </header>
 
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 32px 60px' }}>
-        {error ? (
-          <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 12, padding: '18px 20px', fontSize: 14, fontWeight: 600 }}>
-            No se pudieron cargar los usuarios: {error}.
-            <div style={{ fontWeight: 400, marginTop: 6, color: '#7a271d' }}>
-              Verifica que la API (<code>{API_URL}</code>) esté en línea y responda en <code>/usuarios</code>.
+        <div className="win-toolbar">
+          <span className="dbtn primary">＋ Nuevo usuario</span>
+          <span className="dbtn">Importar</span>
+          <span className="dbtn">Exportar</span>
+          <span className="sp" />
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>
+            {usuarios.length} usuarios · {activos} activos
+          </span>
+        </div>
+
+        <div className="win-body">
+          {error ? (
+            <div className="panel" style={{ padding: '18px 20px', color: '#b42318', fontWeight: 600 }}>
+              No se pudieron cargar los usuarios: {error}.
+              <div style={{ fontWeight: 400, marginTop: 6, color: 'var(--muted)' }}>
+                Verifica que la API (<code>{API_URL}</code>) responda en <code>/usuarios</code>.
+              </div>
             </div>
-          </div>
-        ) : usuarios.length === 0 ? (
-          <div style={{ background: '#fff', borderRadius: 14, padding: '32px', boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', color: '#475467', lineHeight: 1.6 }}>
-            <strong style={{ color: '#101828' }}>Todavía no hay usuarios en la base.</strong>
-            <div style={{ marginTop: 8 }}>
-              El listado del personal aún no se ha cargado. Corre en la consola de Railway:
-              <pre style={{ background: '#0B1020', color: '#D6E2FF', padding: '12px 14px', borderRadius: 10, marginTop: 10, overflowX: 'auto', fontSize: 13 }}>{`npx prisma db push
+          ) : usuarios.length === 0 ? (
+            <div className="panel" style={{ padding: 26, color: 'var(--muted)', lineHeight: 1.6 }}>
+              <strong style={{ color: 'var(--ink)' }}>Todavía no hay usuarios en la base.</strong>
+              <div style={{ marginTop: 8 }}>Corre en la consola de Railway:
+                <pre style={{ background: '#0b1020', color: '#d6e2ff', padding: '12px 14px', borderRadius: 8, marginTop: 10, overflowX: 'auto', fontSize: 13 }}>{`npx prisma db push
 npm run db:generate
 npm run db:import-usuarios`}</pre>
-              Luego recarga esta página.
+                Luego recarga esta página.
+              </div>
             </div>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 34, fontWeight: 800, color: BRAND }}>{usuarios.length}</span>
-              <span style={{ fontSize: 14, color: '#667085', fontWeight: 600 }}>usuarios cargados ({activos} activos)</span>
-            </div>
-            <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', overflow: 'hidden' }}>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+          ) : (
+            <div className="panel">
+              <div className="dt-wrap">
+                <table className="dt">
                   <thead>
-                    <tr>
-                      {['Nombre', 'Correo', 'Cargo', 'Área', 'Rol', 'Estado'].map((h) => (
-                        <th key={h} style={{ textAlign: 'left', textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.4, color: '#667085', fontWeight: 800, padding: '12px 14px', borderBottom: '1px solid #E4E7EC', whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
+                    <tr>{['Nombre', 'Correo', 'Cargo', 'Área', 'Rol', 'Estado'].map((h) => <th key={h}>{h}</th>)}</tr>
                   </thead>
                   <tbody>
                     {usuarios.map((u) => (
                       <tr key={u.id}>
-                        <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', fontWeight: 600 }}>
+                        <td style={{ fontWeight: 600 }}>
                           {u.nombre}
-                          {u.esRoot && <span style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, color: '#20259C', background: '#E7E9FF', padding: '2px 7px', borderRadius: 999 }}>ROOT</span>}
+                          {u.esRoot && <span className="chip" style={{ marginLeft: 8, color: '#20259c', background: '#e7e9ff', borderColor: '#c9ccff' }}>ROOT</span>}
                         </td>
-                        <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467', fontFamily: 'ui-monospace, monospace', fontSize: 12.5 }}>{u.email}</td>
-                        <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467' }}>{u.cargo ?? '—'}</td>
-                        <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467' }}>{u.area ?? '—'}</td>
-                        <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3' }}>
-                          {u.roles.length === 0 ? <span style={{ color: '#98A2B3' }}>—</span> : u.roles.map((r) => (
-                            <span key={r} style={{ display: 'inline-block', fontSize: 11.5, fontWeight: 700, color: ROL_COLOR[r] ?? '#475467', background: `${ROL_COLOR[r] ?? '#475467'}18`, padding: '2px 8px', borderRadius: 999, marginRight: 4 }}>{r}</span>
-                          ))}
+                        <td style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 12.5 }}>{u.email}</td>
+                        <td style={{ color: 'var(--muted)' }}>{u.cargo ?? '—'}</td>
+                        <td style={{ color: 'var(--muted)' }}>{u.area ?? '—'}</td>
+                        <td>
+                          {u.roles.length === 0 ? <span style={{ color: 'var(--muted)' }}>—</span> : u.roles.map((r) => {
+                            const c = ROL_COLOR[r] ?? '#5b6478';
+                            return <span key={r} className="chip" style={{ color: c, background: `${c}18`, borderColor: `${c}44`, marginRight: 4 }}>{r}</span>;
+                          })}
                         </td>
-                        <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3' }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: u.activo ? '#027A48' : '#B42318' }}>{u.activo ? 'Activo' : 'Inactivo'}</span>
-                        </td>
+                        <td style={{ fontWeight: 700, color: u.activo ? '#027a48' : '#b42318' }}>{u.activo ? 'Activo' : 'Inactivo'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
-            <p style={{ fontSize: 12.5, color: '#667085', marginTop: 14 }}>
-              Vista provisional (pública). Cuando exista autenticación quedará detrás de login, visible solo para perfiles Administrador/Coordinador.
-            </p>
-          </>
-        )}
-      </section>
+          )}
+        </div>
+
+        <div className="win-status">
+          <span className="led" /> Conectado · PostgreSQL
+          <span className="sp" />
+          <span>Vista provisional · quedará tras login (Administrador/Coordinador)</span>
+        </div>
+      </div>
     </main>
   );
 }

@@ -53,7 +53,7 @@ export default function HomePage() {
             <a href="#servicios" style={linkStyle}>Servicios</a>
             <a href="#nosotros" style={linkStyle}>Nosotros</a>
             <a href="#contacto" style={linkStyle}>Contacto</a>
-            <a href="/app" style={{ background: BRAND, color: NAVY_DARK, textDecoration: 'none', fontWeight: 800, fontSize: 14, padding: '9px 16px', borderRadius: 9 }}>Acceder al planeador</a>
+            <a href="/app" className="dbtn primary">Acceder al planeador</a>
           </div>
         </nav>
       </header>
@@ -72,8 +72,8 @@ export default function HomePage() {
             con un equipo por áreas y seguimiento del trabajo mes a mes.
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="#contacto" style={{ background: BRAND, color: NAVY_DARK, textDecoration: 'none', fontWeight: 800, fontSize: 15.5, padding: '13px 26px', borderRadius: 11 }}>Solicita una asesoría</a>
-            <a href="#servicios" style={{ background: 'transparent', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 15.5, padding: '13px 26px', borderRadius: 11, border: '1px solid rgba(255,255,255,0.35)' }}>Ver servicios</a>
+            <a href="#contacto" className="dbtn primary" style={{ fontSize: 15.5, padding: '13px 26px' }}>Solicita una asesoría</a>
+            <a href="#servicios" className="dbtn ghost" style={{ fontSize: 15.5, padding: '13px 26px' }}>Ver servicios</a>
           </div>
         </div>
       </section>
@@ -86,13 +86,13 @@ export default function HomePage() {
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 22 }}>
           {SERVICIOS.map((s) => (
-            <div key={s.titulo} style={{ background: '#fff', border: '1px solid #EAECF0', borderRadius: 16, padding: '26px 24px', boxShadow: '0 1px 2px rgba(16,24,40,0.04), 0 8px 24px rgba(16,24,40,0.05)' }}>
+            <div key={s.titulo} style={{ background: '#fff', border: '1px solid #d8deea', borderRadius: 10, padding: '24px 22px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 3px rgba(16,24,40,0.10)' }}>
               <div style={{ width: 50, height: 50, borderRadius: 12, background: 'rgba(52,201,139,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 16 }}>{s.icono}</div>
               <h3 style={{ fontSize: 19, fontWeight: 800, margin: '0 0 8px' }}>{s.titulo}</h3>
               <p style={{ color: '#475467', fontSize: 15, lineHeight: 1.6, margin: 0 }}>{s.texto}</p>
             </div>
           ))}
-          <div style={{ background: `linear-gradient(135deg, ${NAVY}, ${NAVY_DARK})`, color: '#fff', borderRadius: 16, padding: '26px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ background: `linear-gradient(135deg, ${NAVY}, ${NAVY_DARK})`, color: '#fff', borderRadius: 10, padding: '24px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 1px 3px rgba(16,24,40,0.14)' }}>
             <h3 style={{ fontSize: 19, fontWeight: 800, margin: '0 0 8px' }}>¿Necesitas otro servicio?</h3>
             <p style={{ opacity: 0.9, fontSize: 15, lineHeight: 1.6, margin: '0 0 16px' }}>Cuéntanos tu caso y armamos un plan a la medida de tu empresa.</p>
             <a href="#contacto" style={{ color: BRAND, fontWeight: 800, textDecoration: 'none', fontSize: 15 }}>Escríbenos →</a>
@@ -123,7 +123,7 @@ export default function HomePage() {
             { icono: '📍', titulo: 'Ubicación', valor: 'Calle 26b No 39-24, Piso 4 · Barrio 7 de Agosto, Villavicencio (Meta)', href: null },
             { icono: '📞', titulo: 'Teléfono', valor: '312 432 4791', href: 'tel:+573124324791' },
           ].map((c) => (
-            <div key={c.titulo} style={{ background: '#fff', border: '1px solid #EAECF0', borderRadius: 16, padding: '26px 24px', textAlign: 'center' }}>
+            <div key={c.titulo} style={{ background: '#fff', border: '1px solid #d8deea', borderRadius: 10, padding: '24px 22px', textAlign: 'center', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 3px rgba(16,24,40,0.10)' }}>
               <div style={{ fontSize: 26, marginBottom: 10 }}>{c.icono}</div>
               <div style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: '#98A2B3', fontWeight: 800, marginBottom: 6 }}>{c.titulo}</div>
               {c.href
@@ -133,7 +133,7 @@ export default function HomePage() {
           ))}
         </div>
         <div style={{ textAlign: 'center', marginTop: 40 }}>
-          <a href="/app" style={{ background: NAVY, color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 15.5, padding: '14px 30px', borderRadius: 11 }}>Acceder al planeador →</a>
+          <a href="/app" className="dbtn navy" style={{ fontSize: 15.5, padding: '14px 30px' }}>Acceder al planeador →</a>
         </div>
       </section>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import './desktop.css';
 
 export const metadata: Metadata = {
   title: 'Planeador CERPAT',
