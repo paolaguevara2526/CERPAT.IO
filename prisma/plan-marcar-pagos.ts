@@ -4,18 +4,24 @@
 // y lo propaga a las tareas ya generadas, para alimentar la vista de Pagos.
 //
 // Criterio (definido con el equipo):
-//   - Todas las actividades del área de IMPUESTOS.
+//   - Actividades del área de IMPUESTOS que implican un pago real
+//     (declaraciones/pagos), EXCLUYENDO las informativas (exógena,
+//     conciliaciones, revisiones).
 //   - La actividad de seguridad social del área de Nómina (código EF-10).
 //
-// Idempotente: solo actualiza lo que cambia. Correr:  npm run db:plan-marcar-pagos
+// Idempotente: marca las que generan pago y DESMARCA las informativas (por si
+// una corrida previa las dejó marcadas). Correr:  npm run db:plan-marcar-pagos
 
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const ORG_SLUG = 'cerpat';
 
-// Códigos de actividades de Nómina que generan pago (seguridad social / parafiscales).
+// Códigos de actividades de otras áreas que generan pago (seguridad social / parafiscales).
 const CODIGOS_PAGO_EXTRA = ['EF-10'];
+
+// Actividades del área Impuestos que son INFORMATIVAS (no implican pago): se excluyen.
+const CODIGOS_INFORMATIVOS = ['EF-08', 'IN-04', 'IN-05', 'IM-03', 'IM-05'];
 
 async function main() {
   const org = await prisma.organizacion.findFirst({ where: { slug: ORG_SLUG } });
@@ -23,8 +29,8 @@ async function main() {
 
   const areaImpuestos = await prisma.area.findFirst({ where: { organizacionId: org.id, nombre: 'Impuestos' } });
 
-  // Actividades objetivo: área Impuestos + códigos extra (seguridad social de Nómina).
-  const actividades = await prisma.actividadPlan.findMany({
+  // Candidatas: área Impuestos + códigos extra. Luego separamos por informativas.
+  const candidatas = await prisma.actividadPlan.findMany({
     where: {
       organizacionId: org.id,
       OR: [
@@ -36,29 +42,37 @@ async function main() {
     orderBy: { codigo: 'asc' },
   });
 
-  if (actividades.length === 0) {
+  if (candidatas.length === 0) {
     console.log('No se encontraron actividades objetivo. ¿Ya se importó el catálogo del plan?');
     return;
   }
 
-  const ids = actividades.map((a) => a.id);
-  const porMarcar = actividades.filter((a) => !a.generaPago);
+  const conPago = candidatas.filter((a) => !CODIGOS_INFORMATIVOS.includes(a.codigo));
+  const informativas = candidatas.filter((a) => CODIGOS_INFORMATIVOS.includes(a.codigo));
+  const idsPago = conPago.map((a) => a.id);
+  const idsInfo = informativas.map((a) => a.id);
 
-  console.log(`Actividades que generan pago (${actividades.length}):`);
-  for (const a of actividades) console.log(`  ${a.generaPago ? '•' : '+'} ${a.codigo} — ${a.nombre}`);
-
-  if (porMarcar.length > 0) {
-    await prisma.actividadPlan.updateMany({ where: { id: { in: porMarcar.map((a) => a.id) } }, data: { generaPago: true } });
+  console.log(`Actividades que GENERAN pago (${conPago.length}):`);
+  for (const a of conPago) console.log(`  ${a.generaPago ? '•' : '+'} ${a.codigo} — ${a.nombre}`);
+  if (informativas.length > 0) {
+    console.log(`\nExcluidas (informativas, sin pago) (${informativas.length}):`);
+    for (const a of informativas) console.log(`  ${a.generaPago ? '-' : '·'} ${a.codigo} — ${a.nombre}`);
   }
-  console.log(`\nCatálogo: ${porMarcar.length} actividades marcadas (de ${actividades.length}).`);
 
-  // Propaga a las tareas ya generadas de esas actividades.
-  const res = await prisma.tarea.updateMany({
-    where: { organizacionId: org.id, actividadPlanId: { in: ids }, generaPago: false },
-    data: { generaPago: true },
-  });
+  // Catálogo: marcar las que generan pago, desmarcar las informativas.
+  const marcadas = await prisma.actividadPlan.updateMany({ where: { id: { in: idsPago }, generaPago: false }, data: { generaPago: true } });
+  const desmarcadas = idsInfo.length
+    ? await prisma.actividadPlan.updateMany({ where: { id: { in: idsInfo }, generaPago: true }, data: { generaPago: false } })
+    : { count: 0 };
+  console.log(`\nCatálogo: ${marcadas.count} marcadas, ${desmarcadas.count} desmarcadas.`);
+
+  // Propaga a las tareas ya generadas: true para las que pagan, false para informativas.
+  const tMarcadas = await prisma.tarea.updateMany({ where: { organizacionId: org.id, actividadPlanId: { in: idsPago }, generaPago: false }, data: { generaPago: true } });
+  const tDesmarcadas = idsInfo.length
+    ? await prisma.tarea.updateMany({ where: { organizacionId: org.id, actividadPlanId: { in: idsInfo }, generaPago: true }, data: { generaPago: false } })
+    : { count: 0 };
   const total = await prisma.tarea.count({ where: { organizacionId: org.id, generaPago: true } });
-  console.log(`Tareas: ${res.count} actualizadas a generaPago=true. Total con pago ahora: ${total}.`);
+  console.log(`Tareas: ${tMarcadas.count} marcadas, ${tDesmarcadas.count} desmarcadas. Total con pago ahora: ${total}.`);
 }
 
 main()
