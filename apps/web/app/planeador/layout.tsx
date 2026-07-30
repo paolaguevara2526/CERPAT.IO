@@ -13,6 +13,7 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
   const sesion = await getSessionUser();
   if (!sesion) redirect('/login');
   if (sesion.debeCambiarPassword) redirect('/cambiar-clave');
+  const esAdmin = sesion.esRoot || sesion.roles.includes('Administrador');
 
   return (
     <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '20px 16px 36px', display: 'flex', justifyContent: 'center' }}>
@@ -30,7 +31,7 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr', minHeight: 520 }}>
-          <PlaneadorSidebar />
+          <PlaneadorSidebar esAdmin={esAdmin} />
           <div style={{ padding: '18px 20px', overflow: 'auto' }}>{children}</div>
         </div>
 
