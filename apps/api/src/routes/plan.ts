@@ -40,36 +40,52 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   const venceHasta = fecha(req.query.venceHasta);
   const uid = req.user!.sub;
 
-  const tareas = await prisma.tarea.findMany({
-    where: {
-      organizacionId: org.id,
-      actividadPlanId: { not: null },
-      periodo,
-      ...(estado ? { estado: estado as any } : {}),
-      ...(area ? { area: { nombre: area } } : {}),
-      ...(prioridad ? { prioridad: prioridad as any } : {}),
-      ...(asesorId ? { asesorId } : {}),
-      ...(auxiliarId ? { auxiliarId } : {}),
-      ...(estadoPago ? { estadoPago: estadoPago as any } : {}),
-      ...(venceDesde || venceHasta ? { fechaVencimiento: { ...(venceDesde ? { gte: venceDesde } : {}), ...(venceHasta ? { lte: venceHasta } : {}) } } : {}),
-      ...(mias ? { OR: [{ asesorId: uid }, { auxiliarId: uid }] } : {}),
-      ...(q ? { OR: [{ empresa: { nombre: { contains: q, mode: 'insensitive' } } }, { titulo: { contains: q, mode: 'insensitive' } }] } : {}),
-    },
-    select: {
-      id: true, titulo: true, estado: true, prioridad: true, auditoria: true,
-      fechaInicio: true, fechaVencimiento: true, periodo: true,
-      empresa: { select: { nombre: true } },
-      area: { select: { nombre: true } },
-      asesor: { select: { nombre: true } },
-      auxiliar: { select: { nombre: true } },
-    },
-    orderBy: [{ fechaVencimiento: 'asc' }, { titulo: 'asc' }],
-    take: 500,
-  });
+  // Paginación: ?page=1 &pageSize=50 (máx 200). Sin ?page se devuelve hasta 500
+  // (compatibilidad con Tablero/Calendario/Mi Día, que agrupan el período completo).
+  const pageRaw = parseInt(String(req.query.page ?? ''), 10);
+  const paginado = Number.isFinite(pageRaw) && pageRaw >= 1;
+  const pageSize = Math.min(Math.max(parseInt(String(req.query.pageSize ?? ''), 10) || 50, 1), 200);
+  const page = paginado ? pageRaw : 1;
+
+  const where: any = {
+    organizacionId: org.id,
+    actividadPlanId: { not: null },
+    periodo,
+    ...(estado ? { estado: estado as any } : {}),
+    ...(area ? { area: { nombre: area } } : {}),
+    ...(prioridad ? { prioridad: prioridad as any } : {}),
+    ...(asesorId ? { asesorId } : {}),
+    ...(auxiliarId ? { auxiliarId } : {}),
+    ...(estadoPago ? { estadoPago: estadoPago as any } : {}),
+    ...(venceDesde || venceHasta ? { fechaVencimiento: { ...(venceDesde ? { gte: venceDesde } : {}), ...(venceHasta ? { lte: venceHasta } : {}) } } : {}),
+    ...(mias ? { OR: [{ asesorId: uid }, { auxiliarId: uid }] } : {}),
+    ...(q ? { OR: [{ empresa: { nombre: { contains: q, mode: 'insensitive' } } }, { titulo: { contains: q, mode: 'insensitive' } }] } : {}),
+  };
+
+  const [total, tareas] = await Promise.all([
+    prisma.tarea.count({ where }),
+    prisma.tarea.findMany({
+      where,
+      select: {
+        id: true, titulo: true, estado: true, prioridad: true, auditoria: true,
+        fechaInicio: true, fechaVencimiento: true, periodo: true,
+        empresa: { select: { nombre: true } },
+        area: { select: { nombre: true } },
+        asesor: { select: { nombre: true } },
+        auxiliar: { select: { nombre: true } },
+      },
+      orderBy: [{ fechaVencimiento: 'asc' }, { titulo: 'asc' }],
+      skip: paginado ? (page - 1) * pageSize : 0,
+      take: paginado ? pageSize : 500,
+    }),
+  ]);
 
   res.json({
     periodo,
-    total: tareas.length,
+    total,
+    page: paginado ? page : 1,
+    pageSize: paginado ? pageSize : tareas.length,
+    totalPaginas: paginado ? Math.max(1, Math.ceil(total / pageSize)) : 1,
     tareas: tareas.map((t) => ({
       id: t.id, titulo: t.titulo, estado: t.estado, prioridad: t.prioridad, auditoria: t.auditoria,
       fechaVencimiento: t.fechaVencimiento, periodo: t.periodo,
