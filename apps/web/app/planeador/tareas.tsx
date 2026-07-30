@@ -10,7 +10,7 @@ export type Tarea = {
   fechaVencimiento: string; periodo: string | null;
   empresa: string | null; area: string | null; asesor: string | null; auxiliar: string | null;
 };
-export type TareasResp = { periodo: string | null; total: number; tareas: Tarea[] };
+export type TareasResp = { periodo: string | null; total: number; page?: number; pageSize?: number; totalPaginas?: number; tareas: Tarea[] };
 
 export async function fetchTareas(qs: string): Promise<{ data: TareasResp | null; error: string | null }> {
   try {
