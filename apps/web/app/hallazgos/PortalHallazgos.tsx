@@ -39,6 +39,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState<'todos' | 'resuelto' | 'en_gestion' | 'vencido'>('todos');
   const [importando, setImportando] = useState(false);
+  const [arrastrando, setArrastrando] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cargarBase = useCallback(async () => {
@@ -231,6 +232,17 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
           );
         })}
       </div>
+      {esGestor && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); if (!arrastrando) setArrastrando(true); }}
+          onDragLeave={(e) => { if (e.currentTarget === e.target) setArrastrando(false); }}
+          onDrop={(e) => { e.preventDefault(); setArrastrando(false); const f = e.dataTransfer.files?.[0]; if (f) importar(f); }}
+          onClick={() => fileRef.current?.click()}
+          style={{ border: `1.5px dashed ${arrastrando ? 'var(--navy)' : 'var(--edge-strong)'}`, background: arrastrando ? 'rgba(46,80,144,0.08)' : 'var(--panel-2)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, textAlign: 'center', fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer' }}
+        >
+          {importando ? 'Importando…' : arrastrando ? 'Suelta el archivo para importar' : '⭱ Arrastra aquí tu CSV o Excel para importar — o haz clic para elegirlo'}
+        </div>
+      )}
       <div className="panel" style={{ overflowX: 'auto' }}>
         <table className="dt" style={{ minWidth: 940 }}>
           <thead><tr>
