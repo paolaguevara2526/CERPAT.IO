@@ -88,6 +88,14 @@ _Última actualización: 2026-07-30._
 ### Fase 5 — Portal de clientes (futuro)
 - [ ] Aislamiento adicional por empresa cliente (cada cliente ve solo lo suyo) sobre el modelo multi-tenant.
 
+### Módulo Revisoría Fiscal · Portal de Hallazgos 🚧 (en construcción)
+Portal para clientes externos (asamblea/gerencia) + revisor fiscal. Ver
+[`docs/revisoria-fiscal.md`](./revisoria-fiscal.md).
+- [x] Fundación: esquema (`GrupoEmpresarial`, `Hallazgo`, `Usuario.empresaClienteId/grupoClienteId`, `Empresa.grupoId`, enums `RiesgoNivel`/`EstadoHallazgo`) + rol `Cliente` (`db:roles-sync`).
+- [ ] API de Hallazgos (CRUD revisor + lectura con aislamiento cliente/grupo).
+- [ ] Vistas React (revisor / empresa / grupo).
+- [ ] Administración: alta de grupos y usuarios `Cliente`.
+
 ## En diseño — Plan de Trabajo Contable (cumplimiento) 🚧
 
 Dirección nueva (idea del equipo): en vez de depender de que cada usuario cargue
