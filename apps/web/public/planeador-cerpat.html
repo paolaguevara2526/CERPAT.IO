@@ -10,7 +10,7 @@
 :root{
   --brand:#34C98B; --brand-dark:#239C6B; --brand-light:#E6F7F0;
   --navy:#171C91; --navy-dark:#0F1466;
-  --sidebar-1:#20259C; --sidebar-2:#11154F;
+  --sidebar-1:#2E5090; --sidebar-2:#16294A;
   --ink:#101828; --sub:#667085; --line:#E4E7EC; --bg:#F5F6F8; --card:#FFFFFF;
   --orange:#B7590A; --orange-bg:#FDECD1;
   --blue:#1D4ED8; --blue-bg:#DBEAFE;
@@ -72,6 +72,12 @@ button,select,input,textarea{font-family:'Inter',sans-serif;}
 .sb-icon{width:18px;text-align:center;font-size:15px;flex-shrink:0;}
 .sb-count{margin-left:auto;background:var(--side-count-bg);color:var(--side-count-text);border-radius:20px;padding:1px 8px;font-family:'Space Mono',monospace;font-size:11px;}
 .sb-item.active .sb-count{background:rgba(255,255,255,0.28);}
+.sb-item{text-decoration:none;}
+.sb-item.active{position:relative;}
+.sb-item.active::before{content:"";position:absolute;left:-6px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--brand);}
+.sb-section{font-size:10px;text-transform:uppercase;letter-spacing:0.8px;font-weight:800;color:var(--side-muted);padding:12px 12px 4px;}
+.sb-item.link{color:var(--side-text);}
+.sb-item.link:hover{background:var(--side-hover);color:var(--side-text-strong);}
 .sb-count.warn{background:var(--orange);color:#fff;}
 .sb-footer{display:flex;align-items:center;gap:10px;padding:14px 10px 4px;border-top:1px solid var(--side-border);margin-top:10px;}
 .sb-avatar{width:34px;height:34px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;flex-shrink:0;}
@@ -748,14 +754,18 @@ const TAG_COLORS = {
 const DOT_PALETTE = ['#EF4444','#F59E0B','#10B981','#3B82F6','#8B5CF6','#EC4899','#14B8A6','#F97316'];
 const KANBAN_ORDER = ['por_iniciar','en_curso','en_revision','terminado','auditado'];
 const NAV_ITEMS = [
-  {key:'inicio', label:'Inicio', icon:'🏠', showFilters:false},
-  {key:'calendario', label:'Calendario', icon:'📅', showFilters:true},
-  {key:'tablero', label:'Tablero', icon:'▦', showFilters:true},
-  {key:'lista', label:'Lista', icon:'☰', showFilters:true},
-  {key:'miDia', label:'Mi Día', icon:'☆', showFilters:true, countKey:'miDia'},
-  {key:'pagos', label:'Pagos', icon:'💲', showFilters:true, countKey:'pagos'},
-  {key:'auditoria', label:'Auditoría', icon:'🛡', showFilters:true, countKey:'auditoria'},
-  {key:'administracion', label:'Administración', icon:'⚙', showFilters:false}
+  {key:'inicio', label:'Inicio', icon:'🏠', showFilters:false, section:'Planeador'},
+  {key:'calendario', label:'Calendario', icon:'📅', showFilters:true, section:'Planeador'},
+  {key:'tablero', label:'Tablero', icon:'▦', showFilters:true, section:'Planeador'},
+  {key:'lista', label:'Lista', icon:'☰', showFilters:true, section:'Planeador'},
+  {key:'miDia', label:'Mi Día', icon:'☆', showFilters:true, countKey:'miDia', section:'Planeador'},
+  {key:'pagos', label:'Pagos', icon:'💲', showFilters:true, countKey:'pagos', section:'Planeador'},
+  {key:'auditoria', label:'Auditoría', icon:'🛡', showFilters:true, countKey:'auditoria', section:'Planeador'},
+  {key:'administracion', label:'Administración', icon:'⚙', showFilters:false, section:'Gestión'},
+  {label:'Usuarios', icon:'🧗', section:'Gestión', goto:'administracion'},
+  {label:'Calculadora de retenciones', icon:'🧮', section:'Servicios', href:'/servicios/retenciones'},
+  {label:'Punto de equilibrio', icon:'📈', section:'Servicios', href:'/servicios/punto-equilibrio'},
+  {label:'Más herramientas', icon:'🧰', section:'Servicios', href:'/servicios'}
 ];
 const ADMIN_TABS = [
   {key:'usuarios', label:'Usuarios', icon:'👥'},
@@ -1065,15 +1075,29 @@ function renderNav(){
   const pagosCount = data.payments.length;
   const auditoriaCount = data.tasks.filter(t=>t.auditoria==='pendiente').length;
   const counts = {miDia:miDiaCount, pagos:pagosCount, auditoria:auditoriaCount};
+  let lastSection = null;
   wrap.innerHTML = NAV_ITEMS.map(item=>{
+    let out = '';
+    if(item.section && item.section !== lastSection){
+      out += `<div class="sb-section">${item.section}</div>`;
+      lastSection = item.section;
+    }
     let cntHtml = '';
     if(item.countKey){
       const c = counts[item.countKey];
       cntHtml = `<span class="sb-count ${item.countKey==='auditoria'&&c>0?'warn':''}">${c}</span>`;
     }
-    return `<div class="sb-item ${currentView===item.key?'active':''}" onclick="switchView('${item.key}')">
-      <span class="sb-icon">${item.icon}</span><span>${item.label}</span>${cntHtml}
-    </div>`;
+    if(item.href){
+      // Herramienta externa (sección Servicios): navega a la página real.
+      out += `<a class="sb-item link" href="${item.href}"><span class="sb-icon">${item.icon}</span><span>${item.label}</span></a>`;
+    } else {
+      const target = item.goto || item.key;
+      const active = item.key && currentView===item.key ? 'active' : '';
+      out += `<div class="sb-item ${active}" onclick="switchView('${target}')">
+        <span class="sb-icon">${item.icon}</span><span>${item.label}</span>${cntHtml}
+      </div>`;
+    }
+    return out;
   }).join('');
 }
 function switchView(key){

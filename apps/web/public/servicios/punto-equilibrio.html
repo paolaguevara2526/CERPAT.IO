@@ -11,7 +11,7 @@
   /* Paleta oficial CERPAT (Cromática_Cerpat.pdf):
      Verde  #48D597 · Pantone 2412 C
      Azul   #171C8F · Pantone 2746 C
-     Morado #963CBD · Pantone 7442 C
+     Morado #2E5090 · Pantone 7442 C
      Tipografía oficial (Tipografía_Cerpat.pdf): Poppins
      --alert es un color funcional (no es de marca), solo para estados de error/pérdida. */
   :root{
@@ -20,7 +20,7 @@
     --ink:#171C8F;
     --slate:#6B7280;
     --green:#48D597;
-    --purple:#963CBD;
+    --purple:#2E5090;
     --alert:#C0392B;
     --card:#FFFFFF;
   }
@@ -431,7 +431,7 @@ function drawChart(fijos, margenBruto, peValor){
     <line x1="${padL}" y1="${padT+plotH}" x2="${padL+plotW}" y2="${padT+plotH}" stroke="#E7E9EF" stroke-width="1"/>
     <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT+plotH}" stroke="#E7E9EF" stroke-width="1"/>
     <path d="${revenueLine}" fill="none" stroke="#171C8F" stroke-width="2.4"/>
-    <path d="${costLine}" fill="none" stroke="#963CBD" stroke-width="2.4"/>
+    <path d="${costLine}" fill="none" stroke="#2E5090" stroke-width="2.4"/>
     ${markerSvg}
     <text x="${padL}" y="${H-8}" class="axis-label">$0</text>
     <text x="${padL+plotW}" y="${H-8}" class="axis-label" text-anchor="end">${money(maxVentas)}</text>
