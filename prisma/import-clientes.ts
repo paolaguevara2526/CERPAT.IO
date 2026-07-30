@@ -58,6 +58,24 @@ const slug = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 const nn = (s: string | undefined) => { const v = (s || '').trim(); return v.length ? v : null; };
 
+// Normaliza el nombre a "Título" respetando siglas y conectores (uniformidad).
+const ACRONYMS = new Set(['SAS','S.A.S','S.A.S.','SA','S.A','S.A.','LTDA','LTDA.','EU','E.U','E.U.','IPS','EPS','ESP','ESE','E.S.E','E.S.E.','ESAL','ZOMAC','EGR','HS','AP','CI','POS','NIT','SCA','SCS','SC','AZ','MV2']);
+const CONN = new Set(['de','del','la','las','los','el','y','e','en','a','con','para','o','u']);
+const cap = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('es') + s.slice(1).toLocaleLowerCase('es') : s);
+function fixTok(tok: string, first: boolean): string {
+  if (!tok) return tok;
+  const up = tok.toLocaleUpperCase('es');
+  if (ACRONYMS.has(up)) return up;
+  if (!first && CONN.has(tok.toLocaleLowerCase('es'))) return tok.toLocaleLowerCase('es');
+  if (/[0-9&]/.test(tok)) return up;
+  return cap(tok);
+}
+function titleCaseNombre(name: string): string {
+  return name.trim().replace(/\s+/g, ' ').split(' ')
+    .map((w, wi) => w.split('-').map((p, pi) => fixTok(p, wi === 0 && pi === 0)).join('-'))
+    .join(' ');
+}
+
 async function main() {
   const raw = fs.readFileSync(CSV_PATH, 'utf8').replace(/^﻿/, '');
   const rows = parseCSV(raw);
@@ -77,7 +95,7 @@ async function main() {
   for (const r of data) {
     const tipoCsv = (r[idx('tipo')] || '').trim();
     const nit = nn(r[idx('nit')]);
-    const nombre = (r[idx('nombre')] || '').trim();
+    const nombre = titleCaseNombre((r[idx('nombre')] || '').trim());
     const regimenCsv = (r[idx('regimen')] || '').trim();
 
     const tipoNombre = TIPO_MAP[tipoCsv.toLowerCase()];
