@@ -10,6 +10,8 @@ export interface JwtPayload {
   org: string | null;     // organizacionId
   roles: string[];
   esRoot: boolean;
+  empresaCliente?: string | null; // Revisoría Fiscal: cliente ligado a una empresa
+  grupoCliente?: string | null;   // Revisoría Fiscal: cliente ligado a un grupo
   iat?: number;
   exp?: number;
 }

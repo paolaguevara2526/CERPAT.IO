@@ -38,7 +38,7 @@ authRouter.post('/login', async (req, res) => {
   }
 
   const roles = user.roles.map((r) => r.rol.nombre);
-  const token = signJwt({ sub: user.id, org: user.organizacionId, roles, esRoot: user.esRootPlataforma }, secret);
+  const token = signJwt({ sub: user.id, org: user.organizacionId, roles, esRoot: user.esRootPlataforma, empresaCliente: user.empresaClienteId, grupoCliente: user.grupoClienteId }, secret);
   await prisma.usuario.update({ where: { id: user.id }, data: { ultimoLogin: new Date() } });
 
   res.json({
@@ -59,6 +59,7 @@ authRouter.get('/me', requireAuth, async (req: AuthedRequest, res) => {
       id: user.id, nombre: user.nombre, email: user.email,
       roles: user.roles.map((r) => r.rol.nombre), area: user.area, cargo: user.cargo,
       esRoot: user.esRootPlataforma, debeCambiarPassword: user.debeCambiarPassword,
+      empresaCliente: user.empresaClienteId, grupoCliente: user.grupoClienteId,
     },
   });
 });
