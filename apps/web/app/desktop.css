@@ -18,8 +18,9 @@
   --hi: rgba(255,255,255,0.9);
   --lo: rgba(20,24,45,0.10);
 
-  --navy: #20259c;
-  --navy-2: #11154f;
+  --navy: #2e5090;      /* azul rey apagado (primario) */
+  --navy-hi: #3a5ea6;
+  --navy-2: #16294a;    /* azul profundo (barras) */
   --green: #34c98b;
   --green-2: #22a670;
   --green-edge: #1c8a5e;
@@ -66,6 +67,11 @@ body { margin: 0; }
 .dbtn:active { transform: translateY(1px); box-shadow: inset 0 1px 2px var(--lo); }
 .dbtn:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
 .dbtn.primary {
+  color: #fff; background: linear-gradient(180deg, var(--navy-hi), var(--navy));
+  border-color: var(--navy-2); border-top-color: rgba(255,255,255,0.3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 1px 0 var(--navy-2), 0 1px 3px var(--lo);
+}
+.dbtn.success {
   color: #063a28; background: linear-gradient(180deg, #52dc9f, var(--green-2));
   border-color: var(--green-edge); border-top-color: rgba(255,255,255,0.55);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 1px 0 var(--green-edge), 0 1px 3px rgba(28,138,94,0.4);
@@ -87,10 +93,16 @@ body { margin: 0; }
 }
 .win-bar {
   display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(180deg, #2a30b6, var(--navy-2));
-  color: #fff; padding: 10px 15px;
+  background: linear-gradient(180deg, var(--navy-hi), var(--navy-2));
+  color: #fff; padding: 0 4px 0 15px; height: 42px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
 }
+/* Controles de ventana estilo Windows (min / max / cerrar) */
+.win-ctl { display: flex; height: 42px; margin-left: 4px; }
+.win-ctl button { width: 44px; height: 42px; border: 0; background: transparent; color: #dce4f5; cursor: pointer; display: grid; place-items: center; }
+.win-ctl button:hover { background: rgba(255,255,255,0.14); }
+.win-ctl button.close:hover { background: #e0483a; color: #fff; }
+.win-ctl svg { width: 11px; height: 11px; }
 .win-lights { display: flex; gap: 8px; }
 .win-lights i { width: 12px; height: 12px; border-radius: 50%; display: block; box-shadow: inset 0 1px 1px rgba(255,255,255,0.5), inset 0 -1px 1px rgba(0,0,0,0.3); }
 .win-lights i.r { background: radial-gradient(circle at 35% 30%, #ff8b7e, #d64b3f); }

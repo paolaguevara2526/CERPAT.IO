@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 };
 
 const BRAND = '#34C98B';
-const NAVY = '#20259C';
-const NAVY_DARK = '#11154F';
+const NAVY = '#2E5090';
+const NAVY_DARK = '#16294A';
 const INK = '#101828';
 
 const SERVICIOS = [
@@ -51,6 +51,7 @@ export default function HomePage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
             <a href="#servicios" style={linkStyle}>Servicios</a>
+            <a href="/servicios" style={linkStyle}>Herramientas</a>
             <a href="#nosotros" style={linkStyle}>Nosotros</a>
             <a href="#contacto" style={linkStyle}>Contacto</a>
             <a href="/app" className="dbtn primary">Acceder al planeador</a>
