@@ -5,6 +5,10 @@
 //
 // TODO (auth): debe quedar detrás de login (rol Administrador/Coordinador).
 
+import { redirect } from 'next/navigation';
+import { getSessionUser } from '@/lib/session';
+import LogoutButton from '@/app/_components/LogoutButton';
+
 export const dynamic = 'force-dynamic';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api-production-678b8.up.railway.app';
@@ -30,6 +34,10 @@ const ROL_COLOR: Record<string, string> = {
 };
 
 export default async function UsuariosPage() {
+  const sesion = await getSessionUser();
+  if (!sesion) redirect('/login');
+  if (sesion.debeCambiarPassword) redirect('/cambiar-clave');
+
   const { data, error } = await getUsuarios();
   const usuarios = data?.usuarios ?? [];
   const activos = usuarios.filter((u) => u.activo).length;
@@ -57,9 +65,10 @@ export default async function UsuariosPage() {
           <span className="dbtn">Importar</span>
           <span className="dbtn">Exportar</span>
           <span className="sp" />
-          <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600, marginRight: 12 }}>
             {usuarios.length} usuarios · {activos} activos
           </span>
+          <LogoutButton nombre={sesion.nombre} />
         </div>
 
         <div className="win-body">
