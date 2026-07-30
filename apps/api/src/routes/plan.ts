@@ -66,6 +66,38 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   });
 });
 
+const ESTADOS_VALIDOS = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'auditado', 'no_realizado'];
+const REQUIEREN_SUBTAREAS = ['terminado', 'auditado'];
+
+// PATCH /plan/tareas/:id/estado  { estado }  — cambia el estado con reglas de negocio.
+planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, res) => {
+  const estado = String(req.body?.estado ?? '');
+  if (!ESTADOS_VALIDOS.includes(estado)) return res.status(400).json({ error: 'Estado inválido.' });
+
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({
+    where: { id: req.params.id, organizacionId: org?.id },
+    include: { subtareas: true },
+  });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+
+  // Permiso: root, Administrador/Coordinador, o el asesor/auxiliar de la tarea.
+  const u = req.user!;
+  const puede = u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)) || tarea.asesorId === u.sub || tarea.auxiliarId === u.sub;
+  if (!puede) return res.status(403).json({ error: 'No puedes cambiar esta tarea (no eres su asesor/auxiliar ni tienes rol de coordinación).' });
+
+  // Regla: no editar una tarea ya aprobada en auditoría sin desbloquear primero.
+  if (tarea.auditoria === 'aprobada') return res.status(403).json({ error: 'La tarea está bloqueada (aprobada en Auditoría). Debe desbloquearse primero.' });
+
+  // Regla: no marcar Terminado/Auditado con subtareas pendientes.
+  if (REQUIEREN_SUBTAREAS.includes(estado) && tarea.subtareas.some((s) => s.estado === 'pendiente')) {
+    return res.status(422).json({ error: `No se puede marcar "${estado}" con subtareas sin resolver.` });
+  }
+
+  const actualizada = await prisma.tarea.update({ where: { id: tarea.id }, data: { estado: estado as any } });
+  res.json({ ok: true, id: actualizada.id, estado: actualizada.estado });
+});
+
 planRouter.get('/cumplimiento', async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, periodo: null, kpis: null, porArea: [], porCliente: [] });
