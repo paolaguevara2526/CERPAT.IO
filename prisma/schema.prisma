@@ -538,6 +538,7 @@ model ActividadPlan {
   periodicidad       String? // periodicidad sugerida (texto del catálogo)
   esRegistroSoftware Boolean @default(false)
   requiereAuditoria  Boolean @default(false)
+  generaPago         Boolean @default(false) // la actividad implica un pago (obligación DIAN/entidades)
   orden              Int     @default(0)
   activo             Boolean @default(true)
 

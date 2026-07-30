@@ -32,7 +32,7 @@ async function main() {
 
   const actividades = await prisma.actividadPlan.findMany({
     where: { organizacionId: ORG_ID },
-    select: { id: true, nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true },
+    select: { id: true, nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true },
   });
   const actById = new Map(actividades.map((a) => [a.id, a]));
 
@@ -77,6 +77,7 @@ async function main() {
       fechaVencimiento,
       actividadPlanId: p.actividadPlanId,
       areaId: act.areaId,
+      generaPago: act.generaPago,
       periodo,
       asesorId: asign?.asesorId ?? null,
       auxiliarId: asign?.auxiliarId ?? null,
