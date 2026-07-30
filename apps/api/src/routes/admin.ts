@@ -8,10 +8,12 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, requireRol, type AuthedRequest } from '../auth/middleware.js';
+import { hashPassword } from '../auth/password.js';
 
 export const adminRouter = Router();
 
 const soloAdmin = requireRol('Administrador');
+const PASSWORD_TEMPORAL_DEFECTO = 'Cerpat2026*';
 
 async function orgId(): Promise<string | null> {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' }, select: { id: true } });
@@ -308,4 +310,115 @@ adminRouter.delete('/vencimientos/:id', requireAuth, soloAdmin, async (req, res)
   const r = await prisma.vencimiento.deleteMany({ where: { id: req.params.id, organizacionId: id } });
   if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
   res.json({ ok: true });
+});
+
+// ---------- Usuarios (crear/editar/roles/activar) ----------
+
+adminRouter.get('/roles', requireAuth, async (_req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const roles = await prisma.rol.findMany({ where: { organizacionId: id }, orderBy: { nombre: 'asc' }, select: { id: true, nombre: true } });
+  res.json({ roles });
+});
+
+adminRouter.get('/usuarios', requireAuth, soloAdmin, async (_req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const usuarios = await prisma.usuario.findMany({
+    where: { organizacionId: id },
+    orderBy: [{ activo: 'desc' }, { nombre: 'asc' }],
+    select: {
+      id: true, nombre: true, email: true, cargo: true, area: true, activo: true, esRootPlataforma: true,
+      debeCambiarPassword: true, roles: { select: { rolId: true, rol: { select: { nombre: true } } } },
+    },
+  });
+  res.json({ total: usuarios.length, usuarios: usuarios.map((u) => ({ ...u, esRoot: u.esRootPlataforma, roles: u.roles.map((r) => ({ id: r.rolId, nombre: r.rol.nombre })), esRootPlataforma: undefined })) });
+});
+
+function normalizaRolIds(body: any): string[] {
+  return Array.isArray(body?.roles) ? body.roles.map((r: any) => String(r)).filter(Boolean) : [];
+}
+
+adminRouter.post('/usuarios', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const nombre = String(req.body?.nombre ?? '').trim();
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  if (!nombre || !email) return res.status(422).json({ error: 'Nombre y correo son obligatorios.' });
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(422).json({ error: 'Correo inválido.' });
+  const rolIds = normalizaRolIds(req.body);
+  const temporal = String(req.body?.passwordTemporal ?? '').trim() || PASSWORD_TEMPORAL_DEFECTO;
+  try {
+    const u = await prisma.usuario.create({
+      data: {
+        organizacionId: id, nombre, email, passwordHash: hashPassword(temporal), debeCambiarPassword: true,
+        cargo: req.body?.cargo?.trim() || null, area: req.body?.area?.trim() || null, activo: req.body?.activo !== false,
+        ...(rolIds.length ? { roles: { create: rolIds.map((rolId) => ({ rolId })) } } : {}),
+      },
+      select: { id: true },
+    });
+    res.status(201).json({ ok: true, id: u.id, passwordTemporal: temporal });
+  } catch (e: any) {
+    if (e?.code === 'P2002') return res.status(409).json({ error: 'Ya existe un usuario con ese correo.' });
+    if (e?.code === 'P2003') return res.status(422).json({ error: 'Alguno de los roles no es válido.' });
+    throw e;
+  }
+});
+
+adminRouter.patch('/usuarios/:id', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const u = await prisma.usuario.findFirst({ where: { id: req.params.id, organizacionId: id }, select: { id: true, esRootPlataforma: true } });
+  if (!u) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+  const data: Record<string, any> = {};
+  if (typeof req.body?.nombre === 'string' && req.body.nombre.trim()) data.nombre = req.body.nombre.trim();
+  if ('cargo' in req.body) data.cargo = req.body.cargo?.trim() || null;
+  if ('area' in req.body) data.area = req.body.area?.trim() || null;
+  if ('activo' in req.body) {
+    if (u.esRootPlataforma && req.body.activo === false) return res.status(403).json({ error: 'No se puede desactivar al usuario root.' });
+    data.activo = !!req.body.activo;
+  }
+
+  const cambiarRoles = Array.isArray(req.body?.roles);
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (Object.keys(data).length) await tx.usuario.update({ where: { id: u.id }, data });
+      if (cambiarRoles) {
+        const rolIds = normalizaRolIds(req.body);
+        await tx.usuarioRol.deleteMany({ where: { usuarioId: u.id } });
+        if (rolIds.length) await tx.usuarioRol.createMany({ data: rolIds.map((rolId) => ({ usuarioId: u.id, rolId })) });
+      }
+    });
+    res.json({ ok: true });
+  } catch (e: any) {
+    if (e?.code === 'P2003') return res.status(422).json({ error: 'Alguno de los roles no es válido.' });
+    throw e;
+  }
+});
+
+adminRouter.post('/usuarios/:id/reset-password', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const u = await prisma.usuario.findFirst({ where: { id: req.params.id, organizacionId: id }, select: { id: true } });
+  if (!u) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  const temporal = String(req.body?.passwordTemporal ?? '').trim() || PASSWORD_TEMPORAL_DEFECTO;
+  await prisma.usuario.update({ where: { id: u.id }, data: { passwordHash: hashPassword(temporal), debeCambiarPassword: true } });
+  res.json({ ok: true, passwordTemporal: temporal });
+});
+
+adminRouter.delete('/usuarios/:id', requireAuth, soloAdmin, async (req: AuthedRequest, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  if (req.params.id === req.user!.sub) return res.status(403).json({ error: 'No puedes eliminar tu propio usuario.' });
+  const u = await prisma.usuario.findFirst({ where: { id: req.params.id, organizacionId: id }, select: { id: true, esRootPlataforma: true } });
+  if (!u) return res.status(404).json({ error: 'Usuario no encontrado.' });
+  if (u.esRootPlataforma) return res.status(403).json({ error: 'No se puede eliminar al usuario root.' });
+  try {
+    await prisma.usuario.delete({ where: { id: u.id } });
+    res.json({ ok: true });
+  } catch (e: any) {
+    if (e?.code === 'P2003') return res.status(409).json({ error: 'No se puede eliminar: el usuario tiene tareas asignadas o creadas. Desactívalo en su lugar.' });
+    throw e;
+  }
 });

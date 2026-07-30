@@ -23,7 +23,7 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
     items: [
       { label: 'Clientes', icon: '🏢', href: '/clientes' },
       { label: 'Coordinación', icon: '📊', href: '/coordinacion' },
-      { label: 'Usuarios', icon: '🧗', href: '/usuarios' },
+      { label: 'Usuarios', icon: '🧗', href: '/usuarios', adminOnly: true },
       { label: 'Administración', icon: '⚙️', href: '/administracion', adminOnly: true },
     ],
   },
