@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import PlaneadorSidebar from './PlaneadorSidebar';
+import TemaSelector from './TemaSelector';
 
 const CLAVE = 'cerpat_sidebar_colapsado';
 
@@ -51,6 +52,8 @@ export default function PlaneadorShell({ esAdmin, esGestorHallazgos, children }:
           >
             {colapsado ? '☰' : '‹'}
           </button>
+          <span style={{ flex: 1 }} />
+          <TemaSelector />
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: '18px 20px' }}>{children}</div>
       </div>
