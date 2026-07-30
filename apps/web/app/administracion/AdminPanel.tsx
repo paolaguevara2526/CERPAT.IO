@@ -5,11 +5,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import ActividadesEditor from './ActividadesEditor';
+import VencimientosEditor from './VencimientosEditor';
 
 type Tab = { id: string; label: string; tipo?: string };
 const TABS: Tab[] = [
   { id: 'parametros', label: 'Parámetros' },
   { id: 'actividades', label: 'Cat. Tareas' },
+  { id: 'vencimientos', label: 'Vencimientos' },
   { id: 'areas', label: 'Áreas', tipo: 'areas' },
   { id: 'tipos-tarea', label: 'Tipos de tarea', tipo: 'tipos-tarea' },
   { id: 'tipos-obligacion', label: 'Tipos de obligación', tipo: 'tipos-obligacion' },
@@ -39,6 +41,7 @@ export default function AdminPanel() {
       </div>
       {activo.tipo ? <CatalogoEditor key={activo.tipo} tipo={activo.tipo} label={activo.label} />
         : activo.id === 'actividades' ? <ActividadesEditor />
+        : activo.id === 'vencimientos' ? <VencimientosEditor />
         : <ParametrosEditor />}
     </div>
   );

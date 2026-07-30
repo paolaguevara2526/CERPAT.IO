@@ -246,3 +246,66 @@ adminRouter.delete('/actividades/:id/subtareas/:subId', requireAuth, soloAdmin, 
   if (r.count === 0) return res.status(404).json({ error: 'Subtarea no encontrada.' });
   res.json({ ok: true });
 });
+
+// ---------- Vencimientos (calendario tributario general) ----------
+
+function datosVencimiento(body: any): { data?: Record<string, any>; error?: string } {
+  const data: Record<string, any> = {};
+  if ('obligacionId' in (body ?? {})) data.obligacionId = body.obligacionId || null;
+  for (const c of ['municipio', 'periodo', 'nitRango'] as const) {
+    if (c in (body ?? {})) data[c] = typeof body[c] === 'string' && body[c].trim() ? body[c].trim() : null;
+  }
+  if ('fechaVencimiento' in (body ?? {})) {
+    const raw = String(body.fechaVencimiento ?? '');
+    const d = raw ? new Date(raw) : null;
+    if (!d || isNaN(d.getTime())) return { error: 'Fecha de vencimiento inválida.' };
+    data.fechaVencimiento = d;
+  }
+  return { data };
+}
+
+adminRouter.get('/vencimientos', requireAuth, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const periodo = typeof req.query.periodo === 'string' && req.query.periodo ? req.query.periodo : undefined;
+  const obligacionId = typeof req.query.obligacionId === 'string' && req.query.obligacionId ? req.query.obligacionId : undefined;
+  const items = await prisma.vencimiento.findMany({
+    where: { organizacionId: id, ...(periodo ? { periodo } : {}), ...(obligacionId ? { obligacionId } : {}) },
+    orderBy: [{ fechaVencimiento: 'asc' }],
+    select: {
+      id: true, municipio: true, periodo: true, fechaVencimiento: true, nitRango: true,
+      obligacion: { select: { id: true, nombre: true } },
+    },
+    take: 1000,
+  });
+  res.json({ total: items.length, items: items.map((v) => ({ ...v, obligacion: v.obligacion?.nombre ?? null, obligacionId: v.obligacion?.id ?? null })) });
+});
+
+adminRouter.post('/vencimientos', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const { data, error } = datosVencimiento(req.body);
+  if (error) return res.status(422).json({ error });
+  if (!data!.fechaVencimiento) return res.status(422).json({ error: 'La fecha de vencimiento es obligatoria.' });
+  const v = await prisma.vencimiento.create({ data: { organizacionId: id, ...data } as any, select: { id: true } });
+  res.status(201).json({ ok: true, id: v.id });
+});
+
+adminRouter.patch('/vencimientos/:id', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const { data, error } = datosVencimiento(req.body);
+  if (error) return res.status(422).json({ error });
+  if (Object.keys(data!).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+  const r = await prisma.vencimiento.updateMany({ where: { id: req.params.id, organizacionId: id }, data: data! });
+  if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
+  res.json({ ok: true });
+});
+
+adminRouter.delete('/vencimientos/:id', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const r = await prisma.vencimiento.deleteMany({ where: { id: req.params.id, organizacionId: id } });
+  if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
+  res.json({ ok: true });
+});
