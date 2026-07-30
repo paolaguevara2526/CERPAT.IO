@@ -94,7 +94,17 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     if (!sel) return;
     setImportando(true); setError(null);
     try {
-      const filas = parseCSV(await file.text());
+      let filas: string[][];
+      if (file.name.toLowerCase().endsWith('.csv')) {
+        filas = parseCSV(await file.text());
+      } else {
+        const XLSX = await import('xlsx');
+        const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][];
+        filas = aoa.map((r) => r.map((c) => (c instanceof Date ? c.toISOString().slice(0, 10) : c == null ? '' : String(c))));
+        filas = filas.filter((r) => r.some((v) => v.trim() !== ''));
+      }
       if (filas.length < 2) { setError('El archivo no tiene filas de datos.'); setImportando(false); return; }
       const head = filas[0].map((h) => h.trim().toLowerCase());
       const col = (n: string) => head.findIndex((h) => h.includes(n));
@@ -191,7 +201,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
         <span className="sp" style={{ flex: 1 }} />
         <button className="dbtn" onClick={() => exportar(empresaSel?.nombre ?? 'empresa')} disabled={hallazgos.length === 0} style={{ fontSize: 13 }}>⭳ Exportar</button>
         {esGestor && <>
-          <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); }} />
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); }} />
           <button className="dbtn" onClick={() => fileRef.current?.click()} disabled={importando} style={{ fontSize: 13 }}>{importando ? 'Importando…' : '⭱ Importar'}</button>
           <button className="dbtn primary" onClick={() => setModal('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo hallazgo</button>
         </>}
