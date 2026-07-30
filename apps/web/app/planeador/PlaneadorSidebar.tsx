@@ -4,7 +4,7 @@
 
 import { usePathname } from 'next/navigation';
 
-type Item = { label: string; icon: string; href?: string; soon?: boolean };
+type Item = { label: string; icon: string; href?: string; soon?: boolean; adminOnly?: boolean };
 const SECTIONS: { titulo: string; items: Item[] }[] = [
   {
     titulo: 'Planeador',
@@ -24,7 +24,7 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
       { label: 'Clientes', icon: '🏢', href: '/clientes' },
       { label: 'Coordinación', icon: '📊', href: '/coordinacion' },
       { label: 'Usuarios', icon: '🧗', href: '/usuarios' },
-      { label: 'Administración', icon: '⚙️', href: '/administracion' },
+      { label: 'Administración', icon: '⚙️', href: '/administracion', adminOnly: true },
     ],
   },
   {
@@ -37,11 +37,15 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
   },
 ];
 
-export default function PlaneadorSidebar() {
+export default function PlaneadorSidebar({ esAdmin = false }: { esAdmin?: boolean }) {
   const path = usePathname();
+  const secciones = SECTIONS.map((sec) => ({
+    ...sec,
+    items: sec.items.filter((it) => !it.adminOnly || esAdmin),
+  }));
   return (
     <aside style={{ background: 'linear-gradient(180deg,#2e5090,#0f1d33)', color: '#dbe4f5', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210 }}>
-      {SECTIONS.map((sec) => (
+      {secciones.map((sec) => (
         <div key={sec.titulo}>
           <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 800, opacity: 0.55, padding: '12px 10px 5px' }}>{sec.titulo}</div>
           {sec.items.map((it) => {
