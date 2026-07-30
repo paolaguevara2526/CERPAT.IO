@@ -98,6 +98,87 @@ planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, r
   res.json({ ok: true, id: actualizada.id, estado: actualizada.estado });
 });
 
+// GET /plan/auditoria — cola de tareas enviadas a auditoría (estado en_revision,
+// sin aprobar aún) del período. Autenticado.
+planRouter.get('/auditoria', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
+
+  const now = new Date();
+  const periodo = typeof req.query.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.query.periodo)
+    ? req.query.periodo
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const tareas = await prisma.tarea.findMany({
+    where: {
+      organizacionId: org.id,
+      actividadPlanId: { not: null },
+      periodo,
+      estado: 'en_revision',
+      auditoria: { not: 'aprobada' },
+    },
+    select: {
+      id: true, titulo: true, estado: true, auditoria: true, requiereRevisionTecnica: true,
+      observaciones: true, fechaVencimiento: true, periodo: true,
+      empresa: { select: { nombre: true } },
+      area: { select: { nombre: true } },
+      asesor: { select: { id: true, nombre: true } },
+      auxiliar: { select: { id: true, nombre: true } },
+    },
+    orderBy: [{ fechaVencimiento: 'asc' }, { titulo: 'asc' }],
+    take: 500,
+  });
+
+  res.json({
+    periodo,
+    total: tareas.length,
+    tareas: tareas.map((t) => ({
+      id: t.id, titulo: t.titulo, estado: t.estado, auditoria: t.auditoria,
+      requiereRevisionTecnica: t.requiereRevisionTecnica, observaciones: t.observaciones,
+      fechaVencimiento: t.fechaVencimiento, periodo: t.periodo,
+      empresa: t.empresa?.nombre ?? null, area: t.area?.nombre ?? null,
+      asesor: t.asesor?.nombre ?? null, auxiliar: t.auxiliar?.nombre ?? null,
+    })),
+  });
+});
+
+// PATCH /plan/tareas/:id/auditoria  { accion: 'aprobar' | 'devolver', observaciones? }
+// Aprobar: estado -> auditado, auditoria -> aprobada (bloquea). Devolver: estado ->
+// en_curso, auditoria -> rechazada, guarda observaciones. Solo coordinación o el asesor.
+planRouter.patch('/tareas/:id/auditoria', requireAuth, async (req: AuthedRequest, res) => {
+  const accion = String(req.body?.accion ?? '');
+  if (accion !== 'aprobar' && accion !== 'devolver') return res.status(400).json({ error: 'Acción inválida.' });
+
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+
+  // Permiso: root, Administrador/Coordinador, o el asesor de la tarea (aprueba lo de
+  // sus auxiliares). El auxiliar no puede auditar su propia tarea.
+  const u = req.user!;
+  const puede = u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)) || tarea.asesorId === u.sub;
+  if (!puede) return res.status(403).json({ error: 'Solo coordinación o el asesor del área puede auditar esta tarea.' });
+
+  if (tarea.auditoria === 'aprobada') return res.status(409).json({ error: 'La tarea ya fue aprobada en auditoría.' });
+
+  if (accion === 'aprobar') {
+    const actualizada = await prisma.tarea.update({
+      where: { id: tarea.id },
+      data: { estado: 'auditado', auditoria: 'aprobada' },
+    });
+    return res.json({ ok: true, id: actualizada.id, estado: actualizada.estado, auditoria: actualizada.auditoria });
+  }
+
+  // devolver
+  const observaciones = String(req.body?.observaciones ?? '').trim();
+  if (!observaciones) return res.status(422).json({ error: 'Indica las observaciones para devolver la tarea.' });
+  const actualizada = await prisma.tarea.update({
+    where: { id: tarea.id },
+    data: { estado: 'en_curso', auditoria: 'rechazada', observaciones },
+  });
+  res.json({ ok: true, id: actualizada.id, estado: actualizada.estado, auditoria: actualizada.auditoria });
+});
+
 planRouter.get('/cumplimiento', async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, periodo: null, kpis: null, porArea: [], porCliente: [] });
