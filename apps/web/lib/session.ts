@@ -10,6 +10,7 @@ export const COOKIE = 'cerpat_token';
 export type SessionUser = {
   id: string; nombre: string; email: string; roles: string[];
   esRoot: boolean; debeCambiarPassword: boolean; area?: string | null; cargo?: string | null;
+  empresaCliente?: string | null; grupoCliente?: string | null;
 };
 
 export function getToken(): string | undefined {
