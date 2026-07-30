@@ -46,7 +46,7 @@ export default function PlaneadorSidebar({ esAdmin = false, esGestorHallazgos = 
     items: sec.items.filter((it) => (!it.adminOnly || esAdmin) && (!it.gestorHallazgos || esGestorHallazgos)),
   }));
   return (
-    <aside style={{ background: 'linear-gradient(180deg,#2e5090,#0f1d33)', color: '#dbe4f5', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210 }}>
+    <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210 }}>
       {secciones.map((sec) => (
         <div key={sec.titulo}>
           <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 800, opacity: 0.55, padding: '12px 10px 5px' }}>{sec.titulo}</div>
@@ -58,13 +58,13 @@ export default function PlaneadorSidebar({ esAdmin = false, esGestorHallazgos = 
               opacity: it.soon ? 0.45 : 1, position: 'relative',
             };
             const activeStyle: React.CSSProperties = active
-              ? { background: 'rgba(255,255,255,0.12)', color: '#fff' } : {};
+              ? { background: 'var(--nav-active-bg)', color: 'var(--nav-active-ink)' } : {};
             const content = (
               <>
                 <span style={{ width: 18, textAlign: 'center' }}>{it.icon}</span>
                 <span>{it.label}</span>
                 {it.soon && <span style={{ marginLeft: 'auto', fontSize: 9, opacity: 0.7 }}>pronto</span>}
-                {active && <span style={{ position: 'absolute', left: -6, top: 7, bottom: 7, width: 3, borderRadius: 3, background: '#34c98b' }} />}
+                {active && <span style={{ position: 'absolute', left: -6, top: 7, bottom: 7, width: 3, borderRadius: 3, background: 'var(--nav-accent)' }} />}
               </>
             );
             return it.href && !it.soon

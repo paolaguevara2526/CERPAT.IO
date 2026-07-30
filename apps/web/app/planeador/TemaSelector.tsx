@@ -6,11 +6,13 @@ import { useEffect, useRef, useState } from 'react';
 
 const CLAVE = 'cerpat_tema';
 type Tema = { id: string; nombre: string; sw: [string, string, string] };
+// Las muestras reflejan el color de la BARRA de navegación (que es lo que cambia).
 const TEMAS: Tema[] = [
-  { id: 'claro', nombre: 'Claro', sw: ['#e7ebf2', '#2e5090', '#34c98b'] },
-  { id: 'escritorio', nombre: 'Escritorio', sw: ['#ffffff', '#274b9e', '#34c98b'] },
-  { id: 'navy', nombre: 'Azul profundo', sw: ['#0a1424', '#4a72c0', '#34c98b'] },
-  { id: 'oscuro', nombre: 'Oscuro', sw: ['#10121a', '#3a5ea6', '#34c98b'] },
+  { id: 'claro', nombre: 'Claro (navy)', sw: ['#2e5090', '#0f1d33', '#34c98b'] },
+  { id: 'escritorio', nombre: 'Escritorio (clara)', sw: ['#ffffff', '#eef2f9', '#22a670'] },
+  { id: 'navy', nombre: 'Azul profundo', sw: ['#13294a', '#060d18', '#34c98b'] },
+  { id: 'oscuro', nombre: 'Oscuro', sw: ['#242a3a', '#12141c', '#34c98b'] },
+  { id: 'verde', nombre: 'Verde CERPAT', sw: ['#178a5c', '#0c3f2e', '#0f1d33'] },
 ];
 
 export default function TemaSelector() {
