@@ -353,6 +353,8 @@ model Tarea {
   auditoria               EstadoAuditoria @default(pendiente)
   requiereRevisionTecnica Boolean         @default(false)
   generaPago              Boolean         @default(false)
+  valorPago               Decimal?        @db.Decimal(14, 2) // valor de la obligación, digitado por el ejecutor
+  estadoPago              EstadoPago      @default(pendiente)
   generaIneficacia        Boolean         @default(false)
   requiereSoporte         Boolean         @default(false)
   soporteLink             String?
