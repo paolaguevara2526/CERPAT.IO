@@ -17,7 +17,7 @@ export default async function AdministracionPage() {
 
   return (
     <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 70% -10%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '26px 18px 44px', display: 'flex', justifyContent: 'center' }}>
-      <div className="win" style={{ width: '100%', maxWidth: 940 }}>
+      <div className="win" style={{ width: '100%', maxWidth: 1040 }}>
         <div className="win-bar">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />

@@ -129,3 +129,120 @@ adminRouter.delete('/catalogos/:tipo/:id', requireAuth, soloAdmin, async (req, r
     throw e;
   }
 });
+
+// ---------- Cat. Tareas: actividades del plan + subtareas plantilla ----------
+
+const BOOL_ACT = ['esRegistroSoftware', 'requiereAuditoria', 'generaPago', 'activo'] as const;
+const TEXTO_ACT = ['grupo', 'descripcion', 'documentoFormato', 'periodicidad'] as const;
+
+function datosActividad(body: any, esCreacion: boolean): Record<string, any> {
+  const data: Record<string, any> = {};
+  if (typeof body?.codigo === 'string' && body.codigo.trim()) data.codigo = body.codigo.trim();
+  if (typeof body?.nombre === 'string' && body.nombre.trim()) data.nombre = body.nombre.trim();
+  if ('areaId' in (body ?? {})) data.areaId = body.areaId || null;
+  for (const c of TEXTO_ACT) if (c in (body ?? {})) data[c] = typeof body[c] === 'string' && body[c].trim() ? body[c].trim() : null;
+  for (const b of BOOL_ACT) if (b in (body ?? {})) data[b] = !!body[b];
+  if (body?.orden !== undefined && body.orden !== null && body.orden !== '') data.orden = Number(body.orden) || 0;
+  if (esCreacion && data.orden === undefined) data.orden = 0;
+  return data;
+}
+
+adminRouter.get('/actividades', requireAuth, async (_req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const items = await prisma.actividadPlan.findMany({
+    where: { organizacionId: id },
+    orderBy: [{ orden: 'asc' }, { codigo: 'asc' }],
+    select: {
+      id: true, codigo: true, nombre: true, grupo: true, periodicidad: true, orden: true, activo: true,
+      esRegistroSoftware: true, requiereAuditoria: true, generaPago: true,
+      area: { select: { id: true, nombre: true } },
+      _count: { select: { subtareas: true, tareas: true } },
+    },
+  });
+  res.json({ total: items.length, items: items.map((a) => ({ ...a, area: a.area?.nombre ?? null, areaId: a.area?.id ?? null, subtareas: a._count.subtareas, tareas: a._count.tareas, _count: undefined })) });
+});
+
+adminRouter.get('/actividades/:id', requireAuth, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const a = await prisma.actividadPlan.findFirst({
+    where: { id: req.params.id, organizacionId: id },
+    include: { subtareas: { orderBy: { orden: 'asc' }, select: { id: true, texto: true, orden: true } } },
+  });
+  if (!a) return res.status(404).json({ error: 'Actividad no encontrada.' });
+  res.json({ actividad: a });
+});
+
+adminRouter.post('/actividades', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const data = datosActividad(req.body, true);
+  if (!data.codigo || !data.nombre) return res.status(422).json({ error: 'Código y nombre son obligatorios.' });
+  try {
+    const a = await prisma.actividadPlan.create({ data: { organizacionId: id, ...data } as any, select: { id: true } });
+    res.status(201).json({ ok: true, id: a.id });
+  } catch (e: any) {
+    if (e?.code === 'P2002') return res.status(409).json({ error: 'Ya existe una actividad con ese código.' });
+    throw e;
+  }
+});
+
+adminRouter.patch('/actividades/:id', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const data = datosActividad(req.body, false);
+  if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+  try {
+    const r = await prisma.actividadPlan.updateMany({ where: { id: req.params.id, organizacionId: id }, data });
+    if (r.count === 0) return res.status(404).json({ error: 'Actividad no encontrada.' });
+    res.json({ ok: true });
+  } catch (e: any) {
+    if (e?.code === 'P2002') return res.status(409).json({ error: 'Ya existe una actividad con ese código.' });
+    throw e;
+  }
+});
+
+adminRouter.delete('/actividades/:id', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const conTareas = await prisma.tarea.count({ where: { organizacionId: id, actividadPlanId: req.params.id } });
+  if (conTareas > 0) return res.status(409).json({ error: `No se puede eliminar: tiene ${conTareas} tarea(s) generadas. Puedes desactivarla en su lugar.` });
+  const r = await prisma.actividadPlan.deleteMany({ where: { id: req.params.id, organizacionId: id } });
+  if (r.count === 0) return res.status(404).json({ error: 'Actividad no encontrada.' });
+  res.json({ ok: true });
+});
+
+// Subtareas plantilla de una actividad
+async function actividadDeOrg(actId: string): Promise<boolean> {
+  const id = await orgId();
+  if (!id) return false;
+  const a = await prisma.actividadPlan.findFirst({ where: { id: actId, organizacionId: id }, select: { id: true } });
+  return !!a;
+}
+
+adminRouter.post('/actividades/:id/subtareas', requireAuth, soloAdmin, async (req, res) => {
+  if (!(await actividadDeOrg(req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
+  const texto = String(req.body?.texto ?? '').trim();
+  if (!texto) return res.status(422).json({ error: 'El texto de la subtarea es obligatorio.' });
+  const s = await prisma.subtareaPlantilla.create({ data: { actividadPlanId: req.params.id, texto, orden: Number(req.body?.orden) || 0 }, select: { id: true, texto: true, orden: true } });
+  res.status(201).json({ ok: true, subtarea: s });
+});
+
+adminRouter.patch('/actividades/:id/subtareas/:subId', requireAuth, soloAdmin, async (req, res) => {
+  if (!(await actividadDeOrg(req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
+  const data: Record<string, any> = {};
+  if (typeof req.body?.texto === 'string' && req.body.texto.trim()) data.texto = req.body.texto.trim();
+  if (req.body?.orden !== undefined && req.body.orden !== null && req.body.orden !== '') data.orden = Number(req.body.orden) || 0;
+  if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+  const r = await prisma.subtareaPlantilla.updateMany({ where: { id: req.params.subId, actividadPlanId: req.params.id }, data });
+  if (r.count === 0) return res.status(404).json({ error: 'Subtarea no encontrada.' });
+  res.json({ ok: true });
+});
+
+adminRouter.delete('/actividades/:id/subtareas/:subId', requireAuth, soloAdmin, async (req, res) => {
+  if (!(await actividadDeOrg(req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
+  const r = await prisma.subtareaPlantilla.deleteMany({ where: { id: req.params.subId, actividadPlanId: req.params.id } });
+  if (r.count === 0) return res.status(404).json({ error: 'Subtarea no encontrada.' });
+  res.json({ ok: true });
+});
