@@ -5,6 +5,10 @@
 // server-side y muestra KPIs, cumplimiento por área, seguimiento por asesor/
 // auxiliar y clientes en riesgo del período.
 
+import { redirect } from 'next/navigation';
+import { getSessionUser } from '@/lib/session';
+import LogoutButton from '@/app/_components/LogoutButton';
+
 export const dynamic = 'force-dynamic';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api-production-678b8.up.railway.app';
@@ -70,6 +74,10 @@ function TablaPersonas({ titulo, sub, filas }: { titulo: string; sub: string; fi
 }
 
 export default async function CoordinacionPage({ searchParams }: { searchParams?: { periodo?: string } }) {
+  const sesion = await getSessionUser();
+  if (!sesion) redirect('/login');
+  if (sesion.debeCambiarPassword) redirect('/cambiar-clave');
+
   const periodoParam = typeof searchParams?.periodo === 'string' && /^\d{4}-\d{2}$/.test(searchParams.periodo) ? searchParams.periodo : undefined;
   const { data, error } = await getCumplimiento(periodoParam);
   const kpis = data?.kpis;
@@ -106,9 +114,10 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
           <span className="dbtn">Semana</span>
           <span className="dbtn">Mes</span>
           <span className="sp" />
-          <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'capitalize' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600, textTransform: 'capitalize', marginRight: 12 }}>
             {data?.periodo ? `Período: ${nombrePeriodo(data.periodo)}` : ''}
           </span>
+          <LogoutButton nombre={sesion.nombre} />
         </div>
 
         <div className="win-body">
