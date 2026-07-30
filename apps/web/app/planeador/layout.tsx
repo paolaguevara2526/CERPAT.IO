@@ -16,8 +16,8 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
   const esAdmin = sesion.esRoot || sesion.roles.includes('Administrador');
 
   return (
-    <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '20px 16px 36px', display: 'flex', justifyContent: 'center' }}>
-      <div className="win" style={{ width: '100%', maxWidth: 1160 }}>
+    <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '14px', display: 'flex', justifyContent: 'center' }}>
+      <div className="win" style={{ width: '100%' }}>
         <div className="win-bar">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />
