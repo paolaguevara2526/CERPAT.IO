@@ -9,6 +9,9 @@ const nextConfig = {
       // Fuente del prototipo: prototipo-referencia/planeador-cerpat.html.
       beforeFiles: [
         { source: '/app', destination: '/planeador-cerpat.html' },
+        // Calculadoras de la sección Servicios (HTML estáticos autónomos).
+        { source: '/servicios/retenciones', destination: '/servicios/retenciones.html' },
+        { source: '/servicios/punto-equilibrio', destination: '/servicios/punto-equilibrio.html' },
       ],
     };
   },

@@ -90,11 +90,15 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
     <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 70% -10%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '26px 18px 44px', display: 'flex', justifyContent: 'center' }}>
       <div className="win" style={{ width: '100%', maxWidth: 1080 }}>
         <div className="win-bar">
-          <span className="win-lights"><i className="r" /><i className="y" /><i className="g" /></span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />
           <span className="win-title">Panel de Coordinación{data?.organizacion ? ` · ${data.organizacion.nombre}` : ''}</span>
           <span className="win-path">cerpat.io/coordinacion</span>
+          <div className="win-ctl">
+            <button aria-label="Minimizar"><svg viewBox="0 0 12 12"><rect x="1.5" y="6" width="9" height="1.4" fill="currentColor" /></svg></button>
+            <button aria-label="Maximizar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.3}><rect x="1.8" y="1.8" width="8.4" height="8.4" /></svg></button>
+            <button className="close" aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button>
+          </div>
         </div>
 
         <div className="win-toolbar">
