@@ -16,7 +16,8 @@ export async function POST(req: Request) {
   if (!res.ok) {
     return NextResponse.json({ error: data.error || 'No se pudo iniciar sesión.' }, { status: res.status });
   }
-  const out = NextResponse.json({ ok: true, debeCambiarPassword: !!data.user?.debeCambiarPassword });
+  const esCliente = !!data.user?.empresaCliente || !!data.user?.grupoCliente;
+  const out = NextResponse.json({ ok: true, debeCambiarPassword: !!data.user?.debeCambiarPassword, esCliente });
   out.cookies.set(COOKIE, data.token, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 12 });
   return out;
 }

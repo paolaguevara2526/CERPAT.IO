@@ -4,7 +4,7 @@
 
 import { usePathname } from 'next/navigation';
 
-type Item = { label: string; icon: string; href?: string; soon?: boolean; adminOnly?: boolean };
+type Item = { label: string; icon: string; href?: string; soon?: boolean; adminOnly?: boolean; gestorHallazgos?: boolean };
 const SECTIONS: { titulo: string; items: Item[] }[] = [
   {
     titulo: 'Planeador',
@@ -32,16 +32,17 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
     items: [
       { label: 'Calculadora de retenciones', icon: '🧮', href: '/servicios/retenciones' },
       { label: 'Punto de equilibrio', icon: '📈', href: '/servicios/punto-equilibrio' },
+      { label: 'Portal de Hallazgos', icon: '🔎', href: '/hallazgos', gestorHallazgos: true },
       { label: 'Más herramientas', icon: '🧰', href: '/servicios' },
     ],
   },
 ];
 
-export default function PlaneadorSidebar({ esAdmin = false }: { esAdmin?: boolean }) {
+export default function PlaneadorSidebar({ esAdmin = false, esGestorHallazgos = false }: { esAdmin?: boolean; esGestorHallazgos?: boolean }) {
   const path = usePathname();
   const secciones = SECTIONS.map((sec) => ({
     ...sec,
-    items: sec.items.filter((it) => !it.adminOnly || esAdmin),
+    items: sec.items.filter((it) => (!it.adminOnly || esAdmin) && (!it.gestorHallazgos || esGestorHallazgos)),
   }));
   return (
     <aside style={{ background: 'linear-gradient(180deg,#2e5090,#0f1d33)', color: '#dbe4f5', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210 }}>

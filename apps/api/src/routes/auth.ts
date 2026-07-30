@@ -46,6 +46,7 @@ authRouter.post('/login', async (req, res) => {
     user: {
       id: user.id, nombre: user.nombre, email: user.email, roles,
       esRoot: user.esRootPlataforma, debeCambiarPassword: user.debeCambiarPassword,
+      empresaCliente: user.empresaClienteId, grupoCliente: user.grupoClienteId,
     },
   });
 });

@@ -23,7 +23,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'No se pudo iniciar sesión.'); setCargando(false); return; }
-      router.replace(data.debeCambiarPassword ? '/cambiar-clave' : '/planeador');
+      router.replace(data.debeCambiarPassword ? '/cambiar-clave' : data.esCliente ? '/hallazgos' : '/planeador');
     } catch {
       setError('Error de red. Intenta de nuevo.');
       setCargando(false);
