@@ -35,6 +35,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Hallazgo | 'nuevo' | null>(null);
+  const [busqueda, setBusqueda] = useState('');
 
   const cargarBase = useCallback(async () => {
     setCargando(true); setError(null);
@@ -96,22 +97,33 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
             <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: k.vencidos ? '#cf4436' : '#8a94a6' }}>{k.vencidos}</div><div className="s">requieren atención</div></div>
           </div>
         )}
-        <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 10px' }}>Resolución por compañía</h2>
-        <div className="panel" style={{ padding: '6px 16px 12px' }}>
-          {(resumen?.porEmpresa ?? []).map((e) => (
-            <button key={e.empresaId} onClick={() => setSel(e.empresaId)} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', padding: '12px 0', borderBottom: '1px solid var(--line)', fontFamily: 'var(--ui)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                <span style={{ fontWeight: 700, fontSize: 13.5 }}>{e.empresa} <span style={{ marginLeft: 6, color: 'var(--navy)', fontSize: 11 }}>ver matriz →</span></span>
-                <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{e.resueltos}/{e.total} · <strong style={{ color: colorPct(e.pct) }}>{e.pct}%</strong>{e.vencidos > 0 && <span style={{ color: '#cf4436', marginLeft: 8 }}>{e.vencidos} vencido(s)</span>}</span>
-              </div>
-              <div style={{ height: 9, borderRadius: 3, background: 'var(--panel-2)', border: '1px solid var(--line)', overflow: 'hidden', display: 'flex' }}>
-                <span style={{ width: `${e.total ? (e.resueltos / e.total) * 100 : 0}%`, background: '#22a670' }} />
-                <span style={{ width: `${e.total ? (e.enGestion / e.total) * 100 : 0}%`, background: '#2f6fd0' }} />
-                <span style={{ width: `${e.total ? (e.vencidos / e.total) * 100 : 0}%`, background: '#cf4436' }} />
-              </div>
-            </button>
-          ))}
-          {(resumen?.porEmpresa ?? []).length === 0 && <div style={{ padding: 20, color: 'var(--muted)', textAlign: 'center' }}>Aún no hay hallazgos registrados.</div>}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>{esGestor ? 'Selecciona una compañía para gestionar su matriz' : 'Resolución por compañía'}</h2>
+          {empresas.length > 8 && <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar compañía…" style={{ padding: '7px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', minWidth: 220 }} />}
+        </div>
+        <div className="panel" style={{ padding: '6px 16px 12px', maxHeight: 'calc(100vh - 360px)', overflowY: 'auto' }}>
+          {empresas.filter((e) => !busqueda || e.nombre.toLowerCase().includes(busqueda.toLowerCase())).map((e) => {
+            const r = resumen?.porEmpresa.find((x) => x.empresaId === e.id);
+            const total = r?.total ?? 0;
+            return (
+              <button key={e.id} onClick={() => setSel(e.id)} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', padding: '11px 0', borderBottom: '1px solid var(--line)', fontFamily: 'var(--ui)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: total ? 6 : 0 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13.5 }}>{e.nombre} <span style={{ marginLeft: 6, color: 'var(--navy)', fontSize: 11 }}>{esGestor ? 'abrir matriz →' : 'ver matriz →'}</span></span>
+                  {total > 0
+                    ? <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{r!.resueltos}/{total} · <strong style={{ color: colorPct(r!.pct) }}>{r!.pct}%</strong>{r!.vencidos > 0 && <span style={{ color: '#cf4436', marginLeft: 8 }}>{r!.vencidos} vencido(s)</span>}</span>
+                    : <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>sin hallazgos</span>}
+                </div>
+                {total > 0 && (
+                  <div style={{ height: 9, borderRadius: 3, background: 'var(--panel-2)', border: '1px solid var(--line)', overflow: 'hidden', display: 'flex' }}>
+                    <span style={{ width: `${(r!.resueltos / total) * 100}%`, background: '#22a670' }} />
+                    <span style={{ width: `${(r!.enGestion / total) * 100}%`, background: '#2f6fd0' }} />
+                    <span style={{ width: `${(r!.vencidos / total) * 100}%`, background: '#cf4436' }} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+          {empresas.length === 0 && <div style={{ padding: 20, color: 'var(--muted)', textAlign: 'center' }}>No hay compañías en tu alcance.</div>}
         </div>
       </>
     );
