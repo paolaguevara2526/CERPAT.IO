@@ -179,6 +179,86 @@ planRouter.patch('/tareas/:id/auditoria', requireAuth, async (req: AuthedRequest
   res.json({ ok: true, id: actualizada.id, estado: actualizada.estado, auditoria: actualizada.auditoria });
 });
 
+const ESTADOS_PAGO = ['pendiente', 'presentado_sin_pago', 'presentado_pagado', 'no_presentado'];
+
+// GET /plan/pagos — obligaciones con pago (tareas generaPago) del período. Autenticado.
+planRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
+
+  const now = new Date();
+  const periodo = typeof req.query.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.query.periodo)
+    ? req.query.periodo
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const estadoPago = typeof req.query.estadoPago === 'string' ? req.query.estadoPago : undefined;
+
+  const tareas = await prisma.tarea.findMany({
+    where: {
+      organizacionId: org.id,
+      actividadPlanId: { not: null },
+      periodo,
+      generaPago: true,
+      ...(estadoPago && ESTADOS_PAGO.includes(estadoPago) ? { estadoPago: estadoPago as any } : {}),
+    },
+    select: {
+      id: true, titulo: true, estado: true, valorPago: true, estadoPago: true,
+      fechaVencimiento: true, periodo: true,
+      empresa: { select: { nombre: true } },
+      tipoObligacion: { select: { nombre: true } },
+      area: { select: { nombre: true } },
+      asesor: { select: { nombre: true } },
+      auxiliar: { select: { nombre: true } },
+    },
+    orderBy: [{ fechaVencimiento: 'asc' }, { titulo: 'asc' }],
+    take: 500,
+  });
+
+  res.json({
+    periodo,
+    total: tareas.length,
+    tareas: tareas.map((t) => ({
+      id: t.id, titulo: t.titulo, estado: t.estado,
+      valorPago: t.valorPago != null ? Number(t.valorPago) : null, estadoPago: t.estadoPago,
+      fechaVencimiento: t.fechaVencimiento, periodo: t.periodo,
+      empresa: t.empresa?.nombre ?? null, obligacion: t.tipoObligacion?.nombre ?? null,
+      area: t.area?.nombre ?? null, asesor: t.asesor?.nombre ?? null, auxiliar: t.auxiliar?.nombre ?? null,
+    })),
+  });
+});
+
+// PATCH /plan/tareas/:id/pago  { valorPago?, estadoPago? } — el ejecutor digita el
+// valor y el estado del pago. Permiso: coordinación o asesor/auxiliar de la tarea.
+planRouter.patch('/tareas/:id/pago', requireAuth, async (req: AuthedRequest, res) => {
+  const tieneValor = req.body?.valorPago !== undefined && req.body?.valorPago !== null && req.body?.valorPago !== '';
+  const tieneEstado = typeof req.body?.estadoPago === 'string';
+  if (!tieneValor && !tieneEstado) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+
+  let valor: number | undefined;
+  if (tieneValor) {
+    valor = Number(req.body.valorPago);
+    if (!Number.isFinite(valor) || valor < 0) return res.status(422).json({ error: 'El valor del pago no es válido.' });
+  }
+  if (tieneEstado && !ESTADOS_PAGO.includes(req.body.estadoPago)) return res.status(400).json({ error: 'Estado de pago inválido.' });
+
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+
+  const u = req.user!;
+  const puede = u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)) || tarea.asesorId === u.sub || tarea.auxiliarId === u.sub;
+  if (!puede) return res.status(403).json({ error: 'No puedes registrar el pago de esta tarea.' });
+
+  const actualizada = await prisma.tarea.update({
+    where: { id: tarea.id },
+    data: {
+      ...(tieneValor ? { valorPago: valor } : {}),
+      ...(tieneEstado ? { estadoPago: req.body.estadoPago as any } : {}),
+    },
+    select: { id: true, valorPago: true, estadoPago: true },
+  });
+  res.json({ ok: true, id: actualizada.id, valorPago: actualizada.valorPago != null ? Number(actualizada.valorPago) : null, estadoPago: actualizada.estadoPago });
+});
+
 planRouter.get('/cumplimiento', async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, periodo: null, kpis: null, porArea: [], porCliente: [] });

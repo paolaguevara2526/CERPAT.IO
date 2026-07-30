@@ -14,7 +14,7 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
       { label: 'Calendario', icon: '📅', href: '/planeador/calendario' },
       { label: 'Tablero', icon: '▦', href: '/planeador/tablero' },
       { label: 'Lista', icon: '☰', href: '/planeador/lista' },
-      { label: 'Pagos', icon: '💲', soon: true },
+      { label: 'Pagos', icon: '💲', href: '/planeador/pagos' },
       { label: 'Auditoría', icon: '🛡', href: '/planeador/auditoria' },
     ],
   },
