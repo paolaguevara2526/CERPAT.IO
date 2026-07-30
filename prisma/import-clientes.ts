@@ -103,14 +103,18 @@ async function main() {
     if (regimenCsv && !regimenNombre) regimenesNoMapeados.add(regimenCsv);
 
     const id = nit ? `cli-nit-${nit}` : `cli-${slug(nombre)}`;
+    // "Inactivo" en la columna asesor marca el cliente como inactivo (no se lista).
+    const asesorCsv = nn(r[idx('asesor')]);
+    const esInactivo = (asesorCsv || '').toLowerCase() === 'inactivo';
     const payload = {
       organizacionId: ORG_ID,
       nombre,
       nit,
+      activo: !esInactivo,
       tipoId: tipoNombre ? tipoIdByName.get(tipoNombre) ?? null : null,
       regimenId: regimenNombre ? regimenIdByName.get(regimenNombre) ?? null : null,
       servicio: nn(r[idx('servicio')]),
-      asesorNombre: nn(r[idx('asesor')]),
+      asesorNombre: esInactivo ? null : asesorCsv,
       emailRepresentante: nn(r[idx('emailRepresentante')]),
       emailAdministracion: nn(r[idx('emailAdministracion')]),
       emailContabilidad: nn(r[idx('emailContabilidad')]),

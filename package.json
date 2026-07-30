@@ -14,6 +14,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:import-clientes": "tsx prisma/import-clientes.ts",
     "db:clientes-normalizar": "tsx prisma/clientes-normalizar.ts",
+    "db:clientes-inactivos": "tsx prisma/clientes-inactivos.ts",
     "db:import-usuarios": "tsx prisma/import-usuarios.ts",
     "db:usuarios-limpiar": "tsx prisma/usuarios-limpiar.ts",
     "db:import-plan": "tsx prisma/import-plan.ts",

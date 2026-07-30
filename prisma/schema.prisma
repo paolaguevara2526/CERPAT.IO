@@ -184,6 +184,7 @@ model Empresa {
   // Datos operativos y de contacto (base de clientes CERPAT)
   servicio            String? // Asesoría Contable | Outsourcing | Revisoría Contable
   asesorNombre        String? // asesor responsable (texto; puede quedar vinculado a Asesor luego)
+  activo              Boolean @default(true) // false = cliente inactivo (no se lista)
   emailRepresentante  String?
   emailAdministracion String?
   emailContabilidad   String?

@@ -12,12 +12,15 @@ import { prisma } from '../db.js';
 
 export const empresasRouter = Router();
 
-empresasRouter.get('/', async (_req, res) => {
+empresasRouter.get('/', async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, total: 0, empresas: [] });
 
+  // Por defecto solo clientes activos. ?incluirInactivos=1 los incluye (opción futura).
+  const incluirInactivos = req.query.incluirInactivos === '1' || req.query.incluirInactivos === 'true';
+
   const empresas = await prisma.empresa.findMany({
-    where: { organizacionId: org.id },
+    where: { organizacionId: org.id, ...(incluirInactivos ? {} : { activo: true }) },
     orderBy: { nombre: 'asc' },
     include: { tipo: true, regimen: true },
   });
@@ -33,6 +36,7 @@ empresasRouter.get('/', async (_req, res) => {
       servicio: e.servicio,
       asesorNombre: e.asesorNombre,
       regimen: e.regimen?.nombre ?? null,
+      activo: e.activo,
       // Correos omitidos a propósito en este endpoint público (privacidad).
     })),
   });
