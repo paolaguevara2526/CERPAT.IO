@@ -179,7 +179,9 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
   cada asesor/auxiliar.
 - **Agregar/quitar actividades por área en cada cliente:** la gestión del plan de
   cada cliente se hace por área (activar/desactivar actividades vía
-  `PlanClienteActividad.activa`).
+  `PlanClienteActividad.activa`). ✅ **UI en producción**: Administración →
+  *Plan por cliente* (marcar actividades por área + periodicidad, y generar las
+  tareas del período por cliente).
 - **Tamaño por área con tallas:** la talla (S/M/L/XL) es **por empresa × área**
   (una empresa puede ser L en Tesorería y S en Nómina) → campo `talla` en
   `AsignacionClienteArea`.

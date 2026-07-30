@@ -488,3 +488,111 @@ adminRouter.delete('/empresas/:id', requireAuth, soloAdmin, async (req, res) => 
     throw e;
   }
 });
+
+// ---------- Plan de trabajo por cliente (PlanClienteActividad) ----------
+
+const soloCoordinacion = requireRol('Administrador', 'Coordinador');
+const PASO_PLAN: Record<string, number> = { Mensual: 1, Bimestral: 2, Trimestral: 3, Cuatrimestral: 4, Semestral: 6, Anual: 12 };
+function aplicaEnMesPlan(periodicidad: string | null, mes1a12: number): boolean {
+  const n = PASO_PLAN[(periodicidad || '').trim()];
+  return n ? (mes1a12 - 1) % n === 0 : false;
+}
+
+// GET /admin/plan-cliente/:empresaId — catálogo de actividades por área con el
+// estado del plan del cliente (marcadas/periodicidad propia).
+adminRouter.get('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true, nombre: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+  const [actividades, planes] = await Promise.all([
+    prisma.actividadPlan.findMany({
+      where: { organizacionId: id, activo: true },
+      orderBy: [{ orden: 'asc' }, { codigo: 'asc' }],
+      select: { id: true, codigo: true, nombre: true, periodicidad: true, area: { select: { id: true, nombre: true } } },
+    }),
+    prisma.planClienteActividad.findMany({ where: { organizacionId: id, empresaId: empresa.id }, select: { actividadPlanId: true, activa: true, periodicidad: true } }),
+  ]);
+  const planMap = new Map(planes.map((p) => [p.actividadPlanId, p]));
+
+  const areasMap = new Map<string, { area: string; areaId: string | null; actividades: any[] }>();
+  for (const a of actividades) {
+    const key = a.area?.id ?? 'sin';
+    if (!areasMap.has(key)) areasMap.set(key, { area: a.area?.nombre ?? 'Sin área', areaId: a.area?.id ?? null, actividades: [] });
+    const p = planMap.get(a.id);
+    areasMap.get(key)!.actividades.push({
+      id: a.id, codigo: a.codigo, nombre: a.nombre, periodicidadCatalogo: a.periodicidad,
+      enPlan: !!p && p.activa, periodicidad: p?.periodicidad ?? null,
+    });
+  }
+  res.json({ empresa, areas: Array.from(areasMap.values()) });
+});
+
+// PUT /admin/plan-cliente/:empresaId  { activas: [id], periodicidades: {id: 'Mensual'} }
+adminRouter.put('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+  const activas: string[] = Array.isArray(req.body?.activas) ? req.body.activas.map((x: any) => String(x)) : [];
+  const periods: Record<string, string> = (req.body?.periodicidades && typeof req.body.periodicidades === 'object') ? req.body.periodicidades : {};
+  const activasSet = new Set(activas);
+
+  await prisma.$transaction(async (tx) => {
+    // Desactiva las que ya no están.
+    await tx.planClienteActividad.updateMany({ where: { organizacionId: id, empresaId: empresa.id, actividadPlanId: { notIn: activas.length ? activas : ['-'] } }, data: { activa: false } });
+    // Activa/actualiza las marcadas.
+    for (const actividadPlanId of activasSet) {
+      const periodicidad = periods[actividadPlanId] || null;
+      await tx.planClienteActividad.upsert({
+        where: { empresaId_actividadPlanId: { empresaId: empresa.id, actividadPlanId } },
+        create: { organizacionId: id, empresaId: empresa.id, actividadPlanId, activa: true, periodicidad },
+        update: { activa: true, periodicidad },
+      });
+    }
+  });
+  res.json({ ok: true, activas: activasSet.size });
+});
+
+// POST /admin/plan-cliente/:empresaId/generar?periodo=YYYY-MM — genera las tareas
+// del cliente para ese período según su plan activo (idempotente).
+adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+  const now = new Date();
+  const periodo = typeof req.query.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.query.periodo) ? req.query.periodo : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [year, month] = periodo.split('-').map(Number);
+  const fechaInicio = new Date(Date.UTC(year, month - 1, 1));
+  const fechaVencimiento = new Date(Date.UTC(year, month, 0));
+
+  const planes = await prisma.planClienteActividad.findMany({
+    where: { organizacionId: id, empresaId: empresa.id, activa: true },
+    select: { actividadPlanId: true, periodicidad: true, actividad: { select: { nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true } } },
+  });
+  const asign = await prisma.asignacionClienteArea.findMany({ where: { organizacionId: id, empresaId: empresa.id }, select: { areaId: true, asesorId: true, auxiliarId: true } });
+  const asignPorArea = new Map(asign.map((a) => [a.areaId, { asesorId: a.asesorId, auxiliarId: a.auxiliarId }]));
+  const existentes = await prisma.tarea.findMany({ where: { organizacionId: id, empresaId: empresa.id, periodo, actividadPlanId: { not: null } }, select: { actividadPlanId: true } });
+  const yaExiste = new Set(existentes.map((t) => t.actividadPlanId));
+
+  const nuevas = [];
+  for (const p of planes) {
+    if (!p.actividad) continue;
+    const per = p.periodicidad || p.actividad.periodicidad;
+    if (!aplicaEnMesPlan(per, month)) continue;
+    if (yaExiste.has(p.actividadPlanId)) continue;
+    const a = p.actividad.areaId ? asignPorArea.get(p.actividad.areaId) : undefined;
+    nuevas.push({
+      organizacionId: id, titulo: p.actividad.nombre, empresaId: empresa.id, fechaInicio, fechaVencimiento,
+      actividadPlanId: p.actividadPlanId, areaId: p.actividad.areaId, generaPago: p.actividad.generaPago,
+      requiereRevisionTecnica: p.actividad.requiereAuditoria, periodo,
+      asesorId: a?.asesorId ?? null, auxiliarId: a?.auxiliarId ?? null,
+    });
+  }
+  const r = nuevas.length ? await prisma.tarea.createMany({ data: nuevas as any }) : { count: 0 };
+  res.json({ ok: true, periodo, creadas: r.count, yaExistian: existentes.length });
+});
