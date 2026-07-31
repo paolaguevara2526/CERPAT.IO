@@ -172,6 +172,19 @@ hallazgosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
   res.json({ ok: true });
 });
 
+// POST /hallazgos/vaciar  { empresaId } — borra TODOS los hallazgos de una
+// empresa (revisor). Útil para reimportar limpio.
+hallazgosRouter.post('/vaciar', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esGestor(req.user!)) return res.status(403).json({ error: 'Solo el revisor fiscal puede vaciar los hallazgos.' });
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresaId = String(req.body?.empresaId ?? '');
+  const empresa = empresaId ? await prisma.empresa.findFirst({ where: { id: empresaId, organizacionId: org.id }, select: { id: true } }) : null;
+  if (!empresa) return res.status(422).json({ error: 'Debes indicar una empresa válida.' });
+  const r = await prisma.hallazgo.deleteMany({ where: { organizacionId: org.id, empresaId } });
+  res.json({ ok: true, eliminados: r.count });
+});
+
 // POST /hallazgos/importar  { empresaId, items: [...] } — carga masiva (revisor).
 hallazgosRouter.post('/importar', requireAuth, async (req: AuthedRequest, res) => {
   if (!esGestor(req.user!)) return res.status(403).json({ error: 'Solo el revisor fiscal puede importar hallazgos.' });
