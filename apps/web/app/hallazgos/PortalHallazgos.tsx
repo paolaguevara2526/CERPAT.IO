@@ -167,10 +167,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     if (!sel || !texto.trim()) return;
     setImportando(true); setError(null);
     try {
-      const filas = texto.includes('\t')
-        ? texto.replace(/\r/g, '').split('\n').filter((l) => l.trim() !== '').map((l) => l.split('\t'))
-        : parseCSV(texto);
-      await procesarFilas(filas);
+      await procesarFilas(parseCSV(texto));
     } catch { setError('No se pudo leer lo pegado.'); }
     setImportando(false);
   }
