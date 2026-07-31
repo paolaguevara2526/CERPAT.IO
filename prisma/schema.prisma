@@ -116,6 +116,8 @@ model Organizacion {
   // Revisoría Fiscal
   grupos    GrupoEmpresarial[]
   hallazgos Hallazgo[]
+  configuracionesTributarias ConfiguracionTributaria[]
+  municipiosIca              EmpresaMunicipioIca[]
 
   @@map("organizaciones")
 }
@@ -232,6 +234,8 @@ model Empresa {
   usuariosCliente  Usuario[]              @relation("UsuarioEmpresaCliente")
   planActividades  PlanClienteActividad[]
   asignacionesArea AsignacionClienteArea[]
+  configuracionTributaria ConfiguracionTributaria?
+  municipiosIca           EmpresaMunicipioIca[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -358,6 +362,7 @@ model Municipio {
   orden          Int          @default(0)
   organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresas       Empresa[]
+  icaEmpresas    EmpresaMunicipioIca[]
 
   @@index([organizacionId])
   @@map("cat_municipios")
@@ -681,4 +686,49 @@ model AsignacionClienteArea {
   @@unique([empresaId, areaId])
   @@index([organizacionId])
   @@map("asignacion_cliente_area")
+}
+
+// ---------- Parametrización de vencimientos tributarios ----------
+
+// Configuración tributaria nacional de cada empresa (1:1). Alimenta la
+// generación de vencimientos de Retención, IVA, Consumo, Anticipo RST y Renta.
+model ConfiguracionTributaria {
+  id             String @id @default(uuid())
+  organizacionId String
+  empresaId      String @unique
+  ivaPeriodicidad         String? // bimestral | cuatrimestral | anual_rst | no_responsable
+  retencionFuente         Boolean @default(false) // agente retenedor (declara mensual)
+  consumoPeriodicidad     String? // bimestral | anual_rst | null (no responsable)
+  rentaTipo               String? // persona_juridica | persona_natural | gran_contribuyente | rst_consolidada | na
+  anticipoRstPeriodicidad String? // bimestral | null (no aplica)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@map("configuracion_tributaria")
+}
+
+// Responsabilidad de ICA por empresa × municipio (una empresa declara ICA en
+// muchos municipios). Incluye RETEICA y AUTOICA con su periodicidad.
+model EmpresaMunicipioIca {
+  id             String @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  municipioId    String
+  icaPeriodicidad     String? // anual | bimestral | mensual
+  reteica             Boolean @default(false)
+  reteicaPeriodicidad String?
+  autoica             Boolean @default(false)
+  autoicaPeriodicidad String?
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  municipio    Municipio    @relation(fields: [municipioId], references: [id])
+
+  @@unique([empresaId, municipioId])
+  @@index([organizacionId])
+  @@map("empresa_municipio_ica")
 }
