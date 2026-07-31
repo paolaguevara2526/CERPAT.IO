@@ -150,6 +150,19 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   }
 
   // Importa desde texto pegado (Excel copia con TAB; también admite CSV).
+  async function vaciar() {
+    if (!sel) return;
+    if (!confirm(`¿Borrar TODOS los hallazgos de ${empresas.find((e) => e.id === sel)?.nombre ?? 'esta empresa'}? Esta acción no se puede deshacer.`)) return;
+    setImportando(true); setError(null);
+    try {
+      const res = await fetch('/api/portal/vaciar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ empresaId: sel }) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'No se pudo vaciar.');
+      else { await cargarHallazgos(sel); cargarBase(); alert(`Se eliminaron ${d.eliminados} hallazgo(s). Ya puedes reimportar.`); }
+    } catch { setError('Error de red.'); }
+    setImportando(false);
+  }
+
   async function importarTexto(texto: string) {
     if (!sel || !texto.trim()) return;
     setImportando(true); setError(null);
@@ -239,6 +252,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
           <button className="dbtn" onClick={() => setPegar('')} disabled={importando} style={{ fontSize: 13 }}>⎘ Pegar de Excel</button>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); }} />
           <button className="dbtn" onClick={() => fileRef.current?.click()} disabled={importando} style={{ fontSize: 13 }}>{importando ? 'Importando…' : '⭱ Importar'}</button>
+          {hallazgos.length > 0 && <button className="dbtn" onClick={vaciar} disabled={importando} style={{ fontSize: 13, color: '#cf4436' }}>🗑 Vaciar</button>}
           <button className="dbtn primary" onClick={() => setModal('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo hallazgo</button>
         </>}
       </div>
