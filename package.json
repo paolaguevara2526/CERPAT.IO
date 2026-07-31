@@ -26,6 +26,7 @@
     "db:plan-retirar-inactivos": "tsx prisma/plan-retirar-inactivos.ts",
     "db:import-municipios": "tsx prisma/import-municipios.ts",
     "db:import-vencimientos-config": "tsx prisma/import-vencimientos-config.ts",
+    "db:vencimientos-generar": "tsx prisma/vencimientos-generar.ts",
     "db:roles-sync": "tsx prisma/roles-sync.ts",
     "db:studio": "prisma studio"
   },
