@@ -42,9 +42,12 @@ con contraseña temporal. Perfiles:
   `Cliente` con su empresa o su grupo.
 - **`Hallazgo`** — hallazgo + plan de acción:
   - `titulo`, `descripcion` (situación), `normatividad`, `area` (proceso),
-    `riesgo` (`RiesgoNivel`: alto/medio/bajo), `prioridad` (`Prioridad`
-    sugerida), `responsable`, `planAccion` (remediación), `plazo`,
-    `observaciones` (seguimiento).
+    `riesgo` (`RiesgoNivel`: alto/medio/bajo — nivel/severidad),
+    `riesgoDescripcion` (texto libre: narrativa del riesgo/impacto tal como
+    viene en las matrices; la columna "Riesgo" de los CSV que traen un párrafo
+    se guarda aquí y el nivel queda por defecto en `medio`),
+    `prioridad` (`Prioridad` sugerida), `responsable`, `planAccion`
+    (remediación), `plazo`, `observaciones` (seguimiento).
   - `estado` (`EstadoHallazgo`: `pendiente` / `en_gestion` / `resuelto`).
   - **Vencido** es **derivado**: `estado != resuelto && plazo < hoy`. No se
     almacena.
