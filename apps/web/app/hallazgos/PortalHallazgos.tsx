@@ -40,6 +40,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   const [filtro, setFiltro] = useState<'todos' | 'resuelto' | 'en_gestion' | 'vencido'>('todos');
   const [importando, setImportando] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
+  const [pegar, setPegar] = useState<string | null>(null); // null = cerrado; string = texto pegado
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cargarBase = useCallback(async () => {
@@ -96,6 +97,29 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     descargar(`hallazgos-${empresaNombre.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`, toCSV(rows));
   }
 
+  // Convierte filas (encabezado + datos) en hallazgos y los sube.
+  async function procesarFilas(filas: string[][]) {
+    if (!sel) return;
+    if (filas.length < 2) { setError('No hay filas de datos (recuerda incluir la fila de encabezados).'); return; }
+    const head = filas[0].map((h) => h.trim().toLowerCase());
+    const col = (n: string) => head.findIndex((h) => h.includes(n));
+    const iTit = col('hallazgo') >= 0 ? col('hallazgo') : 0;
+    const idx = { desc: col('descrip'), norm: col('normativ'), area: col('área') >= 0 ? col('área') : col('area'), riesgo: col('riesgo'), prio: col('prioridad'), resp: col('responsable'), plan: col('plan'), plazo: col('plazo'), estado: col('estado'), obs: col('observ') };
+    const items = filas.slice(1).map((f) => ({
+      titulo: (f[iTit] ?? '').trim(),
+      descripcion: idx.desc >= 0 ? f[idx.desc] : '', normatividad: idx.norm >= 0 ? f[idx.norm] : '',
+      area: idx.area >= 0 ? f[idx.area] : '', riesgo: idx.riesgo >= 0 ? normRiesgo(f[idx.riesgo]) : 'medio',
+      prioridad: idx.prio >= 0 ? normPrioridad(f[idx.prio]) : 'media', responsable: idx.resp >= 0 ? f[idx.resp] : '',
+      planAccion: idx.plan >= 0 ? f[idx.plan] : '', plazo: idx.plazo >= 0 ? normFecha(f[idx.plazo]) : '',
+      estado: idx.estado >= 0 ? normEstado(f[idx.estado]) : 'pendiente', observaciones: idx.obs >= 0 ? f[idx.obs] : '',
+    })).filter((x) => x.titulo);
+    if (items.length === 0) { setError('No se encontraron filas con "Hallazgo" (título).'); return; }
+    const res = await fetch('/api/portal/importar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ empresaId: sel, items }) });
+    const d = await res.json();
+    if (!res.ok) setError(d.error || 'No se pudo importar.');
+    else { await cargarHallazgos(sel); cargarBase(); setError(null); alert(`Importados: ${d.creadas} hallazgo(s)${d.omitidas ? `, ${d.omitidas} omitida(s)` : ''}.`); }
+  }
+
   async function importar(file: File) {
     if (!sel) return;
     setImportando(true); setError(null);
@@ -111,27 +135,23 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
         filas = aoa.map((r) => r.map((c) => (c instanceof Date ? c.toISOString().slice(0, 10) : c == null ? '' : String(c))));
         filas = filas.filter((r) => r.some((v) => v.trim() !== ''));
       }
-      if (filas.length < 2) { setError('El archivo no tiene filas de datos.'); setImportando(false); return; }
-      const head = filas[0].map((h) => h.trim().toLowerCase());
-      const col = (n: string) => head.findIndex((h) => h.includes(n));
-      const iTit = col('hallazgo') >= 0 ? col('hallazgo') : 0;
-      const idx = { desc: col('descrip'), norm: col('normativ'), area: col('área') >= 0 ? col('área') : col('area'), riesgo: col('riesgo'), prio: col('prioridad'), resp: col('responsable'), plan: col('plan'), plazo: col('plazo'), estado: col('estado'), obs: col('observ') };
-      const items = filas.slice(1).map((f) => ({
-        titulo: (f[iTit] ?? '').trim(),
-        descripcion: idx.desc >= 0 ? f[idx.desc] : '', normatividad: idx.norm >= 0 ? f[idx.norm] : '',
-        area: idx.area >= 0 ? f[idx.area] : '', riesgo: idx.riesgo >= 0 ? normRiesgo(f[idx.riesgo]) : 'medio',
-        prioridad: idx.prio >= 0 ? normPrioridad(f[idx.prio]) : 'media', responsable: idx.resp >= 0 ? f[idx.resp] : '',
-        planAccion: idx.plan >= 0 ? f[idx.plan] : '', plazo: idx.plazo >= 0 ? normFecha(f[idx.plazo]) : '',
-        estado: idx.estado >= 0 ? normEstado(f[idx.estado]) : 'pendiente', observaciones: idx.obs >= 0 ? f[idx.obs] : '',
-      })).filter((x) => x.titulo);
-      if (items.length === 0) { setError('No se encontraron filas con "Hallazgo" (título).'); setImportando(false); return; }
-      const res = await fetch('/api/portal/importar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ empresaId: sel, items }) });
-      const d = await res.json();
-      if (!res.ok) setError(d.error || 'No se pudo importar.');
-      else { await cargarHallazgos(sel); cargarBase(); setError(null); alert(`Importados: ${d.creadas} hallazgo(s)${d.omitidas ? `, ${d.omitidas} omitida(s)` : ''}.`); }
+      await procesarFilas(filas);
     } catch { setError('No se pudo leer el archivo.'); }
     setImportando(false);
     if (fileRef.current) fileRef.current.value = '';
+  }
+
+  // Importa desde texto pegado (Excel copia con TAB; también admite CSV).
+  async function importarTexto(texto: string) {
+    if (!sel || !texto.trim()) return;
+    setImportando(true); setError(null);
+    try {
+      const filas = texto.includes('\t')
+        ? texto.replace(/\r/g, '').split('\n').filter((l) => l.trim() !== '').map((l) => l.split('\t'))
+        : parseCSV(texto);
+      await procesarFilas(filas);
+    } catch { setError('No se pudo leer lo pegado.'); }
+    setImportando(false);
   }
 
   if (cargando) return <div style={{ color: 'var(--muted)', padding: 16 }}>Cargando…</div>;
@@ -208,6 +228,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
         <button className="dbtn" onClick={() => exportar(empresaSel?.nombre ?? 'empresa')} disabled={hallazgos.length === 0} style={{ fontSize: 13 }}>⭳ Exportar</button>
         {esGestor && <>
           <button className="dbtn" onClick={plantilla} style={{ fontSize: 13 }}>Plantilla</button>
+          <button className="dbtn" onClick={() => setPegar('')} disabled={importando} style={{ fontSize: 13 }}>⎘ Pegar de Excel</button>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); }} />
           <button className="dbtn" onClick={() => fileRef.current?.click()} disabled={importando} style={{ fontSize: 13 }}>{importando ? 'Importando…' : '⭱ Importar'}</button>
           <button className="dbtn primary" onClick={() => setModal('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo hallazgo</button>
@@ -286,6 +307,29 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
       </div>
 
       {modal && sel && <HallazgoModal hallazgo={modal} empresaId={sel} onClose={() => setModal(null)} onGuardado={() => { setModal(null); cargarHallazgos(sel); cargarBase(); }} onError={setError} />}
+
+      {pegar !== null && (
+        <div onClick={() => setPegar(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 640 }}>
+            <div className="win-bar"><span className="win-title">Pegar hallazgos desde Excel</span>
+              <div className="win-ctl"><button className="close" onClick={() => setPegar(null)} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
+            </div>
+            <div className="win-body" style={{ padding: 18 }}>
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 10px', lineHeight: 1.5 }}>
+                En Excel selecciona el rango <strong>incluyendo la fila de encabezados</strong> (Hallazgo, Descripción, Normatividad, Área, Riesgo, Prioridad, Responsable, Plan de acción, Plazo, Estado, Observaciones), cópialo (<strong>Ctrl+C</strong>) y pégalo aquí (<strong>Ctrl+V</strong>). No abre ningún selector de archivos.
+              </p>
+              <textarea autoFocus value={pegar} onChange={(e) => setPegar(e.target.value)} rows={9}
+                placeholder={'Hallazgo\tDescripción\tNormatividad\t…\nConciliación pendiente\t…\t…'}
+                style={{ width: '100%', resize: 'vertical', padding: '10px 12px', borderRadius: 6, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 12.5, fontFamily: 'var(--mono)' }} />
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
+                <button className="dbtn" onClick={() => setPegar(null)} style={{ fontSize: 13 }}>Cancelar</button>
+                <button className="dbtn primary" disabled={importando || !pegar.trim()} style={{ fontSize: 13 }}
+                  onClick={async () => { const t = pegar; setPegar(null); await importarTexto(t); }}>{importando ? 'Importando…' : 'Importar pegado'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
