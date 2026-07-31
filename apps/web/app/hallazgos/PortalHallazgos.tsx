@@ -105,15 +105,23 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     const col = (n: string) => head.findIndex((h) => h.includes(n));
     const iTit = col('hallazgo') >= 0 ? col('hallazgo') : 0;
     const idx = { desc: col('descrip'), norm: col('normativ'), area: col('área') >= 0 ? col('área') : col('area'), riesgo: col('riesgo'), prio: col('prioridad'), resp: col('responsable'), plan: col('plan'), plazo: col('plazo'), estado: col('estado'), obs: col('observ') };
-    const items = filas.slice(1).map((f) => ({
-      titulo: (f[iTit] ?? '').trim(),
-      descripcion: idx.desc >= 0 ? f[idx.desc] : '', normatividad: idx.norm >= 0 ? f[idx.norm] : '',
-      area: idx.area >= 0 ? f[idx.area] : '', riesgo: idx.riesgo >= 0 ? normRiesgo(f[idx.riesgo]) : 'medio',
-      prioridad: idx.prio >= 0 ? normPrioridad(f[idx.prio]) : 'media', responsable: idx.resp >= 0 ? f[idx.resp] : '',
-      planAccion: idx.plan >= 0 ? f[idx.plan] : '', plazo: idx.plazo >= 0 ? normFecha(f[idx.plazo]) : '',
-      estado: idx.estado >= 0 ? normEstado(f[idx.estado]) : 'pendiente', observaciones: idx.obs >= 0 ? f[idx.obs] : '',
-    })).filter((x) => x.titulo);
-    if (items.length === 0) { setError('No se encontraron filas con "Hallazgo" (título).'); return; }
+    const val = (f: string[], i: number) => (i >= 0 && f[i] != null ? String(f[i]) : '');
+    const items = filas.slice(1)
+      .filter((f) => f.some((v) => (v ?? '').trim() !== '')) // solo descarta filas totalmente vacías
+      .map((f) => {
+        const desc = val(f, idx.desc);
+        // Se permiten celdas en blanco. Si falta el título, se usa la descripción
+        // o un marcador, para no perder la fila.
+        const titulo = val(f, iTit).trim() || desc.trim().slice(0, 120) || '(Sin título)';
+        return {
+          titulo,
+          descripcion: desc, normatividad: val(f, idx.norm), area: val(f, idx.area),
+          riesgo: normRiesgo(val(f, idx.riesgo)), prioridad: normPrioridad(val(f, idx.prio)),
+          responsable: val(f, idx.resp), planAccion: val(f, idx.plan), plazo: normFecha(val(f, idx.plazo)),
+          estado: normEstado(val(f, idx.estado)), observaciones: val(f, idx.obs),
+        };
+      });
+    if (items.length === 0) { setError('No hay filas con datos para importar.'); return; }
     const res = await fetch('/api/portal/importar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ empresaId: sel, items }) });
     const d = await res.json();
     if (!res.ok) setError(d.error || 'No se pudo importar.');
