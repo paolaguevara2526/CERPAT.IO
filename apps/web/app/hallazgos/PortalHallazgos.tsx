@@ -24,6 +24,7 @@ export const RIESGO_META: Record<string, { label: string; color: string }> = {
   alto: { label: 'Alto', color: '#cf4436' }, medio: { label: 'Medio', color: '#c67c00' }, bajo: { label: 'Bajo', color: '#22a670' },
 };
 const PRIORIDAD_LABEL: Record<string, string> = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+const PROGRAMA_KEY = 'cerpat:hallazgos:programa'; // compañías con gestión de hallazgos (localStorage)
 
 function colorPct(p: number) { return p >= 85 ? '#22a670' : p >= 60 ? '#c67c00' : '#cf4436'; }
 function fmtFecha(iso: string | null) { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
@@ -42,6 +43,12 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   const [arrastrando, setArrastrando] = useState(false);
   const [pegar, setPegar] = useState<string | null>(null); // null = cerrado; string = texto pegado
   const fileRef = useRef<HTMLInputElement>(null);
+  // Programa de hallazgos: qué compañías se gestionan (revisoría fiscal u
+  // outsourcing). Se guarda en el navegador; null = aún sin cargar de localStorage.
+  const [programa, setPrograma] = useState<string[] | null>(null);
+  const programaCargado = useRef(false);
+  const [agregando, setAgregando] = useState(false);
+  const [busquedaAgregar, setBusquedaAgregar] = useState('');
 
   const cargarBase = useCallback(async () => {
     setCargando(true); setError(null);
@@ -67,6 +74,31 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
 
   useEffect(() => { cargarBase(); }, [cargarBase]);
   useEffect(() => { if (sel) cargarHallazgos(sel); }, [sel, cargarHallazgos]);
+
+  // Carga el programa guardado en el navegador (una vez).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PROGRAMA_KEY);
+      if (raw != null) { setPrograma(JSON.parse(raw)); programaCargado.current = true; }
+    } catch { /* localStorage no disponible */ }
+  }, []);
+
+  // Semilla la primera vez (sin nada guardado): incluye las compañías que ya
+  // tienen hallazgos, para no "esconder" lo que ya existe.
+  useEffect(() => {
+    if (programaCargado.current || programa !== null || !resumen) return;
+    const seed = resumen.porEmpresa.filter((x) => x.total > 0).map((x) => x.empresaId);
+    programaCargado.current = true;
+    setPrograma(seed);
+    try { localStorage.setItem(PROGRAMA_KEY, JSON.stringify(seed)); } catch { /* ignore */ }
+  }, [resumen, programa]);
+
+  function guardarPrograma(next: string[]) {
+    setPrograma(next);
+    try { localStorage.setItem(PROGRAMA_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }
+  const agregarAlPrograma = (id: string) => { if (programa && !programa.includes(id)) guardarPrograma([...programa, id]); };
+  const retirarDelPrograma = (id: string) => { if (programa) guardarPrograma(programa.filter((x) => x !== id)); };
 
   async function cambiarEstado(h: Hallazgo, estado: string) {
     const prev = hallazgos;
@@ -180,47 +212,95 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
 
   // ---- Vista consolidada (grupo / revisor con varias empresas) ----
   if (!sel) {
-    const k = resumen?.kpis;
+    if (programa === null) return <div style={{ color: 'var(--muted)', padding: 16 }}>Cargando…</div>;
+    const enPrograma = new Set(programa);
+    const delPrograma = empresas.filter((e) => enPrograma.has(e.id));
+    const fueraDelPrograma = empresas.filter((e) => !enPrograma.has(e.id));
+    // KPIs recalculados solo con las compañías del programa.
+    const filas = (resumen?.porEmpresa ?? []).filter((x) => enPrograma.has(x.empresaId));
+    const total = filas.reduce((a, x) => a + x.total, 0);
+    const resueltos = filas.reduce((a, x) => a + x.resueltos, 0);
+    const enGestion = filas.reduce((a, x) => a + x.enGestion, 0);
+    const vencidos = filas.reduce((a, x) => a + x.vencidos, 0);
+    const pct = total ? Math.round((resueltos / total) * 100) : 0;
+    const opcionesAgregar = fueraDelPrograma.filter((e) => !busquedaAgregar || e.nombre.toLowerCase().includes(busquedaAgregar.toLowerCase()));
     return (
       <>
         <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Estado de hallazgos {empresas[0]?.grupo ? `· ${empresas[0].grupo}` : 'del grupo'}</h1>
-        <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>Consolidado de {empresas.length} compañías frente a los hallazgos de la revisoría fiscal. Entra a cualquiera para ver su matriz.</p>
-        {k && (
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>{delPrograma.length} compañía(s) con gestión de hallazgos de la revisoría fiscal. Entra a cualquiera para ver su matriz.</p>
+        {delPrograma.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 20 }}>
-            <div className="tile"><div className="k">Hallazgos</div><div className="v" style={{ color: 'var(--navy)' }}>{k.total}</div><div className="s">en total</div></div>
-            <div className="tile"><div className="k">Resueltos</div><div className="v" style={{ color: '#22a670' }}>{k.resueltos}<small>/{k.total}</small></div><div className="s">{k.pct}% cerrado</div></div>
-            <div className="tile"><div className="k">En gestión</div><div className="v" style={{ color: '#2f6fd0' }}>{k.enGestion}</div><div className="s">en curso</div></div>
-            <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: k.vencidos ? '#cf4436' : '#8a94a6' }}>{k.vencidos}</div><div className="s">requieren atención</div></div>
+            <div className="tile"><div className="k">Hallazgos</div><div className="v" style={{ color: 'var(--navy)' }}>{total}</div><div className="s">en total</div></div>
+            <div className="tile"><div className="k">Resueltos</div><div className="v" style={{ color: '#22a670' }}>{resueltos}<small>/{total}</small></div><div className="s">{pct}% cerrado</div></div>
+            <div className="tile"><div className="k">En gestión</div><div className="v" style={{ color: '#2f6fd0' }}>{enGestion}</div><div className="s">en curso</div></div>
+            <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: vencidos ? '#cf4436' : '#8a94a6' }}>{vencidos}</div><div className="s">requieren atención</div></div>
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
           <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>{esGestor ? 'Selecciona una compañía para gestionar su matriz' : 'Resolución por compañía'}</h2>
-          {empresas.length > 8 && <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar compañía…" style={{ padding: '7px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', minWidth: 220 }} />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            {delPrograma.length > 8 && <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar compañía…" style={{ padding: '7px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', minWidth: 220 }} />}
+            {esGestor && <button className="dbtn primary" onClick={() => { setBusquedaAgregar(''); setAgregando(true); }} style={{ fontSize: 13 }}>＋ Agregar compañía</button>}
+          </div>
         </div>
         <div className="panel" style={{ padding: '6px 16px 12px', maxHeight: 'calc(100vh - 360px)', overflowY: 'auto' }}>
-          {empresas.filter((e) => !busqueda || e.nombre.toLowerCase().includes(busqueda.toLowerCase())).map((e) => {
+          {delPrograma.filter((e) => !busqueda || e.nombre.toLowerCase().includes(busqueda.toLowerCase())).map((e) => {
             const r = resumen?.porEmpresa.find((x) => x.empresaId === e.id);
             const total = r?.total ?? 0;
             return (
-              <button key={e.id} onClick={() => setSel(e.id)} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', padding: '11px 0', borderBottom: '1px solid var(--line)', fontFamily: 'var(--ui)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: total ? 6 : 0 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13.5 }}>{e.nombre} <span style={{ marginLeft: 6, color: 'var(--navy)', fontSize: 11 }}>{esGestor ? 'abrir matriz →' : 'ver matriz →'}</span></span>
-                  {total > 0
-                    ? <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{r!.resueltos}/{total} · <strong style={{ color: colorPct(r!.pct) }}>{r!.pct}%</strong>{r!.vencidos > 0 && <span style={{ color: '#cf4436', marginLeft: 8 }}>{r!.vencidos} vencido(s)</span>}</span>
-                    : <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>sin hallazgos</span>}
-                </div>
-                {total > 0 && (
-                  <div style={{ height: 9, borderRadius: 3, background: 'var(--panel-2)', border: '1px solid var(--line)', overflow: 'hidden', display: 'flex' }}>
-                    <span style={{ width: `${(r!.resueltos / total) * 100}%`, background: '#22a670' }} />
-                    <span style={{ width: `${(r!.enGestion / total) * 100}%`, background: '#2f6fd0' }} />
-                    <span style={{ width: `${(r!.vencidos / total) * 100}%`, background: '#cf4436' }} />
+              <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--line)' }}>
+                <button onClick={() => setSel(e.id)} style={{ display: 'block', flex: 1, minWidth: 0, textAlign: 'left', border: 'none', background: 'none', cursor: 'pointer', padding: '11px 0', fontFamily: 'var(--ui)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: total ? 6 : 0 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13.5 }}>{e.nombre} <span style={{ marginLeft: 6, color: 'var(--navy)', fontSize: 11 }}>{esGestor ? 'abrir matriz →' : 'ver matriz →'}</span></span>
+                    {total > 0
+                      ? <span style={{ fontSize: 12.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r!.resueltos}/{total} · <strong style={{ color: colorPct(r!.pct) }}>{r!.pct}%</strong>{r!.vencidos > 0 && <span style={{ color: '#cf4436', marginLeft: 8 }}>{r!.vencidos} vencido(s)</span>}</span>
+                      : <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>sin hallazgos</span>}
                   </div>
-                )}
-              </button>
+                  {total > 0 && (
+                    <div style={{ height: 9, borderRadius: 3, background: 'var(--panel-2)', border: '1px solid var(--line)', overflow: 'hidden', display: 'flex' }}>
+                      <span style={{ width: `${(r!.resueltos / total) * 100}%`, background: '#22a670' }} />
+                      <span style={{ width: `${(r!.enGestion / total) * 100}%`, background: '#2f6fd0' }} />
+                      <span style={{ width: `${(r!.vencidos / total) * 100}%`, background: '#cf4436' }} />
+                    </div>
+                  )}
+                </button>
+                {esGestor && <button onClick={() => retirarDelPrograma(e.id)} title="Retirar del programa de hallazgos" style={{ flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 15, lineHeight: 1, padding: '6px 8px' }}>✕</button>}
+              </div>
             );
           })}
-          {empresas.length === 0 && <div style={{ padding: 20, color: 'var(--muted)', textAlign: 'center' }}>No hay compañías en tu alcance.</div>}
+          {delPrograma.length === 0 && (
+            <div style={{ padding: 24, color: 'var(--muted)', textAlign: 'center', fontSize: 13, lineHeight: 1.5 }}>
+              {esGestor ? <>Aún no has agregado compañías al programa de hallazgos.<br />Usa <strong>＋ Agregar compañía</strong> para incluir las de revisoría fiscal (u outsourcing).</> : 'No hay compañías con gestión de hallazgos en tu alcance.'}
+            </div>
+          )}
         </div>
+
+        {agregando && esGestor && (
+          <div onClick={() => setAgregando(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}>
+            <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 560 }}>
+              <div className="win-bar"><span className="win-title">Agregar compañías al programa de hallazgos</span>
+                <div className="win-ctl"><button className="close" onClick={() => setAgregando(false)} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
+              </div>
+              <div className="win-body" style={{ padding: 18 }}>
+                <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 10px', lineHeight: 1.5 }}>
+                  Elige las compañías a las que les vas a gestionar hallazgos (revisoría fiscal u outsourcing). Se agregan al consolidado; las demás quedan fuera.
+                </p>
+                <input autoFocus value={busquedaAgregar} onChange={(e) => setBusquedaAgregar(e.target.value)} placeholder="Buscar compañía…" style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', marginBottom: 10 }} />
+                <div style={{ maxHeight: 340, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 6 }}>
+                  {opcionesAgregar.map((e) => (
+                    <button key={e.id} onClick={() => agregarAlPrograma(e.id)} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', gap: 8, textAlign: 'left', border: 'none', borderBottom: '1px solid var(--line)', background: 'none', cursor: 'pointer', padding: '10px 12px', fontFamily: 'var(--ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                      <span>{e.nombre}</span><span style={{ color: 'var(--navy)', fontWeight: 700, whiteSpace: 'nowrap' }}>＋ Agregar</span>
+                    </button>
+                  ))}
+                  {opcionesAgregar.length === 0 && <div style={{ padding: 18, color: 'var(--muted)', textAlign: 'center', fontSize: 13 }}>{fueraDelPrograma.length === 0 ? 'Todas las compañías ya están en el programa.' : 'Ninguna compañía coincide con la búsqueda.'}</div>}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                  <button className="dbtn primary" onClick={() => setAgregando(false)} style={{ fontSize: 13 }}>Listo</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   }
