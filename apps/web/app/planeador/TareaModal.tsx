@@ -19,6 +19,14 @@ const VACIO: Form = {
   observaciones: '', generaPago: false, requiereRevisionTecnica: false,
 };
 const iso = (s?: string) => (s ? s.slice(0, 10) : '');
+// Cuenta registros a partir del rango de comprobantes (dígitos finales):
+// CE-1045 → CE-1290 = 246 (final − inicial + 1). '' si no se puede calcular.
+function contarRegistros(desde: string, hasta: string): string {
+  const a = desde.match(/(\d+)\s*$/); const b = hasta.match(/(\d+)\s*$/);
+  if (!a || !b) return '';
+  const na = parseInt(a[1], 10), nb = parseInt(b[1], 10);
+  return nb >= na ? String(nb - na + 1) : '';
+}
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 };
 
@@ -33,7 +41,15 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [cargando, setCargando] = useState(true);
+  // Registro en el software (comprobantes). cantidadManual = el usuario ajustó el conteo.
+  const [esRegistro, setEsRegistro] = useState(false);
+  const [reg, setReg] = useState({ desde: '', hasta: '', cantidad: '' });
+  const [cantidadManual, setCantidadManual] = useState(false);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const setDesde = (v: string) => setReg((r) => ({ ...r, desde: v, cantidad: cantidadManual ? r.cantidad : contarRegistros(v, r.hasta) }));
+  const setHasta = (v: string) => setReg((r) => ({ ...r, hasta: v, cantidad: cantidadManual ? r.cantidad : contarRegistros(r.desde, v) }));
+  const setCantidad = (v: string) => { setCantidadManual(true); setReg((r) => ({ ...r, cantidad: v })); };
+  const recalcular = () => { setCantidadManual(false); setReg((r) => ({ ...r, cantidad: contarRegistros(r.desde, r.hasta) })); };
 
   const cargarSubs = useCallback(async (tid: string) => {
     const r = await fetch(`/api/planeador/gestion/tareas/${tid}/subtareas`, { cache: 'no-store' });
@@ -55,6 +71,9 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
             prioridad: t.prioridad ?? 'media', periodo: t.periodo ?? '', fechaInicio: iso(t.fechaInicio), fechaVencimiento: iso(t.fechaVencimiento),
             observaciones: t.observaciones ?? '', generaPago: !!t.generaPago, requiereRevisionTecnica: !!t.requiereRevisionTecnica,
           });
+          setEsRegistro(!!t.esRegistroSoftware);
+          setReg({ desde: t.comprobanteDesde ?? '', hasta: t.comprobanteHasta ?? '', cantidad: t.cantidadRegistros != null ? String(t.cantidadRegistros) : '' });
+          setCantidadManual(false);
           await cargarSubs(id);
         } else setError(d.error || 'No se pudo cargar la tarea.');
       }
@@ -71,6 +90,10 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
         const r = await fetch(`/api/planeador/gestion/tareas/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
         const d = await r.json();
         if (!r.ok) { setError(d.error || 'No se pudo guardar.'); setGuardando(false); return; }
+        if (esRegistro) {
+          const rr = await fetch(`/api/planeador/gestion/tareas/${id}/registro`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comprobanteDesde: reg.desde, comprobanteHasta: reg.hasta, cantidadRegistros: reg.cantidad === '' ? null : Number(reg.cantidad) }) });
+          if (!rr.ok) { const dd = await rr.json(); setError(dd.error || 'No se pudo guardar el registro en software.'); setGuardando(false); return; }
+        }
       } else {
         const r = await fetch('/api/planeador/gestion/tareas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, subtareas: subsCrear }) });
         const d = await r.json();
@@ -175,6 +198,22 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
                   </div>
                 )}
               </div>
+
+              {/* Registro en el software (solo actividades de registro) */}
+              {editar && esRegistro && (
+                <div>
+                  <span style={lbl}>Registro en el software</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <label><span style={lbl}>Comprobante inicial</span><input style={input} value={reg.desde} onChange={(e) => setDesde(e.target.value)} placeholder="Ej: CE-1045" /></label>
+                    <label><span style={lbl}>Comprobante final</span><input style={input} value={reg.hasta} onChange={(e) => setHasta(e.target.value)} placeholder="Ej: CE-1290" /></label>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                    <label style={{ width: 130 }}><span style={lbl}>Registros</span><input type="number" min={0} style={input} value={reg.cantidad} onChange={(e) => setCantidad(e.target.value)} /></label>
+                    <button type="button" className="dbtn" onClick={recalcular} style={{ fontSize: 12.5 }} title="Volver a calcular desde el rango de comprobantes">↻ recalcular</button>
+                    <span style={{ fontSize: 11.5, color: 'var(--muted)', paddingBottom: 9 }}>registros de este período · {cantidadManual ? 'ajustado a mano' : 'calculado del rango'}</span>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                 <button className="dbtn" onClick={onClose} style={{ fontSize: 13 }}>Cancelar</button>
