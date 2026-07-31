@@ -78,7 +78,7 @@ hallazgosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
     orderBy: [{ estado: 'asc' }, { plazo: 'asc' }],
     select: {
       id: true, empresaId: true, area: true, titulo: true, descripcion: true, normatividad: true,
-      riesgo: true, prioridad: true, responsable: true, planAccion: true, plazo: true, estado: true, observaciones: true,
+      riesgo: true, riesgoDescripcion: true, prioridad: true, responsable: true, planAccion: true, plazo: true, estado: true, observaciones: true,
       empresa: { select: { nombre: true } },
     },
   });
@@ -126,7 +126,7 @@ hallazgosRouter.get('/resumen', requireAuth, async (req: AuthedRequest, res) => 
 function datosHallazgo(body: any): { data: Record<string, any>; error?: string } {
   const data: Record<string, any> = {};
   if (typeof body?.titulo === 'string' && body.titulo.trim()) data.titulo = body.titulo.trim();
-  for (const c of ['area', 'descripcion', 'normatividad', 'responsable', 'planAccion', 'observaciones'] as const) {
+  for (const c of ['area', 'descripcion', 'normatividad', 'responsable', 'planAccion', 'observaciones', 'riesgoDescripcion'] as const) {
     if (c in (body ?? {})) data[c] = typeof body[c] === 'string' && body[c].trim() ? body[c].trim() : null;
   }
   if (typeof body?.riesgo === 'string') { if (!RIESGOS.includes(body.riesgo)) return { data, error: 'Riesgo inválido.' }; data.riesgo = body.riesgo; }

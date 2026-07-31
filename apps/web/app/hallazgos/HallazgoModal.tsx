@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { Hallazgo } from './PortalHallazgos';
 
 type Form = {
-  titulo: string; area: string; descripcion: string; normatividad: string; riesgo: string; prioridad: string;
+  titulo: string; area: string; descripcion: string; normatividad: string; riesgo: string; riesgoDescripcion: string; prioridad: string;
   responsable: string; planAccion: string; plazo: string; estado: string; observaciones: string;
 };
 const iso = (s?: string | null) => (s ? s.slice(0, 10) : '');
@@ -19,7 +19,7 @@ export default function HallazgoModal({ hallazgo, empresaId, onClose, onGuardado
   const h = nuevo ? null : hallazgo;
   const [form, setForm] = useState<Form>({
     titulo: h?.titulo ?? '', area: h?.area ?? '', descripcion: h?.descripcion ?? '', normatividad: h?.normatividad ?? '',
-    riesgo: h?.riesgo ?? 'medio', prioridad: h?.prioridad ?? 'media', responsable: h?.responsable ?? '',
+    riesgo: h?.riesgo ?? 'medio', riesgoDescripcion: h?.riesgoDescripcion ?? '', prioridad: h?.prioridad ?? 'media', responsable: h?.responsable ?? '',
     planAccion: h?.planAccion ?? '', plazo: iso(h?.plazo), estado: h?.estado ?? 'pendiente', observaciones: h?.observaciones ?? '',
   });
   const [guardando, setGuardando] = useState(false);
@@ -68,6 +68,7 @@ export default function HallazgoModal({ hallazgo, empresaId, onClose, onGuardado
               </select>
             </label>
           </div>
+          <label><span style={lbl}>Descripción del riesgo (impacto / consecuencia)</span><textarea rows={2} style={{ ...input, resize: 'vertical' }} value={form.riesgoDescripcion} onChange={(e) => set('riesgoDescripcion', e.target.value)} /></label>
           <label><span style={lbl}>Acción o plan de remediación</span><textarea rows={2} style={{ ...input, resize: 'vertical' }} value={form.planAccion} onChange={(e) => set('planAccion', e.target.value)} /></label>
           <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 10 }}>
             <label><span style={lbl}>Plazo</span><input type="date" style={input} value={form.plazo} onChange={(e) => set('plazo', e.target.value)} /></label>

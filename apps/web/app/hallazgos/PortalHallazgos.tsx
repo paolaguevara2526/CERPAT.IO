@@ -10,7 +10,7 @@ import { toCSV, parseCSV, descargar, normRiesgo, normPrioridad, normEstado, norm
 export type Empresa = { id: string; nombre: string; grupo: string | null };
 export type Hallazgo = {
   id: string; empresaId: string; empresa: string | null; area: string | null; titulo: string; descripcion: string | null;
-  normatividad: string | null; riesgo: string; prioridad: string; responsable: string | null; planAccion: string | null;
+  normatividad: string | null; riesgo: string; riesgoDescripcion: string | null; prioridad: string; responsable: string | null; planAccion: string | null;
   plazo: string | null; estado: string; observaciones: string | null; vencido: boolean;
 };
 type Resumen = { kpis: { total: number; resueltos: number; enGestion: number; vencidos: number; pct: number } | null; porEmpresa: { empresaId: string; empresa: string; total: number; resueltos: number; enGestion: number; vencidos: number; pct: number }[] };
@@ -114,16 +114,16 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     else { const d = await r.json(); setError(d.error || 'No se pudo eliminar.'); }
   }
 
-  const CSV_HEAD = ['Hallazgo', 'Descripción', 'Normatividad', 'Área', 'Riesgo', 'Prioridad', 'Responsable', 'Plan de acción', 'Plazo', 'Estado', 'Observaciones'];
+  const CSV_HEAD = ['Hallazgo', 'Descripción', 'Normatividad', 'Área', 'Riesgo', 'Descripción del riesgo', 'Prioridad', 'Responsable', 'Plan de acción', 'Plazo', 'Estado', 'Observaciones'];
 
   function plantilla() {
-    const ejemplo = ['Ej: Conciliación bancaria pendiente', 'Descripción de la situación', 'Art. 000', 'Tesorería', 'alto', 'alta', 'Nombre del responsable', 'Plan de remediación', '2026-08-31', 'pendiente', 'Observación de seguimiento'];
+    const ejemplo = ['Ej: Conciliación bancaria pendiente', 'Descripción de la situación', 'Art. 000', 'Tesorería', 'alto', 'Impacto o consecuencia del riesgo', 'alta', 'Nombre del responsable', 'Plan de remediación', '2026-08-31', 'pendiente', 'Observación de seguimiento'];
     descargar('plantilla-hallazgos.csv', toCSV([CSV_HEAD, ejemplo]));
   }
 
   function exportar(empresaNombre: string) {
     const rows = [CSV_HEAD, ...hallazgos.map((h) => [
-      h.titulo, h.descripcion, h.normatividad, h.area, h.riesgo, h.prioridad, h.responsable, h.planAccion,
+      h.titulo, h.descripcion, h.normatividad, h.area, h.riesgo, h.riesgoDescripcion, h.prioridad, h.responsable, h.planAccion,
       h.plazo ? h.plazo.slice(0, 10) : '', h.estado, h.observaciones,
     ])];
     descargar(`hallazgos-${empresaNombre.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`, toCSV(rows));
@@ -136,7 +136,11 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     const head = filas[0].map((h) => h.trim().toLowerCase());
     const col = (n: string) => head.findIndex((h) => h.includes(n));
     const iTit = col('hallazgo') >= 0 ? col('hallazgo') : 0;
-    const idx = { desc: col('descrip'), norm: col('normativ'), area: col('área') >= 0 ? col('área') : col('area'), riesgo: col('riesgo'), prio: col('prioridad'), resp: col('responsable'), plan: col('plan'), plazo: col('plazo'), estado: col('estado'), obs: col('observ') };
+    // Columna dedicada de descripción del riesgo (p. ej. "Descripción del riesgo"
+    // o "Riesgo (impacto)"); la columna de nivel es cualquier otra que diga "riesgo".
+    const iRiesgoDesc = head.findIndex((h) => h.includes('riesgo') && (h.includes('descrip') || h.includes('impacto') || h.includes('detalle')));
+    const iRiesgoNivel = head.findIndex((h, i) => h.includes('riesgo') && i !== iRiesgoDesc);
+    const idx = { desc: col('descrip'), norm: col('normativ'), area: col('área') >= 0 ? col('área') : col('area'), prio: col('prioridad'), resp: col('responsable'), plan: col('plan'), plazo: col('plazo'), estado: col('estado'), obs: col('observ') };
     const val = (f: string[], i: number) => (i >= 0 && f[i] != null ? String(f[i]) : '');
     const items = filas.slice(1)
       .filter((f) => f.some((v) => (v ?? '').trim() !== '')) // solo descarta filas totalmente vacías
@@ -145,10 +149,16 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
         // Se permiten celdas en blanco. Si falta el título, se usa la descripción
         // o un marcador, para no perder la fila.
         const titulo = val(f, iTit).trim() || desc.trim().slice(0, 120) || '(Sin título)';
+        // La columna "Riesgo" puede traer un nivel (Alto/Medio/Bajo) o un párrafo
+        // que describe el riesgo. Si es párrafo, se conserva como descripción y el
+        // nivel queda por defecto (Medio); la severidad suele ir en "Prioridad".
+        const riesgoRaw = val(f, iRiesgoNivel);
+        const esNivel = ['alto', 'medio', 'bajo'].includes(riesgoRaw.trim().toLowerCase());
+        const riesgoDescripcion = val(f, iRiesgoDesc).trim() || (esNivel ? '' : riesgoRaw.trim());
         return {
           titulo,
           descripcion: desc, normatividad: val(f, idx.norm), area: val(f, idx.area),
-          riesgo: normRiesgo(val(f, idx.riesgo)), prioridad: normPrioridad(val(f, idx.prio)),
+          riesgo: normRiesgo(riesgoRaw), riesgoDescripcion, prioridad: normPrioridad(val(f, idx.prio)),
           responsable: val(f, idx.resp), planAccion: val(f, idx.plan), plazo: normFecha(val(f, idx.plazo)),
           estado: normEstado(val(f, idx.estado)), observaciones: val(f, idx.obs),
         };
@@ -379,7 +389,10 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
                   <td style={{ fontWeight: 600, minWidth: 130 }}>{h.titulo}{h.area && <div style={{ fontSize: 10.5, color: 'var(--muted)', fontWeight: 400 }}>{h.area}</div>}</td>
                   <td style={{ color: 'var(--muted)', minWidth: 180 }}>{h.descripcion ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{h.normatividad ?? '—'}</td>
-                  <td><span className="chip" style={{ color: rm.color, background: `${rm.color}18`, borderColor: `${rm.color}44` }}>{rm.label}</span></td>
+                  <td style={{ minWidth: 150 }}>
+                    <span className="chip" style={{ color: rm.color, background: `${rm.color}18`, borderColor: `${rm.color}44` }}>{rm.label}</span>
+                    {h.riesgoDescripcion && <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 4, fontWeight: 400, whiteSpace: 'pre-wrap' }}>{h.riesgoDescripcion}</div>}
+                  </td>
                   <td style={{ color: 'var(--muted)' }}>{PRIORIDAD_LABEL[h.prioridad] ?? h.prioridad}</td>
                   <td style={{ color: 'var(--muted)' }}>{h.responsable ?? '—'}</td>
                   <td style={{ color: 'var(--muted)', minWidth: 180 }}>{h.planAccion ?? '—'}</td>
@@ -415,7 +428,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
             </div>
             <div className="win-body" style={{ padding: 18 }}>
               <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 10px', lineHeight: 1.5 }}>
-                En Excel selecciona el rango <strong>incluyendo la fila de encabezados</strong> (Hallazgo, Descripción, Normatividad, Área, Riesgo, Prioridad, Responsable, Plan de acción, Plazo, Estado, Observaciones), cópialo (<strong>Ctrl+C</strong>) y pégalo aquí (<strong>Ctrl+V</strong>). No abre ningún selector de archivos.
+                En Excel selecciona el rango <strong>incluyendo la fila de encabezados</strong> (Hallazgo, Descripción, Normatividad, Área, Riesgo, Descripción del riesgo, Prioridad, Responsable, Plan de acción, Plazo, Estado, Observaciones), cópialo (<strong>Ctrl+C</strong>) y pégalo aquí (<strong>Ctrl+V</strong>). No abre ningún selector de archivos.
               </p>
               <textarea autoFocus value={pegar} onChange={(e) => setPegar(e.target.value)} rows={9}
                 placeholder={'Hallazgo\tDescripción\tNormatividad\t…\nConciliación pendiente\t…\t…'}
