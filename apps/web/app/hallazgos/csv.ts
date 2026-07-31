@@ -9,13 +9,24 @@ export function toCSV(rows: (string | number | null | undefined)[][]): string {
   return rows.map((r) => r.map(esc).join(',')).join('\r\n');
 }
 
-// Parser CSV que respeta comillas, comas y saltos de línea internos.
-export function parseCSV(text: string): string[][] {
+// Detecta el separador de la primera línea entre coma, punto y coma o tab.
+export function detectarDelimitador(text: string): string {
+  const linea = text.replace(/^﻿/, '').split(/\r?\n/)[0] ?? '';
+  const cont = (d: string) => linea.split(d).length - 1;
+  const opciones: [string, number][] = [[',', cont(',')], [';', cont(';')], ['\t', cont('\t')]];
+  opciones.sort((a, b) => b[1] - a[1]);
+  return opciones[0][1] > 0 ? opciones[0][0] : ',';
+}
+
+// Parser CSV que respeta comillas y saltos de línea internos. El separador se
+// detecta automáticamente (coma/punto y coma/tab) si no se indica.
+export function parseCSV(text: string, delim?: string): string[][] {
+  const t = text.replace(/^﻿/, ''); // quita BOM
+  const sep = delim ?? detectarDelimitador(t);
   const rows: string[][] = [];
   let field = '';
   let row: string[] = [];
   let inQuotes = false;
-  const t = text.replace(/^﻿/, ''); // quita BOM
   for (let i = 0; i < t.length; i++) {
     const c = t[i];
     if (inQuotes) {
@@ -23,7 +34,7 @@ export function parseCSV(text: string): string[][] {
         if (t[i + 1] === '"') { field += '"'; i++; } else inQuotes = false;
       } else field += c;
     } else if (c === '"') inQuotes = true;
-    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === sep) { row.push(field); field = ''; }
     else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
     else if (c === '\r') { /* ignora; el \n cierra la fila */ }
     else field += c;
