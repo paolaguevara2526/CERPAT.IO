@@ -25,6 +25,9 @@ export const RIESGO_META: Record<string, { label: string; color: string }> = {
 };
 const PRIORIDAD_LABEL: Record<string, string> = { alta: 'Alta', media: 'Media', baja: 'Baja' };
 const PROGRAMA_KEY = 'cerpat:hallazgos:programa'; // compañías con gestión de hallazgos (localStorage)
+// Texto de celdas descriptivas (Descripción, Normatividad, Riesgo): mismo tamaño,
+// color e interlineado para que la matriz se vea uniforme.
+const textoCelda: React.CSSProperties = { color: 'var(--muted)', fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' };
 
 function colorPct(p: number) { return p >= 85 ? '#22a670' : p >= 60 ? '#c67c00' : '#cf4436'; }
 function fmtFecha(iso: string | null) { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
@@ -374,7 +377,8 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
         </div>
       )}
       <div className="panel" style={{ overflowX: 'auto' }}>
-        <table className="dt" style={{ minWidth: 940 }}>
+        <style>{`.matriz-hallazgos td { vertical-align: top; }`}</style>
+        <table className="dt matriz-hallazgos" style={{ minWidth: 940 }}>
           <thead><tr>
             <th>Hallazgo</th><th>Descripción</th><th>Normatividad</th><th>Riesgo</th><th>Prioridad</th><th>Responsable</th><th>Plan de acción</th><th>Plazo</th><th>Estado</th><th>Observaciones</th>{esGestor && <th></th>}
           </tr></thead>
@@ -387,15 +391,15 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
               return (
                 <tr key={h.id}>
                   <td style={{ fontWeight: 600, minWidth: 130 }}>{h.titulo}{h.area && <div style={{ fontSize: 10.5, color: 'var(--muted)', fontWeight: 400 }}>{h.area}</div>}</td>
-                  <td style={{ color: 'var(--muted)', minWidth: 180 }}>{h.descripcion ?? '—'}</td>
-                  <td style={{ color: 'var(--muted)' }}>{h.normatividad ?? '—'}</td>
-                  <td style={{ minWidth: 150 }}>
+                  <td style={{ ...textoCelda, minWidth: 200 }}>{h.descripcion ?? '—'}</td>
+                  <td style={{ ...textoCelda, minWidth: 150 }}>{h.normatividad ?? '—'}</td>
+                  <td style={{ minWidth: 200 }}>
                     <span className="chip" style={{ color: rm.color, background: `${rm.color}18`, borderColor: `${rm.color}44` }}>{rm.label}</span>
-                    {h.riesgoDescripcion && <div style={{ fontSize: 10.5, color: 'var(--muted)', marginTop: 4, fontWeight: 400, whiteSpace: 'pre-wrap' }}>{h.riesgoDescripcion}</div>}
+                    {h.riesgoDescripcion && <div style={{ ...textoCelda, marginTop: 5 }}>{h.riesgoDescripcion}</div>}
                   </td>
-                  <td style={{ color: 'var(--muted)' }}>{PRIORIDAD_LABEL[h.prioridad] ?? h.prioridad}</td>
-                  <td style={{ color: 'var(--muted)' }}>{h.responsable ?? '—'}</td>
-                  <td style={{ color: 'var(--muted)', minWidth: 180 }}>{h.planAccion ?? '—'}</td>
+                  <td style={textoCelda}>{PRIORIDAD_LABEL[h.prioridad] ?? h.prioridad}</td>
+                  <td style={textoCelda}>{h.responsable ?? '—'}</td>
+                  <td style={{ ...textoCelda, minWidth: 200 }}>{h.planAccion ?? '—'}</td>
                   <td style={{ whiteSpace: 'nowrap', fontWeight: h.vencido ? 800 : 500, color: h.vencido ? '#cf4436' : 'var(--muted)' }}>{fmtFecha(h.plazo)}</td>
                   <td>
                     {esGestor ? (
@@ -406,7 +410,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
                       <span className="chip" style={{ color: h.vencido ? '#cf4436' : em.color, background: `${(h.vencido ? '#cf4436' : em.color)}18`, borderColor: `${(h.vencido ? '#cf4436' : em.color)}44` }}>{h.vencido ? 'Vencido' : em.label}</span>
                     )}
                   </td>
-                  <td style={{ color: 'var(--muted)', minWidth: 160 }}>{h.observaciones ?? '—'}</td>
+                  <td style={{ ...textoCelda, minWidth: 160 }}>{h.observaciones ?? '—'}</td>
                   {esGestor && <td style={{ whiteSpace: 'nowrap' }}>
                     <button onClick={() => setModal(h)} title="Editar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--navy)', fontSize: 14, padding: '2px 4px' }}>✎</button>
                     <button onClick={() => eliminar(h)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 13, padding: '2px 4px' }}>🗑</button>
