@@ -20,7 +20,9 @@ const ESTADO_META: Record<string, { label: string; color: string }> = {
   no_presentado: { label: 'No presentado', color: '#cf4436' },
 };
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-function fmtFecha(iso: string) { try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
+// La fecha se guarda como día calendario (medianoche UTC). Se arma desde las
+// partes año-mes-día para mostrar el día exacto, sin corrimiento por zona horaria.
+function fmtFecha(iso: string) { try { const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
 
 export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   const [resumen, setResumen] = useState<Resumen | null>(null);
