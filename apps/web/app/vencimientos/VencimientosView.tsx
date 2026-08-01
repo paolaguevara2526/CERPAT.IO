@@ -61,12 +61,14 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   useEffect(() => { cargarBase(); }, [cargarBase]);
   useEffect(() => { cargarLista(); }, [cargarLista]);
 
-  async function editar(v: Venc, campo: 'estado' | 'notas', valor: string) {
+  async function editar(v: Venc, campo: 'estado' | 'notas' | 'fechaVencimiento', valor: string) {
     const prev = items;
     setItems((p) => p.map((x) => (x.id === v.id ? { ...x, [campo]: valor } : x)));
     const r = await fetch(`/api/vencimientos/${v.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [campo]: valor }) });
-    if (!r.ok) { setItems(prev); const d = await r.json().catch(() => ({})); setError(d.error || 'No se pudo guardar.'); }
-    else if (campo === 'estado') cargarBase();
+    if (!r.ok) { setItems(prev); const d = await r.json().catch(() => ({})); setError(d.error || 'No se pudo guardar.'); return; }
+    // Cambiar estado o fecha afecta KPIs y semáforo; la fecha además reordena la lista.
+    if (campo === 'estado') cargarBase();
+    else if (campo === 'fechaVencimiento') { cargarBase(); cargarLista(); }
   }
 
   const k = resumen?.kpis;
@@ -75,7 +77,7 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   return (
     <>
       <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Vencimientos {ANIO}</h1>
-      <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>Obligaciones tributarias generadas por cliente según su configuración y el calendario DIAN. {esEditor ? 'Marca presentado/pagado a medida que se cumplen.' : 'Solo consulta.'}</p>
+      <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>Obligaciones tributarias generadas por cliente según su configuración y el calendario DIAN. {esEditor ? 'Marca presentado/pagado y ajusta la fecha si un calendario municipal cambió.' : 'Solo consulta.'}</p>
 
       {error && <div className="panel" style={{ padding: '10px 14px', color: '#b42318', fontWeight: 600, marginBottom: 14 }}>{error}</div>}
 
@@ -121,7 +123,15 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
                   <td style={{ fontWeight: 600, minWidth: 160 }}>{v.empresa ?? '—'}</td>
                   <td style={{ minWidth: 150 }}>{v.obligacion}{v.municipio && <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{v.municipio}</div>}{v.periodicidad && <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{v.periodicidad}</div>}</td>
                   <td style={{ color: 'var(--muted)' }}>{v.periodo ?? '—'}</td>
-                  <td style={{ whiteSpace: 'nowrap', fontWeight: v.vencido ? 800 : 500, color: v.vencido ? '#cf4436' : 'var(--muted)' }}>{fmtFecha(v.fechaVencimiento)}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    {esEditor ? (
+                      <input type="date" defaultValue={v.fechaVencimiento.slice(0, 10)} key={v.fechaVencimiento}
+                        onChange={(e) => { if (e.target.value && e.target.value !== v.fechaVencimiento.slice(0, 10)) editar(v, 'fechaVencimiento', e.target.value); }}
+                        style={{ fontSize: 12, fontWeight: v.vencido ? 800 : 600, color: v.vencido ? '#cf4436' : 'var(--ink)', background: 'var(--panel)', border: `1px solid ${v.vencido ? '#cf443666' : 'var(--edge-strong)'}`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }} />
+                    ) : (
+                      <span style={{ fontWeight: v.vencido ? 800 : 500, color: v.vencido ? '#cf4436' : 'var(--muted)' }}>{fmtFecha(v.fechaVencimiento)}</span>
+                    )}
+                  </td>
                   <td>
                     {esEditor ? (
                       <select value={v.estado} onChange={(e) => editar(v, 'estado', e.target.value)} style={{ fontSize: 11.5, fontWeight: 700, color: v.vencido ? '#cf4436' : em.color, background: `${(v.vencido ? '#cf4436' : em.color)}18`, border: `1px solid ${(v.vencido ? '#cf4436' : em.color)}44`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }}>
