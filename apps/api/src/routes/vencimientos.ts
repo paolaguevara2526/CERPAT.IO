@@ -9,7 +9,9 @@ import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 
 export const vencimientosRouter = Router();
 
-const ESTADOS = ['pendiente', 'presentado_sin_pago', 'presentado_pagado', 'no_presentado'];
+const ESTADOS = ['pendiente', 'presentado_sin_pago', 'presentado_pagado', 'presentado_cero', 'no_presentado', 'no_obligado'];
+// Estados que cuentan como "presentado" (cumplido) en los KPIs.
+const PRESENTADOS = ['presentado_sin_pago', 'presentado_pagado', 'presentado_cero'];
 
 // Usuario de la firma (no cliente externo).
 function esUsuarioFirma(u: AuthedRequest['user']): boolean {
@@ -66,8 +68,10 @@ vencimientosRouter.get('/resumen', requireAuth, async (req: AuthedRequest, res) 
   const emp = new Map<string, { empresa: string; total: number; presentados: number; vencidos: number }>();
   const porMes = new Array(12).fill(0);
   for (const v of items) {
+    // "No obligado" no es una obligación real: no cuenta en total ni en cumplimiento.
+    if (v.estado === 'no_obligado') continue;
     total++;
-    const pres = v.estado === 'presentado_sin_pago' || v.estado === 'presentado_pagado';
+    const pres = PRESENTADOS.includes(v.estado);
     const venc = v.estado === 'pendiente' && v.fechaVencimiento < hoy;
     if (pres) presentados++; else if (venc) vencidos++; else pendientes++;
     const k = v.empresa.id;

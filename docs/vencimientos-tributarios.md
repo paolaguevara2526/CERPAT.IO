@@ -123,6 +123,24 @@ publica su calendario definitivo. Para la **próxima temporada**, revisar sobre
 todo los municipios de **fecha fija** cuyo PDF venía escaneado (p. ej. el grupo
 Aguazul · Barranca de Upía · Guamal · Yopal comparte `25-sep / 20-nov`).
 
+## Estados de un vencimiento
+
+Cada vencimiento (`VencimientoEmpresa.estado`, enum `EstadoPago`) tiene uno de
+**6 estados**. El Administrador los cambia en línea en `cerpat.io/vencimientos`.
+
+| Estado | Significado | ¿Cuenta como presentado? |
+|---|---|---|
+| `pendiente` | Aún no se presenta (si ya pasó la fecha, sale como **vencido**) | No |
+| `presentado_sin_pago` | Declaración presentada, falta el pago | Sí |
+| `presentado_pagado` | Presentada y pagada | Sí |
+| `presentado_cero` | Presentada en **$0** (sin valor a pagar) | Sí |
+| `no_presentado` | Venció y no se presentó | No |
+| `no_obligado` | El cliente **no está obligado** a esa declaración | — (se excluye de KPIs) |
+
+> `no_obligado` no es una obligación real: no suma en *total*, *presentados*,
+> *pendientes* ni *vencidos*. Sirve para dejar constancia de que esa fila no aplica
+> sin borrarla.
+
 ## Modelo de datos
 
 ### Ya existe

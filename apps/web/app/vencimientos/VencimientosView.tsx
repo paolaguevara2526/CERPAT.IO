@@ -17,7 +17,9 @@ const ESTADO_META: Record<string, { label: string; color: string }> = {
   pendiente: { label: 'Pendiente', color: '#5b6a82' },
   presentado_sin_pago: { label: 'Presentado (sin pago)', color: '#2f6fd0' },
   presentado_pagado: { label: 'Presentado y pagado', color: '#22a670' },
+  presentado_cero: { label: 'Presentado en $0', color: '#14a8a0' },
   no_presentado: { label: 'No presentado', color: '#cf4436' },
+  no_obligado: { label: 'No obligado', color: '#9aa3b2' },
 };
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 // La fecha se guarda como día calendario (medianoche UTC). Se arma desde las
