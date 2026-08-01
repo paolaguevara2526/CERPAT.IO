@@ -2,7 +2,7 @@
 
 Documento vivo del estado en producción y el roadmap. Actualizar en cada avance.
 
-_Última actualización: 2026-07-30._
+_Última actualización: 2026-08-01._
 
 ## En producción hoy
 
@@ -28,6 +28,11 @@ _Última actualización: 2026-07-30._
   intereses, prestaciones sociales, calendario tributario, portal de documentos.
 - **`cerpat.io/usuarios`** — vista cableada del personal (26 usuarios) desde la BD.
 - **`cerpat.io/clientes`** — vista **cableada**: web → API `GET /empresas` → Postgres, 90 clientes reales (sin correos, por privacidad).
+- **`cerpat.io/vencimientos`** — vista **cableada** de obligaciones tributarias por
+  cliente (API `GET /vencimientos`). **ICA municipal 2026 cargado** (338 vencimientos:
+  ReteICA/AutoICA, ICA Yopal y exógena de ICA) — ver
+  [`vencimientos-tributarios.md`](./vencimientos-tributarios.md). El **Administrador**
+  edita **estado y fecha** de cada vencimiento en línea; el resto solo consulta.
 - **`cerpat.io/coordinacion`** — **Panel de Coordinación** (solo consulta): KPIs de
   cumplimiento del plan por área, asesor, auxiliar y clientes en riesgo
   (API `GET /plan/cumplimiento`). Los ejes asesor/auxiliar se llenan al cargar

@@ -1,0 +1,129 @@
+municipio,departamento,obligacion,periodicidad,periodo,fecha_vencimiento,regla,nota
+Acacías,Meta,ReteICA,Bimestral,jul-ago,2026-09-15,fija,
+Acacías,Meta,ReteICA,Bimestral,sep-oct,2026-11-17,fija,
+Acacías,Meta,ReteICA,Bimestral,nov-dic,2027-01-19,fija,
+Aguazul,Casanare,ReteICA,Bimestral,jul-ago,2026-09-25,fija,
+Aguazul,Casanare,ReteICA,Bimestral,sep-oct,2026-11-20,fija,
+Aguazul,Casanare,ReteICA,Bimestral,nov-dic,2027-01-22,fija,
+Barranca De Upía,Meta,ReteICA,Bimestral,jul-ago,2026-09-25,fija,
+Barranca De Upía,Meta,ReteICA,Bimestral,sep-oct,2026-11-20,fija,
+Barranca De Upía,Meta,ReteICA,Bimestral,nov-dic,2027-01-22,fija,
+"Bogotá, D.C.","Bogotá, D.C.",ReteICA,Bimestral,jul-ago,2026-09-18,fija,
+"Bogotá, D.C.","Bogotá, D.C.",ReteICA,Bimestral,sep-oct,2026-11-20,fija,
+"Bogotá, D.C.","Bogotá, D.C.",ReteICA,Bimestral,nov-dic,2027-01-15,fija,
+Cabuyaro,Meta,ReteICA,Bimestral,jul-ago,2026-09-15,fija,
+Cabuyaro,Meta,ReteICA,Bimestral,sep-oct,2026-11-16,fija,
+Cabuyaro,Meta,ReteICA,Bimestral,nov-dic,2027-01-15,fija,
+Cartagena De Indias,Bolívar,ReteICA,Bimestral,jul-ago,2026-09-24,fija,
+Cartagena De Indias,Bolívar,ReteICA,Bimestral,sep-oct,2026-11-26,fija,
+Cartagena De Indias,Bolívar,ReteICA,Bimestral,nov-dic,2027-01-28,fija,
+Cartagena De Indias,Bolívar,AutoICA,Bimestral,jul-ago,2026-09-24,fija,
+Cartagena De Indias,Bolívar,AutoICA,Bimestral,sep-oct,2026-11-26,fija,
+Cartagena De Indias,Bolívar,AutoICA,Bimestral,nov-dic,2027-01-28,fija,
+Castilla la Nueva,Meta,ReteICA,Mensual,jul,2026-08-13,fija,
+Castilla la Nueva,Meta,ReteICA,Mensual,ago,2026-09-10,fija,
+Castilla la Nueva,Meta,ReteICA,Mensual,sep,2026-10-13,fija,
+Castilla la Nueva,Meta,ReteICA,Mensual,oct,2026-11-12,fija,
+Castilla la Nueva,Meta,ReteICA,Mensual,nov,2026-12-10,fija,
+Castilla la Nueva,Meta,ReteICA,Mensual,dic,2027-01-14,fija,
+Granada M,Meta,ReteICA,Mensual,jul,,por dígito NIT,representativa; ver dígito
+Granada M,Meta,ReteICA,Mensual,ago,,por dígito NIT,representativa; ver dígito
+Granada M,Meta,ReteICA,Mensual,sep,,por dígito NIT,representativa; ver dígito
+Granada M,Meta,ReteICA,Mensual,oct,,por dígito NIT,representativa; ver dígito
+Granada M,Meta,ReteICA,Mensual,nov,,por dígito NIT,representativa; ver dígito
+Granada M,Meta,ReteICA,Mensual,dic,,por dígito NIT,representativa; ver dígito
+Guamal M,Meta,ReteICA,Bimestral,jul-ago,2026-09-25,fija,
+Guamal M,Meta,ReteICA,Bimestral,sep-oct,2026-11-20,fija,
+Guamal M,Meta,ReteICA,Bimestral,nov-dic,2027-01-29,fija,
+Madrid,Cundinamarca,ReteICA,Bimestral,jul-ago,2026-09-15,fija,
+Madrid,Cundinamarca,ReteICA,Bimestral,sep-oct,2026-11-15,fija,
+Madrid,Cundinamarca,ReteICA,Bimestral,nov-dic,2027-01-15,fija,
+Madrid,Cundinamarca,AutoICA,Mensual,jul-ago,2026-09-15,fija,
+Madrid,Cundinamarca,AutoICA,Mensual,sep-oct,2026-11-15,fija,
+Madrid,Cundinamarca,AutoICA,Mensual,nov-dic,2027-01-15,fija,
+Malambo,Atlántico,ReteICA,Mensual,jul,2026-08-13,fija,
+Malambo,Atlántico,ReteICA,Mensual,ago,2026-09-11,fija,
+Malambo,Atlántico,ReteICA,Mensual,sep,2026-10-13,fija,
+Malambo,Atlántico,ReteICA,Mensual,oct,2026-11-13,fija,
+Malambo,Atlántico,ReteICA,Mensual,nov,2026-12-11,fija,
+Malambo,Atlántico,ReteICA,Mensual,dic,2027-01-13,fija,
+Mosquera,Cundinamarca,ReteICA,Mensual,jul,2026-08-18,fija,
+Mosquera,Cundinamarca,ReteICA,Mensual,ago,2026-09-14,fija,
+Mosquera,Cundinamarca,ReteICA,Mensual,sep,2026-10-15,fija,
+Mosquera,Cundinamarca,ReteICA,Mensual,oct,2026-11-17,fija,
+Mosquera,Cundinamarca,ReteICA,Mensual,nov,2026-12-15,fija,
+Mosquera,Cundinamarca,ReteICA,Mensual,dic,2027-01-18,fija,
+Mosquera,Cundinamarca,AutoICA,Mensual,jul,2026-08-10,fija,
+Mosquera,Cundinamarca,AutoICA,Mensual,ago,2026-09-10,fija,
+Mosquera,Cundinamarca,AutoICA,Mensual,sep,2026-10-13,fija,
+Mosquera,Cundinamarca,AutoICA,Mensual,oct,2026-11-10,fija,
+Mosquera,Cundinamarca,AutoICA,Mensual,nov,2026-12-10,fija,
+Mosquera,Cundinamarca,AutoICA,Mensual,dic,2027-01-12,fija,
+Pasto,Nariño,ReteICA,Bimestral,jul-ago,2026-09-30,fija,
+Pasto,Nariño,ReteICA,Bimestral,sep-oct,2026-11-30,fija,
+Pasto,Nariño,ReteICA,Bimestral,nov-dic,2027-02-01,fija,
+Puerto Gaitán,Meta,ReteICA,Bimestral,jul-ago,2026-09-15,fija,
+Puerto Gaitán,Meta,ReteICA,Bimestral,sep-oct,2026-11-17,fija,
+Puerto Gaitán,Meta,ReteICA,Bimestral,nov-dic,2027-01-15,fija,
+Puerto López,Meta,ReteICA,Mensual,jul,2026-08-21,fija,
+Puerto López,Meta,ReteICA,Mensual,ago,2026-09-25,fija,
+Puerto López,Meta,ReteICA,Mensual,sep,2026-10-23,fija,
+Puerto López,Meta,ReteICA,Mensual,oct,2026-11-20,fija,
+Puerto López,Meta,ReteICA,Mensual,nov,2026-12-24,fija,
+Puerto López,Meta,ReteICA,Mensual,dic,2027-01-22,fija,
+Puerto Wilches,Santander,ReteICA,Mensual,jul,,por dígito NIT,representativa; ver dígito
+Puerto Wilches,Santander,ReteICA,Mensual,ago,,por dígito NIT,representativa; ver dígito
+Puerto Wilches,Santander,ReteICA,Mensual,sep,,por dígito NIT,representativa; ver dígito
+Puerto Wilches,Santander,ReteICA,Mensual,oct,,por dígito NIT,representativa; ver dígito
+Puerto Wilches,Santander,ReteICA,Mensual,nov,,por dígito NIT,representativa; ver dígito
+Puerto Wilches,Santander,ReteICA,Mensual,dic,,por dígito NIT,representativa; ver dígito
+Sabana de Torres,Santander,ReteICA,Mensual,jul,2026-08-25,fija,
+Sabana de Torres,Santander,ReteICA,Mensual,ago,2026-09-21,fija,
+Sabana de Torres,Santander,ReteICA,Mensual,sep,2026-10-22,fija,
+Sabana de Torres,Santander,ReteICA,Mensual,oct,2026-11-24,fija,
+Sabana de Torres,Santander,ReteICA,Mensual,nov,2026-12-22,fija,
+Sabana de Torres,Santander,ReteICA,Mensual,dic,2027-01-25,fija,
+San Carlos de Guaroa,Meta,ReteICA,Mensual,jul,2026-08-14,fija,
+San Carlos de Guaroa,Meta,ReteICA,Mensual,ago,2026-09-11,fija,
+San Carlos de Guaroa,Meta,ReteICA,Mensual,sep,2026-10-16,fija,
+San Carlos de Guaroa,Meta,ReteICA,Mensual,oct,2026-11-13,fija,
+San Carlos de Guaroa,Meta,ReteICA,Mensual,nov,2026-12-11,fija,
+San Carlos de Guaroa,Meta,ReteICA,Mensual,dic,2027-01-15,fija,
+San Martín C,Cesar,ReteICA,Bimestral,jul-ago,2026-09-15,fija,
+San Martín C,Cesar,ReteICA,Bimestral,sep-oct,2026-11-17,fija,
+San Martín C,Cesar,ReteICA,Bimestral,nov-dic,2027-01-15,fija,
+San Martín C,Cesar,AutoICA,Bimestral,jul-ago,2026-09-15,fija,
+San Martín C,Cesar,AutoICA,Bimestral,sep-oct,2026-11-17,fija,
+San Martín C,Cesar,AutoICA,Bimestral,nov-dic,2027-01-15,fija,
+San Martín M,Meta,ReteICA,Bimestral,jul-ago,,por dígito NIT,representativa; ver dígito
+San Martín M,Meta,ReteICA,Bimestral,sep-oct,,por dígito NIT,representativa; ver dígito
+San Martín M,Meta,ReteICA,Bimestral,nov-dic,,por dígito NIT,representativa; ver dígito
+Tauramena,Casanare,ReteICA,Bimestral,jul-ago,,por dígito NIT,representativa; ver dígito
+Tauramena,Casanare,ReteICA,Bimestral,sep-oct,,por dígito NIT,representativa; ver dígito
+Tauramena,Casanare,ReteICA,Bimestral,nov-dic,,por dígito NIT,representativa; ver dígito
+Villanueva C,Casanare,ReteICA,Bimestral,jul-ago,,por dígito NIT,representativa; ver dígito
+Villanueva C,Casanare,ReteICA,Bimestral,sep-oct,,por dígito NIT,representativa; ver dígito
+Villanueva C,Casanare,ReteICA,Bimestral,nov-dic,,por dígito NIT,representativa; ver dígito
+Villavicencio,Meta,ReteICA,Bimestral,jul-ago,,por dígito NIT,representativa; ver dígito
+Villavicencio,Meta,ReteICA,Bimestral,sep-oct,,por dígito NIT,representativa; ver dígito
+Villavicencio,Meta,ReteICA,Bimestral,nov-dic,,por dígito NIT,representativa; ver dígito
+Villavicencio,Meta,AutoICA,Bimestral,jul-ago,,por dígito NIT,representativa; ver dígito
+Villavicencio,Meta,AutoICA,Bimestral,sep-oct,,por dígito NIT,representativa; ver dígito
+Villavicencio,Meta,AutoICA,Bimestral,nov-dic,,por dígito NIT,representativa; ver dígito
+Yopal,Casanare,ReteICA,Bimestral,jul-ago,2026-09-25,fija,
+Yopal,Casanare,ReteICA,Bimestral,sep-oct,2026-11-20,fija,
+Yopal,Casanare,ReteICA,Bimestral,nov-dic,2027-02-12,fija,
+Yopal,Casanare,ICA,Bimestral,jul-ago,2026-10-02,fija,
+Yopal,Casanare,ICA,Bimestral,sep-oct,2026-12-04,fija,
+Yopal,Casanare,ICA,Bimestral,nov-dic,2027-02-19,fija,
+
+"# Tablas por dígito del NIT (jul-ago, sep-oct, nov-dic)"
+municipio,ultimo_digito_nit,fecha_jul_ago,fecha_sep_oct,fecha_nov_dic
+Villavicencio,"0,1,2",2026-09-09,2026-11-11,2026-02-10
+Villavicencio,"3,4,5",2026-09-11,2026-11-13,2026-02-12
+Villavicencio,"6,7,8,9",2026-09-14,2026-11-17,2026-02-15
+Villanueva C,0.9,2026-09-14,2026-11-17,2027-01-18
+Villanueva C,7.8,2026-09-15,2026-11-18,2027-01-19
+Villanueva C,6.5,2026-09-16,2026-11-19,2027-01-20
+Villanueva C,4.3,2026-09-17,2026-11-20,2027-01-21
+Villanueva C,2.1,2026-09-18,2026-11-23,2027-01-22
