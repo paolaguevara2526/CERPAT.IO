@@ -344,10 +344,42 @@ planRouter.get('/tareas/:id/detalle', requireAuth, async (req: AuthedRequest, re
       id: true, titulo: true, empresaId: true, areaId: true, asesorId: true, auxiliarId: true,
       prioridad: true, estado: true, periodo: true, observaciones: true, generaPago: true,
       requiereRevisionTecnica: true, auditoria: true, fechaInicio: true, fechaVencimiento: true,
+      comprobanteDesde: true, comprobanteHasta: true, cantidadRegistros: true,
+      actividadPlan: { select: { esRegistroSoftware: true } },
     },
   });
   if (!t) return res.status(404).json({ error: 'Tarea no encontrada.' });
-  res.json({ tarea: t });
+  const { actividadPlan, ...rest } = t;
+  res.json({ tarea: { ...rest, esRegistroSoftware: actividadPlan?.esRegistroSoftware ?? false } });
+});
+
+// PATCH /tareas/:id/registro — captura del "registro en software" (comprobantes)
+// por el ejecutor (asesor/auxiliar) o coordinación. cantidadRegistros la calcula
+// el frontend desde el rango, pero es editable, así que aquí solo se valida.
+planRouter.patch('/tareas/:id/registro', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({
+    where: { id: req.params.id, organizacionId: org?.id },
+    select: { id: true, asesorId: true, auxiliarId: true, auditoria: true },
+  });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  const u = req.user!;
+  const puede = puedeGestionar(u) || tarea.asesorId === u.sub || tarea.auxiliarId === u.sub;
+  if (!puede) return res.status(403).json({ error: 'No puedes registrar en esta tarea (no eres su asesor/auxiliar ni tienes rol de coordinación).' });
+  if (tarea.auditoria === 'aprobada') return res.status(403).json({ error: 'La tarea está bloqueada (aprobada en Auditoría). Debe desbloquearse primero.' });
+
+  const data: Record<string, any> = {};
+  for (const f of ['comprobanteDesde', 'comprobanteHasta'] as const) {
+    if (f in (req.body ?? {})) data[f] = typeof req.body[f] === 'string' && req.body[f].trim() ? req.body[f].trim() : null;
+  }
+  if ('cantidadRegistros' in (req.body ?? {})) {
+    const v = req.body.cantidadRegistros;
+    if (v === null || v === '') data.cantidadRegistros = null;
+    else { const n = Number(v); if (!Number.isInteger(n) || n < 0) return res.status(422).json({ error: 'La cantidad de registros debe ser un entero ≥ 0.' }); data.cantidadRegistros = n; }
+  }
+  if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+  await prisma.tarea.update({ where: { id: tarea.id }, data });
+  res.json({ ok: true });
 });
 
 planRouter.post('/tareas', requireAuth, async (req: AuthedRequest, res) => {

@@ -116,6 +116,9 @@ model Organizacion {
   // Revisoría Fiscal
   grupos    GrupoEmpresarial[]
   hallazgos Hallazgo[]
+  configuracionesTributarias ConfiguracionTributaria[]
+  municipiosIca              EmpresaMunicipioIca[]
+  vencimientosEmpresa        VencimientoEmpresa[]
 
   @@map("organizaciones")
 }
@@ -232,6 +235,9 @@ model Empresa {
   usuariosCliente  Usuario[]              @relation("UsuarioEmpresaCliente")
   planActividades  PlanClienteActividad[]
   asignacionesArea AsignacionClienteArea[]
+  configuracionTributaria ConfiguracionTributaria?
+  municipiosIca           EmpresaMunicipioIca[]
+  vencimientosEmpresa     VencimientoEmpresa[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -358,6 +364,8 @@ model Municipio {
   orden          Int          @default(0)
   organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresas       Empresa[]
+  icaEmpresas    EmpresaMunicipioIca[]
+  vencimientos   VencimientoEmpresa[]
 
   @@index([organizacionId])
   @@map("cat_municipios")
@@ -681,4 +689,78 @@ model AsignacionClienteArea {
   @@unique([empresaId, areaId])
   @@index([organizacionId])
   @@map("asignacion_cliente_area")
+}
+
+// ---------- Parametrización de vencimientos tributarios ----------
+
+// Configuración tributaria nacional de cada empresa (1:1). Alimenta la
+// generación de vencimientos de Retención, IVA, Consumo, Anticipo RST y Renta.
+model ConfiguracionTributaria {
+  id             String @id @default(uuid())
+  organizacionId String
+  empresaId      String @unique
+  ivaPeriodicidad         String? // bimestral | cuatrimestral | anual_rst | no_responsable
+  retencionFuente         Boolean @default(false) // agente retenedor (declara mensual)
+  consumoPeriodicidad     String? // bimestral | anual_rst | null (no responsable)
+  rentaTipo               String? // persona_juridica | persona_natural | gran_contribuyente | rst_consolidada | na
+  anticipoRstPeriodicidad String? // bimestral | null (no aplica)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@map("configuracion_tributaria")
+}
+
+// Responsabilidad de ICA por empresa × municipio (una empresa declara ICA en
+// muchos municipios). Incluye RETEICA y AUTOICA con su periodicidad.
+model EmpresaMunicipioIca {
+  id             String @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  municipioId    String
+  icaPeriodicidad     String? // anual | bimestral | mensual
+  reteica             Boolean @default(false)
+  reteicaPeriodicidad String?
+  autoica             Boolean @default(false)
+  autoicaPeriodicidad String?
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  municipio    Municipio    @relation(fields: [municipioId], references: [id])
+
+  @@unique([empresaId, municipioId])
+  @@index([organizacionId])
+  @@map("empresa_municipio_ica")
+}
+
+// Vencimiento generado para una empresa (salida del generador: config × calendario
+// × último dígito del NIT). Editable solo por Administrador/root por ahora.
+model VencimientoEmpresa {
+  id             String     @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  anio           Int
+  obligacion     String // Retención en la fuente, IVA, Impuesto al consumo, Anticipo RST, Renta PJ/GC/PN, RST consolidada Renta, IVA consolidado RST
+  periodicidad   String?
+  periodo        String? // 2026-01, ene-feb, 1a cuota, anual...
+  municipioId    String? // ICA (a futuro)
+  fechaVencimiento DateTime
+  estado         EstadoPago @default(pendiente)
+  generado       Boolean    @default(true) // creado por el generador (vs. agregado a mano)
+  notas          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  municipio    Municipio?   @relation(fields: [municipioId], references: [id])
+
+  @@index([organizacionId])
+  @@index([empresaId])
+  @@index([anio])
+  @@index([fechaVencimiento])
+  @@map("vencimientos_empresa")
 }

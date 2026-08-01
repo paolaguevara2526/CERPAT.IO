@@ -199,8 +199,12 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
   y generación de tareas por período (2070 `Tarea` para 2026-07).
 - 🟡 Fase 4 — en curso. Hecho: **Panel de Coordinación** con datos reales
   (`GET /plan/cumplimiento` + vista `/coordinacion`, solo consulta: KPIs,
-  cumplimiento por área y clientes en riesgo). Pendiente: gestión del plan por
-  cliente/área y ejecución (subtareas + comprobantes).
+  cumplimiento por área y clientes en riesgo); **ejecución con subtareas**
+  (checklist + regla "no Ejecutada con subtareas pendientes"); y **registro en
+  el software** (comprobante inicial/final → cantidad de registros calculada del
+  rango y editable) en el modal de tarea, guardado por el ejecutor
+  (asesor/auxiliar) o coordinación vía `PATCH /plan/tareas/:id/registro`.
+  Pendiente: métrica **registros por auxiliar** en Coordinación (ya hay datos).
 - 🟡 Usuarios / personal — cargado el catálogo de personal desde la base de la
   firma: 26 usuarios (Paola Guevara como root/administradora + 25 empleados
   activos) con su cargo, área y rol (Administrador, Asesor, Auxiliar, Auditor,
