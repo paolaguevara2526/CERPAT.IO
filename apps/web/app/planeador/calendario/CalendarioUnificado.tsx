@@ -68,6 +68,8 @@ function hoyISO(): string {
 export default function CalendarioUnificado({ mesInicial }: { mesInicial?: string }) {
   const [mes, setMes] = useState(() => mesValido(mesInicial));
   const [etiqueta, setEtiqueta] = useState('');
+  const [cliente, setCliente] = useState('');
+  const [cumpl, setCumpl] = useState('');
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,10 +124,22 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
 
   useEffect(() => { cargar(mes); }, [mes, cargar]);
 
+  // Clientes presentes en el mes (para el filtro), sin repetir.
+  const clientes = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of eventos) if (e.empresa) set.add(e.empresa);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [eventos]);
+
   const visibles = useMemo(
-    () => (etiqueta ? eventos.filter((e) => e.etiqueta === etiqueta) : eventos),
-    [eventos, etiqueta],
+    () => eventos.filter((e) =>
+      (!etiqueta || e.etiqueta === etiqueta) &&
+      (!cliente || e.empresa === cliente) &&
+      (!cumpl || clasificar(e) === cumpl),
+    ),
+    [eventos, etiqueta, cliente, cumpl],
   );
+  const hayFiltro = !!(etiqueta || cliente || cumpl);
   const porDia = useMemo(() => {
     const map = new Map<string, Evento[]>();
     for (const e of visibles) {
@@ -221,11 +235,22 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <select value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} style={selStyle}>
+        <select value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} style={selStyle} title="Filtrar por etiqueta">
           <option value="">Todas las etiquetas</option>
           <option value="Vencimientos">🧾 Vencimientos</option>
           {AREAS.map((a) => <option key={a} value={a}>📋 {a}</option>)}
         </select>
+        <select value={cliente} onChange={(e) => setCliente(e.target.value)} style={{ ...selStyle, maxWidth: 220 }} title="Filtrar por cliente">
+          <option value="">Todos los clientes</option>
+          {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={cumpl} onChange={(e) => setCumpl(e.target.value)} style={selStyle} title="Filtrar por estado">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="vencido">Vencidos</option>
+          <option value="cumplido">Cumplidos</option>
+        </select>
+        {hayFiltro && <button onClick={() => { setEtiqueta(''); setCliente(''); setCumpl(''); }} className="dbtn" style={{ fontSize: 12 }}>Limpiar</button>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11, color: 'var(--muted)' }}>
           {(etiqueta ? [etiqueta] : ['Vencimientos', ...AREAS]).map((et) => (
             <span key={et} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -344,6 +369,20 @@ function DetalleModal({ ev, onClose, onReprogramar }: { ev: Evento; onClose: () 
 }
 
 const selStyle: React.CSSProperties = { padding: '8px 11px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
+
+// Cumplimiento unificado de un evento (para el filtro por estado).
+function clasificar(e: Evento): 'vencido' | 'pendiente' | 'cumplido' | 'otro' {
+  if (e.vencido) return 'vencido';
+  if (e.tipo === 'vencimiento') {
+    if (['presentado_sin_pago', 'presentado_pagado', 'presentado_cero'].includes(e.estado)) return 'cumplido';
+    if (e.estado === 'no_presentado') return 'vencido';
+    if (e.estado === 'no_obligado') return 'otro';
+    return 'pendiente';
+  }
+  if (['terminado', 'auditado'].includes(e.estado)) return 'cumplido';
+  if (e.estado === 'no_realizado') return 'vencido';
+  return 'pendiente';
+}
 
 function escapar(s: string): string {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
