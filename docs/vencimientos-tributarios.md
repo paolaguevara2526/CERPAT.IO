@@ -73,6 +73,74 @@ cuotas) → se manejan con **fechas fijas** del calendario, no por la regla.
 - **Municipios de Colombia**: 1102 (municipio + departamento) → catálogo
   `Municipio` (pendiente el seed de carga).
 
+## ICA municipal 2026 — carga en producción (agosto 2026)
+
+Mientras se construyen el modelo `ResponsabilidadEmpresa` y el generador, los
+vencimientos de **ICA municipal 2026** (períodos pendientes: **jul-ago en
+adelante**) se cargaron **directamente** como filas de `vencimientos_empresa`
+(`generado=true`, `estado='pendiente'`), **sin pasar por el generador** (que aún
+no existe). Cuando el generador esté listo, estos datos deberían **rehacerse**
+desde `ResponsabilidadEmpresa` + calendario, no mantenerse a mano.
+
+**Fuente.** Los calendarios municipales los **transcribió el equipo** (Paola)
+municipio por municipio a una plantilla de Excel. Los PDF municipales varían
+mucho: unos publican **fecha fija** para todos, otros dependen del **último
+dígito del NIT**, y varios solo existen **escaneados**.
+
+**Qué se cargó (338 vencimientos):**
+
+| Obligación | Vencimientos |
+|---|---|
+| ReteICA / AutoICA | 276 |
+| ICA Yopal (bimestral) | 12 |
+| Exógena de ICA | 50 |
+
+**Reglas por municipio** → [`data/calendario-ica-municipal-2026.csv`](./data/calendario-ica-municipal-2026.csv)
+(incluye las tablas por dígito de Villavicencio y Villanueva). Resumen:
+
+- **Por dígito del NIT** (el día depende del último dígito): Villavicencio,
+  Villanueva (Casanare), Tauramena, San Martín (Meta), Granada (Meta),
+  Puerto Wilches.
+- **Fecha fija** (una sola fecha para todos): el resto — Cartagena (calendario
+  oficial), Bogotá, Acacías, Pasto, Puerto Gaitán, Puerto López, Mosquera,
+  Madrid, Malambo, Castilla, San Carlos de Guaroa, Sabana de Torres, etc.
+
+**Correcciones aplicadas al cargar** (la transcripción traía el año equivocado en
+enero):
+
+- Cabuyaro nov-dic: `2026-01-15` → **`2027-01-15`**.
+- Puerto López dic: `2026-01-22` → **`2027-01-22`**.
+
+**Yopal** tiene **dos** obligaciones distintas, ambas para sus **4** empresas:
+**ReteICA** (25-sep / 20-nov / 12-feb-2027) e **ICA** bimestral
+(02-oct / 04-dic / 19-feb-2027).
+
+**Mantenimiento de fechas.** El **Administrador / root** puede **editar la fecha**
+de cualquier vencimiento directamente en `cerpat.io/vencimientos` (columna
+*Vence*), sin recargar la base — el backend ya validaba `PATCH
+/vencimientos/:id`. Útil para ajustar fechas tentativas o cuando un municipio
+publica su calendario definitivo. Para la **próxima temporada**, revisar sobre
+todo los municipios de **fecha fija** cuyo PDF venía escaneado (p. ej. el grupo
+Aguazul · Barranca de Upía · Guamal · Yopal comparte `25-sep / 20-nov`).
+
+## Estados de un vencimiento
+
+Cada vencimiento (`VencimientoEmpresa.estado`, enum `EstadoPago`) tiene uno de
+**6 estados**. El Administrador los cambia en línea en `cerpat.io/vencimientos`.
+
+| Estado | Significado | ¿Cuenta como presentado? |
+|---|---|---|
+| `pendiente` | Aún no se presenta (si ya pasó la fecha, sale como **vencido**) | No |
+| `presentado_sin_pago` | Declaración presentada, falta el pago | Sí |
+| `presentado_pagado` | Presentada y pagada | Sí |
+| `presentado_cero` | Presentada en **$0** (sin valor a pagar) | Sí |
+| `no_presentado` | Venció y no se presentó | No |
+| `no_obligado` | El cliente **no está obligado** a esa declaración | — (se excluye de KPIs) |
+
+> `no_obligado` no es una obligación real: no suma en *total*, *presentados*,
+> *pendientes* ni *vencidos*. Sirve para dejar constancia de que esa fila no aplica
+> sin borrarla.
+
 ## Modelo de datos
 
 ### Ya existe
