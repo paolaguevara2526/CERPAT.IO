@@ -489,6 +489,111 @@ adminRouter.delete('/empresas/:id', requireAuth, soloAdmin, async (req, res) => 
   }
 });
 
+// ---------- Configuración tributaria por cliente ----------
+
+const IVA_OPTS = ['bimestral', 'cuatrimestral', 'anual_rst', 'no_responsable'];
+const CONSUMO_OPTS = ['bimestral', 'anual_rst'];
+const RENTA_OPTS = ['persona_juridica', 'persona_natural', 'gran_contribuyente', 'rst_consolidada', 'na'];
+const ANTICIPO_OPTS = ['bimestral'];
+const ICA_PERIOD_OPTS = ['anual', 'bimestral', 'mensual'];
+const opt = (v: unknown, allowed: string[]) => (typeof v === 'string' && allowed.includes(v) ? v : null);
+
+// Config nacional + ICA por municipio de una empresa.
+adminRouter.get('/config-tributaria/:empresaId', requireAuth, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true, nombre: true, nit: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const config = await prisma.configuracionTributaria.findUnique({ where: { empresaId: empresa.id } });
+  const ica = await prisma.empresaMunicipioIca.findMany({
+    where: { empresaId: empresa.id },
+    select: { id: true, municipioId: true, icaPeriodicidad: true, reteica: true, reteicaPeriodicidad: true, autoica: true, autoicaPeriodicidad: true, municipio: { select: { nombre: true, departamento: true } } },
+    orderBy: { municipio: { nombre: 'asc' } },
+  });
+  res.json({ empresa, config, municipiosIca: ica.map((m) => ({ id: m.id, municipioId: m.municipioId, municipio: m.municipio?.nombre ?? null, departamento: m.municipio?.departamento ?? null, icaPeriodicidad: m.icaPeriodicidad, reteica: m.reteica, reteicaPeriodicidad: m.reteicaPeriodicidad, autoica: m.autoica, autoicaPeriodicidad: m.autoicaPeriodicidad })) });
+});
+
+// Guardar config nacional (upsert).
+adminRouter.put('/config-tributaria/:empresaId', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const b = req.body ?? {};
+  const data = {
+    ivaPeriodicidad: opt(b.ivaPeriodicidad, IVA_OPTS),
+    retencionFuente: !!b.retencionFuente,
+    consumoPeriodicidad: opt(b.consumoPeriodicidad, CONSUMO_OPTS),
+    rentaTipo: opt(b.rentaTipo, RENTA_OPTS),
+    anticipoRstPeriodicidad: opt(b.anticipoRstPeriodicidad, ANTICIPO_OPTS),
+  };
+  await prisma.configuracionTributaria.upsert({ where: { empresaId: empresa.id }, update: data, create: { organizacionId: id, empresaId: empresa.id, ...data } });
+  res.json({ ok: true });
+});
+
+// Agregar un municipio ICA a la empresa.
+adminRouter.post('/config-tributaria/:empresaId/ica', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const b = req.body ?? {};
+  if (typeof b.municipioId !== 'string' || !b.municipioId) return res.status(422).json({ error: 'Falta el municipio.' });
+  try {
+    const row = await prisma.empresaMunicipioIca.create({
+      data: {
+        organizacionId: id, empresaId: empresa.id, municipioId: b.municipioId,
+        icaPeriodicidad: opt(b.icaPeriodicidad, ICA_PERIOD_OPTS),
+        reteica: !!b.reteica, reteicaPeriodicidad: opt(b.reteicaPeriodicidad, ICA_PERIOD_OPTS),
+        autoica: !!b.autoica, autoicaPeriodicidad: opt(b.autoicaPeriodicidad, ICA_PERIOD_OPTS),
+      },
+      select: { id: true },
+    });
+    res.status(201).json({ ok: true, id: row.id });
+  } catch (e: any) {
+    if (e?.code === 'P2002') return res.status(409).json({ error: 'Ese municipio ya está configurado para el cliente.' });
+    throw e;
+  }
+});
+
+// Editar un municipio ICA.
+adminRouter.patch('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const b = req.body ?? {};
+  const data: Record<string, any> = {};
+  if ('icaPeriodicidad' in b) data.icaPeriodicidad = opt(b.icaPeriodicidad, ICA_PERIOD_OPTS);
+  if ('reteica' in b) data.reteica = !!b.reteica;
+  if ('reteicaPeriodicidad' in b) data.reteicaPeriodicidad = opt(b.reteicaPeriodicidad, ICA_PERIOD_OPTS);
+  if ('autoica' in b) data.autoica = !!b.autoica;
+  if ('autoicaPeriodicidad' in b) data.autoicaPeriodicidad = opt(b.autoicaPeriodicidad, ICA_PERIOD_OPTS);
+  const r = await prisma.empresaMunicipioIca.updateMany({ where: { id: req.params.icaId, empresaId: req.params.empresaId, organizacionId: id }, data });
+  if (r.count === 0) return res.status(404).json({ error: 'Registro ICA no encontrado.' });
+  res.json({ ok: true });
+});
+
+// Quitar un municipio ICA.
+adminRouter.delete('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloAdmin, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const r = await prisma.empresaMunicipioIca.deleteMany({ where: { id: req.params.icaId, empresaId: req.params.empresaId, organizacionId: id } });
+  if (r.count === 0) return res.status(404).json({ error: 'Registro ICA no encontrado.' });
+  res.json({ ok: true });
+});
+
+// Búsqueda de municipios (para el selector de ICA).
+adminRouter.get('/municipios', requireAuth, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.json({ items: [] });
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  const items = await prisma.municipio.findMany({
+    where: { organizacionId: id, ...(q ? { nombre: { contains: q, mode: 'insensitive' } } : {}) },
+    orderBy: { nombre: 'asc' }, take: 20,
+    select: { id: true, nombre: true, departamento: true },
+  });
+  res.json({ items });
+});
+
 // ---------- Plan de trabajo por cliente (PlanClienteActividad) ----------
 
 const soloCoordinacion = requireRol('Administrador', 'Coordinador');
