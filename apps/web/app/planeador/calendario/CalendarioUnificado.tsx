@@ -44,6 +44,8 @@ type Evento = {
   key: string; tipo: 'vencimiento' | 'tarea'; id: string; fecha: string;
   titulo: string; empresa: string | null; etiqueta: string;
   estado: string; estadoLabel: string; color: string; vencido: boolean;
+  // Extras de vencimiento (para su detalle):
+  municipio?: string | null; periodo?: string | null; soporteLink?: string | null; createdAt?: string | null;
 };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -103,6 +105,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           key: `v-${v.id}`, tipo: 'vencimiento', id: v.id, fecha: (v.fechaVencimiento || '').slice(0, 10),
           titulo: v.obligacion, empresa: v.empresa ?? null, etiqueta: 'Vencimientos',
           estado: v.estado, estadoLabel: em.label, color: em.color, vencido: !!v.vencido,
+          municipio: v.municipio ?? null, periodo: v.periodo ?? null, soporteLink: v.soporteLink ?? null, createdAt: v.createdAt ?? null,
         });
       }
       const hoy = hoyISO();
@@ -338,7 +341,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
 
       {detalle && (detalle.tipo === 'tarea'
         ? <TareaDetalleModal id={detalle.id} onClose={() => setDetalle(null)} onChanged={() => cargar(mes)} />
-        : <DetalleModal ev={detalle} onClose={() => setDetalle(null)} onReprogramar={(f) => { reprogramar(detalle, f); setDetalle({ ...detalle, fecha: f }); }} />
+        : <DetalleModal ev={detalle} onClose={() => setDetalle(null)} onChanged={() => cargar(mes)} />
       )}
     </>
   );
@@ -390,29 +393,87 @@ function MultiSelect({ label, opciones, sel, onChange, etiquetar, color, anchoMe
   );
 }
 
-function DetalleModal({ ev, onClose, onReprogramar }: { ev: Evento; onClose: () => void; onReprogramar: (fecha: string) => void }) {
+function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => void; onChanged: () => void }) {
+  const [estado, setEstado] = useState(ev.estado);
+  const [fecha, setFecha] = useState(ev.fecha);
+  const [link, setLink] = useState(ev.soporteLink ?? '');
+  const [guardandoLink, setGuardandoLink] = useState(false);
+  const [linkOk, setLinkOk] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h);
+  }, [onClose]);
+
+  async function patch(body: Record<string, unknown>): Promise<boolean> {
+    setAviso(null);
+    const r = await fetch(`/api/vencimientos/${encodeURIComponent(ev.id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); setAviso(d.error || 'No se pudo guardar.'); return false; }
+    return true;
+  }
+  async function cambiarEstado(nuevo: string) {
+    const prev = estado; setEstado(nuevo);
+    if (await patch({ estado: nuevo })) onChanged(); else setEstado(prev);
+  }
+  async function reprogramar(f: string) {
+    if (!f) return; const prev = fecha; setFecha(f);
+    if (await patch({ fechaVencimiento: f })) onChanged(); else setFecha(prev);
+  }
+  async function guardarLink() {
+    setGuardandoLink(true); setLinkOk(false);
+    if (await patch({ soporteLink: link })) { setLinkOk(true); onChanged(); setTimeout(() => setLinkOk(false), 2000); }
+    setGuardandoLink(false);
+  }
+  const fFecha = (iso?: string | null) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch { return '—'; } };
+
+  const em = VENC_META[estado] ?? { label: estado, color: '#5b6a82' };
+  const vencido = ev.vencido && estado === 'pendiente';
+  const col = vencido ? '#cf4436' : em.color;
+  const ec = ETIQUETA_COLOR['Vencimientos'];
+  const lbl2: React.CSSProperties = { fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' };
+
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(10,18,34,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="panel" style={{ maxWidth: 400, width: '100%', padding: 18 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: ETIQUETA_COLOR[ev.etiqueta] ?? '#9aa3b2', background: `${ETIQUETA_COLOR[ev.etiqueta] ?? '#9aa3b2'}18`, borderRadius: 20, padding: '2px 9px' }}>
-            {ev.tipo === 'vencimiento' ? '🧾 Vencimiento' : `📋 ${ev.etiqueta}`}
-          </span>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} className="panel" style={{ maxWidth: 430, width: '100%', maxHeight: '92vh', overflow: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: ec, background: `${ec}18`, borderRadius: 20, padding: '3px 10px' }}>🧾 Vencimiento</span>
           <button onClick={onClose} className="dbtn" style={{ fontSize: 12 }}>✕</button>
         </div>
-        <h3 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>{ev.titulo}</h3>
-        {ev.empresa && <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>{ev.empresa}</div>}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontSize: 11.5, fontWeight: 800, color: ev.vencido ? '#cf4436' : ev.color, background: `${ev.vencido ? '#cf4436' : ev.color}18`, border: `1px solid ${ev.vencido ? '#cf4436' : ev.color}44`, borderRadius: 4, padding: '3px 9px' }}>
-            {ev.vencido ? 'Vencido' : ev.estadoLabel}
-          </span>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 3px' }}>{ev.titulo}</h3>
+          {ev.empresa && <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{ev.empresa}</div>}
+          {(ev.municipio || ev.periodo) && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{[ev.municipio, ev.periodo].filter(Boolean).join(' · ')}</div>}
         </div>
-        <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Reprogramar fecha</label>
-        <input type="date" defaultValue={ev.fecha} onChange={(e) => { if (e.target.value) onReprogramar(e.target.value); }}
-          style={{ ...selStyle, width: '100%' }} />
-        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '10px 0 0' }}>
-          {ev.tipo === 'vencimiento' ? 'La fecha se guarda contra el vencimiento (requiere Administrador).' : 'La fecha se guarda contra la tarea (requiere coordinación; bloqueada si está aprobada en auditoría).'}
-        </p>
+
+        <div>
+          <div style={{ ...lbl2, marginBottom: 4 }}>Estado</div>
+          <select value={estado} onChange={(e) => cambiarEstado(e.target.value)}
+            style={{ fontSize: 12.5, fontWeight: 800, color: col, background: `${col}18`, border: `1px solid ${col}55`, borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'var(--ui)' }}>
+            {Object.entries(VENC_META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
+          </select>
+        </div>
+
+        {aviso && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{aviso}</div>}
+
+        <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div><div style={lbl2}>Creación</div><div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{fFecha(ev.createdAt)}</div></div>
+          <div><div style={{ ...lbl2, marginBottom: 3 }}>Vencimiento</div>
+            <input type="date" value={fecha} onChange={(e) => reprogramar(e.target.value)} style={{ ...selStyle, width: '100%' }} />
+          </div>
+        </div>
+
+        <div style={{ border: '1px solid color-mix(in srgb, var(--brand, #2E5090) 40%, var(--line))', borderRadius: 8, padding: '11px 13px' }}>
+          <div style={{ ...lbl2, marginBottom: 6 }}>🔗 Soporte documental</div>
+          <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.4 }}>Pega el link (Drive / OneDrive) donde va quedando el trabajo de esta obligación.</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input value={link} onChange={(e) => { setLink(e.target.value); setLinkOk(false); }} placeholder="https://drive.google.com/… o link de OneDrive" style={{ ...selStyle, flex: 1, minWidth: 200 }} />
+            <button onClick={guardarLink} disabled={guardandoLink} className="dbtn primary" style={{ fontSize: 12.5 }}>{guardandoLink ? 'Guardando…' : linkOk ? '✓ Guardado' : 'Guardar'}</button>
+          </div>
+          {ev.soporteLink && <a href={ev.soporteLink} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: 'var(--brand, #2E5090)', wordBreak: 'break-all' }}>↗ Abrir soporte actual</a>}
+        </div>
+
+        <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>Los cambios se guardan contra el vencimiento (requiere Administrador).</p>
       </div>
     </div>
   );

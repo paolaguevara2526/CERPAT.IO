@@ -40,7 +40,7 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
     orderBy: [{ fechaVencimiento: 'asc' }],
     select: {
       id: true, empresaId: true, obligacion: true, periodicidad: true, periodo: true,
-      fechaVencimiento: true, estado: true, notas: true,
+      fechaVencimiento: true, estado: true, notas: true, soporteLink: true, createdAt: true,
       empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
     },
   });
@@ -109,6 +109,7 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
     data.estado = req.body.estado;
   }
   if ('notas' in (req.body ?? {})) data.notas = typeof req.body.notas === 'string' && req.body.notas.trim() ? req.body.notas.trim() : null;
+  if ('soporteLink' in (req.body ?? {})) data.soporteLink = typeof req.body.soporteLink === 'string' && req.body.soporteLink.trim() ? req.body.soporteLink.trim() : null;
   if ('fechaVencimiento' in (req.body ?? {})) {
     const d = new Date(req.body.fechaVencimiento);
     if (isNaN(d.getTime())) return res.status(422).json({ error: 'Fecha inválida.' });
