@@ -194,7 +194,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       const semana = celdas.slice(i, i + 7).map((dia) => {
         if (!dia) return '<td class="empty"></td>';
         const items = porDia.get(`${mes}-${pad(dia)}`) ?? [];
-        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}"><b>${escapar(e.empresa ?? e.titulo)}</b>${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
+        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}"><b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
         return `<td><div class="dn">${dia}</div>${cards}</td>`;
       }).join('');
       filas.push(`<tr>${semana}</tr>`);
@@ -314,8 +314,13 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                             </span>
                           )}
                           <div style={{ fontSize: 10.5, fontWeight: 700, lineHeight: 1.2, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {ev.empresa ?? ev.titulo}
+                            {ev.titulo}
                           </div>
+                          {ev.empresa && (
+                            <div style={{ fontSize: 9.5, lineHeight: 1.2, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {ev.empresa}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
