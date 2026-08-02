@@ -1,0 +1,45 @@
+name: CI
+
+# Chequeo automático en cada PR y en cada push a main: valida el esquema de la
+# base, compila la API (typecheck) y construye el frontend. Es la red de
+# seguridad para que un cambio no rompa producción sin avisar.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Validar y construir
+    runs-on: ubuntu-latest
+    # URL ficticia: prisma validate/generate y los builds NO conectan a la base,
+    # pero Prisma exige que la variable exista para leer el datasource.
+    env:
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Validar esquema y generar cliente Prisma
+        run: |
+          npx prisma validate
+          npx prisma generate
+
+      - name: Compilar API (typecheck)
+        run: npm run build --workspace=apps/api
+
+      - name: Construir Web
+        run: npm run build --workspace=apps/web
