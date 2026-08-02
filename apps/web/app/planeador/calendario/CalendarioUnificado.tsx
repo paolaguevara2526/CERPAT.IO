@@ -299,8 +299,8 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                     display: 'flex', flexDirection: 'column', gap: 3,
                   }}>
                   {dia && <div style={{ fontSize: 11.5, fontWeight: esHoy ? 800 : 600, color: esHoy ? '#1c8a5e' : 'var(--muted)' }}>{dia}</div>}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflowY: 'auto', maxHeight: 128 }}>
-                    {items.slice(0, 4).map((ev) => {
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflowY: 'auto', maxHeight: 200 }}>
+                    {items.map((ev) => {
                       const col = ev.vencido ? '#cf4436' : ev.color;
                       return (
                         <div key={ev.key} draggable
@@ -325,11 +325,6 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                         </div>
                       );
                     })}
-                    {items.length > 4 && (
-                      <div onClick={() => setDetalle(items[4])} style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 700, paddingLeft: 3, cursor: 'pointer' }}>
-                        +{items.length - 4} más
-                      </div>
-                    )}
                   </div>
                 </div>
               );
