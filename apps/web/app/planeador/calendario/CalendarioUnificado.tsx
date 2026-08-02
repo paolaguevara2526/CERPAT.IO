@@ -45,7 +45,7 @@ type Evento = {
   titulo: string; empresa: string | null; etiqueta: string;
   estado: string; estadoLabel: string; color: string; vencido: boolean;
   // Extras de vencimiento (para su detalle):
-  municipio?: string | null; periodo?: string | null; soporteLink?: string | null; createdAt?: string | null;
+  municipio?: string | null; periodo?: string | null; soporteLink?: string | null; createdAt?: string | null; valorPago?: number | null;
 };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -134,7 +134,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           key: `v-${v.id}`, tipo: 'vencimiento', id: v.id, fecha: (v.fechaVencimiento || '').slice(0, 10),
           titulo: v.obligacion, empresa: v.empresa ?? null, etiqueta: 'Vencimientos',
           estado: v.estado, estadoLabel: em.label, color: em.color, vencido: !!v.vencido,
-          municipio: v.municipio ?? null, periodo: v.periodo ?? null, soporteLink: v.soporteLink ?? null, createdAt: v.createdAt ?? null,
+          municipio: v.municipio ?? null, periodo: v.periodo ?? null, soporteLink: v.soporteLink ?? null, createdAt: v.createdAt ?? null, valorPago: v.valorPago ?? null,
         });
       }
       const hoy = hoyISO();
@@ -446,6 +446,9 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
   const [link, setLink] = useState(ev.soporteLink ?? '');
   const [guardandoLink, setGuardandoLink] = useState(false);
   const [linkOk, setLinkOk] = useState(false);
+  const [valor, setValor] = useState(ev.valorPago != null ? String(ev.valorPago) : '');
+  const [guardandoVal, setGuardandoVal] = useState(false);
+  const [valOk, setValOk] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
   useEffect(() => {
@@ -471,6 +474,11 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
     setGuardandoLink(true); setLinkOk(false);
     if (await patch({ soporteLink: link })) { setLinkOk(true); onChanged(); setTimeout(() => setLinkOk(false), 2000); }
     setGuardandoLink(false);
+  }
+  async function guardarValor() {
+    setGuardandoVal(true); setValOk(false);
+    if (await patch({ valorPago: valor === '' ? null : Number(valor) })) { setValOk(true); onChanged(); setTimeout(() => setValOk(false), 2000); }
+    setGuardandoVal(false);
   }
   const fFecha = (iso?: string | null) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch { return '—'; } };
 
@@ -499,6 +507,19 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
             style={{ fontSize: 12.5, fontWeight: 800, color: col, background: `${col}18`, border: `1px solid ${col}55`, borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'var(--ui)' }}>
             {Object.entries(VENC_META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
           </select>
+        </div>
+
+        <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px' }}>
+          <div style={{ ...lbl2, marginBottom: 6 }}>💲 Valor a pagar</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: 9, fontSize: 12, color: 'var(--muted)', pointerEvents: 'none' }}>$</span>
+              <input type="number" min={0} inputMode="numeric" value={valor} onChange={(e) => { setValor(e.target.value); setValOk(false); }} placeholder="0"
+                style={{ ...selStyle, width: 150, paddingLeft: 20, textAlign: 'right' }} />
+            </div>
+            <button onClick={guardarValor} disabled={guardandoVal} className="dbtn" style={{ fontSize: 12.5 }}>{guardandoVal ? 'Guardando…' : valOk ? '✓ Guardado' : 'Guardar valor'}</button>
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--muted)', margin: '8px 0 0', lineHeight: 1.4 }}>Si el estado es <b>Presentado (sin pago)</b>, esta obligación aparece en <b>Pagos</b> con este valor.</p>
         </div>
 
         {aviso && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{aviso}</div>}

@@ -40,13 +40,14 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
     orderBy: [{ fechaVencimiento: 'asc' }],
     select: {
       id: true, empresaId: true, obligacion: true, periodicidad: true, periodo: true,
-      fechaVencimiento: true, estado: true, notas: true, soporteLink: true, createdAt: true,
+      fechaVencimiento: true, estado: true, notas: true, soporteLink: true, valorPago: true, createdAt: true,
       empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
     },
   });
   const hoy = new Date();
   let list = items.map((v) => ({
     ...v, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+    valorPago: v.valorPago != null ? Number(v.valorPago) : null,
     vencido: v.estado === 'pendiente' && v.fechaVencimiento < hoy,
   }));
   if (mes >= 1 && mes <= 12) list = list.filter((v) => v.fechaVencimiento.getMonth() + 1 === mes);
@@ -99,6 +100,32 @@ vencimientosRouter.get('/empresas', requireAuth, async (req: AuthedRequest, res)
   res.json({ empresas: rows.map((r) => r.empresa).sort((a, b) => a.nombre.localeCompare(b.nombre)) });
 });
 
+// GET /vencimientos/pagos?anio= — vencimientos en el ciclo de pago (presentado
+// sin pago / presentado y pagado), con su valor. Alimenta la vista de Pagos.
+vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
+  const org = await orgCerpat();
+  if (!org) return res.json({ total: 0, vencimientos: [] });
+  const anio = Number(req.query.anio) || new Date().getFullYear();
+  const items = await prisma.vencimientoEmpresa.findMany({
+    where: { organizacionId: org.id, anio, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] } },
+    orderBy: [{ estado: 'asc' }, { fechaVencimiento: 'asc' }],
+    select: {
+      id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true,
+      empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
+    },
+  });
+  res.json({
+    anio,
+    total: items.length,
+    vencimientos: items.map((v) => ({
+      id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
+      valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+      empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+    })),
+  });
+});
+
 // PATCH /vencimientos/:id — estado / fecha / notas (Administrador / root).
 vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede editar vencimientos.' });
@@ -110,6 +137,11 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
   }
   if ('notas' in (req.body ?? {})) data.notas = typeof req.body.notas === 'string' && req.body.notas.trim() ? req.body.notas.trim() : null;
   if ('soporteLink' in (req.body ?? {})) data.soporteLink = typeof req.body.soporteLink === 'string' && req.body.soporteLink.trim() ? req.body.soporteLink.trim() : null;
+  if ('valorPago' in (req.body ?? {})) {
+    const v = req.body.valorPago;
+    if (v === null || v === '') data.valorPago = null;
+    else { const n = Number(v); if (!isFinite(n) || n < 0) return res.status(422).json({ error: 'El valor a pagar debe ser un número ≥ 0.' }); data.valorPago = n; }
+  }
   if ('fechaVencimiento' in (req.body ?? {})) {
     const d = new Date(req.body.fechaVencimiento);
     if (isNaN(d.getTime())) return res.status(422).json({ error: 'Fecha inválida.' });

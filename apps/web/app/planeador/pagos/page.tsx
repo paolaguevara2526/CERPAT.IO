@@ -1,10 +1,22 @@
 // apps/web/app/planeador/pagos/page.tsx — Seguimiento de obligaciones con pago.
 
 import { apiFetch } from '@/lib/session';
-import { AREAS, nombrePeriodo } from '../tareas';
+import { nombrePeriodo } from '../tareas';
 import PagoEditor, { ESTADO_PAGO_META } from '../PagoEditor';
+import VencimientoPagoEditor from '../VencimientoPagoEditor';
 
 export const dynamic = 'force-dynamic';
+
+type VencPago = { id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null; fechaVencimiento: string; estado: string; valorPago: number | null };
+async function fetchVencPagos(anio: number): Promise<{ data: { vencimientos: VencPago[] } | null; error: string | null }> {
+  try {
+    const res = await apiFetch(`/vencimientos/pagos?anio=${anio}`);
+    if (!res.ok) return { data: null, error: `La API respondió ${res.status}` };
+    return { data: (await res.json()) as { vencimientos: VencPago[] }, error: null };
+  } catch (e) {
+    return { data: null, error: e instanceof Error ? e.message : 'Error de red' };
+  }
+}
 
 type TareaPago = {
   id: string; titulo: string; empresa: string | null; obligacion: string | null; area: string | null;
@@ -36,6 +48,10 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   if (estadoPago) qs.set('estadoPago', estadoPago);
   const { data, error } = await fetchPagos(qs.toString());
   const tareas = data?.tareas ?? [];
+
+  const anio = new Date().getFullYear();
+  const { data: vdata } = await fetchVencPagos(anio);
+  const vencs = vdata?.vencimientos ?? [];
 
   const totalValor = tareas.reduce((s, t) => s + (t.valorPago ?? 0), 0);
   const pagadas = tareas.filter((t) => t.estadoPago === 'presentado_pagado').length;
@@ -99,6 +115,43 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           </div>
         </div>
       )}
+
+      <div style={{ marginTop: 24 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Vencimientos por pagar</h2>
+        <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
+          Obligaciones tributarias (ICA, etc.) ya presentadas — captura el valor y marca el pago. Aparecen aquí cuando se marcan <strong>Presentado (sin pago)</strong> o <strong>Presentado y pagado</strong>. Año {anio}.
+        </p>
+        {vencs.length === 0 ? (
+          <div className="panel" style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>
+            Aún no hay vencimientos en el ciclo de pago.
+            <div style={{ fontSize: 12, marginTop: 6 }}>Marca un vencimiento como <strong>Presentado (sin pago)</strong> en el Calendario o en Vencimientos y aparecerá aquí.</div>
+          </div>
+        ) : (
+          <div className="panel">
+            <div className="dt-wrap">
+              <table className="dt">
+                <thead>
+                  <tr><th>Obligación</th><th>Cliente</th><th>Municipio</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th>Valor y estado de pago</th></tr>
+                </thead>
+                <tbody>
+                  {vencs.map((v) => {
+                    const vencido = new Date(v.fechaVencimiento) < new Date() && v.estado !== 'presentado_pagado';
+                    return (
+                      <tr key={v.id}>
+                        <td style={{ fontWeight: 600 }}>{v.obligacion}{v.periodo ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {v.periodo}</span> : null}</td>
+                        <td style={{ color: 'var(--muted)' }}>{v.empresa ?? '—'}</td>
+                        <td style={{ color: 'var(--muted)' }}>{v.municipio ?? '—'}</td>
+                        <td style={{ whiteSpace: 'nowrap', fontWeight: vencido ? 800 : 500, color: vencido ? '#d64b3f' : 'var(--muted)' }}>{fmtFecha(v.fechaVencimiento)}</td>
+                        <td><VencimientoPagoEditor id={v.id} valorPago={v.valorPago} estado={v.estado} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   );
 }
