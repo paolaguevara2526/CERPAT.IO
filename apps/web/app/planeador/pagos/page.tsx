@@ -2,7 +2,7 @@
 
 import { apiFetch } from '@/lib/session';
 import { nombrePeriodo } from '../tareas';
-import PagoEditor, { ESTADO_PAGO_META } from '../PagoEditor';
+import PagoEditor from '../PagoEditor';
 import VencimientoPagoEditor from '../VencimientoPagoEditor';
 
 export const dynamic = 'force-dynamic';
@@ -44,18 +44,26 @@ function fmtCOP(v: number): string {
 
 export default async function PagosPage({ searchParams }: { searchParams?: Record<string, string> }) {
   const estadoPago = searchParams?.estadoPago || '';
-  const qs = new URLSearchParams();
-  if (estadoPago) qs.set('estadoPago', estadoPago);
-  const { data, error } = await fetchPagos(qs.toString());
-  const tareas = data?.tareas ?? [];
+  const cliente = searchParams?.cliente || '';
+  const hayFiltro = !!(estadoPago || cliente);
 
+  const { data, error } = await fetchPagos('');
+  const tareasAll = data?.tareas ?? [];
   const anio = new Date().getFullYear();
   const { data: vdata } = await fetchVencPagos(anio);
-  const vencs = vdata?.vencimientos ?? [];
+  const vencsAll = vdata?.vencimientos ?? [];
 
-  const totalValor = tareas.reduce((s, t) => s + (t.valorPago ?? 0), 0);
-  const pagadas = tareas.filter((t) => t.estadoPago === 'presentado_pagado').length;
-  const pendientes = tareas.filter((t) => t.estadoPago === 'pendiente' || t.estadoPago === 'no_presentado').length;
+  // Opciones de cliente (unión de tareas + vencimientos).
+  const clientes = [...new Set([...tareasAll.map((t) => t.empresa), ...vencsAll.map((v) => v.empresa)].filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
+
+  // Filtros aplicados a ambas secciones.
+  const tareas = tareasAll.filter((t) => (!estadoPago || t.estadoPago === estadoPago) && (!cliente || t.empresa === cliente));
+  const vencs = vencsAll.filter((v) => (!estadoPago || v.estado === estadoPago) && (!cliente || v.empresa === cliente));
+
+  const totalValor = tareas.reduce((s, t) => s + (t.valorPago ?? 0), 0)
+    + vencs.reduce((s, v) => s + (v.valorPago ?? 0), 0);
+  const pagadas = tareas.filter((t) => t.estadoPago === 'presentado_pagado').length + vencs.filter((v) => v.estado === 'presentado_pagado').length;
+  const pendientes = tareas.filter((t) => t.estadoPago === 'pendiente' || t.estadoPago === 'no_presentado').length + vencs.filter((v) => v.estado === 'presentado_sin_pago').length;
 
   const sel: React.CSSProperties = { padding: '8px 11px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
 
@@ -67,7 +75,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
       </div>
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 14px' }}>Obligaciones con pago (DIAN/entidades) del período. El ejecutor digita el valor y marca el estado de presentación y pago.</p>
 
-      {!error && tareas.length > 0 && (
+      {!error && (tareas.length > 0 || vencs.length > 0) && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 16 }}>
           <div className="tile"><div className="k">Valor total</div><div className="v" style={{ color: 'var(--navy)', fontSize: 22 }}>${fmtCOP(totalValor)}</div><div className="s">digitado</div></div>
           <div className="tile"><div className="k">Pagadas</div><div className="v" style={{ color: '#22a670' }}>{pagadas}</div><div className="s">presentadas y pagadas</div></div>
@@ -76,11 +84,19 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
       )}
 
       <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, alignItems: 'center' }}>
+        <select name="cliente" defaultValue={cliente} style={{ ...sel, maxWidth: 240 }}>
+          <option value="">Todos los clientes</option>
+          {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
         <select name="estadoPago" defaultValue={estadoPago} style={sel}>
           <option value="">Todos los estados de pago</option>
-          {Object.entries(ESTADO_PAGO_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          <option value="pendiente">Pendiente</option>
+          <option value="presentado_sin_pago">Presentado (sin pago)</option>
+          <option value="presentado_pagado">Presentado y pagado</option>
+          <option value="no_presentado">No presentado</option>
         </select>
         <button type="submit" className="dbtn primary" style={{ fontSize: 13 }}>Filtrar</button>
+        {hayFiltro && <a href="/planeador/pagos" className="dbtn" style={{ fontSize: 13, textDecoration: 'none' }}>Limpiar</a>}
       </form>
 
       {error ? (
