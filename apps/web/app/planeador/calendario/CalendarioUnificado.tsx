@@ -67,9 +67,10 @@ function hoyISO(): string {
 
 export default function CalendarioUnificado({ mesInicial }: { mesInicial?: string }) {
   const [mes, setMes] = useState(() => mesValido(mesInicial));
-  const [etiqueta, setEtiqueta] = useState('');
-  const [cliente, setCliente] = useState('');
+  const [etiquetas, setEtiquetas] = useState<string[]>([]);
+  const [clientesSel, setClientesSel] = useState<string[]>([]);
   const [cumpl, setCumpl] = useState('');
+  const [mostrarEstados, setMostrarEstados] = useState(true);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,13 +134,13 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
 
   const visibles = useMemo(
     () => eventos.filter((e) =>
-      (!etiqueta || e.etiqueta === etiqueta) &&
-      (!cliente || e.empresa === cliente) &&
+      (etiquetas.length === 0 || etiquetas.includes(e.etiqueta)) &&
+      (clientesSel.length === 0 || (e.empresa != null && clientesSel.includes(e.empresa))) &&
       (!cumpl || clasificar(e) === cumpl),
     ),
-    [eventos, etiqueta, cliente, cumpl],
+    [eventos, etiquetas, clientesSel, cumpl],
   );
-  const hayFiltro = !!(etiqueta || cliente || cumpl);
+  const hayFiltro = etiquetas.length > 0 || clientesSel.length > 0 || !!cumpl;
   const porDia = useMemo(() => {
     const map = new Map<string, Evento[]>();
     for (const e of visibles) {
@@ -193,7 +194,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       const semana = celdas.slice(i, i + 7).map((dia) => {
         if (!dia) return '<td class="empty"></td>';
         const items = porDia.get(`${mes}-${pad(dia)}`) ?? [];
-        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}"><b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}<i style="color:${e.color}">${escapar(e.estadoLabel)}</i></div>`).join('');
+        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}"><b>${escapar(e.empresa ?? e.titulo)}</b>${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
         return `<td><div class="dn">${dia}</div>${cards}</td>`;
       }).join('');
       filas.push(`<tr>${semana}</tr>`);
@@ -210,7 +211,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       .c b{display:block;} .c span{display:block;color:#667;} .c i{font-style:normal;font-size:8px;}
       @media print{@page{size:landscape;margin:10mm;}}
     </style></head><body>
-      <h1>Calendario — ${titulo}${etiqueta ? ` · ${etiqueta}` : ''}</h1>
+      <h1>Calendario — ${titulo}${etiquetas.length ? ` · ${etiquetas.join(', ')}` : ''}</h1>
       <div class="sub">Plan de trabajo y vencimientos tributarios · CERPAT</div>
       <table><thead><tr>${DIAS.map((d) => `<th>${d}</th>`).join('')}</tr></thead><tbody>${filas.join('')}</tbody></table>
     </body></html>`);
@@ -230,29 +231,26 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           <span style={{ fontSize: 13.5, fontWeight: 700, textTransform: 'capitalize', minWidth: 140, textAlign: 'center' }}>{MESES[m - 1]} {y}</span>
           <button onClick={() => setMes(desplazarMes(mes, 1))} className="dbtn" style={{ fontSize: 13 }}>›</button>
           <button onClick={() => setMes(mesActual())} className="dbtn" style={{ fontSize: 12.5 }}>Hoy</button>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }} title="Mostrar u ocultar los estados en las tarjetas">
+            <input type="checkbox" checked={mostrarEstados} onChange={(e) => setMostrarEstados(e.target.checked)} style={{ accentColor: '#2E5090' }} /> Estados
+          </label>
           <button onClick={imprimir} className="dbtn" style={{ fontSize: 12.5 }}>🖨 Imprimir</button>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <select value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} style={selStyle} title="Filtrar por etiqueta">
-          <option value="">Todas las etiquetas</option>
-          <option value="Vencimientos">🧾 Vencimientos</option>
-          {AREAS.map((a) => <option key={a} value={a}>📋 {a}</option>)}
-        </select>
-        <select value={cliente} onChange={(e) => setCliente(e.target.value)} style={{ ...selStyle, maxWidth: 220 }} title="Filtrar por cliente">
-          <option value="">Todos los clientes</option>
-          {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <MultiSelect label="Etiquetas" opciones={['Vencimientos', ...AREAS]} sel={etiquetas} onChange={setEtiquetas}
+          etiquetar={(o) => (o === 'Vencimientos' ? '🧾 ' : '📋 ') + o} color={(o) => ETIQUETA_COLOR[o]} />
+        <MultiSelect label="Clientes" opciones={clientes} sel={clientesSel} onChange={setClientesSel} anchoMenu={260} />
         <select value={cumpl} onChange={(e) => setCumpl(e.target.value)} style={selStyle} title="Filtrar por estado">
           <option value="">Todos los estados</option>
           <option value="pendiente">Pendientes</option>
           <option value="vencido">Vencidos</option>
           <option value="cumplido">Cumplidos</option>
         </select>
-        {hayFiltro && <button onClick={() => { setEtiqueta(''); setCliente(''); setCumpl(''); }} className="dbtn" style={{ fontSize: 12 }}>Limpiar</button>}
+        {hayFiltro && <button onClick={() => { setEtiquetas([]); setClientesSel([]); setCumpl(''); }} className="dbtn" style={{ fontSize: 12 }}>Limpiar</button>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11, color: 'var(--muted)' }}>
-          {(etiqueta ? [etiqueta] : ['Vencimientos', ...AREAS]).map((et) => (
+          {(etiquetas.length ? etiquetas : ['Vencimientos', ...AREAS]).map((et) => (
             <span key={et} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 9, height: 9, borderRadius: 3, background: ETIQUETA_COLOR[et] ?? '#9aa3b2' }} /> {et}
             </span>
@@ -310,9 +308,11 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                           onClick={() => setDetalle(ev)}
                           title={`${ev.titulo}${ev.empresa ? ' · ' + ev.empresa : ''} · ${ev.estadoLabel}`}
                           style={{ borderLeft: `3px solid ${col}`, background: `${col}12`, borderRadius: 4, padding: '3px 6px', cursor: 'grab' }}>
-                          <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: col, background: `${col}22`, borderRadius: 20, padding: '0 6px', marginBottom: 2 }}>
-                            {ev.vencido ? 'Vencido' : ev.estadoLabel}
-                          </span>
+                          {mostrarEstados && (
+                            <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: col, background: `${col}22`, borderRadius: 20, padding: '0 6px', marginBottom: 2 }}>
+                              {ev.vencido ? 'Vencido' : ev.estadoLabel}
+                            </span>
+                          )}
                           <div style={{ fontSize: 10.5, fontWeight: 700, lineHeight: 1.2, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {ev.empresa ?? ev.titulo}
                           </div>
@@ -337,6 +337,52 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
 
       {detalle && <DetalleModal ev={detalle} onClose={() => setDetalle(null)} onReprogramar={(f) => { reprogramar(detalle, f); setDetalle({ ...detalle, fecha: f }); }} />}
     </>
+  );
+}
+
+// Desplegable de selección múltiple con casillas (cierra al hacer clic fuera).
+function MultiSelect({ label, opciones, sel, onChange, etiquetar, color, anchoMenu }: {
+  label: string; opciones: string[]; sel: string[]; onChange: (v: string[]) => void;
+  etiquetar?: (o: string) => string; color?: (o: string) => string | undefined; anchoMenu?: number;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [abierto]);
+  const resumen = sel.length === 0 ? 'Todos' : sel.length === 1 ? sel[0] : `${sel.length} seleccionados`;
+  const toggle = (o: string) => onChange(sel.includes(o) ? sel.filter((x) => x !== o) : [...sel, o]);
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setAbierto((v) => !v)} title={`Filtrar por ${label.toLowerCase()}`}
+        style={{ ...selStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, maxWidth: 240, minWidth: 150 }}>
+        <span style={{ fontWeight: 700 }}>{label}:</span>
+        <span style={{ color: sel.length ? 'var(--ink)' : 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{resumen}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--muted)' }}>▾</span>
+      </button>
+      {abierto && (
+        <div className="panel" style={{ position: 'absolute', zIndex: 30, top: 'calc(100% + 4px)', left: 0, minWidth: anchoMenu ?? 190, maxHeight: 300, overflowY: 'auto', padding: 6, boxShadow: '0 8px 26px rgba(10,18,34,0.20)' }}>
+          {opciones.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)', padding: '6px 8px' }}>Sin opciones este mes</div>}
+          {opciones.map((o) => {
+            const activo = sel.includes(o);
+            const col = color?.(o);
+            return (
+              <label key={o} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12.5, background: activo ? 'var(--panel-2)' : 'transparent' }}>
+                <input type="checkbox" checked={activo} onChange={() => toggle(o)} style={{ accentColor: '#2E5090' }} />
+                {col && <span style={{ width: 9, height: 9, borderRadius: 3, background: col, flex: '0 0 auto' }} />}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{etiquetar ? etiquetar(o) : o}</span>
+              </label>
+            );
+          })}
+          {sel.length > 0 && (
+            <button type="button" onClick={() => onChange([])} className="dbtn" style={{ fontSize: 11.5, width: '100%', marginTop: 4 }}>Quitar selección</button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
