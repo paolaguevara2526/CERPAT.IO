@@ -754,6 +754,7 @@ model VencimientoEmpresa {
   generado       Boolean    @default(true) // creado por el generador (vs. agregado a mano)
   notas          String?
   soporteLink    String? // link (Drive/OneDrive) donde va quedando el trabajo de la obligación
+  valorPago      Decimal?   @db.Decimal(14, 2) // valor a pagar de la obligación (cuando da valor)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
