@@ -220,14 +220,27 @@ planRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) => {
     ? req.query.periodo
     : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const estadoPago = typeof req.query.estadoPago === 'string' ? req.query.estadoPago : undefined;
+  // Tablero de control: además del mes elegido, arrastra las obligaciones de
+  // meses anteriores (mismo año) que siguen sin pagar y ya vencieron.
+  const incluirAtrasadas = req.query.incluirAtrasadas === '1' || req.query.incluirAtrasadas === 'true';
+  const filtroEstado = estadoPago && ESTADOS_PAGO.includes(estadoPago) ? { estadoPago: estadoPago as any } : {};
+  const anioSel = periodo.slice(0, 4);
 
   const tareas = await prisma.tarea.findMany({
     where: {
       organizacionId: org.id,
       actividadPlanId: { not: null },
-      periodo,
       generaPago: true,
-      ...(estadoPago && ESTADOS_PAGO.includes(estadoPago) ? { estadoPago: estadoPago as any } : {}),
+      ...filtroEstado,
+      ...(incluirAtrasadas
+        ? {
+            OR: [
+              { periodo },
+              // atrasadas: meses anteriores del año, sin pagar y ya vencidas
+              { periodo: { gte: `${anioSel}-01`, lt: periodo }, estadoPago: { not: 'presentado_pagado' as any }, fechaVencimiento: { lt: now } },
+            ],
+          }
+        : { periodo }),
     },
     select: {
       id: true, titulo: true, estado: true, valorPago: true, estadoPago: true,
@@ -239,7 +252,7 @@ planRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) => {
       auxiliar: { select: { nombre: true } },
     },
     orderBy: [{ fechaVencimiento: 'asc' }, { titulo: 'asc' }],
-    take: 500,
+    take: 800,
   });
 
   res.json({

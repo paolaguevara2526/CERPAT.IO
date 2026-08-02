@@ -76,10 +76,16 @@ una tarea abre su **modal completo** (pestañas General/Fiscal/Auditoría) y cli
 en un vencimiento su detalle; ambos con **Soporte Documental** (link editable
 Drive/OneDrive donde va quedando el trabajo).
 
-**`cerpat.io/planeador/pagos` — Pagos.** Suma las tareas con pago y los
-**vencimientos por pagar** (presentados). Los vencimientos ganaron **valor a
-pagar** (`valorPago`); al marcarlos "Presentado (sin pago)" aparecen aquí.
-Filtros por cliente y estado. Además, sección **"Pagos pendientes"** para
+**`cerpat.io/planeador/pagos` — Pagos (tablero de control).** Pensado para el
+**coordinador de impuestos**: KPIs de riesgo en pesos (**Pagado**, **Por pagar**,
+**Presentado sin pagar** y **Vencido sin pagar**), **semáforo de urgencia** por
+días (*vence en N d* / *vencido hace N d*) y orden por urgencia (lo más vencido
+arriba). Filtros por cliente, estado, **mes**, **alcance** (solo el mes vs. mes +
+atrasadas de meses anteriores sin pagar) y **"solo vencidas"**. Suma las tareas
+con pago y los **vencimientos por pagar** (presentados): al marcarlos "Presentado
+(sin pago)" entran al ciclo con su **valor a pagar** (`valorPago`). El arrastre de
+atrasadas se apoya en `GET /plan/pagos?periodo&incluirAtrasadas`. Además, sección
+**"Pagos pendientes"** para
 registrar a mano **deudas de años anteriores** o impuestos que no se cargaron al
 sistema: el Administrador crea la entrada (cliente, obligación, año, período,
 vencimiento, valor, notas), la edita y la elimina. Se guardan como
