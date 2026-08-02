@@ -68,6 +68,35 @@ function hoyISO(): string {
   return `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`;
 }
 
+// ---- Festivos de Colombia (calculados: fijos + Ley Emiliani + Pascua) ----
+function isoUTC(d: Date): string { return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; }
+function pascua(y: number): Date {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(y, mes - 1, dia));
+}
+// Traslada al lunes siguiente (Ley Emiliani); si ya es lunes, se queda.
+function proximoLunes(d: Date): Date {
+  const r = new Date(d), dow = r.getUTCDay();
+  r.setUTCDate(r.getUTCDate() + (dow === 1 ? 0 : dow === 0 ? 1 : 8 - dow));
+  return r;
+}
+function festivosColombia(y: number): Set<string> {
+  const s = new Set<string>();
+  const fijo = (mo: number, da: number) => s.add(`${y}-${pad(mo)}-${pad(da)}`);
+  const emiliani = (mo: number, da: number) => s.add(isoUTC(proximoLunes(new Date(Date.UTC(y, mo - 1, da)))));
+  fijo(1, 1); fijo(5, 1); fijo(7, 20); fijo(8, 7); fijo(12, 8); fijo(12, 25);
+  emiliani(1, 6); emiliani(3, 19); emiliani(6, 29); emiliani(8, 15); emiliani(10, 12); emiliani(11, 1); emiliani(11, 11);
+  const p = pascua(y);
+  const rel = (off: number) => { const d = new Date(p); d.setUTCDate(d.getUTCDate() + off); return isoUTC(d); };
+  s.add(rel(-3)); s.add(rel(-2)); // Jueves y Viernes Santo
+  s.add(rel(43)); s.add(rel(64)); s.add(rel(71)); // Ascensión, Corpus Christi, Sagrado Corazón (ya caen en lunes)
+  return s;
+}
+
 export default function CalendarioUnificado({ mesInicial }: { mesInicial?: string }) {
   const [mes, setMes] = useState(() => mesValido(mesInicial));
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
@@ -224,6 +253,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
     setTimeout(() => w.print(), 300);
   }
 
+  const festivos = festivosColombia(y);
   const totalMes = [...porDia.values()].reduce((n, a) => n + a.length, 0);
 
   return (
@@ -276,14 +306,16 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       ) : (
         <div className="panel" style={{ padding: 0, overflow: 'hidden', opacity: cargando ? 0.6 : 1, transition: 'opacity .15s' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
-            {DIAS.map((d) => (
-              <div key={d} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', color: 'var(--muted)', borderBottom: '1px solid var(--line)', background: 'var(--panel-2)' }}>{d}</div>
+            {DIAS.map((d, idx) => (
+              <div key={d} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', color: idx >= 5 ? '#8a94a6' : 'var(--muted)', borderBottom: '1px solid var(--line)', background: idx >= 5 ? 'rgba(91,106,130,0.12)' : 'var(--panel-2)' }}>{d}</div>
             ))}
             {celdas.map((dia, i) => {
               const diaISO = dia ? `${mes}-${pad(dia)}` : '';
               const items = dia ? (porDia.get(diaISO) ?? []) : [];
               const esHoy = diaISO === hoy;
               const activo = sobreDia === diaISO && arrastrando;
+              const finde = !!dia && (i % 7) >= 5;            // sábado/domingo
+              const festivo = !!dia && festivos.has(diaISO);  // festivo de Colombia
               return (
                 <div key={i}
                   onDragOver={(e) => { if (arrastrando && dia) { e.preventDefault(); setSobreDia(diaISO); } }}
@@ -297,11 +329,21 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                   }}
                   style={{
                     minHeight: 104, padding: 6, borderRight: (i + 1) % 7 === 0 ? 'none' : '1px solid var(--line)', borderBottom: '1px solid var(--line)',
-                    background: !dia ? 'var(--panel-2)' : activo ? 'rgba(46,80,144,0.10)' : esHoy ? 'rgba(52,201,139,0.08)' : 'var(--panel)',
+                    background: !dia ? 'var(--panel-2)'
+                      : activo ? 'rgba(46,80,144,0.10)'
+                      : esHoy ? 'rgba(52,201,139,0.10)'
+                      : festivo ? 'rgba(207,68,54,0.16)'
+                      : finde ? 'rgba(91,106,130,0.16)'
+                      : 'var(--panel)',
                     outline: activo ? '2px dashed var(--brand, #2E5090)' : 'none', outlineOffset: -2,
                     display: 'flex', flexDirection: 'column', gap: 3,
                   }}>
-                  {dia && <div style={{ fontSize: 11.5, fontWeight: esHoy ? 800 : 600, color: esHoy ? '#1c8a5e' : 'var(--muted)' }}>{dia}</div>}
+                  {dia && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                      <span style={{ fontSize: 11.5, fontWeight: esHoy ? 800 : 600, color: esHoy ? '#1c8a5e' : festivo ? '#cf4436' : finde ? '#8a94a6' : 'var(--muted)' }}>{dia}</span>
+                      {festivo && <span title="Día festivo — no se labora" style={{ fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#cf4436', background: '#cf443618', borderRadius: 10, padding: '0 5px' }}>Festivo</span>}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflowY: 'auto', maxHeight: 200 }}>
                     {items.map((ev) => {
                       const col = ev.vencido ? '#cf4436' : ev.color;
@@ -335,8 +377,13 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           </div>
         </div>
       )}
-      <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '10px 2px 0' }}>
-        Cada tarjeta es una tarea o un vencimiento en su fecha. Arrástrala a otro día para reprogramarla; haz clic para ver el detalle. El color indica el estado (rojo = vencido).
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center', margin: '10px 2px 0', fontSize: 11, color: 'var(--muted)' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(52,201,139,0.25)', border: '1px solid #34C98B' }} /> Hoy</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(91,106,130,0.16)' }} /> Sáb/Dom (no se labora)</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(207,68,54,0.15)' }} /> Festivo (no se labora)</span>
+      </div>
+      <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '6px 2px 0' }}>
+        Cada tarjeta es una tarea o un vencimiento en su fecha. Arrástrala a otro día para reprogramarla; haz clic para ver el detalle. El color de la tarjeta indica el estado (rojo = vencido).
       </p>
 
       {detalle && (detalle.tipo === 'tarea'
