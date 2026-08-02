@@ -10,7 +10,7 @@ async function forward(req: Request, path: string[], method: string) {
   if (!token) return NextResponse.json({ error: 'No autenticado.' }, { status: 401 });
   const url = new URL(req.url);
   const suffix = `${path.map(encodeURIComponent).join('/')}${url.search}`;
-  const body = ['POST', 'PATCH', 'PUT'].includes(method) ? await req.text() : undefined;
+  const body = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) && req.body ? await req.text() : undefined;
   const res = await fetch(`${API_URL}/vencimientos/${suffix}`, {
     method,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -24,3 +24,4 @@ async function forward(req: Request, path: string[], method: string) {
 type Ctx = { params: { path: string[] } };
 export async function GET(req: Request, { params }: Ctx) { return forward(req, params.path, 'GET'); }
 export async function PATCH(req: Request, { params }: Ctx) { return forward(req, params.path, 'PATCH'); }
+export async function DELETE(req: Request, { params }: Ctx) { return forward(req, params.path, 'DELETE'); }

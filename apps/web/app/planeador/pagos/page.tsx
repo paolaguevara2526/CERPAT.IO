@@ -4,6 +4,7 @@ import { apiFetch } from '@/lib/session';
 import { nombrePeriodo } from '../tareas';
 import PagoEditor from '../PagoEditor';
 import VencimientoPagoEditor from '../VencimientoPagoEditor';
+import PendientesManuales from '../PendientesManuales';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,28 @@ async function fetchPagos(qs: string): Promise<{ data: Resp | null; error: strin
   }
 }
 
+type Pendiente = {
+  id: string; obligacion: string; anio: number; periodo: string | null; municipio: string | null;
+  empresa: string | null; fechaVencimiento: string; estado: string; valorPago: number | null; notas: string | null;
+};
+async function fetchPendientes(): Promise<Pendiente[]> {
+  try {
+    const res = await apiFetch('/vencimientos/pendientes');
+    if (!res.ok) return [];
+    return ((await res.json()) as { pendientes: Pendiente[] }).pendientes ?? [];
+  } catch { return []; }
+}
+
+type EmpresaLite = { id: string; nombre: string };
+async function fetchEmpresas(): Promise<EmpresaLite[]> {
+  try {
+    const res = await apiFetch('/empresas');
+    if (!res.ok) return [];
+    const data = (await res.json()) as { empresas: EmpresaLite[] };
+    return (data.empresas ?? []).map((e) => ({ id: e.id, nombre: e.nombre }));
+  } catch { return []; }
+}
+
 function fmtFecha(iso: string): string {
   try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return ''; }
 }
@@ -52,6 +75,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const anio = new Date().getFullYear();
   const { data: vdata } = await fetchVencPagos(anio);
   const vencsAll = vdata?.vencimientos ?? [];
+  const [pendientesManuales, empresas] = await Promise.all([fetchPendientes(), fetchEmpresas()]);
 
   // Opciones de cliente (unión de tareas + vencimientos).
   const clientes = [...new Set([...tareasAll.map((t) => t.empresa), ...vencsAll.map((v) => v.empresa)].filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
@@ -168,6 +192,8 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           </div>
         )}
       </div>
+
+      <PendientesManuales empresas={empresas} pendientes={pendientesManuales} />
     </>
   );
 }

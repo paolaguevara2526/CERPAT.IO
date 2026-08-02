@@ -79,7 +79,13 @@ Drive/OneDrive donde va quedando el trabajo).
 **`cerpat.io/planeador/pagos` — Pagos.** Suma las tareas con pago y los
 **vencimientos por pagar** (presentados). Los vencimientos ganaron **valor a
 pagar** (`valorPago`); al marcarlos "Presentado (sin pago)" aparecen aquí.
-Filtros por cliente y estado.
+Filtros por cliente y estado. Además, sección **"Pagos pendientes"** para
+registrar a mano **deudas de años anteriores** o impuestos que no se cargaron al
+sistema: el Administrador crea la entrada (cliente, obligación, año, período,
+vencimiento, valor, notas), la edita y la elimina. Se guardan como
+`VencimientoEmpresa` con `generado=false` (sin migración: el campo ya existía) y
+se listan aparte de los vencimientos del generador — API `POST /vencimientos`,
+`GET /vencimientos/pendientes`, `DELETE /vencimientos/:id`.
 
 **Calidad / infraestructura** — se adoptaron **migraciones versionadas de
 Prisma** (fin del SQL manual y del *drift*) y **CI en cada PR** (valida esquema +

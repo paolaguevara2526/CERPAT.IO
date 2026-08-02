@@ -108,7 +108,9 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
   if (!org) return res.json({ total: 0, vencimientos: [] });
   const anio = Number(req.query.anio) || new Date().getFullYear();
   const items = await prisma.vencimientoEmpresa.findMany({
-    where: { organizacionId: org.id, anio, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] } },
+    // Solo los generados por el sistema: los pagos pendientes agregados a mano
+    // (generado=false) viven en su propia sección para no duplicarse aquí.
+    where: { organizacionId: org.id, anio, generado: true, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] } },
     orderBy: [{ estado: 'asc' }, { fechaVencimiento: 'asc' }],
     select: {
       id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true,
@@ -124,6 +126,88 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
       empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
     })),
   });
+});
+
+// GET /vencimientos/pendientes — pagos pendientes agregados a mano
+// (generado=false), de cualquier año. Sirve para registrar deudas de años
+// anteriores o impuestos que no se cargaron al sistema. Alimenta la sección
+// "Pagos pendientes" en la vista de Pagos.
+vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
+  const org = await orgCerpat();
+  if (!org) return res.json({ total: 0, pendientes: [] });
+  const items = await prisma.vencimientoEmpresa.findMany({
+    where: { organizacionId: org.id, generado: false },
+    orderBy: [{ estado: 'asc' }, { anio: 'desc' }, { fechaVencimiento: 'asc' }],
+    select: {
+      id: true, obligacion: true, anio: true, periodo: true, fechaVencimiento: true, estado: true,
+      valorPago: true, notas: true,
+      empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
+    },
+  });
+  res.json({
+    total: items.length,
+    pendientes: items.map((v) => ({
+      id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
+      estado: v.estado, notas: v.notas, valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+      empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+    })),
+  });
+});
+
+// POST /vencimientos — registra un pago pendiente a mano (Administrador / root).
+// Para deudas de años anteriores o impuestos que no se cargaron. Se marca
+// generado=false para distinguirlo de los vencimientos del generador.
+vencimientosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede agregar pagos pendientes.' });
+  const org = await orgCerpat();
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const b = req.body ?? {};
+
+  const empresaId = typeof b.empresaId === 'string' ? b.empresaId.trim() : '';
+  if (!empresaId) return res.status(422).json({ error: 'Selecciona un cliente.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: empresaId, organizacionId: org.id }, select: { id: true } });
+  if (!empresa) return res.status(422).json({ error: 'Cliente no válido.' });
+
+  const obligacion = typeof b.obligacion === 'string' ? b.obligacion.trim() : '';
+  if (!obligacion) return res.status(422).json({ error: 'Indica la obligación (p. ej. IVA, Renta, ICA).' });
+
+  const anio = Number(b.anio);
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) return res.status(422).json({ error: 'Año inválido.' });
+
+  const fecha = new Date(b.fechaVencimiento);
+  if (isNaN(fecha.getTime())) return res.status(422).json({ error: 'Fecha de vencimiento inválida.' });
+
+  const estado = typeof b.estado === 'string' && ESTADOS.includes(b.estado) ? b.estado : 'pendiente';
+
+  let valorPago: number | null = null;
+  if (b.valorPago != null && b.valorPago !== '') {
+    const n = Number(b.valorPago);
+    if (!isFinite(n) || n < 0) return res.status(422).json({ error: 'El valor a pagar debe ser un número ≥ 0.' });
+    valorPago = n;
+  }
+  const periodo = typeof b.periodo === 'string' && b.periodo.trim() ? b.periodo.trim() : null;
+  const notas = typeof b.notas === 'string' && b.notas.trim() ? b.notas.trim() : null;
+
+  const creado = await prisma.vencimientoEmpresa.create({
+    data: {
+      organizacionId: org.id, empresaId, anio, obligacion, periodo,
+      fechaVencimiento: fecha, estado: estado as any, valorPago, notas, generado: false,
+    },
+    select: { id: true },
+  });
+  res.status(201).json({ ok: true, id: creado.id });
+});
+
+// DELETE /vencimientos/:id — elimina un pago pendiente agregado a mano
+// (Administrador / root). Solo entradas manuales (generado=false); los
+// vencimientos del generador no se borran desde aquí.
+vencimientosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede eliminar pagos pendientes.' });
+  const org = await orgCerpat();
+  const r = await prisma.vencimientoEmpresa.deleteMany({ where: { id: req.params.id, organizacionId: org?.id, generado: false } });
+  if (r.count === 0) return res.status(404).json({ error: 'Pago pendiente no encontrado (o no es una entrada manual).' });
+  res.json({ ok: true });
 });
 
 // PATCH /vencimientos/:id — estado / fecha / notas (Administrador / root).
