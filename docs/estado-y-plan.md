@@ -87,6 +87,17 @@ vencimiento, valor, notas), la edita y la elimina. Se guardan como
 se listan aparte de los vencimientos del generador — API `POST /vencimientos`,
 `GET /vencimientos/pendientes`, `DELETE /vencimientos/:id`.
 
+**Regenerar vencimientos por cliente.** En **Administración → Config. tributaria**,
+tras corregir un parámetro, el botón **"Regenerar vencimientos"** rehace los
+vencimientos **nacionales** del cliente según su config actual (cruce con el
+calendario 2026 embebido en la API, `apps/api/src/vencimientos/`, y el NIT). Es
+**seguro con los pagos**: crea los que faltan, ajusta fechas y borra los
+sobrantes que quedaron **sin trabajar**, pero **conserva** los que ya tienen
+valor/estado/nota/soporte, y **nunca toca** el ICA municipal ni las entradas
+manuales (`generado=false`). API `POST /vencimientos/regenerar/:empresaId` (solo
+Administrador). El calendario `.ts` se regenera desde los CSV de `docs/data/` con
+`node apps/api/scripts/build-calendario.mjs`.
+
 **Calidad / infraestructura** — se adoptaron **migraciones versionadas de
 Prisma** (fin del SQL manual y del *drift*) y **CI en cada PR** (valida esquema +
 compila API y web). Curaduría estructural completa en
