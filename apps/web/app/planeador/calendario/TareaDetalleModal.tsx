@@ -66,7 +66,10 @@ export default function TareaDetalleModal({ id, onClose, onChanged }: { id: stri
       const r = await fetch(`/api/planeador/gestion/tareas/${id}/detalle`, { cache: 'no-store' });
       const d = await r.json();
       if (!r.ok) { setError(d.error || 'No se pudo cargar la tarea.'); return; }
-      setT(d.tarea); setLink(d.tarea.soporteLink ?? '');
+      const tt = d.tarea ?? {};
+      // Defensivo: si la API aún no trae los campos nuevos, no romper el render.
+      setT({ ...tt, asignados: Array.isArray(tt.asignados) ? tt.asignados : [], etiquetas: Array.isArray(tt.etiquetas) ? tt.etiquetas : [] });
+      setLink(tt.soporteLink ?? '');
     } catch { setError('Error de red.'); } finally { setCargando(false); }
   }
   useEffect(() => { cargar(); /* eslint-disable-next-line */ }, [id]);
