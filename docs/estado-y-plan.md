@@ -2,7 +2,7 @@
 
 Documento vivo del estado en producción y el roadmap. Actualizar en cada avance.
 
-_Última actualización: 2026-08-01._
+_Última actualización: 2026-08-02._
 
 ## En producción hoy
 
@@ -57,6 +57,35 @@ _Última actualización: 2026-08-01._
   `@cerpat.io`; hasta entonces esos buzones aún no reciben correo. Los correos de
   terceros (clientes) no se tocan.
 
+## Construido en agosto 2026 (calendario · vencimientos · pagos · calidad)
+
+**Vencimientos tributarios (ICA 2026) cargados** — 338 vencimientos por empresa
+(ReteICA/AutoICA, ICA Yopal, exógena de ICA). Detalle y reglas por municipio en
+[`vencimientos-tributarios.md`](./vencimientos-tributarios.md).
+
+**Estados de un vencimiento** — enum `EstadoPago` con 6 valores: `pendiente`,
+`presentado_sin_pago`, `presentado_pagado`, `presentado_cero` ("Presentado en
+$0"), `no_presentado`, `no_obligado`. El Administrador los edita en línea.
+
+**`cerpat.io/planeador/calendario` — Calendario unificado.** Fusiona en un solo
+mes las **tareas del plan** y los **vencimientos**. Filtros múltiples (etiquetas,
+clientes, estado), interruptor para ocultar estados, **arrastrar** para
+reprogramar, **imprimir** el mes, y **sábados/domingos/festivos** de Colombia
+marcados (festivos calculados en código: fijos + Ley Emiliani + Pascua). Clic en
+una tarea abre su **modal completo** (pestañas General/Fiscal/Auditoría) y clic
+en un vencimiento su detalle; ambos con **Soporte Documental** (link editable
+Drive/OneDrive donde va quedando el trabajo).
+
+**`cerpat.io/planeador/pagos` — Pagos.** Suma las tareas con pago y los
+**vencimientos por pagar** (presentados). Los vencimientos ganaron **valor a
+pagar** (`valorPago`); al marcarlos "Presentado (sin pago)" aparecen aquí.
+Filtros por cliente y estado.
+
+**Calidad / infraestructura** — se adoptaron **migraciones versionadas de
+Prisma** (fin del SQL manual y del *drift*) y **CI en cada PR** (valida esquema +
+compila API y web). Curaduría estructural completa en
+[`revision-tecnica.md`](./revision-tecnica.md).
+
 ## Roadmap
 
 ### Fase 1 — Infraestructura y datos ✅ (hecho)
@@ -88,7 +117,8 @@ _Última actualización: 2026-08-01._
 - [ ] n8n: recordatorios, recálculo diario de mora, tareas recurrentes, alertas a líderes.
 - [ ] Microsoft 365 (Graph API) para correo desde `notificaciones@cerpat.io`.
 - [ ] Sentry (monitoreo de errores).
-- [ ] `api.cerpat.io` (dominio propio de la API) + migraciones versionadas (`prisma migrate deploy`).
+- [x] Migraciones versionadas de Prisma (baseline + `prisma migrate deploy`) y CI en cada PR (ago 2026).
+- [ ] `api.cerpat.io` (dominio propio de la API); activar `migrate deploy` en el deploy.
 
 ### Fase 5 — Portal de clientes (futuro)
 - [ ] Aislamiento adicional por empresa cliente (cada cliente ve solo lo suyo) sobre el modelo multi-tenant.
