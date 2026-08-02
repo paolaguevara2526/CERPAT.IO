@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { vencimientosNacionales, ANIO_CALENDARIO, type ConfigNacional } from '../vencimientos/generador.js';
 
 export const vencimientosRouter = Router();
 
@@ -197,6 +198,75 @@ vencimientosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
     select: { id: true },
   });
   res.status(201).json({ ok: true, id: creado.id });
+});
+
+// POST /vencimientos/regenerar/:empresaId — regenera los vencimientos
+// NACIONALES del cliente según su configuración tributaria actual, cruzándola
+// con el calendario 2026 y su NIT. Preserva los pagos: no borra los
+// vencimientos que ya tienen valor, estado (distinto de pendiente), notas o
+// soporte, aunque la nueva config ya no los contemple. Nunca toca el ICA
+// municipal (municipioId≠null) ni las entradas manuales (generado=false).
+// Solo Administrador / root.
+vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede regenerar vencimientos.' });
+  const org = await orgCerpat();
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+
+  const empresa = await prisma.empresa.findFirst({
+    where: { id: req.params.empresaId, organizacionId: org.id },
+    select: { id: true, nombre: true, nit: true, configuracionTributaria: true },
+  });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  if (!empresa.nit) return res.status(422).json({ error: 'El cliente no tiene NIT; no se pueden calcular las fechas de vencimiento.' });
+  const cfg = empresa.configuracionTributaria;
+  if (!cfg) return res.status(422).json({ error: 'El cliente no tiene configuración tributaria. Configúrala antes de regenerar.' });
+
+  const anio = ANIO_CALENDARIO;
+  const objetivo = vencimientosNacionales(cfg as ConfigNacional, empresa.nit);
+
+  // Existentes: solo nacionales generados (sin ICA municipal, sin manuales).
+  const existentes = await prisma.vencimientoEmpresa.findMany({
+    where: { organizacionId: org.id, empresaId: empresa.id, anio, generado: true, municipioId: null },
+  });
+
+  const key = (o: string, per: string | null, p: string | null) => `${o}|${per ?? ''}|${p ?? ''}`;
+  const existByKey = new Map(existentes.map((e) => [key(e.obligacion, e.periodicidad, e.periodo), e]));
+  const objetivoKeys = new Set(objetivo.map((v) => key(v.obligacion, v.periodicidad, v.periodo)));
+  const tienePago = (e: (typeof existentes)[number]) =>
+    e.estado !== 'pendiente' || e.valorPago != null || !!e.notas?.trim() || !!e.soporteLink?.trim();
+
+  let creados = 0, actualizados = 0, sinCambios = 0, eliminados = 0, conservadosConPago = 0;
+
+  await prisma.$transaction(async (tx) => {
+    // Alta/actualización de cada obligación objetivo.
+    for (const v of objetivo) {
+      const ex = existByKey.get(key(v.obligacion, v.periodicidad, v.periodo));
+      if (!ex) {
+        await tx.vencimientoEmpresa.create({
+          data: {
+            organizacionId: org.id, empresaId: empresa.id, anio, obligacion: v.obligacion,
+            periodicidad: v.periodicidad, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, generado: true,
+          },
+        });
+        creados++;
+      } else if (ex.fechaVencimiento.getTime() !== v.fechaVencimiento.getTime()) {
+        // Misma obligación/periodo pero la fecha cambió: se actualiza sin tocar el pago.
+        await tx.vencimientoEmpresa.update({ where: { id: ex.id }, data: { fechaVencimiento: v.fechaVencimiento } });
+        actualizados++;
+      } else {
+        sinCambios++;
+      }
+    }
+    // Sobrantes: obligaciones que la config nueva ya no contempla.
+    for (const e of existentes) {
+      if (objetivoKeys.has(key(e.obligacion, e.periodicidad, e.periodo))) continue;
+      if (tienePago(e)) { conservadosConPago++; continue; } // preservar el trabajo/pago
+      await tx.vencimientoEmpresa.delete({ where: { id: e.id } });
+      eliminados++;
+    }
+  });
+
+  res.json({ ok: true, empresa: empresa.nombre, anio, resumen: { creados, actualizados, sinCambios, eliminados, conservadosConPago } });
 });
 
 // DELETE /vencimientos/:id — elimina un pago pendiente agregado a mano

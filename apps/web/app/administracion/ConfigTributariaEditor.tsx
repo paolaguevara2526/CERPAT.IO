@@ -32,6 +32,8 @@ export default function ConfigTributariaEditor() {
   const [guardando, setGuardando] = useState(false);
   const [ok, setOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [regenerando, setRegenerando] = useState(false);
+  const [regResumen, setRegResumen] = useState<string | null>(null);
   // búsqueda de municipio para agregar
   const [munQ, setMunQ] = useState('');
   const [munRes, setMunRes] = useState<{ id: string; nombre: string; departamento: string | null }[]>([]);
@@ -39,7 +41,7 @@ export default function ConfigTributariaEditor() {
   useEffect(() => { fetch('/api/admin/empresas', { cache: 'no-store' }).then((r) => r.json()).then((d) => setEmpresas(d.items ?? [])).catch(() => {}); }, []);
 
   const abrir = useCallback(async (e: Empresa) => {
-    setSel(e); setCargando(true); setError(null); setOk(false); setMunQ(''); setMunRes([]);
+    setSel(e); setCargando(true); setError(null); setOk(false); setRegResumen(null); setMunQ(''); setMunRes([]);
     try {
       const r = await fetch(`/api/admin/config-tributaria/${e.id}`, { cache: 'no-store' });
       const d = await r.json();
@@ -51,7 +53,7 @@ export default function ConfigTributariaEditor() {
 
   function setC<K extends keyof NonNullable<Config>>(k: K, v: NonNullable<Config>[K]) {
     setConfig((c) => ({ ...(c ?? { ivaPeriodicidad: null, retencionFuente: false, consumoPeriodicidad: null, rentaTipo: null, anticipoRstPeriodicidad: null }), [k]: v }));
-    setOk(false);
+    setOk(false); setRegResumen(null);
   }
 
   async function guardar() {
@@ -63,6 +65,22 @@ export default function ConfigTributariaEditor() {
       if (!r.ok) { setError(d.error || 'No se pudo guardar.'); return; }
       setOk(true); setTimeout(() => setOk(false), 2500);
     } catch { setError('Error de red.'); } finally { setGuardando(false); }
+  }
+
+  async function regenerar() {
+    if (!sel) return;
+    if (!confirm(`¿Regenerar los vencimientos nacionales de ${sel.nombre} según su configuración actual?\n\nNo se tocan los pagos ya registrados ni el ICA municipal. Guarda primero los cambios de la config.`)) return;
+    setRegenerando(true); setError(null); setRegResumen(null);
+    try {
+      const r = await fetch(`/api/vencimientos/regenerar/${sel.id}`, { method: 'POST' });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(d.error || 'No se pudo regenerar.'); return; }
+      const s = d.resumen ?? {};
+      setRegResumen(
+        `Vencimientos ${d.anio} regenerados: ${s.creados ?? 0} nuevos · ${s.actualizados ?? 0} con fecha ajustada · ${s.sinCambios ?? 0} sin cambios · ${s.eliminados ?? 0} eliminados`
+        + (s.conservadosConPago ? ` · ${s.conservadosConPago} conservados por tener pago registrado` : '') + '.'
+      );
+    } catch { setError('Error de red.'); } finally { setRegenerando(false); }
   }
 
   // ICA
@@ -140,10 +158,16 @@ export default function ConfigTributariaEditor() {
                   </label>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
                 <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13 }}>{guardando ? 'Guardando…' : ok ? '✓ Guardado' : 'Guardar'}</button>
-                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Recuerda regenerar los vencimientos del cliente si cambiaste algo que los afecta.</span>
+                <button className="dbtn" onClick={regenerar} disabled={regenerando || guardando} style={{ fontSize: 13 }} title="Rehace los vencimientos nacionales de este cliente según la config actual, sin tocar los pagos ni el ICA municipal">
+                  {regenerando ? 'Regenerando…' : '↻ Regenerar vencimientos'}
+                </button>
+                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Guarda los cambios y luego regenera para que los vencimientos reflejen la config nueva.</span>
               </div>
+              {regResumen && (
+                <div style={{ marginTop: 12, background: '#E7F4EC', color: '#1B7A47', borderRadius: 6, padding: '9px 12px', fontSize: 12.5, fontWeight: 600 }}>{regResumen}</div>
+              )}
             </div>
 
             {/* ICA por municipio */}
