@@ -323,6 +323,8 @@ function datosTarea(body: any): { data: Record<string, any>; error?: string } {
   if ('periodo' in (body ?? {})) data.periodo = body.periodo && /^\d{4}-\d{2}$/.test(body.periodo) ? body.periodo : (body.periodo ? undefined : null);
   if (data.periodo === undefined && 'periodo' in (body ?? {})) return { data, error: 'El período debe ser YYYY-MM.' };
   if ('observaciones' in (body ?? {})) data.observaciones = typeof body.observaciones === 'string' && body.observaciones.trim() ? body.observaciones.trim() : null;
+  if ('soporteLink' in (body ?? {})) data.soporteLink = typeof body.soporteLink === 'string' && body.soporteLink.trim() ? body.soporteLink.trim() : null;
+  if ('requiereSoporte' in (body ?? {})) data.requiereSoporte = !!body.requiereSoporte;
   if ('generaPago' in (body ?? {})) data.generaPago = !!body.generaPago;
   if ('requiereRevisionTecnica' in (body ?? {})) data.requiereRevisionTecnica = !!body.requiereRevisionTecnica;
   for (const f of ['fechaInicio', 'fechaVencimiento'] as const) {
@@ -345,12 +347,34 @@ planRouter.get('/tareas/:id/detalle', requireAuth, async (req: AuthedRequest, re
       prioridad: true, estado: true, periodo: true, observaciones: true, generaPago: true,
       requiereRevisionTecnica: true, auditoria: true, fechaInicio: true, fechaVencimiento: true,
       comprobanteDesde: true, comprobanteHasta: true, cantidadRegistros: true,
+      createdAt: true, soporteLink: true, requiereSoporte: true, estadoPago: true, valorPago: true,
+      empresa: { select: { nombre: true } },
+      area: { select: { nombre: true } },
+      creadoPor: { select: { nombre: true } },
+      asesor: { select: { nombre: true } },
+      auxiliar: { select: { nombre: true } },
+      asignados: { select: { usuario: { select: { nombre: true } } } },
+      etiquetas: { select: { etiqueta: { select: { nombre: true } } } },
       actividadPlan: { select: { esRegistroSoftware: true } },
     },
   });
   if (!t) return res.status(404).json({ error: 'Tarea no encontrada.' });
-  const { actividadPlan, ...rest } = t;
-  res.json({ tarea: { ...rest, esRegistroSoftware: actividadPlan?.esRegistroSoftware ?? false } });
+  const { actividadPlan, empresa, area, creadoPor, asesor, auxiliar, asignados, etiquetas, valorPago, ...rest } = t;
+  res.json({
+    tarea: {
+      ...rest,
+      esRegistroSoftware: actividadPlan?.esRegistroSoftware ?? false,
+      // Nombres (para la vista de detalle; los *Id de arriba siguen para el formulario de edición).
+      empresa: empresa?.nombre ?? null,
+      area: area?.nombre ?? null,
+      creadoPor: creadoPor?.nombre ?? null,
+      asesor: asesor?.nombre ?? null,
+      auxiliar: auxiliar?.nombre ?? null,
+      asignados: asignados.map((a) => a.usuario?.nombre).filter(Boolean),
+      etiquetas: etiquetas.map((e) => e.etiqueta?.nombre).filter(Boolean),
+      valorPago: valorPago != null ? Number(valorPago) : null,
+    },
+  });
 });
 
 // PATCH /tareas/:id/registro — captura del "registro en software" (comprobantes)
@@ -380,6 +404,24 @@ planRouter.patch('/tareas/:id/registro', requireAuth, async (req: AuthedRequest,
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
   await prisma.tarea.update({ where: { id: tarea.id }, data });
   res.json({ ok: true });
+});
+
+// Guardar el link de soporte documental. Permiso: coordinación o el asesor/auxiliar
+// de la tarea (para que el ejecutor pegue dónde va quedando el trabajo).
+planRouter.patch('/tareas/:id/soporte', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({
+    where: { id: req.params.id, organizacionId: org?.id },
+    select: { id: true, asesorId: true, auxiliarId: true, auditoria: true },
+  });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  const u = req.user!;
+  const puede = puedeGestionar(u) || tarea.asesorId === u.sub || tarea.auxiliarId === u.sub;
+  if (!puede) return res.status(403).json({ error: 'No puedes editar el soporte de esta tarea (no eres su asesor/auxiliar ni tienes rol de coordinación).' });
+  if (tarea.auditoria === 'aprobada') return res.status(403).json({ error: 'La tarea está bloqueada (aprobada en Auditoría). Debe desbloquearse primero.' });
+  const link = typeof req.body?.soporteLink === 'string' && req.body.soporteLink.trim() ? req.body.soporteLink.trim() : null;
+  await prisma.tarea.update({ where: { id: tarea.id }, data: { soporteLink: link } });
+  res.json({ ok: true, soporteLink: link });
 });
 
 planRouter.post('/tareas', requireAuth, async (req: AuthedRequest, res) => {

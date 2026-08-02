@@ -5,6 +5,7 @@
 // clic para ver el detalle e imprimir el mes. Todo contra los proxies /api.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import TareaDetalleModal from './TareaDetalleModal';
 
 const AREAS = ['Impuestos', 'Informes', 'Cumplimiento', 'Nómina', 'Tesorería'];
 
@@ -340,7 +341,10 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         Cada tarjeta es una tarea o un vencimiento en su fecha. Arrástrala a otro día para reprogramarla; haz clic para ver el detalle. El color indica el estado (rojo = vencido).
       </p>
 
-      {detalle && <DetalleModal ev={detalle} onClose={() => setDetalle(null)} onReprogramar={(f) => { reprogramar(detalle, f); setDetalle({ ...detalle, fecha: f }); }} />}
+      {detalle && (detalle.tipo === 'tarea'
+        ? <TareaDetalleModal id={detalle.id} onClose={() => setDetalle(null)} onChanged={() => cargar(mes)} />
+        : <DetalleModal ev={detalle} onClose={() => setDetalle(null)} onReprogramar={(f) => { reprogramar(detalle, f); setDetalle({ ...detalle, fecha: f }); }} />
+      )}
     </>
   );
 }
