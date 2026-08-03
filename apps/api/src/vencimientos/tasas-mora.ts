@@ -43,11 +43,13 @@ export function interesMora(
   valor: number | null | undefined,
   fechaVencimiento: Date,
   fechaCorte: Date = new Date(),
+  tasaAnualOverride?: number | null,
 ): { dias: number; tasaAnual: number; interes: number } {
   const venc = new Date(fechaVencimiento); venc.setHours(0, 0, 0, 0);
   const corte = new Date(fechaCorte); corte.setHours(0, 0, 0, 0);
   const dias = Math.round((corte.getTime() - venc.getTime()) / MS_DIA);
-  const tasaAnual = tasaMoraDelMes(corte);
+  // Tasa: la de Parámetros tributarios si viene; si no, la del mes embebida.
+  const tasaAnual = tasaAnualOverride != null && tasaAnualOverride > 0 ? tasaAnualOverride : tasaMoraDelMes(corte);
   if (dias <= 0 || !valor || valor <= 0) return { dias: Math.max(0, dias), tasaAnual, interes: 0 };
   const bruto = valor * (tasaAnual / 365) * dias;
   const interes = Math.ceil(bruto / 1000) * 1000; // ROUNDUP a múltiplo de 1.000
@@ -66,17 +68,23 @@ function mesesOFraccion(desde: Date, hasta: Date): number {
 // Sanción por extemporaneidad (Art. 641 E.T.): 5% del impuesto por cada mes o
 // fracción de retardo, con TOPE del 100% del impuesto y MÍNIMO la sanción mínima
 // (10 UVT del año). Se aproxima al múltiplo de 1.000 más cercano.
+export type ParamsSancion = { uvt?: number | null; sancionMinUvt?: number | null; pct?: number | null; anioUvt?: number };
 export function sancionExtemporaneidad(
   valor: number | null | undefined,
   fechaVencimiento: Date,
   fechaCorte: Date = new Date(),
-  anioUvt: number = fechaVencimiento.getFullYear(),
+  opts: ParamsSancion = {},
 ): { meses: number; sancion: number } {
-  const minima = Math.round((10 * uvt(anioUvt)) / 1000) * 1000;
+  // Valores de Parámetros tributarios si vienen; si no, los legales por defecto.
+  const anio = opts.anioUvt ?? fechaVencimiento.getFullYear();
+  const uvtVal = opts.uvt != null && opts.uvt > 0 ? opts.uvt : uvt(anio);
+  const minUvt = opts.sancionMinUvt != null && opts.sancionMinUvt > 0 ? opts.sancionMinUvt : 10;
+  const pct = opts.pct != null && opts.pct > 0 ? opts.pct : 0.05;
+  const minima = Math.round((minUvt * uvtVal) / 1000) * 1000;
   if (!valor || valor <= 0) return { meses: 0, sancion: minima };
   const meses = mesesOFraccion(fechaVencimiento, fechaCorte);
-  const bruto = 0.05 * valor * meses;
+  const bruto = pct * valor * meses;
   const conTope = Math.min(bruto, valor); // tope 100% del impuesto
-  const sancion = Math.round(Math.max(conTope, minima) / 1000) * 1000; // mínimo 10 UVT
+  const sancion = Math.round(Math.max(conTope, minima) / 1000) * 1000; // mínimo (sanción mínima)
   return { meses, sancion };
 }

@@ -19,6 +19,18 @@ function sancionAplica(estado: string, consecuencia: string, fechaLimitePago: Da
   return consecuencia === 'ineficaz' && fechaLimitePago != null && new Date() > fechaLimitePago;
 }
 
+// Parámetros de liquidación de la organización (tasa de mora, UVT, sanción). Si
+// no hay fila, se devuelven null y los cálculos usan los valores por defecto.
+async function cargarParamsLiq(orgId: string) {
+  const p = await prisma.parametrosLiquidacion.findUnique({ where: { organizacionId: orgId } });
+  return {
+    tasaAnual: p ? Number(p.tasaMoraMensual) : null,
+    uvt: p ? Number(p.valorUvt) : null,
+    sancionMinUvt: p ? Number(p.sancionMinimaUvt) : null,
+    pct: p ? Number(p.pctSancionExtemporaneidad) : null,
+  };
+}
+
 export const vencimientosRouter = Router();
 
 const ESTADOS = ['pendiente', 'presentado_sin_pago', 'presentado_pagado', 'presentado_cero', 'no_presentado', 'no_obligado'];
@@ -118,6 +130,7 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
   const org = await orgCerpat();
   if (!org) return res.json({ total: 0, vencimientos: [] });
+  const pl = await cargarParamsLiq(org.id);
   const anio = Number(req.query.anio) || new Date().getFullYear();
   const items = await prisma.vencimientoEmpresa.findMany({
     // Solo los generados por el sistema: los pagos pendientes agregados a mano
@@ -134,11 +147,11 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
     total: items.length,
     vencimientos: items.map((v) => {
       const valor = v.valorPago != null ? Number(v.valorPago) : null;
-      const lp = limitePago(v.fechaVencimiento, v.obligacion, valor);
+      const lp = limitePago(v.fechaVencimiento, v.obligacion, valor, pl.uvt);
       // Interés de mora a hoy, solo si está sin pagar.
-      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento);
+      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento, new Date(), pl.tasaAnual);
       const san = sancionAplica(v.estado, lp.consecuencia, lp.fechaLimitePago)
-        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), v.fechaVencimiento.getFullYear())
+        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: pl.sancionMinUvt, pct: pl.pct, anioUvt: v.fechaVencimiento.getFullYear() })
         : { meses: 0, sancion: 0 };
       return {
         id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
@@ -159,6 +172,7 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
   const org = await orgCerpat();
   if (!org) return res.json({ total: 0, pendientes: [] });
+  const pl = await cargarParamsLiq(org.id);
   const items = await prisma.vencimientoEmpresa.findMany({
     where: { organizacionId: org.id, generado: false },
     orderBy: [{ estado: 'asc' }, { anio: 'desc' }, { fechaVencimiento: 'asc' }],
@@ -172,10 +186,10 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
     total: items.length,
     pendientes: items.map((v) => {
       const valor = v.valorPago != null ? Number(v.valorPago) : null;
-      const lp = limitePago(v.fechaVencimiento, v.obligacion, valor);
-      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento);
+      const lp = limitePago(v.fechaVencimiento, v.obligacion, valor, pl.uvt);
+      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento, new Date(), pl.tasaAnual);
       const san = sancionAplica(v.estado, lp.consecuencia, lp.fechaLimitePago)
-        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), v.anio)
+        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: pl.sancionMinUvt, pct: pl.pct, anioUvt: v.anio })
         : { meses: 0, sancion: 0 };
       return {
         id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
