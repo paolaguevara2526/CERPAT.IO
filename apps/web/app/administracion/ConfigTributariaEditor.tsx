@@ -195,6 +195,22 @@ export default function ConfigTributariaEditor() {
               <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>ICA por municipio</div>
               <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 12px' }}>Municipios donde el cliente declara ICA, con reteICA / autoICA.</p>
 
+              {/* Agregar municipio (arriba, para que el desplegable no se recorte con el overflow del panel) */}
+              <div style={{ position: 'relative', maxWidth: 360, marginBottom: 14 }}>
+                <input style={input} value={munQ} onChange={(e) => buscarMun(e.target.value)} placeholder="+ Agregar municipio (escribe 2+ letras)…" />
+                {munQ.trim().length >= 2 && (
+                  <div className="panel" style={{ position: 'absolute', zIndex: 40, top: 'calc(100% + 3px)', left: 0, right: 0, maxHeight: 260, overflow: 'auto', padding: 4, boxShadow: '0 8px 24px rgba(10,18,34,.18)' }}>
+                    {munRes.length === 0 ? (
+                      <div style={{ fontSize: 12, color: 'var(--muted)', padding: '7px 8px' }}>Sin resultados para “{munQ.trim()}”.</div>
+                    ) : munRes.map((m) => (
+                      <button key={m.id} onClick={() => agregarMun(m)} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 4, padding: '6px 8px', cursor: 'pointer', fontSize: 12.5, fontFamily: 'var(--ui)', color: 'var(--ink)' }}>
+                        {m.nombre}{m.departamento ? <span style={{ color: 'var(--muted)' }}> · {m.departamento}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {ica.length === 0 ? (
                 <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>Sin municipios de ICA.</div>
               ) : (
@@ -235,19 +251,6 @@ export default function ConfigTributariaEditor() {
                 </>
               )}
 
-              {/* Agregar municipio */}
-              <div style={{ position: 'relative', maxWidth: 340 }}>
-                <input style={input} value={munQ} onChange={(e) => buscarMun(e.target.value)} placeholder="Agregar municipio (escribe 2+ letras)…" />
-                {munRes.length > 0 && (
-                  <div className="panel" style={{ position: 'absolute', zIndex: 20, top: 'calc(100% + 3px)', left: 0, right: 0, maxHeight: 220, overflow: 'auto', padding: 4, boxShadow: '0 8px 24px rgba(10,18,34,.18)' }}>
-                    {munRes.map((m) => (
-                      <button key={m.id} onClick={() => agregarMun(m)} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 4, padding: '6px 8px', cursor: 'pointer', fontSize: 12.5, fontFamily: 'var(--ui)', color: 'var(--ink)' }}>
-                        {m.nombre}{m.departamento ? <span style={{ color: 'var(--muted)' }}> · {m.departamento}</span> : null}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         )}
