@@ -199,9 +199,17 @@ vencimientosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
   const periodo = typeof b.periodo === 'string' && b.periodo.trim() ? b.periodo.trim() : null;
   const notas = typeof b.notas === 'string' && b.notas.trim() ? b.notas.trim() : null;
 
+  // Municipio opcional (para ICA / ReteICA). Debe pertenecer a la organización.
+  let municipioId: string | null = null;
+  if (typeof b.municipioId === 'string' && b.municipioId.trim()) {
+    const mun = await prisma.municipio.findFirst({ where: { id: b.municipioId.trim(), organizacionId: org.id }, select: { id: true } });
+    if (!mun) return res.status(422).json({ error: 'Municipio no válido.' });
+    municipioId = mun.id;
+  }
+
   const creado = await prisma.vencimientoEmpresa.create({
     data: {
-      organizacionId: org.id, empresaId, anio, obligacion, periodo,
+      organizacionId: org.id, empresaId, anio, obligacion, periodo, municipioId,
       fechaVencimiento: fecha, estado: estado as any, valorPago, notas, generado: false,
     },
     select: { id: true },

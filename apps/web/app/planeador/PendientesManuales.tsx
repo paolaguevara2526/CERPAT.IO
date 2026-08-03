@@ -8,10 +8,22 @@ import { useRouter } from 'next/navigation';
 import VencimientoPagoEditor, { VENC_PAGO_META } from './VencimientoPagoEditor';
 
 type Empresa = { id: string; nombre: string };
+type Municipio = { id: string; nombre: string; departamento: string | null };
 type Pendiente = {
   id: string; obligacion: string; anio: number; periodo: string | null; municipio: string | null;
   empresa: string | null; fechaVencimiento: string; estado: string; valorPago: number | null; notas: string | null;
 };
+
+// Catálogo de obligaciones (uniforme). Los nombres casan con las reglas de
+// límite de pago del backend (retención/autorretención/ReteICA → INEFICAZ, etc.).
+const OBLIGACIONES = [
+  'Retención en la fuente', 'Autorretención', 'IVA', 'Impuesto al consumo', 'Anticipo RST',
+  'Renta Persona Jurídica', 'Renta Persona Natural', 'Renta Grandes Contribuyentes',
+  'ICA (Industria y comercio)', 'ReteICA', 'AutoICA',
+];
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const BIMESTRES = [['Bimestre 1', 'ene-feb'], ['Bimestre 2', 'mar-abr'], ['Bimestre 3', 'may-jun'], ['Bimestre 4', 'jul-ago'], ['Bimestre 5', 'sep-oct'], ['Bimestre 6', 'nov-dic']];
+const CUATRIMESTRES = [['Cuatrimestre 1', 'ene-abr'], ['Cuatrimestre 2', 'may-ago'], ['Cuatrimestre 3', 'sep-dic']];
 
 function fmtFecha(iso: string): string {
   try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return ''; }
@@ -32,29 +44,53 @@ export default function PendientesManuales({ empresas, pendientes }: { empresas:
   const anioActual = new Date().getFullYear();
   const [empresaId, setEmpresaId] = useState('');
   const [obligacion, setObligacion] = useState('');
+  const [obligacionOtra, setObligacionOtra] = useState('');
   const [anio, setAnio] = useState<string>(String(anioActual - 1));
   const [periodo, setPeriodo] = useState('');
   const [fecha, setFecha] = useState('');
   const [valor, setValor] = useState('');
   const [notas, setNotas] = useState('');
+  // Municipio (para ICA / ReteICA) con autocompletar.
+  const [munQ, setMunQ] = useState('');
+  const [munRes, setMunRes] = useState<Municipio[]>([]);
+  const [munId, setMunId] = useState('');
+  const [munNombre, setMunNombre] = useState('');
+
+  const obligacionFinal = obligacion === '__otra__' ? obligacionOtra.trim() : obligacion;
+  const aplicaMunicipio = /ica/i.test(obligacionFinal);
 
   function limpiar() {
-    setEmpresaId(''); setObligacion(''); setAnio(String(anioActual - 1));
+    setEmpresaId(''); setObligacion(''); setObligacionOtra(''); setAnio(String(anioActual - 1));
     setPeriodo(''); setFecha(''); setValor(''); setNotas(''); setError(null);
+    setMunQ(''); setMunRes([]); setMunId(''); setMunNombre('');
+  }
+
+  async function buscarMun(v: string) {
+    setMunQ(v); setMunId(''); setMunNombre('');
+    if (v.trim().length < 2) { setMunRes([]); return; }
+    try {
+      const r = await fetch(`/api/admin/municipios?q=${encodeURIComponent(v.trim())}`, { cache: 'no-store' });
+      const d = await r.json().catch(() => ({ items: [] }));
+      setMunRes(d.items ?? []);
+    } catch { setMunRes([]); }
+  }
+  function elegirMun(m: Municipio) {
+    setMunId(m.id); setMunNombre(m.nombre); setMunQ(m.nombre); setMunRes([]);
   }
 
   async function agregar() {
     setError(null);
     if (!empresaId) { setError('Selecciona un cliente.'); return; }
-    if (!obligacion.trim()) { setError('Indica la obligación.'); return; }
+    if (!obligacionFinal) { setError('Selecciona la obligación.'); return; }
     if (!fecha) { setError('Indica la fecha de vencimiento.'); return; }
     setGuardando(true);
     try {
       const res = await fetch('/api/vencimientos', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          empresaId, obligacion: obligacion.trim(), anio: Number(anio),
+          empresaId, obligacion: obligacionFinal, anio: Number(anio),
           periodo: periodo.trim() || null, fechaVencimiento: fecha,
+          municipioId: munId || null,
           valorPago: valor === '' ? null : Number(valor), notas: notas.trim() || null,
         }),
       });
@@ -78,6 +114,8 @@ export default function PendientesManuales({ empresas, pendientes }: { empresas:
     }
   }
 
+  const lbl: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)' };
+
   return (
     <div style={{ marginTop: 24 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -95,34 +133,72 @@ export default function PendientesManuales({ empresas, pendientes }: { empresas:
       {abierto && (
         <div className="panel" style={{ padding: 16, marginBottom: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 10 }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
+            <label style={lbl}>
               Cliente *
               <select value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} style={inp}>
                 <option value="">Selecciona…</option>
                 {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
               </select>
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
+            <label style={lbl}>
               Obligación *
-              <input value={obligacion} onChange={(e) => setObligacion(e.target.value)} placeholder="IVA, Renta, ICA…" style={inp} />
+              <select value={obligacion} onChange={(e) => setObligacion(e.target.value)} style={inp}>
+                <option value="">Selecciona…</option>
+                {OBLIGACIONES.map((o) => <option key={o} value={o}>{o}</option>)}
+                <option value="__otra__">Otra…</option>
+              </select>
+              {obligacion === '__otra__' && (
+                <input value={obligacionOtra} onChange={(e) => setObligacionOtra(e.target.value)} placeholder="Escribe la obligación" style={{ ...inp, marginTop: 4 }} />
+              )}
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
+            <label style={lbl}>
               Año *
               <input type="number" min={2000} max={2100} value={anio} onChange={(e) => setAnio(e.target.value)} style={inp} />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
+            <label style={lbl}>
               Período
-              <input value={periodo} onChange={(e) => setPeriodo(e.target.value)} placeholder="2024-06, bimestre 3, anual…" style={inp} />
+              <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} style={inp}>
+                <option value="">Sin período</option>
+                <option value="Anual">Anual</option>
+                <optgroup label="Mensual">
+                  {MESES.map((m) => <option key={m} value={m}>{m}</option>)}
+                </optgroup>
+                <optgroup label="Bimestral">
+                  {BIMESTRES.map(([v, r]) => <option key={v} value={v}>{v} · {r}</option>)}
+                </optgroup>
+                <optgroup label="Cuatrimestral">
+                  {CUATRIMESTRES.map(([v, r]) => <option key={v} value={v}>{v} · {r}</option>)}
+                </optgroup>
+              </select>
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
+            <label style={lbl}>
               Vence *
               <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={inp} />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)' }}>
+            <label style={lbl}>
               Valor a pagar
               <input type="number" min={0} inputMode="numeric" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0" style={{ ...inp, textAlign: 'right' }} />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, color: 'var(--muted)', gridColumn: '1 / -1' }}>
+            <label style={{ ...lbl, position: 'relative' }}>
+              Municipio {aplicaMunicipio ? '(ICA)' : '(opcional)'}
+              <input
+                value={munQ}
+                onChange={(e) => buscarMun(e.target.value)}
+                placeholder="Escribe 2+ letras…"
+                style={inp}
+              />
+              {munNombre && munId && <span style={{ fontSize: 11, color: '#16794c', marginTop: 2 }}>✓ {munNombre}</span>}
+              {munRes.length > 0 && (
+                <div className="panel" style={{ position: 'absolute', zIndex: 20, top: '100%', left: 0, right: 0, maxHeight: 200, overflow: 'auto', padding: 4, boxShadow: '0 8px 24px rgba(10,18,34,.18)' }}>
+                  {munRes.map((m) => (
+                    <button key={m.id} type="button" onClick={() => elegirMun(m)} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', background: 'transparent', borderRadius: 4, padding: '6px 8px', cursor: 'pointer', fontSize: 12.5, fontFamily: 'var(--ui)', color: 'var(--ink)' }}>
+                      {m.nombre}{m.departamento ? <span style={{ color: 'var(--muted)' }}> · {m.departamento}</span> : null}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </label>
+            <label style={{ ...lbl, gridColumn: '1 / -1' }}>
               Notas
               <input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Detalle de la deuda (opcional)" style={inp} />
             </label>
@@ -158,7 +234,7 @@ export default function PendientesManuales({ empresas, pendientes }: { empresas:
                   return (
                     <tr key={p.id}>
                       <td style={{ fontWeight: 600 }}>
-                        {p.obligacion}
+                        {p.obligacion}{p.municipio ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {p.municipio}</span> : null}
                         {p.notas ? <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>{p.notas}</span> : null}
                       </td>
                       <td style={{ color: 'var(--muted)' }}>{p.empresa ?? '—'}</td>
