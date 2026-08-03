@@ -76,16 +76,21 @@ una tarea abre su **modal completo** (pestañas General/Fiscal/Auditoría) y cli
 en un vencimiento su detalle; ambos con **Soporte Documental** (link editable
 Drive/OneDrive donde va quedando el trabajo).
 
-**`cerpat.io/planeador/pagos` — Pagos.** Controla lo que está **pendiente de
-pago**. Es **una sola tabla, "Pagos pendientes"**, donde el Administrador
-registra a mano las obligaciones por pagar (cliente, obligación, año, período,
-vencimiento, valor, notas), edita su **valor y estado** y las elimina. Sirve para
-**deudas de años anteriores** o impuestos que no se cargaron al sistema. Se
-guardan como `VencimientoEmpresa` con `generado=false` (sin migración: el campo
-ya existía) — API `POST /vencimientos`, `GET /vencimientos/pendientes`,
-`DELETE /vencimientos/:id`. El estado de **presentación** de los vencimientos
-tributarios (config × calendario) se gestiona aparte en `cerpat.io/vencimientos`,
-y las actividades operativas en el Plan de Trabajo; Pagos no las duplica.
+**`cerpat.io/planeador/pagos` — Pagos.** Controla en **un solo listado "Por
+pagar"** todo lo pendiente de pago: los **vencimientos tributarios** ya marcados
+*Presentado (sin pago) / y pagado* **y** los **pagos pendientes cargados a mano**
+(deudas de años anteriores). Por cada obligación muestra **semáforo de urgencia**,
+**límite de pago** (INEFICAZ / exclusión RST) e **interés de mora DIAN a hoy**
+(Art. 635 E.T.; ver regla 6). Arriba, **KPIs** que suman todo: Pagado, Por pagar,
+Vencido sin pagar, Riesgo ineficacia/RST e Interés de mora. Filtros por cliente y
+estado. El **valor y estado de pago** se editan en línea; los pagos pendientes se
+**agregan** con el formulario "+ Agregar pago pendiente" (obligación, año, período
+y municipio como desplegables/autocompletar) y se **eliminan** desde el mismo
+listado. Se guardan como `VencimientoEmpresa` con `generado=false` (sin migración)
+— API `GET /vencimientos/pagos`, `GET /vencimientos/pendientes`,
+`POST /vencimientos` (acepta `municipioId`), `DELETE /vencimientos/:id`. La
+**presentación** de los vencimientos se gestiona en `cerpat.io/vencimientos` y las
+actividades operativas en el Plan de Trabajo; Pagos no las duplica.
 
 **Regenerar vencimientos por cliente.** En **Administración → Config. tributaria**,
 tras corregir un parámetro, el botón **"Regenerar vencimientos"** rehace los

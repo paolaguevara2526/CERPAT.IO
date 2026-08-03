@@ -36,7 +36,7 @@ const inp: React.CSSProperties = {
   background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)',
 };
 
-export default function PendientesManuales({ empresas, pendientes }: { empresas: Empresa[]; pendientes: Pendiente[] }) {
+export default function PendientesManuales({ empresas, pendientes, mostrarTabla = true }: { empresas: Empresa[]; pendientes: Pendiente[]; mostrarTabla?: boolean }) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -215,7 +215,7 @@ export default function PendientesManuales({ empresas, pendientes }: { empresas:
         </div>
       )}
 
-      {pendientes.length === 0 ? (
+      {!mostrarTabla ? null : pendientes.length === 0 ? (
         !abierto && (
           <div className="panel" style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>
             No hay pagos pendientes agregados a mano.
