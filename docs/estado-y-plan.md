@@ -148,7 +148,11 @@ compila API y web). Curaduría estructural completa en
 - [ ] Microsoft 365 (Graph API) para correo desde `notificaciones@cerpat.io`.
 - [ ] Sentry (monitoreo de errores).
 - [x] Migraciones versionadas de Prisma (baseline + `prisma migrate deploy`) y CI en cada PR (ago 2026).
-- [ ] `api.cerpat.io` (dominio propio de la API); activar `migrate deploy` en el deploy.
+- [x] `migrate deploy` automático en el deploy: `railway.json` antepone
+  `npm run db:migrate:deploy` al arranque de la API, así cada despliegue aplica
+  las migraciones pendientes antes de servir (ago 2026). Requiere que el *root
+  directory* del servicio de la API en Railway sea la raíz del monorepo.
+- [ ] `api.cerpat.io` (dominio propio de la API).
 
 ### Fase 5 — Portal de clientes (futuro)
 - [ ] Aislamiento adicional por empresa cliente (cada cliente ve solo lo suyo) sobre el modelo multi-tenant.
