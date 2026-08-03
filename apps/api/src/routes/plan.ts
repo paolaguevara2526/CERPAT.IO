@@ -263,7 +263,7 @@ planRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) => {
       // Las tareas del plan no llevan tipoObligacion; el nombre de la
       // obligación vive en el título de la actividad. Usa ese como respaldo
       // para que la regla de "límite de pago" (ineficacia / RST) sí aplique.
-      const lp = limitePago(t.fechaVencimiento, t.tipoObligacion?.nombre ?? t.titulo);
+      const lp = limitePago(t.fechaVencimiento, t.tipoObligacion?.nombre ?? t.titulo, t.valorPago != null ? Number(t.valorPago) : null);
       return {
         id: t.id, titulo: t.titulo, estado: t.estado,
         valorPago: t.valorPago != null ? Number(t.valorPago) : null, estadoPago: t.estadoPago,

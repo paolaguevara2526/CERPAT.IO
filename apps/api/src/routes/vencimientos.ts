@@ -124,8 +124,8 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
     anio,
     total: items.length,
     vencimientos: items.map((v) => {
-      const lp = limitePago(v.fechaVencimiento, v.obligacion);
       const valor = v.valorPago != null ? Number(v.valorPago) : null;
+      const lp = limitePago(v.fechaVencimiento, v.obligacion, valor);
       // Interés de mora a hoy, solo si está sin pagar.
       const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento);
       return {
@@ -159,8 +159,8 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
   res.json({
     total: items.length,
     pendientes: items.map((v) => {
-      const lp = limitePago(v.fechaVencimiento, v.obligacion);
       const valor = v.valorPago != null ? Number(v.valorPago) : null;
+      const lp = limitePago(v.fechaVencimiento, v.obligacion, valor);
       const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento);
       return {
         id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,

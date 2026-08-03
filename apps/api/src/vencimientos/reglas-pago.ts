@@ -15,6 +15,8 @@
 // para servir tanto a las tareas del plan (tipoObligacion.nombre) como a los
 // VencimientoEmpresa (campo obligacion, string).
 
+import { uvt } from './tasas-mora.js';
+
 export type Consecuencia = 'intereses' | 'ineficaz' | 'exclusion_rst';
 export type ReglaPago = { plazoMeses: number | null; consecuencia: Consecuencia };
 
@@ -43,13 +45,26 @@ export function sumarMeses(fecha: Date, meses: number): Date {
 
 // Fecha límite de pago (null si la obligación solo causa intereses) y su
 // consecuencia si se incumple.
+//
+// Regla especial: la **retención en la fuente DIAN < 10 UVT** tiene plazo de
+// **1 año** (no 2 meses) antes de la ineficacia. Por eso recibe el valor y el
+// año (para calcular las 10 UVT de ese año). No aplica a autorretención ni ReteICA.
 export function limitePago(
   fechaVencimiento: Date,
   obligacion: string | null | undefined,
+  valor?: number | null,
 ): { fechaLimitePago: Date | null; consecuencia: Consecuencia } {
   const r = reglaPago(obligacion);
+  let plazoMeses = r.plazoMeses;
+
+  const o = norm(obligacion ?? '');
+  const esRetencionFuente = o.includes('reten') && o.includes('fuente') && !o.includes('autorret');
+  if (esRetencionFuente && plazoMeses != null && valor != null && valor < 10 * uvt(fechaVencimiento.getFullYear())) {
+    plazoMeses = 12;
+  }
+
   return {
-    fechaLimitePago: r.plazoMeses != null ? sumarMeses(fechaVencimiento, r.plazoMeses) : null,
+    fechaLimitePago: plazoMeses != null ? sumarMeses(fechaVencimiento, plazoMeses) : null,
     consecuencia: r.consecuencia,
   };
 }

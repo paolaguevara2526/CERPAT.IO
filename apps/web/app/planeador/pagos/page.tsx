@@ -151,6 +151,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const kVencido = suma((i) => !pagadoDe(i.estado) && esVencido(i.fechaVencimiento));
   const kRiesgo = suma((i) => enRiesgoPago(i.fechaLimitePago, i.consecuencia, pagadoDe(i.estado)));
   const kInteres = scope.reduce((s, i) => s + (i.interesMora ?? 0), 0);
+  const kTotal = kPorPagar.v + kInteres; // capital pendiente + interés de mora a hoy
 
   const filas = scope
     .filter((i) => !estado || i.estado === estado)
@@ -172,6 +173,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           <div className="tile" style={{ borderColor: kVencido.n > 0 ? '#e0a3a0' : undefined }}><div className="k">Vencido sin pagar</div><div className="v" style={{ color: kVencido.n > 0 ? '#d64b3f' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kVencido.v)}</div><div className="s">{kVencido.n} con intereses corriendo</div></div>
           <div className="tile" style={{ borderColor: kRiesgo.n > 0 ? '#b3261e' : undefined }}><div className="k">Riesgo ineficacia / RST</div><div className="v" style={{ color: kRiesgo.n > 0 ? '#b3261e' : '#8a94a6', fontSize: 21 }}>{kRiesgo.n}</div><div className="s">límite de pago ≤ {UMBRAL_RIESGO} d o vencido</div></div>
           <div className="tile"><div className="k">Interés de mora</div><div className="v" style={{ color: kInteres > 0 ? '#c67c00' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kInteres)}</div><div className="s">estimado a hoy (DIAN)</div></div>
+          <div className="tile" style={{ borderColor: kTotal > 0 ? 'var(--navy)' : undefined }}><div className="k">Total a pagar (hoy)</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kTotal)}</div><div className="s">capital + interés de mora</div></div>
         </div>
       )}
 
@@ -223,7 +225,11 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                     <td><LimitePago fechaLimite={i.fechaLimitePago} consecuencia={i.consecuencia} pagado={pagadoDe(i.estado)} /></td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {i.interesMora > 0
-                        ? <><span style={{ fontWeight: 600, color: '#c67c00' }}>${fmtCOP(i.interesMora)}</span><div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{i.diasMora} d de mora</div></>
+                        ? <>
+                            <span style={{ fontWeight: 600, color: '#c67c00' }}>${fmtCOP(i.interesMora)}</span>
+                            <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{i.diasMora} d de mora</div>
+                            {!pagadoDe(i.estado) && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--navy)' }}>Total ${fmtCOP((i.valorPago ?? 0) + i.interesMora)}</div>}
+                          </>
                         : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
                     <td><VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} /></td>
