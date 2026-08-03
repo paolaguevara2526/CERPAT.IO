@@ -31,8 +31,13 @@
    - **Retención en la fuente DIAN < 10 UVT:** el plazo de pago antes de ineficacia
      es **1 año** en vez de 2 meses (solo retención en la fuente DIAN, no
      autorretención ni ReteICA). `limitePago(fecha, obligacion, valor)`.
-   - **Sanción por extemporaneidad** (pendiente): 5% del impuesto por mes o fracción
-     de mes, con **tope del 100%** y **mínimo la sanción mínima (10 UVT)**.
+   - **Sanción por extemporaneidad** (Art. 641 E.T.): `5% × impuesto × meses o
+     fracción de mora`, con **tope del 100%** del impuesto y **mínimo la sanción
+     mínima (10 UVT)**. Aplica a las **no presentadas** y a las **presentadas que
+     quedaron INEFICACES** (retención/autorretención/ReteICA que pasaron su límite
+     de pago); no a las pagadas ni a lo que solo causa intereses. Se muestra por
+     obligación y como KPI **Sanción (est.)**; el **Total a pagar** = capital +
+     interés + sanción.
 7. **Vista de Pagos.** No mostrar obligaciones futuras (`fechaVencimiento > hoy`)
    salvo que `estadoTarea = 'terminado'`, ya estén vencidas o ya estén pagadas.
 8. **Impresión modo "Cliente".** Excluir siempre las tareas con `interno = true`.

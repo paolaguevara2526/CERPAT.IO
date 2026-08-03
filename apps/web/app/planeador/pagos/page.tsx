@@ -15,12 +15,12 @@ export const dynamic = 'force-dynamic';
 type VencPago = {
   id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null;
   fechaVencimiento: string; estado: string; valorPago: number | null; fechaLimitePago: string | null; consecuencia: string;
-  diasMora: number; interesMora: number;
+  diasMora: number; interesMora: number; sancion: number;
 };
 type Pendiente = {
   id: string; obligacion: string; anio: number; periodo: string | null; municipio: string | null;
   empresa: string | null; fechaVencimiento: string; estado: string; valorPago: number | null; notas: string | null;
-  fechaLimitePago: string | null; consecuencia: string; diasMora: number; interesMora: number;
+  fechaLimitePago: string | null; consecuencia: string; diasMora: number; interesMora: number; sancion: number;
 };
 type EmpresaLite = { id: string; nombre: string };
 
@@ -28,7 +28,7 @@ type EmpresaLite = { id: string; nombre: string };
 type Item = {
   id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null;
   anio: number | null; fechaVencimiento: string; estado: string; valorPago: number | null;
-  fechaLimitePago: string | null; consecuencia: string; diasMora: number; interesMora: number;
+  fechaLimitePago: string | null; consecuencia: string; diasMora: number; interesMora: number; sancion: number;
   notas: string | null; manual: boolean;
 };
 
@@ -130,13 +130,13 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
     ...vencs.map((v): Item => ({
       id: v.id, obligacion: v.obligacion, empresa: v.empresa, municipio: v.municipio, periodo: v.periodo,
       anio: null, fechaVencimiento: v.fechaVencimiento, estado: v.estado, valorPago: v.valorPago,
-      fechaLimitePago: v.fechaLimitePago, consecuencia: v.consecuencia, diasMora: v.diasMora, interesMora: v.interesMora,
+      fechaLimitePago: v.fechaLimitePago, consecuencia: v.consecuencia, diasMora: v.diasMora, interesMora: v.interesMora, sancion: v.sancion,
       notas: null, manual: false,
     })),
     ...pendientes.map((p): Item => ({
       id: p.id, obligacion: p.obligacion, empresa: p.empresa, municipio: p.municipio, periodo: p.periodo,
       anio: p.anio, fechaVencimiento: p.fechaVencimiento, estado: p.estado, valorPago: p.valorPago,
-      fechaLimitePago: p.fechaLimitePago, consecuencia: p.consecuencia, diasMora: p.diasMora, interesMora: p.interesMora,
+      fechaLimitePago: p.fechaLimitePago, consecuencia: p.consecuencia, diasMora: p.diasMora, interesMora: p.interesMora, sancion: p.sancion,
       notas: p.notas, manual: true,
     })),
   ];
@@ -151,7 +151,8 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const kVencido = suma((i) => !pagadoDe(i.estado) && esVencido(i.fechaVencimiento));
   const kRiesgo = suma((i) => enRiesgoPago(i.fechaLimitePago, i.consecuencia, pagadoDe(i.estado)));
   const kInteres = scope.reduce((s, i) => s + (i.interesMora ?? 0), 0);
-  const kTotal = kPorPagar.v + kInteres; // capital pendiente + interés de mora a hoy
+  const kSancion = scope.reduce((s, i) => s + (i.sancion ?? 0), 0);
+  const kTotal = kPorPagar.v + kInteres + kSancion; // capital + interés + sanción a hoy
 
   const filas = scope
     .filter((i) => !estado || i.estado === estado)
@@ -173,7 +174,8 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           <div className="tile" style={{ borderColor: kVencido.n > 0 ? '#e0a3a0' : undefined }}><div className="k">Vencido sin pagar</div><div className="v" style={{ color: kVencido.n > 0 ? '#d64b3f' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kVencido.v)}</div><div className="s">{kVencido.n} con intereses corriendo</div></div>
           <div className="tile" style={{ borderColor: kRiesgo.n > 0 ? '#b3261e' : undefined }}><div className="k">Riesgo ineficacia / RST</div><div className="v" style={{ color: kRiesgo.n > 0 ? '#b3261e' : '#8a94a6', fontSize: 21 }}>{kRiesgo.n}</div><div className="s">límite de pago ≤ {UMBRAL_RIESGO} d o vencido</div></div>
           <div className="tile"><div className="k">Interés de mora</div><div className="v" style={{ color: kInteres > 0 ? '#c67c00' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kInteres)}</div><div className="s">estimado a hoy (DIAN)</div></div>
-          <div className="tile" style={{ borderColor: kTotal > 0 ? 'var(--navy)' : undefined }}><div className="k">Total a pagar (hoy)</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kTotal)}</div><div className="s">capital + interés de mora</div></div>
+          <div className="tile"><div className="k">Sanción (est.)</div><div className="v" style={{ color: kSancion > 0 ? '#b3261e' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kSancion)}</div><div className="s">extemporaneidad / ineficacia</div></div>
+          <div className="tile" style={{ borderColor: kTotal > 0 ? 'var(--navy)' : undefined }}><div className="k">Total a pagar (hoy)</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kTotal)}</div><div className="s">capital + interés + sanción</div></div>
         </div>
       )}
 
@@ -209,7 +211,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           <div className="dt-wrap">
             <table className="dt">
               <thead>
-                <tr><th>Obligación</th><th>Cliente</th><th>Municipio</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th style={{ whiteSpace: 'nowrap' }}>Límite de pago</th><th style={{ whiteSpace: 'nowrap' }}>Interés de mora</th><th>Valor y estado de pago</th><th></th></tr>
+                <tr><th>Obligación</th><th>Cliente</th><th>Municipio</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th style={{ whiteSpace: 'nowrap' }}>Límite de pago</th><th style={{ whiteSpace: 'nowrap' }}>Interés · sanción · total</th><th>Valor y estado de pago</th><th></th></tr>
               </thead>
               <tbody>
                 {filas.map((i) => (
@@ -224,11 +226,11 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                     <td><Semaforo iso={i.fechaVencimiento} pagado={pagadoDe(i.estado)} /></td>
                     <td><LimitePago fechaLimite={i.fechaLimitePago} consecuencia={i.consecuencia} pagado={pagadoDe(i.estado)} /></td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      {i.interesMora > 0
+                      {(i.interesMora > 0 || i.sancion > 0)
                         ? <>
-                            <span style={{ fontWeight: 600, color: '#c67c00' }}>${fmtCOP(i.interesMora)}</span>
-                            <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{i.diasMora} d de mora</div>
-                            {!pagadoDe(i.estado) && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--navy)' }}>Total ${fmtCOP((i.valorPago ?? 0) + i.interesMora)}</div>}
+                            {i.interesMora > 0 && <div><span style={{ fontWeight: 600, color: '#c67c00' }}>Int. ${fmtCOP(i.interesMora)}</span> <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>({i.diasMora} d)</span></div>}
+                            {i.sancion > 0 && <div style={{ fontSize: 11.5, color: '#b3261e', fontWeight: 600 }}>Sanción ${fmtCOP(i.sancion)}</div>}
+                            {!pagadoDe(i.estado) && <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--navy)' }}>Total ${fmtCOP((i.valorPago ?? 0) + i.interesMora + i.sancion)}</div>}
                           </>
                         : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>

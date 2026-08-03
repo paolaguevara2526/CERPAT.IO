@@ -53,3 +53,30 @@ export function interesMora(
   const interes = Math.ceil(bruto / 1000) * 1000; // ROUNDUP a múltiplo de 1.000
   return { dias, tasaAnual, interes };
 }
+
+// Meses o fracción de mes de retardo (para la sanción por extemporaneidad):
+// cualquier fracción cuenta como un mes completo; mínimo 1.
+function mesesOFraccion(desde: Date, hasta: Date): number {
+  const d = new Date(desde); d.setHours(0, 0, 0, 0);
+  const h = new Date(hasta); h.setHours(0, 0, 0, 0);
+  const dias = Math.round((h.getTime() - d.getTime()) / MS_DIA);
+  return Math.max(1, Math.ceil(dias / 30));
+}
+
+// Sanción por extemporaneidad (Art. 641 E.T.): 5% del impuesto por cada mes o
+// fracción de retardo, con TOPE del 100% del impuesto y MÍNIMO la sanción mínima
+// (10 UVT del año). Se aproxima al múltiplo de 1.000 más cercano.
+export function sancionExtemporaneidad(
+  valor: number | null | undefined,
+  fechaVencimiento: Date,
+  fechaCorte: Date = new Date(),
+  anioUvt: number = fechaVencimiento.getFullYear(),
+): { meses: number; sancion: number } {
+  const minima = Math.round((10 * uvt(anioUvt)) / 1000) * 1000;
+  if (!valor || valor <= 0) return { meses: 0, sancion: minima };
+  const meses = mesesOFraccion(fechaVencimiento, fechaCorte);
+  const bruto = 0.05 * valor * meses;
+  const conTope = Math.min(bruto, valor); // tope 100% del impuesto
+  const sancion = Math.round(Math.max(conTope, minima) / 1000) * 1000; // mínimo 10 UVT
+  return { meses, sancion };
+}
