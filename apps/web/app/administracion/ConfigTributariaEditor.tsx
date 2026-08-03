@@ -4,6 +4,7 @@
 // municipio (reteICA / autoICA). Contra la API vía /api/admin/config-tributaria.
 
 import { useCallback, useEffect, useState } from 'react';
+import FiltroColumna from './FiltroColumna';
 
 type Empresa = { id: string; nombre: string; nit: string | null };
 type Ica = { id: string; municipioId: string; municipio: string | null; departamento: string | null; icaPeriodicidad: string | null; reteica: boolean; reteicaPeriodicidad: string | null; autoica: boolean; autoicaPeriodicidad: string | null };
@@ -28,7 +29,11 @@ export default function ConfigTributariaEditor() {
   const [sel, setSel] = useState<Empresa | null>(null);
   const [config, setConfig] = useState<Config>(null);
   const [ica, setIca] = useState<Ica[]>([]);
-  const [icaFiltro, setIcaFiltro] = useState('');
+  // Filtros estilo Excel por columna (null = todos).
+  const [fMun, setFMun] = useState<Set<string> | null>(null);
+  const [fIca, setFIca] = useState<Set<string> | null>(null);
+  const [fRete, setFRete] = useState<Set<string> | null>(null);
+  const [fAuto, setFAuto] = useState<Set<string> | null>(null);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [ok, setOk] = useState(false);
@@ -43,6 +48,7 @@ export default function ConfigTributariaEditor() {
 
   const abrir = useCallback(async (e: Empresa) => {
     setSel(e); setCargando(true); setError(null); setOk(false); setRegResumen(null); setMunQ(''); setMunRes([]);
+    setFMun(null); setFIca(null); setFRete(null); setFAuto(null);
     try {
       const r = await fetch(`/api/admin/config-tributaria/${e.id}`, { cache: 'no-store' });
       const d = await r.json();
@@ -114,7 +120,19 @@ export default function ConfigTributariaEditor() {
   function setIcaRow(id: string, patch: Partial<Ica>) { setIca((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x))); }
 
   const filtrada = empresas.filter((e) => !q || `${e.nombre} ${e.nit ?? ''}`.toLowerCase().includes(q.toLowerCase()));
-  const icaFiltrada = ica.filter((r) => !icaFiltro.trim() || `${r.municipio ?? ''} ${r.departamento ?? ''}`.toLowerCase().includes(icaFiltro.trim().toLowerCase()));
+  // Valores por columna para los filtros tipo Excel.
+  const valMun = (r: Ica) => `${r.municipio ?? ''}${r.departamento ? ' · ' + r.departamento : ''}`;
+  const perLabel = (v: string | null) => (ICA_PER.find(([k]) => k === (v ?? ''))?.[1] ?? '—');
+  const valIca = (r: Ica) => perLabel(r.icaPeriodicidad);
+  const valRete = (r: Ica) => (r.reteica ? 'Sí' : 'No');
+  const valAuto = (r: Ica) => (r.autoica ? 'Sí' : 'No');
+  const distintos = (fn: (r: Ica) => string) => [...new Set(ica.map(fn))].sort((a, b) => a.localeCompare(b));
+  const icaFiltrada = ica.filter((r) =>
+    (fMun == null || fMun.has(valMun(r)))
+    && (fIca == null || fIca.has(valIca(r)))
+    && (fRete == null || fRete.has(valRete(r)))
+    && (fAuto == null || fAuto.has(valAuto(r))),
+  );
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 300px) 1fr', gap: 18, alignItems: 'start' }}>
@@ -181,20 +199,19 @@ export default function ConfigTributariaEditor() {
                 <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>Sin municipios de ICA.</div>
               ) : (
                 <>
-                  <input
-                    style={{ ...input, maxWidth: 320, marginBottom: 10 }}
-                    value={icaFiltro}
-                    onChange={(e) => setIcaFiltro(e.target.value)}
-                    placeholder={`Filtrar municipio o departamento… (${ica.length})`}
-                  />
-                  {icaFiltrada.length === 0 ? (
-                    <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>Ningún municipio coincide con “{icaFiltro}”.</div>
-                  ) : (
-                  <div className="dt-wrap" style={{ marginBottom: 12 }}>
+                  <div className="dt-wrap" style={{ marginBottom: 12, overflow: 'visible' }}>
                     <table className="dt">
-                      <thead><tr><th>Municipio</th><th>ICA</th><th>ReteICA</th><th>AutoICA</th><th></th></tr></thead>
+                      <thead><tr>
+                        <th style={{ whiteSpace: 'nowrap' }}>Municipio <FiltroColumna valores={distintos(valMun)} seleccion={fMun} onCambio={setFMun} buscar ancho={260} /></th>
+                        <th style={{ whiteSpace: 'nowrap' }}>ICA <FiltroColumna valores={distintos(valIca)} seleccion={fIca} onCambio={setFIca} /></th>
+                        <th style={{ whiteSpace: 'nowrap' }}>ReteICA <FiltroColumna valores={distintos(valRete)} seleccion={fRete} onCambio={setFRete} /></th>
+                        <th style={{ whiteSpace: 'nowrap' }}>AutoICA <FiltroColumna valores={distintos(valAuto)} seleccion={fAuto} onCambio={setFAuto} /></th>
+                        <th></th>
+                      </tr></thead>
                       <tbody>
-                      {icaFiltrada.map((row) => (
+                      {icaFiltrada.length === 0 ? (
+                        <tr><td colSpan={5} style={{ padding: 14, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>Ningún municipio con esos filtros.</td></tr>
+                      ) : icaFiltrada.map((row) => (
                         <tr key={row.id}>
                           <td style={{ fontWeight: 600 }}>{row.municipio}{row.departamento ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {row.departamento}</span> : null}</td>
                           <td style={{ minWidth: 110 }}><Sel value={row.icaPeriodicidad ?? ''} onChange={(v) => setIcaRow(row.id, { icaPeriodicidad: v || null })} opciones={ICA_PER} /></td>
@@ -215,7 +232,6 @@ export default function ConfigTributariaEditor() {
                       </tbody>
                     </table>
                   </div>
-                  )}
                 </>
               )}
 
