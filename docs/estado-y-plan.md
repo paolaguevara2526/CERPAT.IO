@@ -80,7 +80,11 @@ Drive/OneDrive donde va quedando el trabajo).
 **coordinador de impuestos**: KPIs de riesgo en pesos (**Pagado**, **Por pagar**,
 **Presentado sin pagar** y **Vencido sin pagar**), **semáforo de urgencia** por
 días (*vence en N d* / *vencido hace N d*) y orden por urgencia (lo más vencido
-arriba). Filtros por cliente, estado, **mes**, **alcance** (solo el mes vs. mes +
+arriba). Distingue el **límite de presentación** (desde el día siguiente corren
+intereses) del **límite de pago**: retención/autorretención/ReteICA quedan
+**INEFICAZ** a los 2 meses y el anticipo RST entra en **riesgo de exclusión** al
+mes — con KPI **Riesgo ineficacia/RST** y filtro (ver regla 10 en
+[`reglas-de-negocio.md`](./reglas-de-negocio.md)). Filtros por cliente, estado, **mes**, **alcance** (solo el mes vs. mes +
 atrasadas de meses anteriores sin pagar) y **"solo vencidas"**. Suma las tareas
 con pago y los **vencimientos por pagar** (presentados): al marcarlos "Presentado
 (sin pago)" entran al ciclo con su **valor a pagar** (`valorPago`). El arrastre de

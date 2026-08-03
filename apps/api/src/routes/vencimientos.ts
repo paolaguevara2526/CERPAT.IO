@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { vencimientosNacionales, ANIO_CALENDARIO, type ConfigNacional } from '../vencimientos/generador.js';
+import { limitePago } from '../vencimientos/reglas-pago.js';
 
 export const vencimientosRouter = Router();
 
@@ -121,11 +122,15 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
   res.json({
     anio,
     total: items.length,
-    vencimientos: items.map((v) => ({
-      id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
-      valorPago: v.valorPago != null ? Number(v.valorPago) : null,
-      empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
-    })),
+    vencimientos: items.map((v) => {
+      const lp = limitePago(v.fechaVencimiento, v.obligacion);
+      return {
+        id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
+        valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+        fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
+        empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+      };
+    }),
   });
 });
 
@@ -148,11 +153,15 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
   });
   res.json({
     total: items.length,
-    pendientes: items.map((v) => ({
-      id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
-      estado: v.estado, notas: v.notas, valorPago: v.valorPago != null ? Number(v.valorPago) : null,
-      empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
-    })),
+    pendientes: items.map((v) => {
+      const lp = limitePago(v.fechaVencimiento, v.obligacion);
+      return {
+        id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
+        estado: v.estado, notas: v.notas, valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+        fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
+        empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+      };
+    }),
   });
 });
 

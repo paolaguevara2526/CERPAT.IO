@@ -32,6 +32,25 @@
 8. **Impresión modo "Cliente".** Excluir siempre las tareas con `interno = true`.
 9. **Etiquetas dinámicas.** Se puede crear una etiqueta al vuelo desde el
    formulario de tarea; queda disponible en el catálogo para reutilizarse.
+10. **Fecha límite de presentación vs. fecha límite de pago.** Las fechas que
+    carga el sistema (`fechaVencimiento`) son el **límite de presentación**.
+    Desde el día siguiente corren **intereses de mora** en todas las
+    obligaciones sin pagar. Además, algunas tienen un **límite de pago**
+    (= presentación + N meses calendario) tras el cual la consecuencia ya no es
+    solo intereses:
+    - **Retención en la fuente, Autorretención y ReteICA:** **+2 meses** → la
+      declaración queda **INEFICAZ** (para la DIAN es como no haberla presentado;
+      Art. 580-1 E.T.). Hay que volver a presentar y pagar.
+    - **Anticipo bimestral del RST:** **+1 mes** → **riesgo de exclusión del
+      RST**. Es una **alarma, no una sanción**.
+    - **Resto** (IVA, Renta, Consumo, etc.): solo intereses hasta que se pague.
+
+    El catálogo y el cálculo viven en el backend
+    (`apps/api/src/vencimientos/reglas-pago.ts`); los feeds `GET /plan/pagos` y
+    `GET /vencimientos/pagos` devuelven `fechaLimitePago` y `consecuencia`
+    (`intereses | ineficaz | exclusion_rst`) por obligación. La vista de Pagos
+    los usa para el semáforo de "límite de pago", el KPI **Riesgo ineficacia/RST**
+    y el filtro respectivo.
 
 ## Seguridad (no negociable)
 
