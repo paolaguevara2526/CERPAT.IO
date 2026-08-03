@@ -8,7 +8,16 @@ import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { vencimientosNacionales, ANIO_CALENDARIO, type ConfigNacional } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
-import { interesMora } from '../vencimientos/tasas-mora.js';
+import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
+
+// ¿La obligación causa sanción por extemporaneidad? Aplica a las NO presentadas
+// y a las que quedaron INEFICACES (retención/autorretención/ReteICA que pasaron
+// su límite de pago). No a las pagadas.
+function sancionAplica(estado: string, consecuencia: string, fechaLimitePago: Date | null): boolean {
+  if (estado === 'presentado_pagado') return false;
+  if (estado === 'no_presentado') return true;
+  return consecuencia === 'ineficaz' && fechaLimitePago != null && new Date() > fechaLimitePago;
+}
 
 export const vencimientosRouter = Router();
 
@@ -124,15 +133,18 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
     anio,
     total: items.length,
     vencimientos: items.map((v) => {
-      const lp = limitePago(v.fechaVencimiento, v.obligacion);
       const valor = v.valorPago != null ? Number(v.valorPago) : null;
+      const lp = limitePago(v.fechaVencimiento, v.obligacion, valor);
       // Interés de mora a hoy, solo si está sin pagar.
       const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento);
+      const san = sancionAplica(v.estado, lp.consecuencia, lp.fechaLimitePago)
+        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), v.fechaVencimiento.getFullYear())
+        : { meses: 0, sancion: 0 };
       return {
         id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
         valorPago: valor,
         fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
-        diasMora: im.dias, interesMora: im.interes,
+        diasMora: im.dias, interesMora: im.interes, sancion: san.sancion,
         empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
       };
     }),
@@ -159,14 +171,17 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
   res.json({
     total: items.length,
     pendientes: items.map((v) => {
-      const lp = limitePago(v.fechaVencimiento, v.obligacion);
       const valor = v.valorPago != null ? Number(v.valorPago) : null;
+      const lp = limitePago(v.fechaVencimiento, v.obligacion, valor);
       const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento);
+      const san = sancionAplica(v.estado, lp.consecuencia, lp.fechaLimitePago)
+        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), v.anio)
+        : { meses: 0, sancion: 0 };
       return {
         id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
         estado: v.estado, notas: v.notas, valorPago: valor,
         fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
-        diasMora: im.dias, interesMora: im.interes,
+        diasMora: im.dias, interesMora: im.interes, sancion: san.sancion,
         empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
       };
     }),
