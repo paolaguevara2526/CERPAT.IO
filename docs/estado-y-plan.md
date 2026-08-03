@@ -85,11 +85,13 @@ intereses) del **límite de pago**: retención/autorretención/ReteICA quedan
 **INEFICAZ** a los 2 meses y el anticipo RST entra en **riesgo de exclusión** al
 mes — con KPI **Riesgo ineficacia/RST** y filtro (ver regla 10 en
 [`reglas-de-negocio.md`](./reglas-de-negocio.md)). Filtros por cliente, estado, **mes**, **alcance** (solo el mes vs. mes +
-atrasadas de meses anteriores sin pagar) y **"solo vencidas"**. Suma las tareas
-con pago y los **vencimientos por pagar** (presentados): al marcarlos "Presentado
-(sin pago)" entran al ciclo con su **valor a pagar** (`valorPago`). El arrastre de
-atrasadas se apoya en `GET /plan/pagos?periodo&incluirAtrasadas`. Además, sección
-**"Pagos pendientes"** para
+atrasadas de meses anteriores sin pagar) y **"solo vencidas"**. Es **una sola
+tabla**, alimentada por las obligaciones del **Plan de Trabajo** que generan pago
+(IVA, retención, ICA, nómina…), con responsable, valor y estado; el arrastre de
+atrasadas se apoya en `GET /plan/pagos?periodo&incluirAtrasadas`. Los
+**vencimientos tributarios** (config × calendario) se controlan en su propia vista
+`cerpat.io/vencimientos` (estado de presentación), para no duplicarlos en Pagos.
+Además, sección **"Pagos pendientes"** para
 registrar a mano **deudas de años anteriores** o impuestos que no se cargaron al
 sistema: el Administrador crea la entrada (cliente, obligación, año, período,
 vencimiento, valor, notas), la edita y la elimina. Se guardan como

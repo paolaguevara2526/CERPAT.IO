@@ -2,25 +2,17 @@
 // Pensado para el coordinador de impuestos: KPIs de riesgo en $ (pagado, por
 // pagar, presentado sin pagar, vencido sin pagar), semáforo de urgencia por
 // días, orden por urgencia y filtros (cliente, estado, mes, alcance, vencidas).
+//
+// Una sola tabla, alimentada por las obligaciones del Plan de Trabajo que
+// generan pago. Los vencimientos tributarios (config × calendario) se controlan
+// en su propia vista (/vencimientos); aquí no se duplican.
 
 import { apiFetch } from '@/lib/session';
 import { nombrePeriodo } from '../tareas';
 import PagoEditor from '../PagoEditor';
-import VencimientoPagoEditor from '../VencimientoPagoEditor';
 import PendientesManuales from '../PendientesManuales';
 
 export const dynamic = 'force-dynamic';
-
-type VencPago = { id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null; fechaVencimiento: string; estado: string; valorPago: number | null; fechaLimitePago: string | null; consecuencia: string };
-async function fetchVencPagos(anio: number): Promise<{ data: { vencimientos: VencPago[] } | null; error: string | null }> {
-  try {
-    const res = await apiFetch(`/vencimientos/pagos?anio=${anio}`);
-    if (!res.ok) return { data: null, error: `La API respondió ${res.status}` };
-    return { data: (await res.json()) as { vencimientos: VencPago[] }, error: null };
-  } catch (e) {
-    return { data: null, error: e instanceof Error ? e.message : 'Error de red' };
-  }
-}
 
 type TareaPago = {
   id: string; titulo: string; empresa: string | null; obligacion: string | null; area: string | null;
@@ -142,23 +134,17 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
   const { data, error } = await fetchPagos(periodo, incluirAtrasadas);
   const tareasAll = data?.tareas ?? [];
-  const { data: vdata } = await fetchVencPagos(anio);
-  const vencsAll = vdata?.vencimientos ?? [];
   const [pendientesManuales, empresas] = await Promise.all([fetchPendientes(), fetchEmpresas()]);
 
-  // Opciones de cliente (unión de tareas + vencimientos).
-  const clientes = [...new Set([...tareasAll.map((t) => t.empresa), ...vencsAll.map((v) => v.empresa)].filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
+  // Opciones de cliente.
+  const clientes = [...new Set(tareasAll.map((t) => t.empresa).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
   const meses = Array.from({ length: 12 }, (_, i) => `${anio}-${String(i + 1).padStart(2, '0')}`);
 
   // Alcance de los KPIs: filtra por cliente (el estado y "solo vencidas" son
-  // drill-down de las tablas, no del tablero). Normaliza tareas + vencimientos.
+  // drill-down de la tabla, no del tablero).
   const pagadoDe = (e: string) => e === 'presentado_pagado';
   const tareasScope = tareasAll.filter((t) => !cliente || t.empresa === cliente);
-  const vencsScope = vencsAll.filter((v) => !cliente || v.empresa === cliente);
-  const kpiItems = [
-    ...tareasScope.map((t) => ({ estado: t.estadoPago, fecha: t.fechaVencimiento, valor: t.valorPago ?? 0, fechaLimitePago: t.fechaLimitePago, consecuencia: t.consecuencia })),
-    ...vencsScope.map((v) => ({ estado: v.estado, fecha: v.fechaVencimiento, valor: v.valorPago ?? 0, fechaLimitePago: v.fechaLimitePago, consecuencia: v.consecuencia })),
-  ];
+  const kpiItems = tareasScope.map((t) => ({ estado: t.estadoPago, fecha: t.fechaVencimiento, valor: t.valorPago ?? 0, fechaLimitePago: t.fechaLimitePago, consecuencia: t.consecuencia }));
   const suma = (pred: (x: (typeof kpiItems)[number]) => boolean) => kpiItems.filter(pred).reduce((a, x) => ({ n: a.n + 1, v: a.v + x.valor }), { n: 0, v: 0 });
   const kPagado = suma((x) => pagadoDe(x.estado));
   const kPorPagar = suma((x) => !pagadoDe(x.estado));
@@ -174,8 +160,6 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
     && (!soloRiesgo || enRiesgoPago(fechaLimite, consec, pagadoDe(est)));
   const tareas = tareasScope.filter((t) => filtroFila(t.estadoPago, t.fechaVencimiento, t.fechaLimitePago, t.consecuencia))
     .sort((a, b) => Number(pagadoDe(a.estadoPago)) - Number(pagadoDe(b.estadoPago)) || +new Date(a.fechaVencimiento) - +new Date(b.fechaVencimiento));
-  const vencs = vencsScope.filter((v) => filtroFila(v.estado, v.fechaVencimiento, v.fechaLimitePago, v.consecuencia))
-    .sort((a, b) => Number(pagadoDe(a.estado)) - Number(pagadoDe(b.estado)) || +new Date(a.fechaVencimiento) - +new Date(b.fechaVencimiento));
 
   const sel: React.CSSProperties = { padding: '8px 11px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
 
@@ -183,7 +167,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 4 }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Pagos</h1>
-        <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{nombrePeriodo(periodo)}{incluirAtrasadas ? ' + atrasadas' : ''} · {tareas.length + vencs.length} obligaciones</span>
+        <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{nombrePeriodo(periodo)}{incluirAtrasadas ? ' + atrasadas' : ''} · {tareas.length} obligaciones</span>
       </div>
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 14px' }}>Control de obligaciones con pago (DIAN/entidades). La fecha de <strong>vence</strong> es el límite de presentación (desde el día siguiente corren intereses); el <strong>límite de pago</strong> avisa cuándo la retención/autorretención/ReteICA quedaría <strong>INEFICAZ</strong> (2 meses) o el anticipo RST en <strong>riesgo de exclusión</strong> (1 mes).</p>
 
@@ -226,9 +210,8 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         {hayFiltro && <a href="/planeador/pagos" className="dbtn" style={{ fontSize: 13, textDecoration: 'none' }}>Limpiar</a>}
       </form>
 
-      <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Obligaciones del plan de trabajo</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-        Actividades del <strong>Plan de Trabajo</strong> del cliente marcadas como <strong>genera pago</strong> (IVA, retención, ICA, nómina…). Es distinto de los <strong>vencimientos tributarios</strong> del generador, que van más abajo.
+        Obligaciones con pago del cliente (del <strong>Plan de Trabajo</strong>: IVA, retención, ICA, nómina…), con su responsable. Registra el valor y el estado de pago. El control de <strong>presentación</strong> de los vencimientos tributarios está en la vista <strong>Vencimientos</strong> del menú.
       </p>
 
       {error ? (
@@ -261,41 +244,6 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           </div>
         </div>
       )}
-
-      <div style={{ marginTop: 24 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Vencimientos por pagar</h2>
-        <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-          Obligaciones tributarias (ICA, etc.) ya presentadas — captura el valor y marca el pago. Aparecen aquí cuando se marcan <strong>Presentado (sin pago)</strong> o <strong>Presentado y pagado</strong>. Año {anio}.
-        </p>
-        {vencs.length === 0 ? (
-          <div className="panel" style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>
-            {soloVencidas ? 'No hay vencimientos vencidos sin pagar con estos filtros.' : 'Aún no hay vencimientos en el ciclo de pago.'}
-            <div style={{ fontSize: 12, marginTop: 6 }}>Marca un vencimiento como <strong>Presentado (sin pago)</strong> en el Calendario o en Vencimientos y aparecerá aquí.</div>
-          </div>
-        ) : (
-          <div className="panel">
-            <div className="dt-wrap">
-              <table className="dt">
-                <thead>
-                  <tr><th>Obligación</th><th>Cliente</th><th>Municipio</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th style={{ whiteSpace: 'nowrap' }}>Límite de pago</th><th>Valor y estado de pago</th></tr>
-                </thead>
-                <tbody>
-                  {vencs.map((v) => (
-                    <tr key={v.id}>
-                      <td style={{ fontWeight: 600 }}>{v.obligacion}{v.periodo ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {v.periodo}</span> : null}</td>
-                      <td style={{ color: 'var(--muted)' }}>{v.empresa ?? '—'}</td>
-                      <td style={{ color: 'var(--muted)' }}>{v.municipio ?? '—'}</td>
-                      <td><Semaforo iso={v.fechaVencimiento} pagado={pagadoDe(v.estado)} /></td>
-                      <td><LimitePago fechaLimite={v.fechaLimitePago} consecuencia={v.consecuencia} pagado={pagadoDe(v.estado)} /></td>
-                      <td><VencimientoPagoEditor id={v.id} valorPago={v.valorPago} estado={v.estado} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
 
       <PendientesManuales empresas={empresas} pendientes={pendientesManuales} />
     </>
