@@ -103,6 +103,14 @@ manuales (`generado=false`). API `POST /vencimientos/regenerar/:empresaId` (solo
 Administrador). El calendario `.ts` se regenera desde los CSV de `docs/data/` con
 `node apps/api/scripts/build-calendario.mjs`.
 
+**FOPAT (transporte).** Nueva responsabilidad nacional en Config. tributaria:
+casilla **"Agente de retención FOPAT (transporte)"** (`ConfiguracionTributaria.fopat`,
+migración `add_fopat_config`). Es una **retención mensual**; al regenerar, el
+generador crea 12 vencimientos que vencen el **10º día hábil del mes siguiente**
+al período (igual para todos, sin depender del NIT; se saltan fines de semana y
+**festivos de Colombia**). Solo aplica a los clientes que el Administrador marque
+como obligados.
+
 **Calidad / infraestructura** — se adoptaron **migraciones versionadas de
 Prisma** (fin del SQL manual y del *drift*) y **CI en cada PR** (valida esquema +
 compila API y web). Curaduría estructural completa en
@@ -140,7 +148,11 @@ compila API y web). Curaduría estructural completa en
 - [ ] Microsoft 365 (Graph API) para correo desde `notificaciones@cerpat.io`.
 - [ ] Sentry (monitoreo de errores).
 - [x] Migraciones versionadas de Prisma (baseline + `prisma migrate deploy`) y CI en cada PR (ago 2026).
-- [ ] `api.cerpat.io` (dominio propio de la API); activar `migrate deploy` en el deploy.
+- [x] `migrate deploy` automático en el deploy: `railway.json` antepone
+  `npm run db:migrate:deploy` al arranque de la API, así cada despliegue aplica
+  las migraciones pendientes antes de servir (ago 2026). Requiere que el *root
+  directory* del servicio de la API en Railway sea la raíz del monorepo.
+- [ ] `api.cerpat.io` (dominio propio de la API).
 
 ### Fase 5 — Portal de clientes (futuro)
 - [ ] Aislamiento adicional por empresa cliente (cada cliente ve solo lo suyo) sobre el modelo multi-tenant.

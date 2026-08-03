@@ -529,6 +529,7 @@ adminRouter.put('/config-tributaria/:empresaId', requireAuth, soloAdmin, async (
   const data = {
     ivaPeriodicidad: opt(b.ivaPeriodicidad, IVA_OPTS),
     retencionFuente: !!b.retencionFuente,
+    fopat: !!b.fopat,
     consumoPeriodicidad: opt(b.consumoPeriodicidad, CONSUMO_OPTS),
     rentaTipo: opt(b.rentaTipo, RENTA_OPTS),
     anticipoRstPeriodicidad: opt(b.anticipoRstPeriodicidad, ANTICIPO_OPTS),

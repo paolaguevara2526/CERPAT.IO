@@ -8,7 +8,7 @@ import FiltroColumna from './FiltroColumna';
 
 type Empresa = { id: string; nombre: string; nit: string | null };
 type Ica = { id: string; municipioId: string; municipio: string | null; departamento: string | null; icaPeriodicidad: string | null; reteica: boolean; reteicaPeriodicidad: string | null; autoica: boolean; autoicaPeriodicidad: string | null };
-type Config = { ivaPeriodicidad: string | null; retencionFuente: boolean; consumoPeriodicidad: string | null; rentaTipo: string | null; anticipoRstPeriodicidad: string | null } | null;
+type Config = { ivaPeriodicidad: string | null; retencionFuente: boolean; fopat: boolean; consumoPeriodicidad: string | null; rentaTipo: string | null; anticipoRstPeriodicidad: string | null } | null;
 
 const IVA = [['', 'No responsable'], ['bimestral', 'Bimestral'], ['cuatrimestral', 'Cuatrimestral'], ['anual_rst', 'Anual (RST)']];
 const CONSUMO = [['', 'No responsable'], ['bimestral', 'Bimestral'], ['anual_rst', 'Anual (RST)']];
@@ -53,13 +53,13 @@ export default function ConfigTributariaEditor() {
       const r = await fetch(`/api/admin/config-tributaria/${e.id}`, { cache: 'no-store' });
       const d = await r.json();
       if (!r.ok) { setError(d.error || 'No se pudo cargar.'); return; }
-      setConfig(d.config ?? { ivaPeriodicidad: null, retencionFuente: false, consumoPeriodicidad: null, rentaTipo: null, anticipoRstPeriodicidad: null });
+      setConfig(d.config ?? { ivaPeriodicidad: null, retencionFuente: false, fopat: false, consumoPeriodicidad: null, rentaTipo: null, anticipoRstPeriodicidad: null });
       setIca(d.municipiosIca ?? []);
     } catch { setError('Error de red.'); } finally { setCargando(false); }
   }, []);
 
   function setC<K extends keyof NonNullable<Config>>(k: K, v: NonNullable<Config>[K]) {
-    setConfig((c) => ({ ...(c ?? { ivaPeriodicidad: null, retencionFuente: false, consumoPeriodicidad: null, rentaTipo: null, anticipoRstPeriodicidad: null }), [k]: v }));
+    setConfig((c) => ({ ...(c ?? { ivaPeriodicidad: null, retencionFuente: false, fopat: false, consumoPeriodicidad: null, rentaTipo: null, anticipoRstPeriodicidad: null }), [k]: v }));
     setOk(false); setRegResumen(null);
   }
 
@@ -175,6 +175,12 @@ export default function ConfigTributariaEditor() {
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
                     <input type="checkbox" checked={!!config?.retencionFuente} onChange={(e) => setC('retencionFuente', e.target.checked)} style={{ accentColor: '#2E5090' }} />
                     Agente de retención en la fuente
+                  </label>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }} title="Retención FOPAT (mensual), aplica a empresas de transporte">
+                    <input type="checkbox" checked={!!config?.fopat} onChange={(e) => setC('fopat', e.target.checked)} style={{ accentColor: '#2E5090' }} />
+                    Agente de retención FOPAT (transporte)
                   </label>
                 </div>
               </div>
