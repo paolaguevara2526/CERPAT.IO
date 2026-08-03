@@ -76,28 +76,16 @@ una tarea abre su **modal completo** (pestañas General/Fiscal/Auditoría) y cli
 en un vencimiento su detalle; ambos con **Soporte Documental** (link editable
 Drive/OneDrive donde va quedando el trabajo).
 
-**`cerpat.io/planeador/pagos` — Pagos (tablero de control).** Pensado para el
-**coordinador de impuestos**: KPIs de riesgo en pesos (**Pagado**, **Por pagar**,
-**Presentado sin pagar** y **Vencido sin pagar**), **semáforo de urgencia** por
-días (*vence en N d* / *vencido hace N d*) y orden por urgencia (lo más vencido
-arriba). Distingue el **límite de presentación** (desde el día siguiente corren
-intereses) del **límite de pago**: retención/autorretención/ReteICA quedan
-**INEFICAZ** a los 2 meses y el anticipo RST entra en **riesgo de exclusión** al
-mes — con KPI **Riesgo ineficacia/RST** y filtro (ver regla 10 en
-[`reglas-de-negocio.md`](./reglas-de-negocio.md)). Filtros por cliente, estado, **mes**, **alcance** (solo el mes vs. mes +
-atrasadas de meses anteriores sin pagar) y **"solo vencidas"**. Es **una sola
-tabla**, alimentada por las obligaciones del **Plan de Trabajo** que generan pago
-(IVA, retención, ICA, nómina…), con responsable, valor y estado; el arrastre de
-atrasadas se apoya en `GET /plan/pagos?periodo&incluirAtrasadas`. Los
-**vencimientos tributarios** (config × calendario) se controlan en su propia vista
-`cerpat.io/vencimientos` (estado de presentación), para no duplicarlos en Pagos.
-Además, sección **"Pagos pendientes"** para
-registrar a mano **deudas de años anteriores** o impuestos que no se cargaron al
-sistema: el Administrador crea la entrada (cliente, obligación, año, período,
-vencimiento, valor, notas), la edita y la elimina. Se guardan como
-`VencimientoEmpresa` con `generado=false` (sin migración: el campo ya existía) y
-se listan aparte de los vencimientos del generador — API `POST /vencimientos`,
-`GET /vencimientos/pendientes`, `DELETE /vencimientos/:id`.
+**`cerpat.io/planeador/pagos` — Pagos.** Controla lo que está **pendiente de
+pago**. Es **una sola tabla, "Pagos pendientes"**, donde el Administrador
+registra a mano las obligaciones por pagar (cliente, obligación, año, período,
+vencimiento, valor, notas), edita su **valor y estado** y las elimina. Sirve para
+**deudas de años anteriores** o impuestos que no se cargaron al sistema. Se
+guardan como `VencimientoEmpresa` con `generado=false` (sin migración: el campo
+ya existía) — API `POST /vencimientos`, `GET /vencimientos/pendientes`,
+`DELETE /vencimientos/:id`. El estado de **presentación** de los vencimientos
+tributarios (config × calendario) se gestiona aparte en `cerpat.io/vencimientos`,
+y las actividades operativas en el Plan de Trabajo; Pagos no las duplica.
 
 **Regenerar vencimientos por cliente.** En **Administración → Config. tributaria**,
 tras corregir un parámetro, el botón **"Regenerar vencimientos"** rehace los
