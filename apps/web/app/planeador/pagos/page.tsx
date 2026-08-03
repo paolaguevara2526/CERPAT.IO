@@ -102,6 +102,12 @@ function LimitePago({ fechaLimite, consecuencia, pagado }: { fechaLimite: string
 }
 
 const pagadoDe = (e: string) => e === 'presentado_pagado';
+const esVencido = (iso: string) => new Date(iso).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0);
+function enRiesgoPago(fechaLimite: string | null, consecuencia: string, pagado: boolean): boolean {
+  if (pagado || !fechaLimite || consecuencia === 'intereses') return false;
+  const hoy = new Date().setHours(0, 0, 0, 0);
+  return Math.round((new Date(fechaLimite).setHours(0, 0, 0, 0) - hoy) / MS_DIA) <= UMBRAL_RIESGO;
+}
 
 export default async function PagosPage({ searchParams }: { searchParams?: Record<string, string> }) {
   const cliente = searchParams?.cliente || '';
@@ -114,12 +120,18 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
   const todos = vencsAll ?? [];
   const clientes = [...new Set(todos.map((v) => v.empresa).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
-  const vencs = todos
-    .filter((v) => (!cliente || v.empresa === cliente) && (!estado || v.estado === estado))
-    .sort((a, b) => Number(pagadoDe(a.estado)) - Number(pagadoDe(b.estado)) || +new Date(a.fechaVencimiento) - +new Date(b.fechaVencimiento));
 
-  const totalPorPagar = todos.filter((v) => v.estado === 'presentado_sin_pago').reduce((s, v) => s + (v.valorPago ?? 0), 0);
-  const nPorPagar = todos.filter((v) => v.estado === 'presentado_sin_pago').length;
+  // KPIs sobre el alcance por cliente (el estado es drill-down de la tabla).
+  const scope = todos.filter((v) => !cliente || v.empresa === cliente);
+  const suma = (pred: (v: VencPago) => boolean) => scope.filter(pred).reduce((a, v) => ({ n: a.n + 1, v: a.v + (v.valorPago ?? 0) }), { n: 0, v: 0 });
+  const kPagado = suma((v) => v.estado === 'presentado_pagado');
+  const kPorPagar = suma((v) => v.estado === 'presentado_sin_pago');
+  const kVencido = suma((v) => v.estado === 'presentado_sin_pago' && esVencido(v.fechaVencimiento));
+  const kRiesgo = suma((v) => enRiesgoPago(v.fechaLimitePago, v.consecuencia, pagadoDe(v.estado)));
+
+  const vencs = scope
+    .filter((v) => !estado || v.estado === estado)
+    .sort((a, b) => Number(pagadoDe(a.estado)) - Number(pagadoDe(b.estado)) || +new Date(a.fechaVencimiento) - +new Date(b.fechaVencimiento));
 
   const sel: React.CSSProperties = { padding: '8px 11px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
 
@@ -130,10 +142,18 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         Control de las obligaciones <strong>pendientes de pago</strong>. Registra el valor y el estado de cada pago.
       </p>
 
+      {!error && scope.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 16 }}>
+          <div className="tile"><div className="k">Pagado</div><div className="v" style={{ color: '#16794c', fontSize: 21 }}>${fmtCOP(kPagado.v)}</div><div className="s">{kPagado.n} presentadas y pagadas</div></div>
+          <div className="tile"><div className="k">Por pagar</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kPorPagar.v)}</div><div className="s">{kPorPagar.n} presentadas sin pago</div></div>
+          <div className="tile" style={{ borderColor: kVencido.n > 0 ? '#e0a3a0' : undefined }}><div className="k">Vencido sin pagar</div><div className="v" style={{ color: kVencido.n > 0 ? '#d64b3f' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kVencido.v)}</div><div className="s">{kVencido.n} con intereses corriendo</div></div>
+          <div className="tile" style={{ borderColor: kRiesgo.n > 0 ? '#b3261e' : undefined }}><div className="k">Riesgo ineficacia / RST</div><div className="v" style={{ color: kRiesgo.n > 0 ? '#b3261e' : '#8a94a6', fontSize: 21 }}>{kRiesgo.n}</div><div className="s">límite de pago ≤ {UMBRAL_RIESGO} d o vencido</div></div>
+        </div>
+      )}
+
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Vencimientos por pagar</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
         Vencimientos que ya marcaste <strong>Presentado (sin pago)</strong> o <strong>Presentado y pagado</strong> — captura el valor y controla el pago. Año {anio}.
-        {nPorPagar > 0 && <> Por pagar: <strong>{nPorPagar}</strong> (${fmtCOP(totalPorPagar)}).</>}
       </p>
 
       <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
