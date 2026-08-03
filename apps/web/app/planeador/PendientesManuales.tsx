@@ -12,6 +12,7 @@ type Municipio = { id: string; nombre: string; departamento: string | null };
 type Pendiente = {
   id: string; obligacion: string; anio: number; periodo: string | null; municipio: string | null;
   empresa: string | null; fechaVencimiento: string; estado: string; valorPago: number | null; notas: string | null;
+  diasMora: number; interesMora: number;
 };
 
 // Catálogo de obligaciones (uniforme). Los nombres casan con las reglas de
@@ -28,6 +29,7 @@ const CUATRIMESTRES = [['Cuatrimestre 1', 'ene-abr'], ['Cuatrimestre 2', 'may-ag
 function fmtFecha(iso: string): string {
   try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return ''; }
 }
+const fmtCOP = (v: number) => v.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 
 const inp: React.CSSProperties = {
   padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)',
@@ -225,7 +227,7 @@ export default function PendientesManuales({ empresas, pendientes }: { empresas:
           <div className="dt-wrap">
             <table className="dt">
               <thead>
-                <tr><th>Obligación</th><th>Cliente</th><th style={{ whiteSpace: 'nowrap' }}>Año / período</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th>Valor y estado de pago</th><th></th></tr>
+                <tr><th>Obligación</th><th>Cliente</th><th style={{ whiteSpace: 'nowrap' }}>Año / período</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th style={{ whiteSpace: 'nowrap' }}>Interés de mora</th><th>Valor y estado de pago</th><th></th></tr>
               </thead>
               <tbody>
                 {pendientes.map((p) => {
@@ -240,6 +242,11 @@ export default function PendientesManuales({ empresas, pendientes }: { empresas:
                       <td style={{ color: 'var(--muted)' }}>{p.empresa ?? '—'}</td>
                       <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)' }}>{p.anio}{p.periodo ? ` · ${p.periodo}` : ''}</td>
                       <td style={{ whiteSpace: 'nowrap', fontWeight: vencido ? 800 : 500, color: vencido ? '#d64b3f' : 'var(--muted)' }} title={meta.label}>{fmtFecha(p.fechaVencimiento)}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {p.interesMora > 0
+                          ? <><span style={{ fontWeight: 600, color: '#c67c00' }}>${fmtCOP(p.interesMora)}</span><div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{p.diasMora} d de mora</div></>
+                          : <span style={{ color: 'var(--muted)' }}>—</span>}
+                      </td>
                       <td><VencimientoPagoEditor id={p.id} valorPago={p.valorPago} estado={p.estado} /></td>
                       <td>
                         <button

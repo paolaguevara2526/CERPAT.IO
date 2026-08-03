@@ -19,14 +19,18 @@
    se asigna automáticamente a quien la crea (nunca queda sin asignar).
 5. **"Mi Día".** Muestra solo tareas con `fechaVencimiento = hoy` **y** donde el
    usuario actual está en `TareaAsignado`; no incluye vencidas de días previos.
-6. **Liquidador de intereses y sanción** (`Pago`), solo si
-   `estadoPago != 'presentado_pagado'` y `fechaVencimiento < hoy`:
-   - `diasMora = hoy - fechaVencimiento`
-   - `tasaDiaria = tasaMoraMensual / 30`
-   - `interes = valor * tasaDiaria * diasMora`
-   - Si `diasMora > 60`: `sancion = max(valor * pctSancionExtemporaneidad, sancionMinimaUvt * valorUvt)`; si no, `sancion = 0`
-   - `total = valor + interes + sancion`
-   - Debe recalcularse a diario (job en n8n o backend), no solo al consultar.
+6. **Interés de mora (DIAN, Art. 635 E.T.)** — solo si `estado != 'presentado_pagado'`
+   y `fechaVencimiento < hoy`. Método replicado del liquidador oficial del equipo
+   (`apps/api/src/vencimientos/tasas-mora.ts`):
+   - `diasMora = fechaCorte − fechaVencimiento` (días calendario; en Pagos, `fechaCorte = hoy`).
+   - `tasaAnual = tasa de mora del MES de la fecha de pago` (tabla mensual DIAN/Superfinanciera).
+   - `interes = valor × (tasaAnual / 365) × diasMora`, **redondeado hacia arriba** al múltiplo de 1.000.
+   - Interés **simple**: la tasa vigente al pago se aplica a todo el período. Se recalcula a diario.
+   - Se muestra por obligación y como KPI **Interés de mora** en Pagos. **UVT 2026 = $52.374.**
+   - **Sanción por extemporaneidad** (pendiente de implementar): 5% del impuesto por
+     mes o fracción de mes, con **tope del 100%** y **mínimo la sanción mínima (10 UVT)**.
+   - **Retención en la fuente DIAN < 10 UVT** (pendiente): el plazo de pago antes de
+     ineficacia es **1 año** en vez de 2 meses (solo retención en la fuente DIAN).
 7. **Vista de Pagos.** No mostrar obligaciones futuras (`fechaVencimiento > hoy`)
    salvo que `estadoTarea = 'terminado'`, ya estén vencidas o ya estén pagadas.
 8. **Impresión modo "Cliente".** Excluir siempre las tareas con `interno = true`.

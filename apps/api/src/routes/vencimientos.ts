@@ -8,6 +8,7 @@ import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { vencimientosNacionales, ANIO_CALENDARIO, type ConfigNacional } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
+import { interesMora } from '../vencimientos/tasas-mora.js';
 
 export const vencimientosRouter = Router();
 
@@ -124,10 +125,14 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
     total: items.length,
     vencimientos: items.map((v) => {
       const lp = limitePago(v.fechaVencimiento, v.obligacion);
+      const valor = v.valorPago != null ? Number(v.valorPago) : null;
+      // Interés de mora a hoy, solo si está sin pagar.
+      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento);
       return {
         id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
-        valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+        valorPago: valor,
         fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
+        diasMora: im.dias, interesMora: im.interes,
         empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
       };
     }),
@@ -155,10 +160,13 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
     total: items.length,
     pendientes: items.map((v) => {
       const lp = limitePago(v.fechaVencimiento, v.obligacion);
+      const valor = v.valorPago != null ? Number(v.valorPago) : null;
+      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento);
       return {
         id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
-        estado: v.estado, notas: v.notas, valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+        estado: v.estado, notas: v.notas, valorPago: valor,
         fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
+        diasMora: im.dias, interesMora: im.interes,
         empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
       };
     }),
