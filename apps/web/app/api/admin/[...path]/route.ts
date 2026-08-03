@@ -9,7 +9,8 @@ async function forward(req: Request, path: string[], method: string) {
   const token = cookies().get(COOKIE)?.value;
   if (!token) return NextResponse.json({ error: 'No autenticado.' }, { status: 401 });
   const body = ['POST', 'PATCH', 'PUT'].includes(method) ? await req.text() : undefined;
-  const res = await fetch(`${API_URL}/admin/${path.map(encodeURIComponent).join('/')}`, {
+  const search = new URL(req.url).search; // conserva ?q=… y demás filtros
+  const res = await fetch(`${API_URL}/admin/${path.map(encodeURIComponent).join('/')}${search}`, {
     method,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body,
