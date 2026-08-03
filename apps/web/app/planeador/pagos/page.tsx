@@ -226,6 +226,11 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         {hayFiltro && <a href="/planeador/pagos" className="dbtn" style={{ fontSize: 13, textDecoration: 'none' }}>Limpiar</a>}
       </form>
 
+      <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Obligaciones del plan de trabajo</h2>
+      <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
+        Actividades del <strong>Plan de Trabajo</strong> del cliente marcadas como <strong>genera pago</strong> (IVA, retención, ICA, nómina…). Es distinto de los <strong>vencimientos tributarios</strong> del generador, que van más abajo.
+      </p>
+
       {error ? (
         <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudieron cargar los pagos: {error}.</div>
       ) : tareas.length === 0 ? (
