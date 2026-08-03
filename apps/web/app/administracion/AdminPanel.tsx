@@ -157,7 +157,7 @@ function CatalogoEditor({ tipo, label }: { tipo: string; label: string }) {
 const CAMPOS: { k: string; label: string; sufijo?: string; ayuda?: string; step?: string }[] = [
   { k: 'valorUvt', label: 'Valor UVT', sufijo: '$', ayuda: 'Unidad de Valor Tributario del año' },
   { k: 'smmlv', label: 'SMMLV', sufijo: '$', ayuda: 'Salario mínimo mensual legal vigente' },
-  { k: 'tasaMoraMensual', label: 'Tasa de mora mensual', step: '0.0001', ayuda: 'En decimal (ej. 0.2679)' },
+  { k: 'tasaMoraMensual', label: 'Tasa de mora (anual vigente)', step: '0.0001', ayuda: 'Tasa DIAN del mes vigente, en decimal (ej. 0.2766 = 27,66%). Actualízala cada mes.' },
   { k: 'sancionMinimaUvt', label: 'Sanción mínima', sufijo: 'UVT', step: '0.01' },
   { k: 'pctSancionExtemporaneidad', label: '% sanción extemporaneidad', step: '0.0001', ayuda: 'En decimal (0.05 = 5%)' },
 ];
@@ -204,7 +204,7 @@ function ParametrosEditor() {
   return (
     <div style={{ maxWidth: 460 }}>
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>Parámetros de liquidación</h2>
-      <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 16px' }}>Valores que usan las calculadoras y las liquidaciones. Actualízalos cada año (UVT, SMMLV).</p>
+      <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 16px' }}>Valores que usan las liquidaciones de Pagos (interés de mora y sanción) y las calculadoras. Actualiza la <strong>tasa de mora cada mes</strong> y la <strong>UVT cada año</strong>.</p>
       {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
         {CAMPOS.map((c) => (

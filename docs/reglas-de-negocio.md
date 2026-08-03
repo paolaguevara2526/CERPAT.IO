@@ -27,7 +27,10 @@
    - `interes = valor × (tasaAnual / 365) × diasMora`, **redondeado hacia arriba** al múltiplo de 1.000.
    - Interés **simple**: la tasa vigente al pago se aplica a todo el período. Se recalcula a diario.
    - Se muestra por obligación, con **Total a pagar hoy** (capital + interés) por
-     fila y como KPI, en Pagos. **UVT 2026 = $52.374.**
+     fila y como KPI, en Pagos. Los valores (**tasa de mora, UVT, sanción mínima,
+     % sanción**) los edita el Administrador en **Administración → Parámetros**
+     (modelo `ParametrosLiquidacion`); el liquidador los lee y, si faltan, usa los
+     valores embebidos. **UVT 2026 = $52.374.**
    - **Retención en la fuente DIAN < 10 UVT:** el plazo de pago antes de ineficacia
      es **1 año** en vez de 2 meses (solo retención en la fuente DIAN, no
      autorretención ni ReteICA). `limitePago(fecha, obligacion, valor)`.

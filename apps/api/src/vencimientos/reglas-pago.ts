@@ -53,13 +53,15 @@ export function limitePago(
   fechaVencimiento: Date,
   obligacion: string | null | undefined,
   valor?: number | null,
+  uvtOverride?: number | null,
 ): { fechaLimitePago: Date | null; consecuencia: Consecuencia } {
   const r = reglaPago(obligacion);
   let plazoMeses = r.plazoMeses;
 
   const o = norm(obligacion ?? '');
   const esRetencionFuente = o.includes('reten') && o.includes('fuente') && !o.includes('autorret');
-  if (esRetencionFuente && plazoMeses != null && valor != null && valor < 10 * uvt(fechaVencimiento.getFullYear())) {
+  const uvtVal = uvtOverride != null && uvtOverride > 0 ? uvtOverride : uvt(fechaVencimiento.getFullYear());
+  if (esRetencionFuente && plazoMeses != null && valor != null && valor < 10 * uvtVal) {
     plazoMeses = 12;
   }
 

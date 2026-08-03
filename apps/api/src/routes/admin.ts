@@ -29,10 +29,16 @@ adminRouter.get('/parametros', requireAuth, async (_req, res) => {
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const p = await prisma.parametrosLiquidacion.findUnique({ where: { organizacionId: id } });
   const num = (v: any) => (v != null ? Number(v) : null);
+  // Si aún no se han guardado, se devuelven los valores por defecto (los mismos
+  // del esquema) para que el panel no aparezca vacío.
   res.json({
-    parametros: p
-      ? { tasaMoraMensual: num(p.tasaMoraMensual), valorUvt: num(p.valorUvt), smmlv: num(p.smmlv), sancionMinimaUvt: num(p.sancionMinimaUvt), pctSancionExtemporaneidad: num(p.pctSancionExtemporaneidad) }
-      : null,
+    parametros: {
+      tasaMoraMensual: num(p?.tasaMoraMensual) ?? 0.2679,
+      valorUvt: num(p?.valorUvt) ?? 52374,
+      smmlv: num(p?.smmlv) ?? 1423500,
+      sancionMinimaUvt: num(p?.sancionMinimaUvt) ?? 10,
+      pctSancionExtemporaneidad: num(p?.pctSancionExtemporaneidad) ?? 0.05,
+    },
   });
 });
 
