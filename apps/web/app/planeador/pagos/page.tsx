@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic';
 type VencPago = {
   id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null;
   fechaVencimiento: string; estado: string; valorPago: number | null; fechaLimitePago: string | null; consecuencia: string;
+  diasMora: number; interesMora: number;
 };
 async function fetchVencPagos(anio: number): Promise<{ data: VencPago[] | null; error: string | null }> {
   try {
@@ -29,6 +30,7 @@ async function fetchVencPagos(anio: number): Promise<{ data: VencPago[] | null; 
 type Pendiente = {
   id: string; obligacion: string; anio: number; periodo: string | null; municipio: string | null;
   empresa: string | null; fechaVencimiento: string; estado: string; valorPago: number | null; notas: string | null;
+  diasMora: number; interesMora: number;
 };
 async function fetchPendientes(): Promise<Pendiente[]> {
   try {
@@ -128,6 +130,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const kPorPagar = suma((v) => v.estado === 'presentado_sin_pago');
   const kVencido = suma((v) => v.estado === 'presentado_sin_pago' && esVencido(v.fechaVencimiento));
   const kRiesgo = suma((v) => enRiesgoPago(v.fechaLimitePago, v.consecuencia, pagadoDe(v.estado)));
+  const kInteres = scope.reduce((s, v) => s + (v.interesMora ?? 0), 0);
 
   const vencs = scope
     .filter((v) => !estado || v.estado === estado)
@@ -148,6 +151,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           <div className="tile"><div className="k">Por pagar</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kPorPagar.v)}</div><div className="s">{kPorPagar.n} presentadas sin pago</div></div>
           <div className="tile" style={{ borderColor: kVencido.n > 0 ? '#e0a3a0' : undefined }}><div className="k">Vencido sin pagar</div><div className="v" style={{ color: kVencido.n > 0 ? '#d64b3f' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kVencido.v)}</div><div className="s">{kVencido.n} con intereses corriendo</div></div>
           <div className="tile" style={{ borderColor: kRiesgo.n > 0 ? '#b3261e' : undefined }}><div className="k">Riesgo ineficacia / RST</div><div className="v" style={{ color: kRiesgo.n > 0 ? '#b3261e' : '#8a94a6', fontSize: 21 }}>{kRiesgo.n}</div><div className="s">límite de pago ≤ {UMBRAL_RIESGO} d o vencido</div></div>
+          <div className="tile"><div className="k">Interés de mora</div><div className="v" style={{ color: kInteres > 0 ? '#c67c00' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kInteres)}</div><div className="s">estimado a hoy (DIAN)</div></div>
         </div>
       )}
 
@@ -182,7 +186,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           <div className="dt-wrap">
             <table className="dt">
               <thead>
-                <tr><th>Obligación</th><th>Cliente</th><th>Municipio</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th style={{ whiteSpace: 'nowrap' }}>Límite de pago</th><th>Valor y estado de pago</th></tr>
+                <tr><th>Obligación</th><th>Cliente</th><th>Municipio</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th style={{ whiteSpace: 'nowrap' }}>Límite de pago</th><th style={{ whiteSpace: 'nowrap' }}>Interés de mora</th><th>Valor y estado de pago</th></tr>
               </thead>
               <tbody>
                 {vencs.map((v) => (
@@ -192,6 +196,11 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                     <td style={{ color: 'var(--muted)' }}>{v.municipio ?? '—'}</td>
                     <td><Semaforo iso={v.fechaVencimiento} pagado={pagadoDe(v.estado)} /></td>
                     <td><LimitePago fechaLimite={v.fechaLimitePago} consecuencia={v.consecuencia} pagado={pagadoDe(v.estado)} /></td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {v.interesMora > 0
+                        ? <><span style={{ fontWeight: 600, color: '#c67c00' }}>${fmtCOP(v.interesMora)}</span><div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{v.diasMora} d de mora</div></>
+                        : <span style={{ color: 'var(--muted)' }}>—</span>}
+                    </td>
                     <td><VencimientoPagoEditor id={v.id} valorPago={v.valorPago} estado={v.estado} /></td>
                   </tr>
                 ))}
