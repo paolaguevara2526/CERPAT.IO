@@ -28,6 +28,7 @@ export default function ConfigTributariaEditor() {
   const [sel, setSel] = useState<Empresa | null>(null);
   const [config, setConfig] = useState<Config>(null);
   const [ica, setIca] = useState<Ica[]>([]);
+  const [icaFiltro, setIcaFiltro] = useState('');
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [ok, setOk] = useState(false);
@@ -113,6 +114,7 @@ export default function ConfigTributariaEditor() {
   function setIcaRow(id: string, patch: Partial<Ica>) { setIca((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x))); }
 
   const filtrada = empresas.filter((e) => !q || `${e.nombre} ${e.nit ?? ''}`.toLowerCase().includes(q.toLowerCase()));
+  const icaFiltrada = ica.filter((r) => !icaFiltro.trim() || `${r.municipio ?? ''} ${r.departamento ?? ''}`.toLowerCase().includes(icaFiltro.trim().toLowerCase()));
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 300px) 1fr', gap: 18, alignItems: 'start' }}>
@@ -178,11 +180,21 @@ export default function ConfigTributariaEditor() {
               {ica.length === 0 ? (
                 <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>Sin municipios de ICA.</div>
               ) : (
-                <div className="dt-wrap" style={{ marginBottom: 12 }}>
-                  <table className="dt">
-                    <thead><tr><th>Municipio</th><th>ICA</th><th>ReteICA</th><th>AutoICA</th><th></th></tr></thead>
-                    <tbody>
-                      {ica.map((row) => (
+                <>
+                  <input
+                    style={{ ...input, maxWidth: 320, marginBottom: 10 }}
+                    value={icaFiltro}
+                    onChange={(e) => setIcaFiltro(e.target.value)}
+                    placeholder={`Filtrar municipio o departamento… (${ica.length})`}
+                  />
+                  {icaFiltrada.length === 0 ? (
+                    <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>Ningún municipio coincide con “{icaFiltro}”.</div>
+                  ) : (
+                  <div className="dt-wrap" style={{ marginBottom: 12 }}>
+                    <table className="dt">
+                      <thead><tr><th>Municipio</th><th>ICA</th><th>ReteICA</th><th>AutoICA</th><th></th></tr></thead>
+                      <tbody>
+                      {icaFiltrada.map((row) => (
                         <tr key={row.id}>
                           <td style={{ fontWeight: 600 }}>{row.municipio}{row.departamento ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {row.departamento}</span> : null}</td>
                           <td style={{ minWidth: 110 }}><Sel value={row.icaPeriodicidad ?? ''} onChange={(v) => setIcaRow(row.id, { icaPeriodicidad: v || null })} opciones={ICA_PER} /></td>
@@ -200,9 +212,11 @@ export default function ConfigTributariaEditor() {
                           </td>
                         </tr>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </tbody>
+                    </table>
+                  </div>
+                  )}
+                </>
               )}
 
               {/* Agregar municipio */}
