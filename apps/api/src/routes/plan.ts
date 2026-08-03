@@ -10,6 +10,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { limitePago } from '../vencimientos/reglas-pago.js';
 
 export const planRouter = Router();
 
@@ -258,13 +259,17 @@ planRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) => {
   res.json({
     periodo,
     total: tareas.length,
-    tareas: tareas.map((t) => ({
-      id: t.id, titulo: t.titulo, estado: t.estado,
-      valorPago: t.valorPago != null ? Number(t.valorPago) : null, estadoPago: t.estadoPago,
-      fechaVencimiento: t.fechaVencimiento, periodo: t.periodo,
-      empresa: t.empresa?.nombre ?? null, obligacion: t.tipoObligacion?.nombre ?? null,
-      area: t.area?.nombre ?? null, asesor: t.asesor?.nombre ?? null, auxiliar: t.auxiliar?.nombre ?? null,
-    })),
+    tareas: tareas.map((t) => {
+      const lp = limitePago(t.fechaVencimiento, t.tipoObligacion?.nombre);
+      return {
+        id: t.id, titulo: t.titulo, estado: t.estado,
+        valorPago: t.valorPago != null ? Number(t.valorPago) : null, estadoPago: t.estadoPago,
+        fechaVencimiento: t.fechaVencimiento, periodo: t.periodo,
+        fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
+        empresa: t.empresa?.nombre ?? null, obligacion: t.tipoObligacion?.nombre ?? null,
+        area: t.area?.nombre ?? null, asesor: t.asesor?.nombre ?? null, auxiliar: t.auxiliar?.nombre ?? null,
+      };
+    }),
   });
 });
 
