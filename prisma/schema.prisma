@@ -155,6 +155,8 @@ model Usuario {
   asesor        Asesor?
   tareasComoAsesor   Tarea[]                 @relation("TareaAsesor")
   tareasComoAuxiliar Tarea[]                 @relation("TareaAuxiliar")
+  vencimientosComoAsesor   VencimientoEmpresa[] @relation("VencAsesor")
+  vencimientosComoAuxiliar VencimientoEmpresa[] @relation("VencAuxiliar")
   areasComoAsesor    AsignacionClienteArea[] @relation("AsesorArea")
   areasComoAuxiliar  AsignacionClienteArea[] @relation("AuxiliarArea")
 
@@ -768,16 +770,39 @@ model VencimientoEmpresa {
   notas          String?
   soporteLink    String? // link (Drive/OneDrive) donde va quedando el trabajo de la obligación
   valorPago      Decimal?   @db.Decimal(14, 2) // valor a pagar de la obligación (cuando da valor)
+  // Responsable heredado del área de la actividad vinculada (asignación cliente×área).
+  asesorId       String?
+  auxiliarId     String?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   municipio    Municipio?   @relation(fields: [municipioId], references: [id])
+  asesor       Usuario?     @relation("VencAsesor", fields: [asesorId], references: [id])
+  auxiliar     Usuario?     @relation("VencAuxiliar", fields: [auxiliarId], references: [id])
+  subtareas    SubtareaVencimiento[]
 
   @@index([organizacionId])
   @@index([empresaId])
   @@index([anio])
   @@index([fechaVencimiento])
   @@map("vencimientos_empresa")
+}
+
+// Checklist de un vencimiento: copiado de las SubtareaPlantilla de la actividad
+// del plan vinculada (ActividadPlan.obligacionVencimiento) al generar el
+// vencimiento. El asesor le da "chulo" desde el calendario. El texto se congela
+// (no se re-sincroniza si luego cambia la plantilla), como Subtarea de Tarea.
+model SubtareaVencimiento {
+  id           String         @id @default(uuid())
+  vencimientoId String
+  texto        String
+  estado       EstadoSubtarea @default(pendiente)
+  orden        Int            @default(0)
+
+  vencimiento VencimientoEmpresa @relation(fields: [vencimientoId], references: [id], onDelete: Cascade)
+
+  @@index([vencimientoId])
+  @@map("subtareas_vencimiento")
 }
