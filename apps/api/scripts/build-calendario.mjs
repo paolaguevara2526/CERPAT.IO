@@ -11,25 +11,29 @@ const tributario=objs('docs/data/calendario-tributario-2026.csv').map(r=>({oblig
 const renta=objs('docs/data/calendario-renta-consolidadas-2026.csv').map(r=>({obligacion:r.obligacion,subtipo:r.subtipo,digito_o_rango:r.digito_o_rango,fecha_vencimiento:r.fecha_vencimiento}));
 
 // ---- ICA municipal ----
-// El CSV tiene DOS secciones: (A) filas por municipio con fecha fija o marcadas
-// "por dígito NIT" (fecha vacía), y (B) tras la línea "# Tablas por dígito del
-// NIT", tablas municipio × dígito → 3 fechas bimestrales. Se aplanan a filas
-// con ultimo_digito ('' = aplica a todos; un dígito = solo ese NIT).
+// El CSV tiene una sección principal (A) con filas por municipio: fecha fija o
+// marcadas "por dígito NIT" (fecha vacía). Tras cada línea marcadora "# ..."
+// vienen tablas municipio × dígito → fecha por periodo. El periodo lo define el
+// nombre de la columna: `fecha_jul_ago` → "jul-ago" (bimestral), `fecha_jul` →
+// "jul" (mensual). Se aplanan a filas con ultimo_digito ('' = todos; un dígito).
 function buildIca(){
   const filas=parseCSV(fs.readFileSync('docs/data/calendario-ica-municipal-2026.csv','utf8')).filter(r=>r.some(c=>c.trim()!==''));
-  const marca=filas.findIndex(r=>(r[0]||'').trim().startsWith('#'));
-  const finA=marca===-1?filas.length:marca;
+  const marcas=filas.map((r,i)=>((r[0]||'').trim().startsWith('#')?i:-1)).filter(i=>i>=0);
+  const finA=marcas.length?marcas[0]:filas.length;
   const headA=filas[0].map(h=>h.trim());
   const secA=filas.slice(1,finA).map(r=>Object.fromEntries(headA.map((h,i)=>[h,(r[i]??'').trim()])));
-  // Sección B: dígito → fecha por (municipio, periodo bimestral).
+  // Tablas por dígito: cada bloque tras un marcador. Sus columnas fecha_<periodo>
+  // definen el periodo (fecha_jul_ago→"jul-ago", fecha_jul→"jul").
   const porDig=new Map(); // `${muni}|${periodo}|${dig}` -> fecha
-  if(marca!==-1){
-    const headB=filas[marca+1].map(h=>h.trim());
-    const secB=filas.slice(marca+2).map(r=>Object.fromEntries(headB.map((h,i)=>[h,(r[i]??'').trim()])));
-    const cols=[['fecha_jul_ago','jul-ago'],['fecha_sep_oct','sep-oct'],['fecha_nov_dic','nov-dic']];
-    for(const r of secB){
-      const digs=(r.ultimo_digito_nit||'').match(/\d/g)||[];
-      for(const [col,per] of cols){ const f=(r[col]||'').trim(); if(!f) continue; for(const d of digs) porDig.set(`${r.municipio}|${per}|${d}`,f); }
+  for(let m=0;m<marcas.length;m++){
+    const ini=marcas[m]+1, fin=m+1<marcas.length?marcas[m+1]:filas.length;
+    const head=filas[ini].map(h=>h.trim());
+    const idxMuni=head.indexOf('municipio'), idxDig=head.indexOf('ultimo_digito_nit');
+    const cols=head.map((h,i)=>[i,h]).filter(([,h])=>h.startsWith('fecha_')).map(([i,h])=>[i,h.slice(6).replace(/_/g,'-')]);
+    for(const r of filas.slice(ini+1,fin)){
+      const muni=(r[idxMuni]??'').trim(); if(!muni) continue;
+      const digs=((r[idxDig]??'')+'').match(/\d/g)||[];
+      for(const [ci,per] of cols){ const f=(r[ci]??'').trim(); if(!f) continue; for(const d of digs) porDig.set(`${muni}|${per}|${d}`,f); }
     }
   }
   const out=[];

@@ -3229,6 +3229,546 @@ export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; rent
       "fecha_vencimiento": "2027-01-14"
     },
     {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-08-26"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-08-12"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-08-13"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-08-14"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-08-18"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-08-19"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-08-20"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-08-21"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-08-24"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-08-25"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-09-22"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-09-09"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-09-10"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-09-16"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-09-17"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-09-18"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-09-21"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-10-23"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-10-09"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-10-13"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-10-14"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-10-15"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-10-16"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-10-19"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-10-20"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-10-21"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-10-22"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-11-25"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-11-12"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-11-18"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-11-19"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-11-23"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-11-24"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-12-23"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-12-10"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-12-11"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-12-14"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-12-15"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-12-16"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-12-17"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-12-18"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-12-21"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-12-22"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2027-01-26"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2027-01-13"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2027-01-14"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2027-01-18"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2027-01-19"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2027-01-20"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2027-01-21"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2027-01-22"
+    },
+    {
+      "municipio": "Granada M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2027-01-25"
+    },
+    {
       "municipio": "Guamal M",
       "departamento": "Meta",
       "obligacion": "ReteICA",
@@ -4010,6 +4550,276 @@ export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; rent
       "periodo": "nov-dic",
       "ultimo_digito": "9",
       "fecha_vencimiento": "2027-01-25"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-09-18"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-09-16"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-09-16"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-09-17"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-09-17"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-09-18"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-11-09"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-11-09"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-11-10"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-11-10"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-11-12"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-11-12"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2027-01-18"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2027-01-12"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2027-01-12"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2027-01-13"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2027-01-13"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2027-01-14"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2027-01-14"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Tauramena",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2027-01-18"
     },
     {
       "municipio": "Villanueva C",
