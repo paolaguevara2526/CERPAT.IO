@@ -133,6 +133,13 @@ No entran al ciclo de **Pagos** (`OBLIGACIONES_SIN_PAGO`): nunca causan interés
 sanción; solo se les hace seguimiento de presentación en Vencimientos/Calendario.
 Se generan al **Regenerar vencimientos** para los clientes marcados.
 
+**RUB (Registro Único de Beneficiarios)** — se sumó a las de solo presentación,
+pero **trimestral** y con **fechas fijas nacionales** (no dependen del NIT): en
+2026 **2-feb, 4-may, 3-ago, 3-nov**. Aplica **automáticamente a personas
+jurídicas** (`rentaTipo ∈ {persona_juridica, gran_contribuyente, rst_consolidada}`)
+—sin casilla ni marcado por cliente— y se materializa al **Regenerar
+vencimientos**. Fechas por año en `RUB_FECHAS` (API + sembrador, en sync).
+
 **Calidad / infraestructura** — se adoptaron **migraciones versionadas de
 Prisma** (fin del SQL manual y del *drift*) y **CI en cada PR** (valida esquema +
 compila API y web). Curaduría estructural completa en

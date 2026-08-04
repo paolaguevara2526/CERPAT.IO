@@ -85,6 +85,14 @@
       (día hábil según los 2 últimos dígitos del NIT). Son mensuales, se marcan por
       cliente y **no entran al ciclo de Pagos** (`OBLIGACIONES_SIN_PAGO`): nunca
       causan interés ni sanción; solo seguimiento de presentación.
+    - **RUB (Registro Único de Beneficiarios):** obligación de **solo presentación
+      (no genera pago)**, **trimestral**, con **fechas fijas nacionales** (iguales
+      para todos, **no dependen del NIT**). En 2026: **2-feb, 4-may, 3-ago y
+      3-nov**. Aplica **automáticamente a todas las personas jurídicas**, derivado
+      de `rentaTipo ∈ {persona_juridica, gran_contribuyente, rst_consolidada}` (no
+      requiere marcar cliente por cliente ni casilla nueva). Como las demás de solo
+      presentación, entra en `OBLIGACIONES_SIN_PAGO`. Fechas parametrizadas por año
+      en `RUB_FECHAS` (generador de la API y sembrador masivo, mantener en sync).
 
 ## Seguridad (no negociable)
 
