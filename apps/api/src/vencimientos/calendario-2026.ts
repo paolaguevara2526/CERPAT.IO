@@ -3742,6 +3742,276 @@ export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; rent
       "fecha_vencimiento": "2027-01-15"
     },
     {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-09-22"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-09-09"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-09-10"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-09-16"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-09-17"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-09-18"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-09-21"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-11-25"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-11-12"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-11-18"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-11-19"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-11-23"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-11-24"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2027-01-26"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2027-01-13"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2027-01-14"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2027-01-18"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2027-01-19"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2027-01-20"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2027-01-21"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2027-01-22"
+    },
+    {
+      "municipio": "San Martín M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2027-01-25"
+    },
+    {
       "municipio": "Villanueva C",
       "departamento": "Casanare",
       "obligacion": "ReteICA",
