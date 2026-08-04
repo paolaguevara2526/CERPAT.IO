@@ -628,6 +628,11 @@ model ActividadPlan {
   esRegistroSoftware Boolean @default(false)
   requiereAuditoria  Boolean @default(false)
   generaPago         Boolean @default(false) // la actividad implica un pago (obligación DIAN/entidades)
+  // Vincula el checklist (subtareas) de esta actividad a un vencimiento tributario.
+  // Guarda una clave estable de VINCULOS_VENCIMIENTO (p. ej. "retencion_fuente",
+  // "renta", "rub"); al generar el vencimiento se copia el checklist de la
+  // actividad vinculada. Independiente del código (sobrevive a re-codificaciones).
+  obligacionVencimiento String?
   orden              Int     @default(0)
   activo             Boolean @default(true)
 
