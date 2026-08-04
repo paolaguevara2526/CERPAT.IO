@@ -156,13 +156,18 @@ async function main() {
   }
 
   console.log(`✓ Vencimientos ${ANIO} generados: ${creados} (para ${empresas.length} empresas con configuración).`);
-  console.log('  Nota: ICA municipal pendiente (requiere calendarios por municipio).');
+  console.log('  Nota: el ICA municipal NO se genera aquí. Se genera por cliente con el botón');
+  console.log('        "Regenerar vencimientos" (POST /vencimientos/regenerar/:empresaId), que');
+  console.log('        cruza lo marcado por municipio con calendario-ica-municipal-2026.csv.');
   if (sinNit.length) console.log(`  ⚠ Sin NIT (omitidas): ${sinNit.length}`, sinNit.slice(0, 5));
 }
 
+// Solo resetea los vencimientos NACIONALES (municipioId=null). El ICA municipal
+// (municipioId≠null) se gestiona por cliente desde la API y no se toca aquí,
+// para no borrar lo generado con el botón "Regenerar vencimientos".
 async function reset() {
-  const r = await prisma.vencimientoEmpresa.deleteMany({ where: { organizacionId: ORG_ID, anio: ANIO, generado: true } });
-  if (r.count) console.log(`  (borrados ${r.count} vencimientos generados previos del ${ANIO})`);
+  const r = await prisma.vencimientoEmpresa.deleteMany({ where: { organizacionId: ORG_ID, anio: ANIO, generado: true, municipioId: null } });
+  if (r.count) console.log(`  (borrados ${r.count} vencimientos nacionales generados previos del ${ANIO})`);
 }
 
 reset()

@@ -7,7 +7,8 @@ import { useCallback, useEffect, useState } from 'react';
 import FiltroColumna from './FiltroColumna';
 
 type Empresa = { id: string; nombre: string; nit: string | null };
-type Ica = { id: string; municipioId: string; municipio: string | null; departamento: string | null; icaPeriodicidad: string | null; reteica: boolean; reteicaPeriodicidad: string | null; autoica: boolean; autoicaPeriodicidad: string | null };
+type Ica = { id: string; municipioId: string; municipio: string | null; departamento: string | null; icaPeriodicidad: string | null; reteica: boolean; reteicaPeriodicidad: string | null; autoica: boolean; autoicaPeriodicidad: string | null; fechaInscripcion: string | null };
+type SinCalendario = { municipio: string; departamento: string | null; obligaciones: string[] };
 type Config = { ivaPeriodicidad: string | null; retencionFuente: boolean; fopat: boolean; consumoPeriodicidad: string | null; rentaTipo: string | null; anticipoRstPeriodicidad: string | null } | null;
 
 const IVA = [['', 'No responsable'], ['bimestral', 'Bimestral'], ['cuatrimestral', 'Cuatrimestral'], ['anual_rst', 'Anual (RST)']];
@@ -40,6 +41,7 @@ export default function ConfigTributariaEditor() {
   const [error, setError] = useState<string | null>(null);
   const [regenerando, setRegenerando] = useState(false);
   const [regResumen, setRegResumen] = useState<string | null>(null);
+  const [regAviso, setRegAviso] = useState<SinCalendario[]>([]);
   // búsqueda de municipio para agregar
   const [munQ, setMunQ] = useState('');
   const [munRes, setMunRes] = useState<{ id: string; nombre: string; departamento: string | null }[]>([]);
@@ -47,7 +49,7 @@ export default function ConfigTributariaEditor() {
   useEffect(() => { fetch('/api/admin/empresas', { cache: 'no-store' }).then((r) => r.json()).then((d) => setEmpresas(d.items ?? [])).catch(() => {}); }, []);
 
   const abrir = useCallback(async (e: Empresa) => {
-    setSel(e); setCargando(true); setError(null); setOk(false); setRegResumen(null); setMunQ(''); setMunRes([]);
+    setSel(e); setCargando(true); setError(null); setOk(false); setRegResumen(null); setRegAviso([]); setMunQ(''); setMunRes([]);
     setFMun(null); setFIca(null); setFRete(null); setFAuto(null);
     try {
       const r = await fetch(`/api/admin/config-tributaria/${e.id}`, { cache: 'no-store' });
@@ -76,8 +78,8 @@ export default function ConfigTributariaEditor() {
 
   async function regenerar() {
     if (!sel) return;
-    if (!confirm(`¿Regenerar los vencimientos nacionales de ${sel.nombre} según su configuración actual?\n\nNo se tocan los pagos ya registrados ni el ICA municipal. Guarda primero los cambios de la config.`)) return;
-    setRegenerando(true); setError(null); setRegResumen(null);
+    if (!confirm(`¿Regenerar los vencimientos de ${sel.nombre} (nacionales + ICA municipal) según su configuración actual?\n\nNo se tocan los pagos ya registrados ni las entradas manuales. Guarda primero los cambios de la config.`)) return;
+    setRegenerando(true); setError(null); setRegResumen(null); setRegAviso([]);
     try {
       const r = await fetch(`/api/vencimientos/regenerar/${sel.id}`, { method: 'POST' });
       const d = await r.json().catch(() => ({}));
@@ -87,6 +89,7 @@ export default function ConfigTributariaEditor() {
         `Vencimientos ${d.anio} regenerados: ${s.creados ?? 0} nuevos · ${s.actualizados ?? 0} con fecha ajustada · ${s.sinCambios ?? 0} sin cambios · ${s.eliminados ?? 0} eliminados`
         + (s.conservadosConPago ? ` · ${s.conservadosConPago} conservados por tener pago registrado` : '') + '.'
       );
+      setRegAviso(Array.isArray(d.sinCalendario) ? d.sinCalendario : []);
     } catch { setError('Error de red.'); } finally { setRegenerando(false); }
   }
 
@@ -194,6 +197,17 @@ export default function ConfigTributariaEditor() {
               {regResumen && (
                 <div style={{ marginTop: 12, background: '#E7F4EC', color: '#1B7A47', borderRadius: 6, padding: '9px 12px', fontSize: 12.5, fontWeight: 600 }}>{regResumen}</div>
               )}
+              {regAviso.length > 0 && (
+                <div style={{ marginTop: 10, background: '#FEF3E2', color: '#9A5B12', borderRadius: 6, padding: '9px 12px', fontSize: 12.5 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠ Sin calendario de ICA para:</div>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {regAviso.map((a, i) => (
+                      <li key={i}><b>{a.municipio}</b>{a.departamento ? ` · ${a.departamento}` : ''} — {a.obligaciones.join(', ')}</li>
+                    ))}
+                  </ul>
+                  <div style={{ marginTop: 4, fontSize: 11.5 }}>No se generaron esos vencimientos porque falta la fecha en el calendario municipal. Agrega sus fechas a <code>docs/data/calendario-ica-municipal-2026.csv</code> y regenera.</div>
+                </div>
+              )}
             </div>
 
             {/* ICA por municipio */}
@@ -228,11 +242,12 @@ export default function ConfigTributariaEditor() {
                         <th style={{ whiteSpace: 'nowrap' }}>ICA <FiltroColumna valores={distintos(valIca)} seleccion={fIca} onCambio={setFIca} /></th>
                         <th style={{ whiteSpace: 'nowrap' }}>ReteICA <FiltroColumna valores={distintos(valRete)} seleccion={fRete} onCambio={setFRete} /></th>
                         <th style={{ whiteSpace: 'nowrap' }}>AutoICA <FiltroColumna valores={distintos(valAuto)} seleccion={fAuto} onCambio={setFAuto} /></th>
+                        <th style={{ whiteSpace: 'nowrap' }} title="Desde esta fecha se generan los vencimientos de ICA de este municipio (no afecta lo ya cargado)">Inscripción</th>
                         <th></th>
                       </tr></thead>
                       <tbody>
                       {icaFiltrada.length === 0 ? (
-                        <tr><td colSpan={5} style={{ padding: 14, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>Ningún municipio con esos filtros.</td></tr>
+                        <tr><td colSpan={6} style={{ padding: 14, textAlign: 'center', color: 'var(--muted)', fontSize: 12.5 }}>Ningún municipio con esos filtros.</td></tr>
                       ) : icaFiltrada.map((row) => (
                         <tr key={row.id}>
                           <td style={{ fontWeight: 600 }}>{row.municipio}{row.departamento ? <span style={{ color: 'var(--muted)', fontWeight: 400 }}> · {row.departamento}</span> : null}</td>
@@ -244,6 +259,9 @@ export default function ConfigTributariaEditor() {
                           <td style={{ minWidth: 150 }}>
                             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}><input type="checkbox" checked={row.autoica} onChange={(e) => setIcaRow(row.id, { autoica: e.target.checked })} /> Sí</label>
                             {row.autoica && <div style={{ marginTop: 4 }}><Sel value={row.autoicaPeriodicidad ?? ''} onChange={(v) => setIcaRow(row.id, { autoicaPeriodicidad: v || null })} opciones={ICA_PER} /></div>}
+                          </td>
+                          <td style={{ minWidth: 140 }}>
+                            <input type="date" value={row.fechaInscripcion ?? ''} onChange={(e) => setIcaRow(row.id, { fechaInscripcion: e.target.value || null })} style={{ ...input, padding: '6px 7px' }} title="Opcional. Desde esta fecha se generan los vencimientos de ICA." />
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <button className="dbtn" onClick={() => guardarIca(row)} style={{ fontSize: 11.5, marginRight: 6 }}>Guardar</button>

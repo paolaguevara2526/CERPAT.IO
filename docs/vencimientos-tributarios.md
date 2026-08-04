@@ -4,7 +4,9 @@ Documento vivo del módulo de **parametrización de vencimientos**: cada cliente
 configura una vez (responsabilidades) y el sistema **genera automáticamente los
 vencimientos de todo el año** cruzando esa configuración con el calendario oficial.
 
-_Estado: en diseño. Calendario 2026 cargado y validado; falta modelo + generador._
+_Estado: en producción. Generador nacional (Retención, IVA, Consumo, Anticipo RST,
+Renta, FOPAT) e **ICA municipal** (ICA / ReteICA / AutoICA) funcionando; se
+disparan por cliente con el botón **Regenerar vencimientos** en Config. tributaria._
 
 ## Enfoque (3 piezas)
 
@@ -75,12 +77,25 @@ cuotas) → se manejan con **fechas fijas** del calendario, no por la regla.
 
 ## ICA municipal 2026 — carga en producción (agosto 2026)
 
-Mientras se construyen el modelo `ResponsabilidadEmpresa` y el generador, los
-vencimientos de **ICA municipal 2026** (períodos pendientes: **jul-ago en
-adelante**) se cargaron **directamente** como filas de `vencimientos_empresa`
-(`generado=true`, `estado='pendiente'`), **sin pasar por el generador** (que aún
-no existe). Cuando el generador esté listo, estos datos deberían **rehacerse**
-desde `ResponsabilidadEmpresa` + calendario, no mantenerse a mano.
+**Generación de ICA municipal (ago 2026).** El botón **Regenerar vencimientos**
+(`POST /vencimientos/regenerar/:empresaId`) ya genera el ICA municipal, además de
+lo nacional: por cada municipio marcado en Config. tributaria cruza lo que aplica
+(ICA / ReteICA / AutoICA) con `calendario-ica-municipal-2026.csv` (embebido en
+`apps/api/src/vencimientos/calendario-2026.ts`) y el último dígito del NIT.
+
+- **Solo genera lo marcado.** Si una obligación marcada no tiene fecha en el
+  calendario para ese municipio (p. ej. San Martín/Meta, que quedó por dígito de
+  NIT sin tabla), **no inventa**: lo reporta como *sin calendario* para avisar.
+- **Fecha de inscripción por municipio** (`EmpresaMunicipioIca.fechaInscripcion`,
+  opcional): si está, solo se generan los vencimientos con fecha **en/después** de
+  ella. Acota "de aquí en adelante" sin afectar lo ya cargado.
+- **Preserva lo demás.** Nunca borra vencimientos con pago/estado/notas/soporte,
+  ni las entradas manuales (`generado=false`), ni obligaciones que el generador no
+  administra (p. ej. **Exógena de ICA**): solo da de baja las obligaciones de su
+  propio conjunto (`OBLIGACIONES_NACIONALES` / `OBLIGACIONES_ICA`) que la config
+  ya no contempla.
+- **Cruce de municipios:** normaliza nombre + departamento y quita el sufijo de
+  inicial del departamento del calendario ("San Martín M" en Meta → "San Martín").
 
 **Fuente.** Los calendarios municipales los **transcribió el equipo** (Paola)
 municipio por municipio a una plantilla de Excel. Los PDF municipales varían

@@ -94,14 +94,24 @@ actividades operativas en el Plan de Trabajo; Pagos no las duplica.
 
 **Regenerar vencimientos por cliente.** En **Administración → Config. tributaria**,
 tras corregir un parámetro, el botón **"Regenerar vencimientos"** rehace los
-vencimientos **nacionales** del cliente según su config actual (cruce con el
-calendario 2026 embebido en la API, `apps/api/src/vencimientos/`, y el NIT). Es
-**seguro con los pagos**: crea los que faltan, ajusta fechas y borra los
-sobrantes que quedaron **sin trabajar**, pero **conserva** los que ya tienen
-valor/estado/nota/soporte, y **nunca toca** el ICA municipal ni las entradas
-manuales (`generado=false`). API `POST /vencimientos/regenerar/:empresaId` (solo
-Administrador). El calendario `.ts` se regenera desde los CSV de `docs/data/` con
+vencimientos **nacionales e ICA municipal** del cliente según su config actual
+(cruce con el calendario 2026 embebido en la API, `apps/api/src/vencimientos/`, y
+el NIT). Es **seguro con los pagos**: crea los que faltan, ajusta fechas y borra
+los sobrantes que quedaron **sin trabajar**, pero **conserva** los que ya tienen
+valor/estado/nota/soporte, las entradas manuales (`generado=false`) y las
+obligaciones que el generador no administra (p. ej. Exógena de ICA). API
+`POST /vencimientos/regenerar/:empresaId` (solo Administrador). El calendario `.ts`
+se regenera desde los CSV de `docs/data/` con
 `node apps/api/scripts/build-calendario.mjs`.
+
+**ICA municipal generado (ago 2026).** Al regenerar, por cada municipio marcado
+se generan ICA / ReteICA / AutoICA cruzando con `calendario-ica-municipal-2026.csv`
+y el dígito del NIT. Si una obligación marcada no tiene fecha en el calendario
+(p. ej. San Martín/Meta, por dígito de NIT sin tabla), no la inventa: la reporta
+como **sin calendario** para avisar. Nuevo campo **fecha de inscripción** por
+municipio (`EmpresaMunicipioIca.fechaInscripcion`, migración
+`add_ica_fecha_inscripcion`): si se fija, solo genera los vencimientos de ICA en/
+después de esa fecha (acota "de aquí en adelante" sin afectar lo ya cargado).
 
 **FOPAT (transporte).** Nueva responsabilidad nacional en Config. tributaria:
 casilla **"Agente de retención FOPAT (transporte)"** (`ConfiguracionTributaria.fopat`,

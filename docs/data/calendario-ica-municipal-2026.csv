@@ -119,9 +119,9 @@ Yopal,Casanare,ICA,Bimestral,nov-dic,2027-02-19,fija,
 
 "# Tablas por dígito del NIT (jul-ago, sep-oct, nov-dic)"
 municipio,ultimo_digito_nit,fecha_jul_ago,fecha_sep_oct,fecha_nov_dic
-Villavicencio,"0,1,2",2026-09-09,2026-11-11,2026-02-10
-Villavicencio,"3,4,5",2026-09-11,2026-11-13,2026-02-12
-Villavicencio,"6,7,8,9",2026-09-14,2026-11-17,2026-02-15
+Villavicencio,"0,1,2",2026-09-09,2026-11-11,2027-02-10
+Villavicencio,"3,4,5",2026-09-11,2026-11-13,2027-02-12
+Villavicencio,"6,7,8,9",2026-09-14,2026-11-17,2027-02-15
 Villanueva C,0.9,2026-09-14,2026-11-17,2027-01-18
 Villanueva C,7.8,2026-09-15,2026-11-18,2027-01-19
 Villanueva C,6.5,2026-09-16,2026-11-19,2027-01-20
