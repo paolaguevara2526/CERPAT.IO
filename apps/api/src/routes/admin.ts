@@ -142,7 +142,7 @@ adminRouter.delete('/catalogos/:tipo/:id', requireAuth, soloAdmin, async (req, r
 // ---------- Cat. Tareas: actividades del plan + subtareas plantilla ----------
 
 const BOOL_ACT = ['esRegistroSoftware', 'requiereAuditoria', 'generaPago', 'activo'] as const;
-const TEXTO_ACT = ['grupo', 'descripcion', 'documentoFormato', 'periodicidad'] as const;
+const TEXTO_ACT = ['grupo', 'descripcion', 'documentoFormato', 'periodicidad', 'obligacionVencimiento'] as const;
 
 function datosActividad(body: any, esCreacion: boolean): Record<string, any> {
   const data: Record<string, any> = {};

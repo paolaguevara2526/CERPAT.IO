@@ -17,12 +17,35 @@ type Form = {
   codigo: string; nombre: string; areaId: string; grupo: string; periodicidad: string;
   documentoFormato: string; descripcion: string; orden: string;
   generaPago: boolean; requiereAuditoria: boolean; esRegistroSoftware: boolean; activo: boolean;
+  obligacionVencimiento: string;
 };
 
 const VACIO: Form = {
   codigo: '', nombre: '', areaId: '', grupo: '', periodicidad: '', documentoFormato: '', descripcion: '', orden: '0',
   generaPago: false, requiereAuditoria: false, esRegistroSoftware: false, activo: true,
+  obligacionVencimiento: '',
 };
+
+// Vincula el checklist de una actividad a un vencimiento tributario. La clave
+// (value) se guarda en ActividadPlan.obligacionVencimiento; el generador la usa
+// para heredar las subtareas al vencimiento. Debe coincidir con VINCULOS_VENCIMIENTO
+// del backend (apps/api/src/vencimientos/vinculos.ts).
+const VINCULOS: { key: string; label: string }[] = [
+  { key: '', label: 'Ninguno (no es un vencimiento)' },
+  { key: 'retencion_fuente', label: 'Retención en la fuente' },
+  { key: 'iva', label: 'IVA' },
+  { key: 'consumo', label: 'Impuesto al consumo' },
+  { key: 'anticipo_rst', label: 'Anticipo RST' },
+  { key: 'renta', label: 'Declaración de renta (PJ / GC / PN)' },
+  { key: 'consolidada_rst', label: 'Consolidada RST (Renta)' },
+  { key: 'fopat', label: 'FOPAT' },
+  { key: 'nomina_electronica', label: 'Nómina electrónica' },
+  { key: 'pila', label: 'Seguridad social (PILA)' },
+  { key: 'rub', label: 'RUB (Registro Único de Beneficiarios)' },
+  { key: 'ica', label: 'ICA (Industria y comercio)' },
+  { key: 'reteica', label: 'ReteICA' },
+  { key: 'autoica', label: 'AutoICA' },
+];
 
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
 
@@ -62,6 +85,7 @@ export default function ActividadesEditor() {
       periodicidad: a.periodicidad ?? '', documentoFormato: a.documentoFormato ?? '', descripcion: a.descripcion ?? '',
       orden: String(a.orden ?? 0), generaPago: !!a.generaPago, requiereAuditoria: !!a.requiereAuditoria,
       esRegistroSoftware: !!a.esRegistroSoftware, activo: a.activo !== false,
+      obligacionVencimiento: a.obligacionVencimiento ?? '',
     });
     setSubs(a.subtareas ?? []);
   }
@@ -177,6 +201,16 @@ export default function ActividadesEditor() {
               <label><span style={lbl}>Documento / formato</span><input style={input} value={form.documentoFormato} onChange={(e) => set('documentoFormato', e.target.value)} /></label>
             </div>
             <label><span style={lbl}>Descripción</span><textarea rows={2} style={{ ...input, resize: 'vertical' }} value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} /></label>
+
+            <label>
+              <span style={lbl}>Vincular al vencimiento (hereda el checklist)</span>
+              <select style={input} value={form.obligacionVencimiento} onChange={(e) => set('obligacionVencimiento', e.target.value)}>
+                {VINCULOS.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
+              </select>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                Si eliges un vencimiento, sus subtareas se copiarán al abrirlo en el calendario para darles ✔. La declaración se controla en Vencimientos (no se duplica como tarea del plan).
+              </span>
+            </label>
 
             <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
               <label style={chk}><input type="checkbox" checked={form.generaPago} onChange={(e) => set('generaPago', e.target.checked)} /> Genera pago</label>
