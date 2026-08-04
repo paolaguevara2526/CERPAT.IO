@@ -96,6 +96,13 @@
       Solo se copia al **crear** el vencimiento: al regenerar, los existentes
       conservan sus chulos. Objetivo: la declaración se controla en Vencimientos
       (con su checklist y avance) y no se duplica como tarea del plan.
+    - **Avance por área incluye los vencimientos vinculados:** el panel de
+      Coordinación (`/plan/cumplimiento`) suma, además de las tareas del plan, los
+      **vencimientos del período vinculados a una actividad**, atribuidos al área
+      de esa actividad y a su responsable. Un vencimiento **presentado** cuenta
+      como **ejecutado**; **no presentado** o vencido, como **vencido**. Así el
+      área (p. ej. Impuestos) refleja su avance real aunque la declaración no sea
+      una tarea del plan.
     - **RUB (Registro Único de Beneficiarios):** obligación de **solo presentación
       (no genera pago)**, **trimestral**, con **fechas fijas nacionales** (iguales
       para todos, **no dependen del NIT**). En 2026: **2-feb, 4-may, 3-ago y

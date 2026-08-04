@@ -1,7 +1,9 @@
 // apps/api/src/routes/plan.ts
 //
 // Panel de Coordinación: indicadores de cumplimiento del Plan de Trabajo,
-// agregados desde las tareas del plan (Tarea con actividadPlanId) de un período.
+// agregados desde las tareas del plan (Tarea con actividadPlanId) y los
+// vencimientos vinculados a una actividad (declaraciones controladas en
+// Vencimientos), de un período. Ambas fuentes cuentan igual (ejecutado/vencido).
 //
 // TODO (auth/tenant): resolver la organización desde la sesión y restringir a rol
 // Coordinador. Mientras no hay auth, resuelve la organización demo (slug "cerpat").
@@ -11,10 +13,13 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
+import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
 
 export const planRouter = Router();
 
 const EJECUTADA = ['terminado', 'auditado'];
+// Un vencimiento cuenta como "ejecutado" cuando ya se presentó (con o sin pago).
+const EJECUTADA_VENC = ['presentado_sin_pago', 'presentado_pagado', 'presentado_cero'];
 
 // GET /plan/tareas — lista de tareas reales del plan (autenticado).
 // Filtros: ?periodo=YYYY-MM &estado= &area= &q= (empresa/actividad) &mias=1
@@ -561,7 +566,7 @@ planRouter.get('/cumplimiento', async (req, res) => {
   });
 
   const hoy = new Date();
-  let ejecutadas = 0, vencidas = 0, porAuditar = 0;
+  let total = 0, ejecutadas = 0, vencidas = 0, porAuditar = 0;
   const areaMap = new Map<string, { total: number; ejecutadas: number }>();
   const cliMap = new Map<string, { empresa: string; total: number; ejecutadas: number; vencidas: number }>();
   type Persona = { nombre: string; total: number; ejecutadas: number; vencidas: number };
@@ -576,6 +581,7 @@ planRouter.get('/cumplimiento', async (req, res) => {
   for (const t of tareas) {
     const esEjec = EJECUTADA.includes(t.estado);
     const esVenc = !esEjec && t.fechaVencimiento < hoy;
+    total++;
     if (esEjec) ejecutadas++;
     if (esVenc) vencidas++;
     if (t.estado === 'terminado' && t.auditoria !== 'aprobada') porAuditar++;
@@ -591,7 +597,45 @@ planRouter.get('/cumplimiento', async (req, res) => {
     if (t.auxiliar) acumPersona(auxiliarMap, t.auxiliar.id, t.auxiliar.nombre, esEjec, esVenc);
   }
 
-  const total = tareas.length;
+  // --- Vencimientos del período (declaraciones controladas en Vencimientos) ---
+  // Las declaraciones vinculadas (ActividadPlan.obligacionVencimiento) cuentan en
+  // el avance como las tareas: se atribuyen al área de su actividad y al
+  // responsable del vencimiento; "presentado" = ejecutado. Así el área (p. ej.
+  // Impuestos) refleja su avance real aunque la declaración no sea tarea del plan.
+  const [anioP, mesP] = periodoParam.split('-').map(Number);
+  const desdeV = new Date(Date.UTC(anioP, mesP - 1, 1));
+  const hastaV = new Date(Date.UTC(anioP, mesP, 1)); // exclusivo (primer día del mes siguiente)
+  const actsVinc = await prisma.actividadPlan.findMany({
+    where: { organizacionId: org.id, obligacionVencimiento: { not: null } },
+    select: { obligacionVencimiento: true, area: { select: { nombre: true } } },
+  });
+  const areaPorKey = new Map(actsVinc.map((a) => [a.obligacionVencimiento!, a.area?.nombre ?? 'Sin área']));
+  const vencs = await prisma.vencimientoEmpresa.findMany({
+    where: { organizacionId: org.id, fechaVencimiento: { gte: desdeV, lt: hastaV } },
+    select: {
+      estado: true, fechaVencimiento: true, obligacion: true,
+      empresa: { select: { id: true, nombre: true } },
+      asesor: { select: { id: true, nombre: true } },
+      auxiliar: { select: { id: true, nombre: true } },
+    },
+  });
+  for (const v of vencs) {
+    const key = vinculoDeObligacion(v.obligacion);
+    if (!key || !areaPorKey.has(key)) continue; // solo declaraciones vinculadas a una actividad
+    const areaNombre = areaPorKey.get(key)!;
+    const esEjec = EJECUTADA_VENC.includes(v.estado);
+    const esVenc = !esEjec && (v.estado === 'no_presentado' || v.fechaVencimiento < hoy);
+    total++;
+    if (esEjec) ejecutadas++;
+    if (esVenc) vencidas++;
+    const a = areaMap.get(areaNombre) ?? { total: 0, ejecutadas: 0 };
+    a.total++; if (esEjec) a.ejecutadas++; areaMap.set(areaNombre, a);
+    const c = cliMap.get(v.empresa.id) ?? { empresa: v.empresa.nombre, total: 0, ejecutadas: 0, vencidas: 0 };
+    c.total++; if (esEjec) c.ejecutadas++; if (esVenc) c.vencidas++; cliMap.set(v.empresa.id, c);
+    if (v.asesor) acumPersona(asesorMap, v.asesor.id, v.asesor.nombre, esEjec, esVenc);
+    if (v.auxiliar) acumPersona(auxiliarMap, v.auxiliar.id, v.auxiliar.nombre, esEjec, esVenc);
+  }
+
   const pct = (e: number, t: number) => (t ? Math.round((e / t) * 100) : 0);
 
   const porArea = Array.from(areaMap.entries())
