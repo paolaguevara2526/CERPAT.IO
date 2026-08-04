@@ -163,6 +163,9 @@ compila API y web). Curaduría estructural completa en
 - [ ] Tareas: Tablero (kanban), Calendario (drag&drop), Lista (export), Mi Día.
 - [ ] Reglas de negocio §4 en el backend (subtareas, soporte, bloqueo por auditoría, auto-asignación, Mi Día, liquidador de intereses, filtro de Pagos, exclusión de internos, etiquetas dinámicas).
 - [ ] Pagos + liquidador de intereses/sanción.
+- [ ] **Pagos — impresión y exportación (prioritario, pedido ago 2026):**
+  - [ ] **Imprimir por cliente** los impuestos pendientes de pago (vista imprimible por cliente).
+  - [ ] **Exportar a Excel** el listado de Pagos: todo o según el filtro aplicado.
 - [ ] Auditoría (aprobar/rechazar/desbloquear + log de desbloqueo).
 
 ### Fase 4 — Automatización y operación
