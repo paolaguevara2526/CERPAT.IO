@@ -80,12 +80,12 @@ export default function PagosAcciones({ filas, cliente }: { filas: Fila[]; clien
         <tr>
           <td>${esc(f.obligacion)}${f.periodo ? ` · ${esc(f.periodo)}` : ''}${f.manual && f.anio ? ` · ${f.anio}` : ''}${f.municipio ? `<div class="mun">${esc(f.municipio)}</div>` : ''}</td>
           <td class="c">${fechaLarga(f.fechaVencimiento)}</td>
-          <td class="c">${venc ? '<span class="venc">Vencido</span>' : '<span class="ok">Al día</span>'}</td>
           <td class="c${limVenc ? ' venc' : ''}">${tieneLimite ? fechaLarga(f.fechaLimitePago!) : '—'}</td>
           <td class="r">${f.valorPago != null ? '$' + cop(f.valorPago) : '—'}</td>
           <td class="r">${f.interesMora ? '$' + cop(f.interesMora) : '—'}</td>
           <td class="r">${f.sancion ? '$' + cop(f.sancion) : '—'}</td>
           <td class="r b">$${cop(totalFila(f))}</td>
+          <td class="c">${venc ? '<span class="venc">SÍ</span>' : '<span class="ok">NO</span>'}</td>
         </tr>`;
       }).join('');
       return `
@@ -96,9 +96,9 @@ export default function PagosAcciones({ filas, cliente }: { filas: Fila[]; clien
           </div>
           <div class="cli"><span>Cliente:</span> <b>${esc(nombre)}</b></div>
           <table>
-            <thead><tr><th>Obligación</th><th class="c">Vence</th><th class="c">Estado</th><th class="c">Límite de pago</th><th class="r">Valor</th><th class="r">Interés</th><th class="r">Sanción</th><th class="r">Total</th></tr></thead>
+            <thead><tr><th>Obligación</th><th class="c">Vence</th><th class="c">Límite de pago</th><th class="r">Valor</th><th class="r">Interés</th><th class="r">Sanción</th><th class="r">Total</th><th class="c">Vencido</th></tr></thead>
             <tbody>${filasHtml}</tbody>
-            <tfoot><tr><td colspan="4" class="r b">Totales</td><td class="r b">$${cop(totCap)}</td><td class="r b">$${cop(totInt)}</td><td class="r b">$${cop(totSan)}</td><td class="r b tot">$${cop(totTot)}</td></tr></tfoot>
+            <tfoot><tr><td colspan="3" class="r b">Totales</td><td class="r b">$${cop(totCap)}</td><td class="r b">$${cop(totInt)}</td><td class="r b">$${cop(totSan)}</td><td class="r b tot">$${cop(totTot)}</td><td></td></tr></tfoot>
           </table>
           <p class="nota">Valores estimados a la fecha de generación. El interés de mora se calcula según la tasa DIAN y aumenta cada día; solicite el valor actualizado el día del pago.</p>
         </section>`;
