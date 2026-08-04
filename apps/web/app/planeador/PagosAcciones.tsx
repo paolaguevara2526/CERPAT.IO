@@ -1,7 +1,7 @@
 'use client';
-// Acciones de la vista de Pagos: exportar a Excel (CSV) e imprimir por cliente
-// los impuestos pendientes de pago. Trabaja sobre las filas ya filtradas que le
-// pasa la página (respeta el filtro de cliente/estado aplicado).
+// Acciones de la vista de Pagos: exportar a Excel (.xls con diseño) e imprimir
+// por cliente los impuestos pendientes de pago. Trabaja sobre las filas ya
+// filtradas que le pasa la página (respeta el filtro de cliente/estado).
 
 type Fila = {
   id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null;
@@ -10,11 +10,6 @@ type Fila = {
   notas: string | null; manual: boolean;
 };
 
-const ESTADO_LBL: Record<string, string> = {
-  pendiente: 'Pendiente', presentado_sin_pago: 'Presentado (sin pago)', presentado_pagado: 'Presentado y pagado',
-  presentado_cero: 'Presentado en $0', no_presentado: 'No presentado', no_obligado: 'No obligado',
-};
-const CONSEC_LBL: Record<string, string> = { ineficaz: 'Queda INEFICAZ', exclusion_rst: 'Exclusión del RST', intereses: 'Solo intereses' };
 const pagado = (e: string) => e === 'presentado_pagado';
 const cop = (v: number) => (v ?? 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
 function fechaLarga(iso: string): string {
@@ -33,26 +28,71 @@ function vencida(iso: string | null): boolean {
 export default function PagosAcciones({ filas, cliente }: { filas: Fila[]; cliente: string }) {
   const hoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-  // ---------- Exportar a Excel (CSV con separador ';' y BOM, abre en Excel) ----------
+  // ---------- Exportar a Excel (.xls con el mismo diseño del documento) ----------
+  // Se genera como tabla HTML que Excel abre conservando colores, negritas y el
+  // agrupado por cliente. Excel puede mostrar un aviso de "formato" al abrir.
   function exportar() {
-    const cols = ['Cliente', 'Obligación', 'Período', 'Año', 'Municipio', 'Vence', 'Estado', 'Valor', 'Interés de mora', 'Días de mora', 'Sanción', 'Total a pagar', 'Límite de pago', 'Consecuencia', 'Notas'];
-    const celda = (v: string | number | null) => {
-      const s = v == null ? '' : String(v);
-      return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    };
-    const filasCsv = filas.map((f) => [
-      f.empresa ?? '', f.obligacion, f.periodo ?? '', f.anio ?? '', f.municipio ?? '',
-      fechaLarga(f.fechaVencimiento), ESTADO_LBL[f.estado] ?? f.estado,
-      f.valorPago ?? '', f.interesMora || '', f.diasMora || '', f.sancion || '',
-      pagado(f.estado) ? '' : Math.round(totalFila(f)),
-      f.fechaLimitePago ? fechaLarga(f.fechaLimitePago) : '', CONSEC_LBL[f.consecuencia] ?? '', f.notas ?? '',
-    ].map(celda).join(';'));
-    const csv = '﻿' + [cols.join(';'), ...filasCsv].join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const pend = filas.filter((f) => !pagado(f.estado));
+    if (pend.length === 0) { alert('No hay impuestos pendientes de pago para exportar con el filtro actual.'); return; }
+    const porCliente = new Map<string, Fila[]>();
+    for (const f of pend) {
+      const k = f.empresa ?? 'Sin cliente';
+      (porCliente.get(k) ?? porCliente.set(k, []).get(k)!).push(f);
+    }
+    const tdBase = 'border:0.5pt solid #dfe4ec;padding:3px 7px;font-family:Calibri,Arial;font-size:10pt;';
+    const tdL = tdBase + 'text-align:left;', tdC = tdBase + 'text-align:center;', tdR = tdBase + 'text-align:right;';
+    const th = 'background:#2E5090;color:#ffffff;font-weight:bold;border:0.5pt solid #24406f;padding:5px 7px;text-align:center;font-family:Calibri,Arial;font-size:9pt;';
+    const cliRow = 'background:#eef2f8;color:#16233b;font-weight:bold;border:0.5pt solid #dfe4ec;padding:6px 7px;font-family:Calibri,Arial;font-size:10.5pt;';
+    const ftBase = 'border-top:1.5pt solid #c7d0de;font-weight:bold;padding:4px 7px;font-family:Calibri,Arial;font-size:10pt;';
+    const rojo = ';color:#b3261e;font-weight:bold', verde = ';color:#16794c';
+    const dinero = (v: number | null) => (v != null ? '$' + cop(v) : '—');
+
+    const encabezado = `<tr>
+      <th style="${th}text-align:left">Obligación</th><th style="${th}">Vence</th><th style="${th}">Límite de pago</th>
+      <th style="${th}">Valor</th><th style="${th}">Interés</th><th style="${th}">Sanción</th><th style="${th}">Total</th><th style="${th}">Vencido</th></tr>`;
+
+    const bloques = [...porCliente.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([nombre, fs]) => {
+      const totCap = fs.reduce((s, f) => s + (f.valorPago ?? 0), 0);
+      const totInt = fs.reduce((s, f) => s + (f.interesMora ?? 0), 0);
+      const totSan = fs.reduce((s, f) => s + (f.sancion ?? 0), 0);
+      const filasHtml = fs.map((f) => {
+        const venc = vencida(f.fechaVencimiento);
+        const tieneLimite = f.fechaLimitePago && f.consecuencia !== 'intereses';
+        const limVenc = tieneLimite && vencida(f.fechaLimitePago);
+        return `<tr>
+          <td style="${tdL}">${esc(f.obligacion)}${f.periodo ? ` · ${esc(f.periodo)}` : ''}${f.manual && f.anio ? ` · ${f.anio}` : ''}${f.municipio ? ` — ${esc(f.municipio)}` : ''}</td>
+          <td style="${tdC}">${fechaLarga(f.fechaVencimiento)}</td>
+          <td style="${tdC}${limVenc ? rojo : ''}">${tieneLimite ? fechaLarga(f.fechaLimitePago!) : '—'}</td>
+          <td style="${tdR}">${dinero(f.valorPago)}</td>
+          <td style="${tdR}">${f.interesMora ? '$' + cop(f.interesMora) : '—'}</td>
+          <td style="${tdR}">${f.sancion ? '$' + cop(f.sancion) : '—'}</td>
+          <td style="${tdR}font-weight:bold">$${cop(totalFila(f))}</td>
+          <td style="${tdC}${venc ? rojo : verde}">${venc ? 'SÍ' : 'NO'}</td>
+        </tr>`;
+      }).join('');
+      const totales = `<tr>
+        <td colspan="3" style="${ftBase}text-align:right">Totales</td>
+        <td style="${ftBase}text-align:right">$${cop(totCap)}</td>
+        <td style="${ftBase}text-align:right">$${cop(totInt)}</td>
+        <td style="${ftBase}text-align:right">$${cop(totSan)}</td>
+        <td style="${ftBase}text-align:right;color:#2E5090">$${cop(totCap + totInt + totSan)}</td>
+        <td style="${ftBase}"></td></tr>`;
+      return `<tr><td colspan="8" style="${cliRow}">Cliente: ${esc(nombre)}</td></tr>${encabezado}${filasHtml}${totales}<tr><td colspan="8" style="border:none;padding:3px"></td></tr>`;
+    }).join('');
+
+    const titulo = `<tr><td colspan="8" style="font-family:Calibri,Arial;font-size:15pt;font-weight:bold;color:#16233b;padding:2px 7px">Impuestos pendientes de pago</td></tr>
+      <tr><td colspan="8" style="font-family:Calibri,Arial;font-size:9pt;color:#667;padding:0 7px 6px">CERPAT · Planeador contable — Generado el ${hoy}</td></tr>`;
+
+    const html = `﻿<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="utf-8">
+      <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Pagos</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+      </head><body><table style="border-collapse:collapse">${titulo}${bloques}</table></body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     const slug = (cliente || 'todos').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    a.href = url; a.download = `pagos-${slug}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.href = url; a.download = `pagos-${slug}-${new Date().toISOString().slice(0, 10)}.xls`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
