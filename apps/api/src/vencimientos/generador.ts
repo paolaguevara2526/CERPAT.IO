@@ -120,6 +120,21 @@ function nthDiaHabil(anio: number, mes1a12: number, n: number): Date {
   return new Date(Date.UTC(anio, mes1a12 - 1, 1)); // fallback (no debería ocurrir)
 }
 
+// RUB (Registro Único de Beneficiarios): actualización TRIMESTRAL de solo
+// presentación (no genera pago). Las fechas son fijas nacionales (iguales para
+// todos, NO dependen del NIT). Aplica a personas jurídicas: quienes declaran
+// Renta como Persona Jurídica, Gran Contribuyente o RST consolidada.
+const RUB_OBLIGACION = 'RUB (Registro Único de Beneficiarios)';
+const RUB_RENTA_PJ = new Set(['persona_juridica', 'gran_contribuyente', 'rst_consolidada']);
+const RUB_FECHAS: Record<number, { periodo: string; fecha: string }[]> = {
+  2026: [
+    { periodo: '1er trimestre', fecha: '2026-02-02' },
+    { periodo: '2do trimestre', fecha: '2026-05-04' },
+    { periodo: '3er trimestre', fecha: '2026-08-03' },
+    { periodo: '4to trimestre', fecha: '2026-11-03' },
+  ],
+};
+
 // Seguridad social (PILA): día hábil del mes según los DOS últimos dígitos del
 // NIT (rangos oficiales). Devuelve el n-ésimo día hábil que aplica.
 function diaHabilPila(dos: string): number {
@@ -178,6 +193,12 @@ export function vencimientosNacionales(cfg: ConfigNacional, nit: string): Vencim
       break;
     }
   }
+
+  // RUB: solo personas jurídicas. Fechas fijas del año (no dependen del NIT).
+  if (cfg.rentaTipo && RUB_RENTA_PJ.has(cfg.rentaTipo)) {
+    for (const it of RUB_FECHAS[ANIO_CALENDARIO] ?? [])
+      vs.push({ obligacion: RUB_OBLIGACION, periodicidad: 'Trimestral', periodo: it.periodo, fechaVencimiento: new Date(it.fecha) });
+  }
   return vs;
 }
 
@@ -189,12 +210,12 @@ export const OBLIGACIONES_NACIONALES = new Set<string>([
   'Retención en la fuente', 'FOPAT', 'IVA', 'IVA consolidado RST',
   'Impuesto al consumo', 'Anticipo RST', 'Renta Persona Jurídica',
   'Renta Grandes Contribuyentes', 'RST consolidada Renta', 'Renta Persona Natural',
-  'Envío de nómina electrónica', 'Seguridad social (PILA)',
+  'Envío de nómina electrónica', 'Seguridad social (PILA)', RUB_OBLIGACION,
 ]);
 export const OBLIGACIONES_ICA = new Set<string>(['ICA', 'ReteICA', 'AutoICA']);
 // Obligaciones de SOLO PRESENTACIÓN: no generan pago y no entran al ciclo de
 // Pagos (nunca causan interés ni sanción).
-export const OBLIGACIONES_SIN_PAGO = new Set<string>(['Envío de nómina electrónica', 'Seguridad social (PILA)']);
+export const OBLIGACIONES_SIN_PAGO = new Set<string>(['Envío de nómina electrónica', 'Seguridad social (PILA)', RUB_OBLIGACION]);
 
 // ---- ICA municipal ----
 // Config de ICA de una empresa en un municipio (fila de EmpresaMunicipioIca).

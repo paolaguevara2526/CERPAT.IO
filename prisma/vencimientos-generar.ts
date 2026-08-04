@@ -16,6 +16,21 @@ const prisma = new PrismaClient();
 const ORG_ID = 'seed-org-cerpat';
 const ANIO = 2026;
 
+// RUB (Registro Único de Beneficiarios): actualización trimestral de solo
+// presentación (no genera pago). Fechas fijas nacionales (no dependen del NIT).
+// Aplica a personas jurídicas (Renta PJ / Gran Contribuyente / RST consolidada).
+// ⚠ Replica apps/api/src/vencimientos/generador.ts — mantener ambos en sync.
+const RUB_OBLIGACION = 'RUB (Registro Único de Beneficiarios)';
+const RUB_RENTA_PJ = new Set(['persona_juridica', 'gran_contribuyente', 'rst_consolidada']);
+const RUB_FECHAS: Record<number, { periodo: string; fecha: string }[]> = {
+  2026: [
+    { periodo: '1er trimestre', fecha: '2026-02-02' },
+    { periodo: '2do trimestre', fecha: '2026-05-04' },
+    { periodo: '3er trimestre', fecha: '2026-08-03' },
+    { periodo: '4to trimestre', fecha: '2026-11-03' },
+  ],
+};
+
 function parseCSV(text: string): string[][] {
   const rows: string[][] = []; let row: string[] = []; let field = ''; let q = false;
   for (let i = 0; i < text.length; i++) {
@@ -165,6 +180,12 @@ async function main() {
         if (f) vs.push({ obligacion: 'Renta Persona Natural', periodicidad: 'Anual', periodo: 'declaración y pago', fecha: f });
         break;
       }
+    }
+
+    // RUB: solo personas jurídicas. Fechas fijas del año (no dependen del NIT).
+    if (cfg.rentaTipo && RUB_RENTA_PJ.has(cfg.rentaTipo)) {
+      for (const it of RUB_FECHAS[ANIO] ?? [])
+        vs.push({ obligacion: RUB_OBLIGACION, periodicidad: 'Trimestral', periodo: it.periodo, fecha: it.fecha });
     }
 
     if (vs.length) {
