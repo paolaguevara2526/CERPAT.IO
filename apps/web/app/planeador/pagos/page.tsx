@@ -9,6 +9,7 @@ import { apiFetch } from '@/lib/session';
 import VencimientoPagoEditor from '../VencimientoPagoEditor';
 import PendientesManuales from '../PendientesManuales';
 import BorrarPendiente from '../BorrarPendiente';
+import PagosAcciones from '../PagosAcciones';
 
 export const dynamic = 'force-dynamic';
 
@@ -184,20 +185,23 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         Vencimientos ya presentados (marca el pago) y pagos pendientes cargados a mano. El interés de mora se calcula a hoy y se actualiza solo.
       </p>
 
-      <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <select name="cliente" defaultValue={cliente} style={{ ...sel, maxWidth: 240 }}>
-          <option value="">Todos los clientes</option>
-          {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select name="estado" defaultValue={estado} style={sel}>
-          <option value="">Todos los estados</option>
-          <option value="pendiente">Pendiente</option>
-          <option value="presentado_sin_pago">Presentado (sin pago)</option>
-          <option value="presentado_pagado">Presentado y pagado</option>
-        </select>
-        <button type="submit" className="dbtn primary" style={{ fontSize: 13 }}>Filtrar</button>
-        {(cliente || estado) && <a href="/planeador/pagos" className="dbtn" style={{ fontSize: 13, textDecoration: 'none' }}>Limpiar</a>}
-      </form>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', margin: 0 }}>
+          <select name="cliente" defaultValue={cliente} style={{ ...sel, maxWidth: 240 }}>
+            <option value="">Todos los clientes</option>
+            {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select name="estado" defaultValue={estado} style={sel}>
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="presentado_sin_pago">Presentado (sin pago)</option>
+            <option value="presentado_pagado">Presentado y pagado</option>
+          </select>
+          <button type="submit" className="dbtn primary" style={{ fontSize: 13 }}>Filtrar</button>
+          {(cliente || estado) && <a href="/planeador/pagos" className="dbtn" style={{ fontSize: 13, textDecoration: 'none' }}>Limpiar</a>}
+        </form>
+        {filas.length > 0 && <PagosAcciones filas={filas} cliente={cliente} />}
+      </div>
 
       {error ? (
         <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudieron cargar los pagos: {error}.</div>
