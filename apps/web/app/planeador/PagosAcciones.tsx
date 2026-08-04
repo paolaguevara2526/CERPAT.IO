@@ -22,6 +22,13 @@ function fechaLarga(iso: string): string {
 }
 const totalFila = (f: Fila) => (f.valorPago ?? 0) + (f.interesMora ?? 0) + (f.sancion ?? 0);
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// ¿La fecha (solo día) ya pasó? Para marcar vencido y el límite de pago en rojo.
+function vencida(iso: string | null): boolean {
+  if (!iso) return false;
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const f = new Date(iso); f.setHours(0, 0, 0, 0);
+  return f.getTime() < hoy.getTime();
+}
 
 export default function PagosAcciones({ filas, cliente }: { filas: Fila[]; cliente: string }) {
   const hoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -65,16 +72,22 @@ export default function PagosAcciones({ filas, cliente }: { filas: Fila[]; clien
       const totInt = fs.reduce((s, f) => s + (f.interesMora ?? 0), 0);
       const totSan = fs.reduce((s, f) => s + (f.sancion ?? 0), 0);
       const totTot = totCap + totInt + totSan;
-      const filasHtml = fs.map((f) => `
+      const filasHtml = fs.map((f) => {
+        const venc = vencida(f.fechaVencimiento);
+        const tieneLimite = f.fechaLimitePago && f.consecuencia !== 'intereses';
+        const limVenc = tieneLimite && vencida(f.fechaLimitePago);
+        return `
         <tr>
           <td>${esc(f.obligacion)}${f.periodo ? ` · ${esc(f.periodo)}` : ''}${f.manual && f.anio ? ` · ${f.anio}` : ''}${f.municipio ? `<div class="mun">${esc(f.municipio)}</div>` : ''}</td>
           <td class="c">${fechaLarga(f.fechaVencimiento)}</td>
-          <td class="c">${f.fechaLimitePago && f.consecuencia !== 'intereses' ? fechaLarga(f.fechaLimitePago) : '—'}</td>
+          <td class="c">${venc ? '<span class="venc">Vencido</span>' : '<span class="ok">Al día</span>'}</td>
+          <td class="c${limVenc ? ' venc' : ''}">${tieneLimite ? fechaLarga(f.fechaLimitePago!) : '—'}</td>
           <td class="r">${f.valorPago != null ? '$' + cop(f.valorPago) : '—'}</td>
           <td class="r">${f.interesMora ? '$' + cop(f.interesMora) : '—'}</td>
           <td class="r">${f.sancion ? '$' + cop(f.sancion) : '—'}</td>
           <td class="r b">$${cop(totalFila(f))}</td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
       return `
         <section class="cliente" ${idx > 0 ? 'style="page-break-before:always"' : ''}>
           <div class="head">
@@ -83,9 +96,9 @@ export default function PagosAcciones({ filas, cliente }: { filas: Fila[]; clien
           </div>
           <div class="cli"><span>Cliente:</span> <b>${esc(nombre)}</b></div>
           <table>
-            <thead><tr><th>Obligación</th><th class="c">Vence</th><th class="c">Límite de pago</th><th class="r">Valor</th><th class="r">Interés</th><th class="r">Sanción</th><th class="r">Total</th></tr></thead>
+            <thead><tr><th>Obligación</th><th class="c">Vence</th><th class="c">Estado</th><th class="c">Límite de pago</th><th class="r">Valor</th><th class="r">Interés</th><th class="r">Sanción</th><th class="r">Total</th></tr></thead>
             <tbody>${filasHtml}</tbody>
-            <tfoot><tr><td colspan="3" class="r b">Totales</td><td class="r b">$${cop(totCap)}</td><td class="r b">$${cop(totInt)}</td><td class="r b">$${cop(totSan)}</td><td class="r b tot">$${cop(totTot)}</td></tr></tfoot>
+            <tfoot><tr><td colspan="4" class="r b">Totales</td><td class="r b">$${cop(totCap)}</td><td class="r b">$${cop(totInt)}</td><td class="r b">$${cop(totSan)}</td><td class="r b tot">$${cop(totTot)}</td></tr></tfoot>
           </table>
           <p class="nota">Valores estimados a la fecha de generación. El interés de mora se calcula según la tasa DIAN y aumenta cada día; solicite el valor actualizado el día del pago.</p>
         </section>`;
@@ -104,6 +117,7 @@ export default function PagosAcciones({ filas, cliente }: { filas: Fila[]; clien
         th, td { border-bottom: 1px solid #dfe4ec; padding: 6px 8px; text-align: left; vertical-align: top; }
         th { background: #f2f5fa; font-size: 10.5px; text-transform: uppercase; letter-spacing: .3px; color: #45536b; }
         .c { text-align: center; white-space: nowrap; } .r { text-align: right; white-space: nowrap; } .b { font-weight: 700; }
+        .venc { color: #b3261e; font-weight: 700; } .ok { color: #16794c; font-weight: 600; }
         .mun { font-size: 10px; color: #78839a; } .tot { color: #2E5090; }
         tfoot td { border-top: 2px solid #c7d0de; border-bottom: none; }
         .nota { font-size: 10px; color: #78839a; margin-top: 10px; }
