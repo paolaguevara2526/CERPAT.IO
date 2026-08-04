@@ -80,6 +80,15 @@ function nthDiaHabil(anio: number, mes1a12: number, n: number): string {
   }
   return isoUTC(new Date(Date.UTC(anio, mes1a12 - 1, 1)));
 }
+// Seguridad social (PILA): día hábil según los 2 últimos dígitos del NIT.
+function diaHabilPila(dos: string): number {
+  const n = parseInt(dos, 10) || 0;
+  if (n <= 7) return 2; if (n <= 14) return 3; if (n <= 21) return 4;
+  if (n <= 28) return 5; if (n <= 35) return 6; if (n <= 42) return 7;
+  if (n <= 49) return 8; if (n <= 56) return 9; if (n <= 63) return 10;
+  if (n <= 69) return 11; if (n <= 75) return 12; if (n <= 81) return 13;
+  if (n <= 87) return 14; if (n <= 93) return 15; return 16;
+}
 
 type V = { obligacion: string; periodicidad: string | null; periodo: string | null; fecha: string };
 
@@ -130,6 +139,17 @@ async function main() {
         vs.push({ obligacion: 'FOPAT', periodicidad: 'Mensual', periodo: `${ANIO}-${pad2(mth)}`, fecha: nthDiaHabil(dueAnio, dueMes, 10) });
       }
     }
+    // Obligaciones de solo presentación (no generan pago), mensuales, día hábil
+    // del mes siguiente: nómina electrónica (10º) y seguridad social/PILA (por NIT).
+    const sinPago = (ob: string, n: number) => {
+      for (let mth = 1; mth <= 12; mth++) {
+        const dueAnio = mth === 12 ? ANIO + 1 : ANIO;
+        const dueMes = mth === 12 ? 1 : mth + 1;
+        vs.push({ obligacion: ob, periodicidad: 'Mensual', periodo: `${ANIO}-${pad2(mth)}`, fecha: nthDiaHabil(dueAnio, dueMes, n) });
+      }
+    };
+    if (cfg.nominaElectronica) sinPago('Envío de nómina electrónica', 10);
+    if (cfg.seguridadSocial) sinPago('Seguridad social (PILA)', diaHabilPila(dos));
     if (cfg.ivaPeriodicidad === 'bimestral') push('IVA', 'Bimestral', G('IVA', 'Bimestral', uno));
     else if (cfg.ivaPeriodicidad === 'cuatrimestral') push('IVA', 'Cuatrimestral', G('IVA', 'Cuatrimestral', uno));
     else if (cfg.ivaPeriodicidad === 'anual_rst') push('IVA consolidado RST', 'Anual', R('RST consolidado IVA', par(uno)));

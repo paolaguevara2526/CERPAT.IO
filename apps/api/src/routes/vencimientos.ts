@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
-import { vencimientosNacionales, vencimientosIca, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
+import { vencimientosNacionales, vencimientosIca, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
 
@@ -134,8 +134,9 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
   const anio = Number(req.query.anio) || new Date().getFullYear();
   const items = await prisma.vencimientoEmpresa.findMany({
     // Solo los generados por el sistema: los pagos pendientes agregados a mano
-    // (generado=false) viven en su propia sección para no duplicarse aquí.
-    where: { organizacionId: org.id, anio, generado: true, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] } },
+    // (generado=false) viven en su propia sección para no duplicarse aquí. Las
+    // obligaciones de solo presentación (nómina electrónica, PILA) no entran.
+    where: { organizacionId: org.id, anio, generado: true, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] }, obligacion: { notIn: [...OBLIGACIONES_SIN_PAGO] } },
     orderBy: [{ estado: 'asc' }, { fechaVencimiento: 'asc' }],
     select: {
       id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true,
