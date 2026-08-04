@@ -140,6 +140,18 @@ jurídicas** (`rentaTipo ∈ {persona_juridica, gran_contribuyente, rst_consolid
 —sin casilla ni marcado por cliente— y se materializa al **Regenerar
 vencimientos**. Fechas por año en `RUB_FECHAS` (API + sembrador, en sync).
 
+**Unificación plan ↔ vencimientos.** Las **declaraciones** (Retención, IVA, Renta,
+ICA, ReteICA, RST…) dejan de duplicarse: cada actividad del plan puede **vincularse
+a un vencimiento** en Administración → Actividades (`ActividadPlan.obligacionVencimiento`,
+clave estable de `vinculos.ts`). Con eso: (1) el vencimiento **hereda el checklist**
+(subtareas → `SubtareaVencimiento`) y el **responsable** (asesor/auxiliar del área),
+con **chulo** desde el Calendario; (2) el panel de **Coordinación** suma esos
+vencimientos al **avance por área/persona** (presentado = ejecutado); (3) el
+generador del plan **no crea tarea** para las actividades vinculadas, y
+`prisma/plan-limpiar-duplicados.ts` borra las tareas-duplicado **vacías** ya
+generadas (conserva las que tengan avance; dry-run por defecto, `--apply` para
+borrar).
+
 **Calidad / infraestructura** — se adoptaron **migraciones versionadas de
 Prisma** (fin del SQL manual y del *drift*) y **CI en cada PR** (valida esquema +
 compila API y web). Curaduría estructural completa en

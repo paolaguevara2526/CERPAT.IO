@@ -4,6 +4,11 @@
 // que aparecen en Calendario/Mi Día (misma entidad Tarea).
 // Idempotente: no duplica una tarea ya existente para (empresa, actividad, período).
 //
+// NO genera tarea para las actividades vinculadas a un vencimiento
+// (ActividadPlan.obligacionVencimiento != null): esas declaraciones se controlan
+// en Vencimientos (con su checklist y avance) y no se duplican como tarea del plan.
+// Para limpiar las tareas-duplicado ya generadas: prisma/plan-limpiar-duplicados.ts.
+//
 // Ejecutar con:  npx tsx prisma/plan-generar.ts [YYYY-MM]   (por defecto, mes actual)
 
 import { PrismaClient } from '@prisma/client';
@@ -32,7 +37,7 @@ async function main() {
 
   const actividades = await prisma.actividadPlan.findMany({
     where: { organizacionId: ORG_ID },
-    select: { id: true, nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true },
+    select: { id: true, nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true, obligacionVencimiento: true },
   });
   const actById = new Map(actividades.map((a) => [a.id, a]));
 
@@ -65,6 +70,7 @@ async function main() {
   for (const p of planes) {
     const act = actById.get(p.actividadPlanId);
     if (!act) continue;
+    if (act.obligacionVencimiento) continue; // se controla en Vencimientos, no se duplica
     const per = p.periodicidad || act.periodicidad;
     if (!aplicaEnMes(per, month)) continue;
     if (yaExiste.has(`${p.empresaId}|${p.actividadPlanId}`)) continue;
