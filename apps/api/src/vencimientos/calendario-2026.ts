@@ -1,12 +1,14 @@
 // apps/api/src/vencimientos/calendario-2026.ts
-// AUTO-GENERADO desde docs/data/calendario-tributario-2026.csv y
-// docs/data/calendario-renta-consolidadas-2026.csv. No editar a mano: si cambian
+// AUTO-GENERADO desde docs/data/calendario-tributario-2026.csv,
+// docs/data/calendario-renta-consolidadas-2026.csv y
+// docs/data/calendario-ica-municipal-2026.csv. No editar a mano: si cambian
 // los CSV, vuelve a generarlo con scripts/build-calendario.mjs.
 
 export type FilaTributario = { obligacion: string; periodicidad: string; periodo: string; ultimo_digito: string; fecha_vencimiento: string };
 export type FilaRenta = { obligacion: string; subtipo: string; digito_o_rango: string; fecha_vencimiento: string };
+export type FilaIca = { municipio: string; departamento: string; obligacion: string; periodicidad: string; periodo: string; ultimo_digito: string; fecha_vencimiento: string };
 
-export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; renta: FilaRenta[] } = {
+export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; renta: FilaRenta[]; ica: FilaIca[] } = {
   "anio": 2026,
   "tributario": [
     {
@@ -2980,6 +2982,1628 @@ export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; rent
       "subtipo": "anual (feb)",
       "digito_o_rango": "9-0",
       "fecha_vencimiento": "2026-02-20"
+    }
+  ],
+  "ica": [
+    {
+      "municipio": "Acacías",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Acacías",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Acacías",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-19"
+    },
+    {
+      "municipio": "Aguazul",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-25"
+    },
+    {
+      "municipio": "Aguazul",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Aguazul",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-22"
+    },
+    {
+      "municipio": "Barranca De Upía",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-25"
+    },
+    {
+      "municipio": "Barranca De Upía",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Barranca De Upía",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-22"
+    },
+    {
+      "municipio": "Bogotá, D.C.",
+      "departamento": "Bogotá, D.C.",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-18"
+    },
+    {
+      "municipio": "Bogotá, D.C.",
+      "departamento": "Bogotá, D.C.",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Bogotá, D.C.",
+      "departamento": "Bogotá, D.C.",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Cabuyaro",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Cabuyaro",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-16"
+    },
+    {
+      "municipio": "Cabuyaro",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Cartagena De Indias",
+      "departamento": "Bolívar",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-24"
+    },
+    {
+      "municipio": "Cartagena De Indias",
+      "departamento": "Bolívar",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-26"
+    },
+    {
+      "municipio": "Cartagena De Indias",
+      "departamento": "Bolívar",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-28"
+    },
+    {
+      "municipio": "Cartagena De Indias",
+      "departamento": "Bolívar",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-24"
+    },
+    {
+      "municipio": "Cartagena De Indias",
+      "departamento": "Bolívar",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-26"
+    },
+    {
+      "municipio": "Cartagena De Indias",
+      "departamento": "Bolívar",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-28"
+    },
+    {
+      "municipio": "Castilla la Nueva",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-13"
+    },
+    {
+      "municipio": "Castilla la Nueva",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-10"
+    },
+    {
+      "municipio": "Castilla la Nueva",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-13"
+    },
+    {
+      "municipio": "Castilla la Nueva",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-12"
+    },
+    {
+      "municipio": "Castilla la Nueva",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-10"
+    },
+    {
+      "municipio": "Castilla la Nueva",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-14"
+    },
+    {
+      "municipio": "Guamal M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-25"
+    },
+    {
+      "municipio": "Guamal M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Guamal M",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-29"
+    },
+    {
+      "municipio": "Madrid",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Madrid",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-15"
+    },
+    {
+      "municipio": "Madrid",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Madrid",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Madrid",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-15"
+    },
+    {
+      "municipio": "Madrid",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-13"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-13"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-11"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-13"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-18"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-15"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-15"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-18"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-10"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-10"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-13"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-10"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-10"
+    },
+    {
+      "municipio": "Mosquera",
+      "departamento": "Cundinamarca",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-12"
+    },
+    {
+      "municipio": "Pasto",
+      "departamento": "Nariño",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-30"
+    },
+    {
+      "municipio": "Pasto",
+      "departamento": "Nariño",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-30"
+    },
+    {
+      "municipio": "Pasto",
+      "departamento": "Nariño",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-02-01"
+    },
+    {
+      "municipio": "Puerto Gaitán",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Puerto Gaitán",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Puerto Gaitán",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Puerto López",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-21"
+    },
+    {
+      "municipio": "Puerto López",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-25"
+    },
+    {
+      "municipio": "Puerto López",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-23"
+    },
+    {
+      "municipio": "Puerto López",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Puerto López",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-24"
+    },
+    {
+      "municipio": "Puerto López",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-22"
+    },
+    {
+      "municipio": "Sabana de Torres",
+      "departamento": "Santander",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-25"
+    },
+    {
+      "municipio": "Sabana de Torres",
+      "departamento": "Santander",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-21"
+    },
+    {
+      "municipio": "Sabana de Torres",
+      "departamento": "Santander",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-22"
+    },
+    {
+      "municipio": "Sabana de Torres",
+      "departamento": "Santander",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-24"
+    },
+    {
+      "municipio": "Sabana de Torres",
+      "departamento": "Santander",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-22"
+    },
+    {
+      "municipio": "Sabana de Torres",
+      "departamento": "Santander",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-25"
+    },
+    {
+      "municipio": "San Carlos de Guaroa",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-14"
+    },
+    {
+      "municipio": "San Carlos de Guaroa",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "San Carlos de Guaroa",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-16"
+    },
+    {
+      "municipio": "San Carlos de Guaroa",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "San Carlos de Guaroa",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-11"
+    },
+    {
+      "municipio": "San Carlos de Guaroa",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "San Martín C",
+      "departamento": "Cesar",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "San Martín C",
+      "departamento": "Cesar",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "San Martín C",
+      "departamento": "Cesar",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "San Martín C",
+      "departamento": "Cesar",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "San Martín C",
+      "departamento": "Cesar",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "San Martín C",
+      "departamento": "Cesar",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-15"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-09-18"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-09-18"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-09-17"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-09-17"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-09-16"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-09-16"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-09-15"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-11-23"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-11-23"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-11-19"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-11-19"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-11-18"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-11-18"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2027-01-18"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2027-01-22"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2027-01-22"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2027-01-21"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2027-01-21"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2027-01-20"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2027-01-20"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2027-01-19"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2027-01-19"
+    },
+    {
+      "municipio": "Villanueva C",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2027-01-18"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-09-09"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-09-09"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-09-09"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2027-02-10"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2027-02-10"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2027-02-10"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2027-02-12"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2027-02-12"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2027-02-12"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2027-02-15"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2027-02-15"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2027-02-15"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2027-02-15"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-09-09"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-09-09"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-09-09"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-09-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-09-14"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2026-11-11"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2026-11-13"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2026-11-17"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "0",
+      "fecha_vencimiento": "2027-02-10"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "1",
+      "fecha_vencimiento": "2027-02-10"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "2",
+      "fecha_vencimiento": "2027-02-10"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "3",
+      "fecha_vencimiento": "2027-02-12"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "4",
+      "fecha_vencimiento": "2027-02-12"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "5",
+      "fecha_vencimiento": "2027-02-12"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "6",
+      "fecha_vencimiento": "2027-02-15"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "7",
+      "fecha_vencimiento": "2027-02-15"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "8",
+      "fecha_vencimiento": "2027-02-15"
+    },
+    {
+      "municipio": "Villavicencio",
+      "departamento": "Meta",
+      "obligacion": "AutoICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "9",
+      "fecha_vencimiento": "2027-02-15"
+    },
+    {
+      "municipio": "Yopal",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-25"
+    },
+    {
+      "municipio": "Yopal",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-20"
+    },
+    {
+      "municipio": "Yopal",
+      "departamento": "Casanare",
+      "obligacion": "ReteICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-02-12"
+    },
+    {
+      "municipio": "Yopal",
+      "departamento": "Casanare",
+      "obligacion": "ICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-02"
+    },
+    {
+      "municipio": "Yopal",
+      "departamento": "Casanare",
+      "obligacion": "ICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-04"
+    },
+    {
+      "municipio": "Yopal",
+      "departamento": "Casanare",
+      "obligacion": "ICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-02-19"
     }
   ]
 };

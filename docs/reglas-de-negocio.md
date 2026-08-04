@@ -65,6 +65,21 @@
     (`intereses | ineficaz | exclusion_rst`) por obligación. La vista de Pagos
     los usa para el semáforo de "límite de pago", el KPI **Riesgo ineficacia/RST**
     y el filtro respectivo.
+11. **Generación de vencimientos (nacional + ICA municipal).** El botón
+    **Regenerar vencimientos** (`POST /vencimientos/regenerar/:empresaId`) rehace
+    los vencimientos del cliente cruzando su Config. tributaria con el calendario
+    2026 y el último dígito del NIT:
+    - **ICA municipal:** genera **solo lo marcado** por municipio (ICA / ReteICA /
+      AutoICA) contra `calendario-ica-municipal-2026.csv`. Si un municipio/obligación
+      marcada no tiene fecha en el calendario, **no inventa**: lo devuelve en
+      `sinCalendario` para avisar en la UI.
+    - **Fecha de inscripción por municipio** (opcional): si está, solo se generan
+      los vencimientos de ICA con fecha **en/después** de ella. Acota "de aquí en
+      adelante" sin afectar lo ya cargado.
+    - **Nunca destruye trabajo:** preserva los vencimientos con pago, estado,
+      notas o soporte; las entradas manuales (`generado=false`); y las obligaciones
+      que el generador **no** administra (p. ej. Exógena de ICA). Solo da de baja
+      las obligaciones de su propio conjunto que la config ya no contempla.
 
 ## Seguridad (no negociable)
 

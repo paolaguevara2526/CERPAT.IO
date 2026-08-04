@@ -50,6 +50,24 @@ for (const r of calendario.renta) {
 }
 const R = (ob: string, rango: string) => renta.get(`${ob}|${rango}`) ?? [];
 
+// ---- ICA municipal: índice por (departamento|municipio) ----
+// Normaliza texto para el cruce (sin tildes, minúsculas, solo alfanumérico).
+const normTxt = (s: string | null | undefined) =>
+  (s ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+// El CSV nombra algunos municipios con la inicial del departamento al final
+// ("San Martín M" en Meta, "Villanueva C" en Casanare) para desambiguar
+// homónimos. Se quita ese sufijo para cruzar contra el catálogo de municipios.
+function sinSufijoDepto(muni: string, depto: string): string {
+  const m = muni.match(/^(.*\S)\s+([A-Za-zÁÉÍÓÚÑ])$/);
+  if (m && normTxt(m[2]) === normTxt((depto || '').slice(0, 1))) return m[1];
+  return muni;
+}
+const icaIdx = new Map<string, typeof calendario.ica>();
+for (const r of calendario.ica) {
+  const k = `${normTxt(r.departamento)}|${normTxt(sinSufijoDepto(r.municipio, r.departamento))}`;
+  (icaIdx.get(k) ?? icaIdx.set(k, []).get(k)!).push(r);
+}
+
 // Último dígito (antes del de verificación) y últimos dos dígitos del NIT.
 function digitos(nit: string) {
   const base = (nit || '').split(/[-\s]/)[0].replace(/\D/g, '');
@@ -135,4 +153,83 @@ export function vencimientosNacionales(cfg: ConfigNacional, nit: string): Vencim
     }
   }
   return vs;
+}
+
+// Obligaciones que ESTE generador administra. Al regenerar, solo se pueden dar
+// de baja obligaciones de estos conjuntos; cualquier otra obligación cargada a
+// mano (p. ej. "Exógena de ICA") se preserva SIEMPRE, aunque no esté en el
+// objetivo actual.
+export const OBLIGACIONES_NACIONALES = new Set<string>([
+  'Retención en la fuente', 'FOPAT', 'IVA', 'IVA consolidado RST',
+  'Impuesto al consumo', 'Anticipo RST', 'Renta Persona Jurídica',
+  'Renta Grandes Contribuyentes', 'RST consolidada Renta', 'Renta Persona Natural',
+]);
+export const OBLIGACIONES_ICA = new Set<string>(['ICA', 'ReteICA', 'AutoICA']);
+
+// ---- ICA municipal ----
+// Config de ICA de una empresa en un municipio (fila de EmpresaMunicipioIca).
+export type MunicipioIcaInput = {
+  municipioId: string;
+  municipio: string | null;      // nombre del municipio (catálogo)
+  departamento: string | null;
+  icaPeriodicidad: string | null; // ICA (declaración) si viene seteada
+  reteica: boolean;
+  reteicaPeriodicidad: string | null;
+  autoica: boolean;
+  autoicaPeriodicidad: string | null;
+  fechaInscripcion?: Date | null; // solo genera vencimientos en/después de esta fecha
+};
+
+export type VencimientoIca = {
+  municipioId: string;
+  obligacion: string; // 'ICA' | 'ReteICA' | 'AutoICA'
+  periodicidad: string | null;
+  periodo: string | null;
+  fechaVencimiento: Date;
+};
+
+export type IcaResultado = {
+  vencimientos: VencimientoIca[];
+  // Municipios/obligaciones marcadas sin fechas en el calendario municipal.
+  sinCalendario: { municipio: string; departamento: string | null; obligaciones: string[] }[];
+};
+
+// Calcula los vencimientos de ICA municipal (ICA / ReteICA / AutoICA) de una
+// empresa cruzando lo que marcó en cada municipio con el calendario municipal
+// y el último dígito de su NIT. Función pura: no toca la base de datos.
+//
+// - Genera SOLO las obligaciones marcadas en cada municipio.
+// - Si una obligación marcada no tiene fechas en el calendario para ese
+//   municipio, no inventa nada: la reporta en `sinCalendario` para avisar.
+// - La `fechaInscripcion` (opcional) acota "de aquí en adelante": omite los
+//   vencimientos cuya fecha es anterior a la inscripción, sin afectar lo demás.
+export function vencimientosIca(municipios: MunicipioIcaInput[], nit: string): IcaResultado {
+  const { uno } = digitos(nit);
+  const vencimientos: VencimientoIca[] = [];
+  const sinCalendario: IcaResultado['sinCalendario'] = [];
+
+  for (const m of municipios) {
+    const marcadas: string[] = [];
+    if (m.icaPeriodicidad) marcadas.push('ICA');
+    if (m.reteica) marcadas.push('ReteICA');
+    if (m.autoica) marcadas.push('AutoICA');
+    if (!marcadas.length) continue;
+
+    const filas = icaIdx.get(`${normTxt(m.departamento)}|${normTxt(m.municipio)}`) ?? [];
+    const faltan: string[] = [];
+
+    for (const ob of marcadas) {
+      // Filas de la obligación aplicables al NIT (dígito '' = todos; o el suyo).
+      const aplic = filas.filter((f) => f.obligacion === ob && (f.ultimo_digito === '' || f.ultimo_digito === uno));
+      if (!aplic.length) { faltan.push(ob); continue; }
+      for (const f of aplic) {
+        const fecha = new Date(f.fecha_vencimiento);
+        if (m.fechaInscripcion && fecha < m.fechaInscripcion) continue; // no afecta lo anterior
+        vencimientos.push({ municipioId: m.municipioId, obligacion: ob, periodicidad: f.periodicidad || null, periodo: f.periodo || null, fechaVencimiento: fecha });
+      }
+    }
+    if (faltan.length) sinCalendario.push({ municipio: m.municipio ?? '(sin nombre)', departamento: m.departamento ?? null, obligaciones: faltan });
+  }
+
+  return { vencimientos, sinCalendario };
 }

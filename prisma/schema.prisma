@@ -729,6 +729,10 @@ model EmpresaMunicipioIca {
   reteicaPeriodicidad String?
   autoica             Boolean @default(false)
   autoicaPeriodicidad String?
+  // Fecha de inscripción del cliente en el ICA de ese municipio. Si está, al
+  // generar vencimientos solo se crean los de fecha en/después de esta (no
+  // afecta lo ya cargado de periodos anteriores).
+  fechaInscripcion    DateTime?
 
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)

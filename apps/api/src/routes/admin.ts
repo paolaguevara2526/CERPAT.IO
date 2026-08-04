@@ -503,6 +503,12 @@ const RENTA_OPTS = ['persona_juridica', 'persona_natural', 'gran_contribuyente',
 const ANTICIPO_OPTS = ['bimestral'];
 const ICA_PERIOD_OPTS = ['anual', 'bimestral', 'mensual'];
 const opt = (v: unknown, allowed: string[]) => (typeof v === 'string' && allowed.includes(v) ? v : null);
+// Fecha 'YYYY-MM-DD' → Date (medianoche UTC); vacío/ inválido → null.
+const optFecha = (v: unknown): Date | null => {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v.trim())) return null;
+  const d = new Date(`${v.trim()}T00:00:00.000Z`);
+  return isNaN(d.getTime()) ? null : d;
+};
 
 // Config nacional + ICA por municipio de una empresa.
 adminRouter.get('/config-tributaria/:empresaId', requireAuth, async (req, res) => {
@@ -513,10 +519,10 @@ adminRouter.get('/config-tributaria/:empresaId', requireAuth, async (req, res) =
   const config = await prisma.configuracionTributaria.findUnique({ where: { empresaId: empresa.id } });
   const ica = await prisma.empresaMunicipioIca.findMany({
     where: { empresaId: empresa.id },
-    select: { id: true, municipioId: true, icaPeriodicidad: true, reteica: true, reteicaPeriodicidad: true, autoica: true, autoicaPeriodicidad: true, municipio: { select: { nombre: true, departamento: true } } },
+    select: { id: true, municipioId: true, icaPeriodicidad: true, reteica: true, reteicaPeriodicidad: true, autoica: true, autoicaPeriodicidad: true, fechaInscripcion: true, municipio: { select: { nombre: true, departamento: true } } },
     orderBy: { municipio: { nombre: 'asc' } },
   });
-  res.json({ empresa, config, municipiosIca: ica.map((m) => ({ id: m.id, municipioId: m.municipioId, municipio: m.municipio?.nombre ?? null, departamento: m.municipio?.departamento ?? null, icaPeriodicidad: m.icaPeriodicidad, reteica: m.reteica, reteicaPeriodicidad: m.reteicaPeriodicidad, autoica: m.autoica, autoicaPeriodicidad: m.autoicaPeriodicidad })) });
+  res.json({ empresa, config, municipiosIca: ica.map((m) => ({ id: m.id, municipioId: m.municipioId, municipio: m.municipio?.nombre ?? null, departamento: m.municipio?.departamento ?? null, icaPeriodicidad: m.icaPeriodicidad, reteica: m.reteica, reteicaPeriodicidad: m.reteicaPeriodicidad, autoica: m.autoica, autoicaPeriodicidad: m.autoicaPeriodicidad, fechaInscripcion: m.fechaInscripcion ? m.fechaInscripcion.toISOString().slice(0, 10) : null })) });
 });
 
 // Guardar config nacional (upsert).
@@ -553,6 +559,7 @@ adminRouter.post('/config-tributaria/:empresaId/ica', requireAuth, soloAdmin, as
         icaPeriodicidad: opt(b.icaPeriodicidad, ICA_PERIOD_OPTS),
         reteica: !!b.reteica, reteicaPeriodicidad: opt(b.reteicaPeriodicidad, ICA_PERIOD_OPTS),
         autoica: !!b.autoica, autoicaPeriodicidad: opt(b.autoicaPeriodicidad, ICA_PERIOD_OPTS),
+        fechaInscripcion: optFecha(b.fechaInscripcion),
       },
       select: { id: true },
     });
@@ -574,6 +581,7 @@ adminRouter.patch('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloA
   if ('reteicaPeriodicidad' in b) data.reteicaPeriodicidad = opt(b.reteicaPeriodicidad, ICA_PERIOD_OPTS);
   if ('autoica' in b) data.autoica = !!b.autoica;
   if ('autoicaPeriodicidad' in b) data.autoicaPeriodicidad = opt(b.autoicaPeriodicidad, ICA_PERIOD_OPTS);
+  if ('fechaInscripcion' in b) data.fechaInscripcion = optFecha(b.fechaInscripcion);
   const r = await prisma.empresaMunicipioIca.updateMany({ where: { id: req.params.icaId, empresaId: req.params.empresaId, organizacionId: id }, data });
   if (r.count === 0) return res.status(404).json({ error: 'Registro ICA no encontrado.' });
   res.json({ ok: true });
