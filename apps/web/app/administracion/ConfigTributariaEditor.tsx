@@ -9,7 +9,8 @@ import FiltroColumna from './FiltroColumna';
 type Empresa = { id: string; nombre: string; nit: string | null };
 type Ica = { id: string; municipioId: string; municipio: string | null; departamento: string | null; icaPeriodicidad: string | null; reteica: boolean; reteicaPeriodicidad: string | null; autoica: boolean; autoicaPeriodicidad: string | null; fechaInscripcion: string | null };
 type SinCalendario = { municipio: string; departamento: string | null; obligaciones: string[] };
-type Config = { ivaPeriodicidad: string | null; retencionFuente: boolean; fopat: boolean; consumoPeriodicidad: string | null; rentaTipo: string | null; anticipoRstPeriodicidad: string | null } | null;
+type Config = { ivaPeriodicidad: string | null; retencionFuente: boolean; fopat: boolean; nominaElectronica: boolean; seguridadSocial: boolean; consumoPeriodicidad: string | null; rentaTipo: string | null; anticipoRstPeriodicidad: string | null } | null;
+const CONFIG_VACIA = { ivaPeriodicidad: null, retencionFuente: false, fopat: false, nominaElectronica: false, seguridadSocial: false, consumoPeriodicidad: null, rentaTipo: null, anticipoRstPeriodicidad: null };
 
 const IVA = [['', 'No responsable'], ['bimestral', 'Bimestral'], ['cuatrimestral', 'Cuatrimestral'], ['anual_rst', 'Anual (RST)']];
 const CONSUMO = [['', 'No responsable'], ['bimestral', 'Bimestral'], ['anual_rst', 'Anual (RST)']];
@@ -55,13 +56,13 @@ export default function ConfigTributariaEditor() {
       const r = await fetch(`/api/admin/config-tributaria/${e.id}`, { cache: 'no-store' });
       const d = await r.json();
       if (!r.ok) { setError(d.error || 'No se pudo cargar.'); return; }
-      setConfig(d.config ?? { ivaPeriodicidad: null, retencionFuente: false, fopat: false, consumoPeriodicidad: null, rentaTipo: null, anticipoRstPeriodicidad: null });
+      setConfig(d.config ?? { ...CONFIG_VACIA });
       setIca(d.municipiosIca ?? []);
     } catch { setError('Error de red.'); } finally { setCargando(false); }
   }, []);
 
   function setC<K extends keyof NonNullable<Config>>(k: K, v: NonNullable<Config>[K]) {
-    setConfig((c) => ({ ...(c ?? { ivaPeriodicidad: null, retencionFuente: false, fopat: false, consumoPeriodicidad: null, rentaTipo: null, anticipoRstPeriodicidad: null }), [k]: v }));
+    setConfig((c) => ({ ...(c ?? { ...CONFIG_VACIA }), [k]: v }));
     setOk(false); setRegResumen(null);
   }
 
@@ -184,6 +185,18 @@ export default function ConfigTributariaEditor() {
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }} title="Retención FOPAT (mensual), aplica a empresas de transporte">
                     <input type="checkbox" checked={!!config?.fopat} onChange={(e) => setC('fopat', e.target.checked)} style={{ accentColor: '#2E5090' }} />
                     Agente de retención FOPAT (transporte)
+                  </label>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }} title="Envío de nómina electrónica (mensual, 10º día hábil). Solo presentación, no genera pago.">
+                    <input type="checkbox" checked={!!config?.nominaElectronica} onChange={(e) => setC('nominaElectronica', e.target.checked)} style={{ accentColor: '#2E5090' }} />
+                    Nómina electrónica <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(sin pago)</span>
+                  </label>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }} title="Pago de seguridad social / PILA (mensual, día hábil según los 2 últimos dígitos del NIT). Solo presentación, no genera pago.">
+                    <input type="checkbox" checked={!!config?.seguridadSocial} onChange={(e) => setC('seguridadSocial', e.target.checked)} style={{ accentColor: '#2E5090' }} />
+                    Seguridad social · PILA <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(sin pago)</span>
                   </label>
                 </div>
               </div>

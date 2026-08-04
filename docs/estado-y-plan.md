@@ -121,6 +121,18 @@ al período (igual para todos, sin depender del NIT; se saltan fines de semana y
 **festivos de Colombia**). Solo aplica a los clientes que el Administrador marque
 como obligados.
 
+**Obligaciones de solo presentación (no generan pago).** Dos casillas nuevas en
+Config. tributaria (`ConfiguracionTributaria.nominaElectronica` /
+`seguridadSocial`, migración `add_nomina_seguridad_social`), mensuales, que
+vencen un día hábil del mes siguiente:
+- **Nómina electrónica** — **10º día hábil** (igual que FOPAT).
+- **Seguridad social (PILA)** — día hábil según los **2 últimos dígitos del NIT**
+  (00-07 → 2º, 08-14 → 3º, … 94-99 → 16º).
+
+No entran al ciclo de **Pagos** (`OBLIGACIONES_SIN_PAGO`): nunca causan interés ni
+sanción; solo se les hace seguimiento de presentación en Vencimientos/Calendario.
+Se generan al **Regenerar vencimientos** para los clientes marcados.
+
 **Calidad / infraestructura** — se adoptaron **migraciones versionadas de
 Prisma** (fin del SQL manual y del *drift*) y **CI en cada PR** (valida esquema +
 compila API y web). Curaduría estructural completa en

@@ -18,6 +18,8 @@ export type ConfigNacional = {
   ivaPeriodicidad: string | null;
   retencionFuente: boolean;
   fopat: boolean;
+  nominaElectronica: boolean;
+  seguridadSocial: boolean;
   consumoPeriodicidad: string | null;
   rentaTipo: string | null;
   anticipoRstPeriodicidad: string | null;
@@ -118,6 +120,17 @@ function nthDiaHabil(anio: number, mes1a12: number, n: number): Date {
   return new Date(Date.UTC(anio, mes1a12 - 1, 1)); // fallback (no debería ocurrir)
 }
 
+// Seguridad social (PILA): día hábil del mes según los DOS últimos dígitos del
+// NIT (rangos oficiales). Devuelve el n-ésimo día hábil que aplica.
+function diaHabilPila(dos: string): number {
+  const n = parseInt(dos, 10) || 0;
+  if (n <= 7) return 2; if (n <= 14) return 3; if (n <= 21) return 4;
+  if (n <= 28) return 5; if (n <= 35) return 6; if (n <= 42) return 7;
+  if (n <= 49) return 8; if (n <= 56) return 9; if (n <= 63) return 10;
+  if (n <= 69) return 11; if (n <= 75) return 12; if (n <= 81) return 13;
+  if (n <= 87) return 14; if (n <= 93) return 15; return 16; // 94-99
+}
+
 // Calcula los vencimientos nacionales que le corresponden a la empresa según su
 // config y NIT. Función pura: no toca la base de datos.
 export function vencimientosNacionales(cfg: ConfigNacional, nit: string): VencimientoNacional[] {
@@ -136,6 +149,19 @@ export function vencimientosNacionales(cfg: ConfigNacional, nit: string): Vencim
       vs.push({ obligacion: 'FOPAT', periodicidad: 'Mensual', periodo: `${ANIO_CALENDARIO}-${pad2(m)}`, fechaVencimiento: nthDiaHabil(dueAnio, dueMes, 10) });
     }
   }
+  // Obligaciones de SOLO PRESENTACIÓN (no generan pago), mensuales, que vencen un
+  // día hábil del mes siguiente al período.
+  //  - Nómina electrónica: 10º día hábil (igual que FOPAT).
+  //  - Seguridad social (PILA): día hábil según los 2 últimos dígitos del NIT.
+  const mensualDiaHabil = (ob: string, n: number) => {
+    for (let m = 1; m <= 12; m++) {
+      const dueAnio = m === 12 ? ANIO_CALENDARIO + 1 : ANIO_CALENDARIO;
+      const dueMes = m === 12 ? 1 : m + 1;
+      vs.push({ obligacion: ob, periodicidad: 'Mensual', periodo: `${ANIO_CALENDARIO}-${pad2(m)}`, fechaVencimiento: nthDiaHabil(dueAnio, dueMes, n) });
+    }
+  };
+  if (cfg.nominaElectronica) mensualDiaHabil('Envío de nómina electrónica', 10);
+  if (cfg.seguridadSocial) mensualDiaHabil('Seguridad social (PILA)', diaHabilPila(dos));
   if (cfg.ivaPeriodicidad === 'bimestral') push('IVA', 'Bimestral', G('IVA', 'Bimestral', uno));
   else if (cfg.ivaPeriodicidad === 'cuatrimestral') push('IVA', 'Cuatrimestral', G('IVA', 'Cuatrimestral', uno));
   else if (cfg.ivaPeriodicidad === 'anual_rst') push('IVA consolidado RST', 'Anual', R('RST consolidado IVA', par(uno)));
@@ -163,8 +189,12 @@ export const OBLIGACIONES_NACIONALES = new Set<string>([
   'Retención en la fuente', 'FOPAT', 'IVA', 'IVA consolidado RST',
   'Impuesto al consumo', 'Anticipo RST', 'Renta Persona Jurídica',
   'Renta Grandes Contribuyentes', 'RST consolidada Renta', 'Renta Persona Natural',
+  'Envío de nómina electrónica', 'Seguridad social (PILA)',
 ]);
 export const OBLIGACIONES_ICA = new Set<string>(['ICA', 'ReteICA', 'AutoICA']);
+// Obligaciones de SOLO PRESENTACIÓN: no generan pago y no entran al ciclo de
+// Pagos (nunca causan interés ni sanción).
+export const OBLIGACIONES_SIN_PAGO = new Set<string>(['Envío de nómina electrónica', 'Seguridad social (PILA)']);
 
 // ---- ICA municipal ----
 // Config de ICA de una empresa en un municipio (fila de EmpresaMunicipioIca).

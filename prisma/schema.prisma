@@ -704,6 +704,9 @@ model ConfiguracionTributaria {
   ivaPeriodicidad         String? // bimestral | cuatrimestral | anual_rst | no_responsable
   retencionFuente         Boolean @default(false) // agente retenedor (declara mensual)
   fopat                   Boolean @default(false) // agente de retención FOPAT (transporte; mensual)
+  // Obligaciones de solo presentación (mensuales, NO generan pago):
+  nominaElectronica       Boolean @default(false) // envío de nómina electrónica (10º día hábil)
+  seguridadSocial         Boolean @default(false) // pago de seguridad social/PILA (día hábil por 2 últimos dígitos del NIT)
   consumoPeriodicidad     String? // bimestral | anual_rst | null (no responsable)
   rentaTipo               String? // persona_juridica | persona_natural | gran_contribuyente | rst_consolidada | na
   anticipoRstPeriodicidad String? // bimestral | null (no aplica)

@@ -80,6 +80,11 @@
       notas o soporte; las entradas manuales (`generado=false`); y las obligaciones
       que el generador **no** administra (p. ej. Exógena de ICA). Solo da de baja
       las obligaciones de su propio conjunto que la config ya no contempla.
+    - **Obligaciones de solo presentación (no generan pago):** **nómina
+      electrónica** (10º día hábil del mes siguiente) y **seguridad social / PILA**
+      (día hábil según los 2 últimos dígitos del NIT). Son mensuales, se marcan por
+      cliente y **no entran al ciclo de Pagos** (`OBLIGACIONES_SIN_PAGO`): nunca
+      causan interés ni sanción; solo seguimiento de presentación.
 
 ## Seguridad (no negociable)
 
