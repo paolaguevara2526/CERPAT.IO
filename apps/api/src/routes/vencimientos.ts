@@ -9,6 +9,7 @@ import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { vencimientosNacionales, vencimientosIca, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
+import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
 
 // ¿La obligación causa sanción por extemporaneidad? Aplica a las NO presentadas
 // y a las que quedaron INEFICACES (retención/autorretención/ReteICA que pasaron
@@ -309,6 +310,30 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
   const tienePago = (e: (typeof existentes)[number]) =>
     e.estado !== 'pendiente' || e.valorPago != null || !!e.notas?.trim() || !!e.soporteLink?.trim();
 
+  // Vínculos: al CREAR un vencimiento hereda el responsable (del área de la
+  // actividad del plan vinculada) y copia su checklist (subtareas plantilla).
+  // Los vencimientos ya existentes no se tocan (conservan su checklist/chulos).
+  const actividadesVinc = await prisma.actividadPlan.findMany({
+    where: { organizacionId: org.id, activo: true, obligacionVencimiento: { not: null } },
+    select: { obligacionVencimiento: true, areaId: true, subtareas: { orderBy: { orden: 'asc' }, select: { texto: true, orden: true } } },
+  });
+  const vincPorKey = new Map(actividadesVinc.map((a) => [a.obligacionVencimiento!, { areaId: a.areaId, subtareas: a.subtareas }]));
+  const asigAreas = await prisma.asignacionClienteArea.findMany({
+    where: { empresaId: empresa.id }, select: { areaId: true, asesorId: true, auxiliarId: true },
+  });
+  const respPorArea = new Map(asigAreas.map((x) => [x.areaId, { asesorId: x.asesorId, auxiliarId: x.auxiliarId }]));
+  // Extras de creación (responsable + checklist) según la obligación del vencimiento.
+  const extrasCreacion = (obligacion: string) => {
+    const key = vinculoDeObligacion(obligacion);
+    const vinc = key ? vincPorKey.get(key) : undefined;
+    const resp = vinc?.areaId ? respPorArea.get(vinc.areaId) : undefined;
+    return {
+      asesorId: resp?.asesorId ?? null,
+      auxiliarId: resp?.auxiliarId ?? null,
+      ...(vinc?.subtareas.length ? { subtareas: { create: vinc.subtareas.map((s) => ({ texto: s.texto, orden: s.orden })) } } : {}),
+    };
+  };
+
   let creados = 0, actualizados = 0, sinCambios = 0, eliminados = 0, conservadosConPago = 0;
 
   await prisma.$transaction(async (tx) => {
@@ -320,6 +345,7 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
           data: {
             organizacionId: org.id, empresaId: empresa.id, anio, obligacion: v.obligacion,
             periodicidad: v.periodicidad, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, generado: true,
+            ...extrasCreacion(v.obligacion),
           },
         });
         creados++;
@@ -345,6 +371,7 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
           data: {
             organizacionId: org.id, empresaId: empresa.id, anio, obligacion: v.obligacion,
             periodicidad: v.periodicidad, periodo: v.periodo, municipioId: v.municipioId, fechaVencimiento: v.fechaVencimiento, generado: true,
+            ...extrasCreacion(v.obligacion),
           },
         });
         creados++;
@@ -402,5 +429,47 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
   const r = await prisma.vencimientoEmpresa.updateMany({ where: { id: req.params.id, organizacionId: org?.id }, data });
   if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
+  res.json({ ok: true });
+});
+
+// GET /vencimientos/:id/detalle — vencimiento con su checklist y responsable
+// (para el modal del calendario). Lectura para cualquier usuario de la firma.
+vencimientosRouter.get('/:id/detalle', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgCerpat();
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const v = await prisma.vencimientoEmpresa.findFirst({
+    where: { id: req.params.id, organizacionId: org.id },
+    select: {
+      id: true, obligacion: true, periodicidad: true, periodo: true, fechaVencimiento: true,
+      estado: true, valorPago: true, notas: true, soporteLink: true,
+      empresa: { select: { nombre: true } },
+      asesor: { select: { nombre: true } },
+      auxiliar: { select: { nombre: true } },
+      subtareas: { orderBy: { orden: 'asc' }, select: { id: true, texto: true, estado: true, orden: true } },
+    },
+  });
+  if (!v) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
+  res.json({ vencimiento: v });
+});
+
+// PATCH /vencimientos/subtareas/:id — marca/desmarca una subtarea del checklist
+// (el "chulo"). Puede el Administrador/Coordinador/root o el asesor/auxiliar del
+// propio vencimiento.
+const ESTADOS_SUBTAREA_VENC = ['pendiente', 'realizada', 'no_aplica', 'no_realizada'];
+vencimientosRouter.patch('/subtareas/:id', requireAuth, async (req: AuthedRequest, res) => {
+  const estado = req.body?.estado;
+  if (typeof estado !== 'string' || !ESTADOS_SUBTAREA_VENC.includes(estado)) return res.status(422).json({ error: 'Estado de subtarea inválido.' });
+  const org = await orgCerpat();
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const sub = await prisma.subtareaVencimiento.findFirst({
+    where: { id: req.params.id, vencimiento: { organizacionId: org.id } },
+    select: { id: true, vencimiento: { select: { asesorId: true, auxiliarId: true } } },
+  });
+  if (!sub) return res.status(404).json({ error: 'Subtarea no encontrada.' });
+  const u = req.user!;
+  const puede = u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r))
+    || sub.vencimiento.asesorId === u.sub || sub.vencimiento.auxiliarId === u.sub;
+  if (!puede) return res.status(403).json({ error: 'No puedes marcar esta subtarea (no eres su responsable).' });
+  await prisma.subtareaVencimiento.update({ where: { id: sub.id }, data: { estado: estado as any } });
   res.json({ ok: true });
 });

@@ -15,7 +15,7 @@ export type VinculoVencimiento = { key: string; label: string; obligaciones: str
 // (apps/api/src/vencimientos/generador.ts).
 export const VINCULOS_VENCIMIENTO: VinculoVencimiento[] = [
   { key: 'retencion_fuente', label: 'Retención en la fuente', obligaciones: ['Retención en la fuente'] },
-  { key: 'iva', label: 'IVA', obligaciones: ['IVA'] },
+  { key: 'iva', label: 'IVA', obligaciones: ['IVA', 'IVA consolidado RST'] },
   { key: 'consumo', label: 'Impuesto al consumo', obligaciones: ['Impuesto al consumo'] },
   { key: 'anticipo_rst', label: 'Anticipo RST', obligaciones: ['Anticipo RST'] },
   { key: 'renta', label: 'Declaración de renta', obligaciones: ['Renta Persona Jurídica', 'Renta Grandes Contribuyentes', 'Renta Persona Natural'] },

@@ -85,6 +85,17 @@
       (día hábil según los 2 últimos dígitos del NIT). Son mensuales, se marcan por
       cliente y **no entran al ciclo de Pagos** (`OBLIGACIONES_SIN_PAGO`): nunca
       causan interés ni sanción; solo seguimiento de presentación.
+    - **Checklist y responsable en el vencimiento (unificación plan↔vencimientos):**
+      cada actividad del plan puede **vincularse a un vencimiento** desde
+      Administración → Actividades (`ActividadPlan.obligacionVencimiento`, clave
+      estable de `vinculos.ts`, independiente del código). Al **generar/regenerar**
+      un vencimiento, si su obligación está vinculada, hereda el **checklist**
+      (copia de las `SubtareaPlantilla` de esa actividad → `SubtareaVencimiento`) y
+      el **responsable** (asesor/auxiliar de la asignación cliente×área de la
+      actividad). El asesor marca el checklist (**chulo**) desde el **calendario**.
+      Solo se copia al **crear** el vencimiento: al regenerar, los existentes
+      conservan sus chulos. Objetivo: la declaración se controla en Vencimientos
+      (con su checklist y avance) y no se duplica como tarea del plan.
     - **RUB (Registro Único de Beneficiarios):** obligación de **solo presentación
       (no genera pago)**, **trimestral**, con **fechas fijas nacionales** (iguales
       para todos, **no dependen del NIT**). En 2026: **2-feb, 4-may, 3-ago y

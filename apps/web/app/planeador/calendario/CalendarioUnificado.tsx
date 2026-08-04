@@ -450,11 +450,35 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
   const [guardandoVal, setGuardandoVal] = useState(false);
   const [valOk, setValOk] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  type Det = { subtareas: { id: string; texto: string; estado: string; orden: number }[]; asesor: { nombre: string } | null; auxiliar: { nombre: string } | null };
+  const [det, setDet] = useState<Det | null>(null);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h);
   }, [onClose]);
+
+  useEffect(() => {
+    let vivo = true;
+    fetch(`/api/vencimientos/${encodeURIComponent(ev.id)}/detalle`, { cache: 'no-store' })
+      .then((r) => r.json()).then((d) => { if (vivo && d.vencimiento) setDet(d.vencimiento); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [ev.id]);
+
+  // Marca/desmarca una subtarea del checklist (optimista; revierte si falla).
+  async function toggleSub(s: { id: string; estado: string }) {
+    const nuevo = s.estado === 'realizada' ? 'pendiente' : 'realizada';
+    setDet((d) => d ? { ...d, subtareas: d.subtareas.map((x) => x.id === s.id ? { ...x, estado: nuevo } : x) } : d);
+    setAviso(null);
+    const r = await fetch(`/api/vencimientos/subtareas/${encodeURIComponent(s.id)}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado: nuevo }),
+    });
+    if (!r.ok) {
+      const dd = await r.json().catch(() => ({}));
+      setAviso(dd.error || 'No se pudo marcar la subtarea.');
+      setDet((d) => d ? { ...d, subtareas: d.subtareas.map((x) => x.id === s.id ? { ...x, estado: s.estado } : x) } : d);
+    }
+  }
 
   async function patch(body: Record<string, unknown>): Promise<boolean> {
     setAviso(null);
@@ -508,6 +532,31 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
             {Object.entries(VENC_META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
           </select>
         </div>
+
+        {det && (det.asesor || det.auxiliar) && (
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+            {det.asesor && <div><div style={lbl2}>Asesor</div><div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{det.asesor.nombre}</div></div>}
+            {det.auxiliar && <div><div style={lbl2}>Auxiliar</div><div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{det.auxiliar.nombre}</div></div>}
+          </div>
+        )}
+
+        {det && det.subtareas.length > 0 && (
+          <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px' }}>
+            <div style={{ ...lbl2, marginBottom: 8 }}>✔️ Checklist ({det.subtareas.filter((s) => s.estado === 'realizada').length}/{det.subtareas.length})</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {det.subtareas.map((s) => {
+                const done = s.estado === 'realizada';
+                return (
+                  <button key={s.id} onClick={() => toggleSub(s)} title="Marcar / desmarcar"
+                    style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 4px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--ui)', width: '100%' }}>
+                    <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${done ? '#22a670' : 'var(--edge-strong)'}`, background: done ? '#22a670' : 'transparent', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, flexShrink: 0 }}>{done ? '✓' : ''}</span>
+                    <span style={{ fontSize: 12.5, color: done ? 'var(--muted)' : 'var(--ink)', textDecoration: done ? 'line-through' : 'none' }}>{s.texto}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px' }}>
           <div style={{ ...lbl2, marginBottom: 6 }}>💲 Valor a pagar</div>
