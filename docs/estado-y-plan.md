@@ -163,6 +163,10 @@ compila API y web). Curaduría estructural completa en
 - [ ] Tareas: Tablero (kanban), Calendario (drag&drop), Lista (export), Mi Día.
 - [ ] Reglas de negocio §4 en el backend (subtareas, soporte, bloqueo por auditoría, auto-asignación, Mi Día, liquidador de intereses, filtro de Pagos, exclusión de internos, etiquetas dinámicas).
 - [ ] Pagos + liquidador de intereses/sanción.
+- [x] **Pagos — impresión y exportación (ago 2026):** botones en la vista de Pagos
+  (`apps/web/app/planeador/PagosAcciones.tsx`): **Imprimir por cliente** (una hoja
+  por cliente con sus impuestos pendientes de pago, para enviar) y **Exportar a
+  Excel** (CSV con `;` y BOM que abre en Excel; respeta el filtro aplicado).
 - [ ] Auditoría (aprobar/rechazar/desbloquear + log de desbloqueo).
 
 ### Fase 4 — Automatización y operación
