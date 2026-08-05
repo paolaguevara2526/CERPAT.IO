@@ -156,22 +156,25 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
   de **entrega** que notifica + **dependencias** (insumo → procesamiento).
   **Diseño confirmado:**
   - **Fase por actividad** (`ActividadPlan.fase`: captura / procesamiento / revisión).
-  - **Entrega híbrida** (`EntregaInsumo`): una **general** (habilita todas las áreas)
-    y opcionales **por área** (adelantan una). Una tarea de procesamiento se
-    **habilita** si existe la entrega general **o** la de su área.
-  - **Disparo mixto:** entrega **automática** cuando toda la captura del cliente
-    queda *terminada* (general, o por área si hay insumo del cliente), **y** botones
-    (general / por área) para adelantarla o revertirla a mano. ✅ implementado.
+  - **Entrega híbrida** (`EntregaInsumo`): **por área** (cada asesor recibe solo lo
+    suyo) y opcional **general** (manual, habilita todas las áreas de una vez). Una
+    tarea de procesamiento se **habilita** si existe la entrega de su área **o** una
+    general.
+  - **Disparo mixto:** entrega **automática por área** cuando toda la captura del
+    cliente queda *terminada* — a cada área con trabajo (procesamiento y/o
+    vencimientos) se le libera lo suyo —, **y** botones (general / por área) para
+    adelantarla o revertirla a mano. ✅ implementado.
   - **Eventos** (`EventoTarea`): cada cambio de estado registra quién y cuándo.
   - Incrementos: **F1.1** fundamentos (fase + tablas + registro de eventos) ✅ ·
     **F1.2a** entrega + bloqueo/habilitación ✅ · **F1.2b** captura por lotes
     (`LoteCaptura`) ✅ · **F1.3** *Mi día del auxiliar* — captura multi-cliente en
     un solo lugar ✅ · **auto-entrega** ✅ — al terminar toda la captura del cliente,
-    la firma se libera sola (entrega `auto`): **general** si no hay áreas con insumo
-    del cliente, o **por área** solo para las que dependen de la firma (las de insumo
-    del cliente quedan pendientes, se marcan a mano); si la captura se reabre, revierte
-    solo lo `auto` · bandeja *"listo para procesar"* del asesor ✅ — con la columna
-    vertebral de F1 completa.
+    la firma se libera sola (entrega `auto`) **por área**: a cada área con trabajo del
+    período (tareas de procesamiento y/o vencimientos, p. ej. Impuestos por sus
+    declaraciones) se le libera lo suyo, para que cada asesor reciba solo lo de su área;
+    las áreas de **insumo del cliente** quedan pendientes (se marcan a mano). Si la
+    captura se reabre, revierte solo lo `auto` · bandeja *"listo para procesar"* del
+    asesor ✅ — con la columna vertebral de F1 completa.
 - **F2 — Vistas por rol.** Sobre la página **Mi Día** (cockpit por rol, cada sección
   se muestra según las asignaciones del usuario): *Captura del día* del auxiliar ✅
   (multi-cliente con lotes en línea) y *Listo para procesar* del asesor ✅ (sus tareas
@@ -189,4 +192,4 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
 
 ---
 
-_Última actualización: 2026-08-05 (F1 completo + F2 tablero de flujo del cierre)._
+_Última actualización: 2026-08-05 (F1 completo + F2 tablero de flujo; auto-entrega por área)._

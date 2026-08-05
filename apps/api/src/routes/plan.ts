@@ -118,12 +118,12 @@ const CAPTURA_LISTA = ['terminado', 'auditado'];
 
 // Auto-entrega (F1 — flujo del cierre): cuando TODA la captura del cliente queda
 // terminada, libera automáticamente el insumo de la firma hacia el procesamiento.
-// Respeta el modelo híbrido (docs/metodologia-operacion.md §F1):
-//  - Si el cliente NO tiene áreas con "insumo del cliente", crea la entrega GENERAL
-//    (habilita todas las áreas de una vez).
-//  - Si tiene áreas "insumo del cliente", crea entregas POR ÁREA solo para las que
-//    dependen de la firma; las del cliente quedan pendientes (se marcan a mano al
-//    recibirlas). Así la demora del insumo externo no la asume la firma.
+// Se libera SIEMPRE POR ÁREA (nunca una entrega general), para que cada asesor
+// reciba solo lo de su área: Impuestos lo de impuestos, Informes lo suyo, y así
+// Nómina y Tesorería. El objetivo son las áreas con trabajo del cliente en el período
+// —tareas de procesamiento del plan y/o vencimientos (declaraciones) del área—,
+// EXCLUYENDO las marcadas como "insumo del cliente" (esas se marcan a mano al
+// recibirlas; su demora no la asume la firma). Ver docs/metodologia-operacion.md §F1.
 // Si la captura deja de estar terminada (se reabre), revierte solo lo 'auto' — nunca
 // una entrega 'manual' hecha por coordinación. Best-effort: no bloquea el cambio de estado.
 async function evaluarAutoEntrega(orgId: string, empresaId: string, periodo: string, tareaId: string, usuarioId: string | null): Promise<void> {
@@ -134,21 +134,54 @@ async function evaluarAutoEntrega(orgId: string, empresaId: string, periodo: str
   if (capturas.length === 0) return; // sin captura interna: no hay nada que auto-entregar
   const capturaLista = capturas.every((t) => CAPTURA_LISTA.includes(t.estado));
 
-  const asigs = await prisma.asignacionClienteArea.findMany({
-    where: { organizacionId: orgId, empresaId },
-    select: { areaId: true, insumoCliente: true },
-  });
-  const hayInsumoCliente = asigs.some((a) => a.insumoCliente);
-  const areasFirma = asigs.filter((a) => !a.insumoCliente).map((a) => a.areaId);
-
   if (!capturaLista) {
     const r = await prisma.entregaInsumo.deleteMany({ where: { organizacionId: orgId, empresaId, periodo, origen: 'auto' } });
     if (r.count > 0) await prisma.eventoTarea.create({ data: { organizacionId: orgId, tareaId, tipo: 'entrega', estadoAnterior: 'entregado', estadoNuevo: 'revertido', usuarioId } });
     return;
   }
 
-  // Crea las entregas que falten (idempotente): general, o por área si hay insumo del cliente.
-  const objetivo: (string | null)[] = hayInsumoCliente ? areasFirma : [null];
+  // Áreas del cliente cuyo insumo lo provee el cliente (no se auto-liberan).
+  const asigs = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: orgId, empresaId, insumoCliente: true },
+    select: { areaId: true },
+  });
+  const insumoClienteAreas = new Set(asigs.map((a) => a.areaId));
+
+  // Áreas con procesamiento pendiente para este cliente (tareas del plan).
+  const areasProc = await prisma.tarea.findMany({
+    where: { organizacionId: orgId, empresaId, periodo, actividadPlan: { fase: 'procesamiento' }, areaId: { not: null } },
+    select: { areaId: true }, distinct: ['areaId'],
+  });
+
+  // Áreas con vencimientos (declaraciones) del período: el trabajo del área de Impuestos
+  // son las declaraciones controladas en Vencimientos, no tareas del plan — así también
+  // se libera su área. Cada vencimiento se mapea a su área por la actividad vinculada.
+  const [anioP, mesP] = periodo.split('-').map(Number);
+  const desdeV = new Date(Date.UTC(anioP, mesP - 1, 1));
+  const hastaV = new Date(Date.UTC(anioP, mesP, 1));
+  const [actsVinc, vencs] = await Promise.all([
+    prisma.actividadPlan.findMany({ where: { organizacionId: orgId, obligacionVencimiento: { not: null }, areaId: { not: null } }, select: { obligacionVencimiento: true, areaId: true } }),
+    prisma.vencimientoEmpresa.findMany({ where: { organizacionId: orgId, empresaId, fechaVencimiento: { gte: desdeV, lt: hastaV } }, select: { obligacion: true } }),
+  ]);
+  const areaPorKey = new Map(actsVinc.map((a) => [a.obligacionVencimiento as string, a.areaId as string]));
+  const areasVenc = new Set<string>();
+  for (const v of vencs) {
+    const key = vinculoDeObligacion(v.obligacion);
+    const areaId = key ? areaPorKey.get(key) : undefined;
+    if (areaId) areasVenc.add(areaId);
+  }
+
+  // Objetivo: unión de áreas con procesamiento y áreas con vencimientos, EXCLUYENDO
+  // las de "insumo del cliente".
+  const objetivo = Array.from(new Set([
+    ...areasProc.map((t) => t.areaId as string),
+    ...areasVenc,
+  ])).filter((id) => !insumoClienteAreas.has(id));
+
+  // Política por área: descarta una entrega GENERAL automática antigua si quedó de una
+  // versión anterior (nunca toca una general 'manual' de coordinación).
+  await prisma.entregaInsumo.deleteMany({ where: { organizacionId: orgId, empresaId, periodo, areaId: null, origen: 'auto' } });
+
   let creadas = 0;
   for (const areaId of objetivo) {
     const existe = await prisma.entregaInsumo.findFirst({ where: { organizacionId: orgId, empresaId, periodo, areaId } });
