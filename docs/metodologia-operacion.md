@@ -44,6 +44,16 @@ INSUMO (Auxiliar)  →  PROCESAMIENTO POR ÁREA (Asesor)  →  REVISIÓN  →  R
 y con eso **habilita y avisa** a Impuestos e Informes; *"ya puedes empezar"*. El
 control del flujo nace de modelar esa entrega, no de tareas sueltas.
 
+**¿Quién provee el insumo? Firma o cliente.** No siempre la firma pone el auxiliar
+contable. En algunos servicios el **auxiliar es del cliente**, así que el insumo
+**no depende de nosotros**. Se marca por **cliente × área** (`AsignacionClienteArea.insumoCliente`):
+- **Insumo de la firma** (interno) — hay captura interna; la entrega puede ser
+  **automática** al terminar esa captura. La demora del insumo **es de la firma**.
+- **Insumo del cliente** (externo) — no hay captura interna; la entrega se marca a
+  mano (**recepción del cliente**) y esa demora **no es de la firma** (se mide como
+  cumplimiento del cliente, y el *lead time* separa la espera al cliente de nuestro
+  procesamiento). Es la razón de fondo del modelo **híbrido**.
+
 ## 2. Roles y responsabilidades (RACI)
 
 Los roles existen en el esquema (`Rol`, `AsignacionClienteArea` con asesor/auxiliar

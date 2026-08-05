@@ -707,6 +707,11 @@ model AsignacionClienteArea {
   asesorId       String?
   auxiliarId     String?
   talla          String? // S / M / L / XL — tamaño de la empresa por área
+  // El insumo (captura) de esta área lo provee el CLIENTE (auxiliar externo), no
+  // la firma. Cuando es true: no hay captura interna que auto-entregue; la entrega
+  // se marca a mano (recepción del cliente) y la demora del insumo NO es de la
+  // firma. Ver F1 en docs/metodologia-operacion.md.
+  insumoCliente  Boolean @default(false)
 
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)

@@ -45,3 +45,7 @@ ALTER TABLE "entregas_insumo" ADD CONSTRAINT "entregas_insumo_entregadoPorId_fke
 ALTER TABLE "eventos_tarea" ADD CONSTRAINT "eventos_tarea_organizacionId_fkey" FOREIGN KEY ("organizacionId") REFERENCES "organizaciones"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "eventos_tarea" ADD CONSTRAINT "eventos_tarea_tareaId_fkey" FOREIGN KEY ("tareaId") REFERENCES "tareas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "eventos_tarea" ADD CONSTRAINT "eventos_tarea_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "usuarios"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Insumo provisto por el cliente (auxiliar externo) por área. Cuando es true, la
+-- captura no depende de la firma: la entrega se marca a mano (recepción del cliente).
+ALTER TABLE "asignacion_cliente_area" ADD COLUMN "insumoCliente" BOOLEAN NOT NULL DEFAULT false;

@@ -64,6 +64,9 @@ Todas (salvo `Organizacion` y el root) pertenecen a una organización vía
   (`empresaId`, `periodo`, `areaId`).
 - **`EventoTarea`** — bitácora de una tarea (`tipo` `estado`/`entrega`, estado
   anterior/nuevo, usuario, fecha); base para medir tiempos de ciclo y de handoff.
+- **`AsignacionClienteArea.insumoCliente`** (`Boolean`) — el insumo de esa área lo
+  provee el **cliente** (auxiliar externo), no la firma: la entrega se marca a mano
+  y su demora no es de la firma.
 
 ## Relaciones
 
