@@ -67,6 +67,11 @@ Todas (salvo `Organizacion` y el root) pertenecen a una organización vía
 - **`AsignacionClienteArea.insumoCliente`** (`Boolean`) — el insumo de esa área lo
   provee el **cliente** (auxiliar externo), no la firma: la entrega se marca a mano
   y su demora no es de la firma.
+- **`ActividadPlan.esCapturaDocumentos`** (`Boolean`) — marca la actividad especial
+  *Captura de documentos*: su tarea muestra el detalle de lotes.
+- **`LoteCaptura`** — lote capturado dentro de la tarea de captura: `tipoDocumento`,
+  consecutivo `desde`–`hasta`, `cantidad`, `fecha`. Registro diario del auxiliar
+  dentro de la tarea mensual.
 
 ## Relaciones
 

@@ -396,7 +396,7 @@ planRouter.get('/tareas/:id/detalle', requireAuth, async (req: AuthedRequest, re
       auxiliar: { select: { nombre: true } },
       asignados: { select: { usuario: { select: { nombre: true } } } },
       etiquetas: { select: { etiqueta: { select: { nombre: true } } } },
-      actividadPlan: { select: { esRegistroSoftware: true } },
+      actividadPlan: { select: { esRegistroSoftware: true, esCapturaDocumentos: true } },
     },
   });
   if (!t) return res.status(404).json({ error: 'Tarea no encontrada.' });
@@ -405,6 +405,7 @@ planRouter.get('/tareas/:id/detalle', requireAuth, async (req: AuthedRequest, re
     tarea: {
       ...rest,
       esRegistroSoftware: actividadPlan?.esRegistroSoftware ?? false,
+      esCapturaDocumentos: actividadPlan?.esCapturaDocumentos ?? false,
       // Nombres (para la vista de detalle; los *Id de arriba siguen para el formulario de edición).
       empresa: empresa?.nombre ?? null,
       area: area?.nombre ?? null,
@@ -416,6 +417,55 @@ planRouter.get('/tareas/:id/detalle', requireAuth, async (req: AuthedRequest, re
       valorPago: valorPago != null ? Number(valorPago) : null,
     },
   });
+});
+
+// ---------- Captura de documentos: lotes (F1.2b) ----------
+// El auxiliar registra, por tipo de documento, el rango de consecutivos y la
+// cantidad, con su fecha. Trabajo diario dentro de la tarea "Captura de documentos".
+
+const loteSelect = { id: true, tipoDocumento: true, desde: true, hasta: true, cantidad: true, fecha: true } as const;
+
+// GET /plan/tareas/:id/lotes
+planRouter.get('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  const lotes = await prisma.loteCaptura.findMany({ where: { tareaId: tarea.id }, orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }], select: loteSelect });
+  res.json({ lotes });
+});
+
+// POST /plan/tareas/:id/lotes  { tipoDocumento, desde?, hasta?, cantidad?, fecha? }
+planRouter.post('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true, organizacionId: true, asesorId: true, auxiliarId: true } });
+  if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
+  const u = req.user!;
+  if (!(puedeGestionar(u) || tarea.asesorId === u.sub || tarea.auxiliarId === u.sub))
+    return res.status(403).json({ error: 'No puedes registrar la captura de esta tarea (no eres su asesor/auxiliar ni tienes rol de coordinación).' });
+
+  const tipoDocumento = String(req.body?.tipoDocumento ?? '').trim();
+  if (!tipoDocumento) return res.status(422).json({ error: 'Indica el tipo de documento.' });
+  const txt = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  const n = Number(req.body?.cantidad);
+  const cantidad = req.body?.cantidad !== '' && req.body?.cantidad != null && Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : null;
+  const fecha = req.body?.fecha && !isNaN(new Date(req.body.fecha).getTime()) ? new Date(req.body.fecha) : new Date();
+  const lote = await prisma.loteCaptura.create({
+    data: { organizacionId: tarea.organizacionId, tareaId: tarea.id, tipoDocumento, desde: txt(req.body?.desde), hasta: txt(req.body?.hasta), cantidad, fecha },
+    select: loteSelect,
+  });
+  res.json({ ok: true, lote });
+});
+
+// DELETE /plan/lotes/:id
+planRouter.delete('/lotes/:id', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const lote = await prisma.loteCaptura.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true, tarea: { select: { asesorId: true, auxiliarId: true } } } });
+  if (!lote) return res.status(404).json({ error: 'Lote no encontrado.' });
+  const u = req.user!;
+  if (!(puedeGestionar(u) || lote.tarea.asesorId === u.sub || lote.tarea.auxiliarId === u.sub))
+    return res.status(403).json({ error: 'No puedes eliminar este lote.' });
+  await prisma.loteCaptura.delete({ where: { id: lote.id } });
+  res.json({ ok: true });
 });
 
 // PATCH /tareas/:id/registro — captura del "registro en software" (comprobantes)
