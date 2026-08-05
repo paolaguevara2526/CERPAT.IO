@@ -1,6 +1,8 @@
 # Estado y plan — Planeador CERPAT
 
 Documento vivo del estado en producción y el roadmap. Actualizar en cada avance.
+Para el **modelo de operación** (flujo, roles, entregas y medición) ver
+[`metodologia-operacion.md`](./metodologia-operacion.md).
 
 _Última actualización: 2026-08-02._
 
