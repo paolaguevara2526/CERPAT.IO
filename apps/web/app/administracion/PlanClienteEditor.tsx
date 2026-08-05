@@ -201,7 +201,7 @@ export default function PlanClienteEditor() {
                 <span style={{ fontWeight: 800, fontSize: 13.5 }}>Entregas del insumo</span>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>período {periodo}</span>
               </div>
-              <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 10px' }}>Cuando el insumo está listo, <b>libera</b> el área para habilitar su procesamiento. La entrega general habilita todas las áreas.</p>
+              <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 10px' }}>Cuando el insumo está listo, <b>libera</b> el área para habilitar su procesamiento. La entrega general habilita todas las áreas. Al terminar toda la captura del cliente, la firma se libera <b>sola</b> (marca <span style={{ fontWeight: 700 }}>auto</span>); las áreas con <b>insumo del cliente</b> se marcan a mano al recibirlas.</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 <EntregaChip label="Todo el insumo (general)" e={entregas.general} onLiberar={() => entregar(null, false)} onRevertir={() => entregar(null, true)} />
                 {entregas.areas.map((a) => (
@@ -226,8 +226,9 @@ export default function PlanClienteEditor() {
 }
 
 // Chip de entrega: liberar (habilita el procesamiento) o revertir.
-function EntregaChip({ label, e, onLiberar, onRevertir }: { label: string; e?: { entregado: boolean; por?: string | null }; onLiberar: () => void; onRevertir: () => void }) {
+function EntregaChip({ label, e, onLiberar, onRevertir }: { label: string; e?: { entregado: boolean; por?: string | null; origen?: string }; onLiberar: () => void; onRevertir: () => void }) {
   const entregado = !!e?.entregado;
+  const esAuto = e?.origen === 'auto';
   const verde = '#22a670';
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: `1px solid ${entregado ? verde + '66' : 'var(--edge-strong)'}`, background: entregado ? verde + '14' : 'var(--panel)', borderRadius: 8, padding: '6px 10px' }}>
@@ -235,6 +236,7 @@ function EntregaChip({ label, e, onLiberar, onRevertir }: { label: string; e?: {
       {entregado ? (
         <>
           <span style={{ fontSize: 11.5, color: verde, fontWeight: 700 }}>✓ Entregado{e?.por ? ` · ${e.por}` : ''}</span>
+          {esAuto && <span title="Liberado automáticamente al terminar la captura" style={{ fontSize: 9.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: '#2f6fd0', background: '#eaf1fb', border: '1px solid #cfe0f7', borderRadius: 20, padding: '1px 6px' }}>auto</span>}
           <button className="dbtn" onClick={onRevertir} title="Revertir la entrega" style={{ fontSize: 11, padding: '3px 7px' }}>↺</button>
         </>
       ) : (
