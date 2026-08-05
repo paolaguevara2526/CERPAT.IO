@@ -590,6 +590,60 @@ planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) =
   });
 });
 
+// GET /plan/mi-dia/procesar — bandeja "listo para procesar" del asesor: sus tareas
+// de PROCESAMIENTO cuyo insumo YA fue entregado (auto o manual) y siguen pendientes.
+// Es la contraparte del auxiliar: en cuanto la captura se libera, el asesor ve aquí
+// qué clientes puede arrancar. F1 — vistas por rol.
+planRouter.get('/mi-dia/procesar', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
+
+  const now = new Date();
+  const periodo = typeof req.query.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.query.periodo)
+    ? req.query.periodo
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const u = req.user!;
+  const uid = u.sub;
+  // Coordinación/root ve todo el procesamiento del período; el ejecutor, lo suyo.
+  const scope = puedeGestionar(u) ? {} : { OR: [{ asesorId: uid }, { auxiliarId: uid }] };
+
+  const tareas = await prisma.tarea.findMany({
+    where: {
+      organizacionId: org.id, periodo, actividadPlanId: { not: null },
+      actividadPlan: { fase: 'procesamiento' },
+      estado: { in: ['por_iniciar', 'en_curso'] }, // pendiente de trabajar
+      ...scope,
+    },
+    select: {
+      id: true, titulo: true, estado: true, fechaVencimiento: true, empresaId: true, areaId: true,
+      empresa: { select: { nombre: true } },
+      area: { select: { nombre: true } },
+    },
+    orderBy: [{ fechaVencimiento: 'asc' }, { titulo: 'asc' }],
+    take: 500,
+  });
+
+  // Insumo entregado (general o del área) del período → habilita el procesamiento.
+  const entregas = await prisma.entregaInsumo.findMany({ where: { organizacionId: org.id, periodo }, select: { empresaId: true, areaId: true, entregadoEn: true } });
+  const entMap = new Map<string, Date>();
+  for (const e of entregas) entMap.set(`${e.empresaId}|${e.areaId ?? 'gen'}`, e.entregadoEn);
+
+  const filas = tareas.flatMap((t) => {
+    const gen = entMap.get(`${t.empresaId}|gen`);
+    const area = t.areaId ? entMap.get(`${t.empresaId}|${t.areaId}`) : undefined;
+    const fechas = [gen, area].filter(Boolean) as Date[];
+    if (fechas.length === 0) return []; // aún bloqueada: el insumo no está listo
+    const listoDesde = new Date(Math.min(...fechas.map((d) => d.getTime())));
+    return [{
+      id: t.id, titulo: t.titulo, estado: t.estado,
+      empresa: t.empresa?.nombre ?? '—', area: t.area?.nombre ?? null,
+      fechaVencimiento: t.fechaVencimiento, listoDesde,
+    }];
+  });
+
+  res.json({ periodo, total: filas.length, tareas: filas });
+});
+
 // PATCH /tareas/:id/registro — captura del "registro en software" (comprobantes)
 // por el ejecutor (asesor/auxiliar) o coordinación. cantidadRegistros la calcula
 // el frontend desde el rango, pero es editable, así que aquí solo se valida.

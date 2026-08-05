@@ -85,15 +85,10 @@ export default function CapturaDelDia() {
     } catch { setMsg({ id, texto: 'Error de red al cambiar el estado.', ok: false }); }
   }
 
-  if (cargando) return <div className="panel" style={{ padding: 18, color: 'var(--muted)' }}>Cargando captura del día…</div>;
+  if (cargando) return null; // silencioso mientras carga
   if (error) return <div className="panel" style={{ padding: 16, color: '#b42318', fontWeight: 600 }}>No se pudo cargar la captura: {error}.</div>;
-  if (!data || data.total === 0) {
-    return (
-      <div className="panel" style={{ padding: 20, color: 'var(--muted)', fontSize: 13 }}>
-        No tienes la tarea <b>Captura de documentos</b> asignada este período. Cuando coordinación la genere para tus clientes, aquí registrarás tus lotes del día para todos ellos en un solo lugar.
-      </div>
-    );
-  }
+  // Sin captura asignada (p. ej. un asesor): se oculta para no meter ruido.
+  if (!data || data.total === 0) return null;
 
   const th: React.CSSProperties = { textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '8px 10px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
   const td: React.CSSProperties = { padding: '9px 10px', fontSize: 13, borderBottom: '1px solid var(--border)', verticalAlign: 'middle' };

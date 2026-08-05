@@ -170,11 +170,13 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
     la firma se libera sola (entrega `auto`): **general** si no hay áreas con insumo
     del cliente, o **por área** solo para las que dependen de la firma (las de insumo
     del cliente quedan pendientes, se marcan a mano); si la captura se reabre, revierte
-    solo lo `auto`. Pendiente: bandeja *"listo para procesar"* del asesor.
-- **F2 — Vistas por rol.** *Mi día del auxiliar* ✅ (captura del día multi-cliente
-  con registro de lotes en línea, sección de la página **Mi Día**). Falta la
-  bandeja del asesor y el tablero de flujo del coordinador/gerente — todas sobre
-  la misma columna.
+    solo lo `auto` · bandeja *"listo para procesar"* del asesor ✅ — con la columna
+    vertebral de F1 completa.
+- **F2 — Vistas por rol.** Sobre la página **Mi Día** (cockpit por rol, cada sección
+  se muestra según las asignaciones del usuario): *Captura del día* del auxiliar ✅
+  (multi-cliente con lotes en línea) y *Listo para procesar* del asesor ✅ (sus tareas
+  de procesamiento ya habilitadas por la entrega del insumo, con estado en línea).
+  Falta el tablero de flujo del coordinador/gerente sobre la misma columna.
 - **F3 — Medición de tiempos.** Lead time, tiempo de handoff, cumplimiento **a
   tiempo** por cada eje.
 - **F4 — Automatización.** SLAs/alertas, notificaciones por correo, integraciones
@@ -182,4 +184,4 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
 
 ---
 
-_Última actualización: 2026-08-05 (F1.3 — Mi día del auxiliar + auto-entrega)._
+_Última actualización: 2026-08-05 (F1 completo — Mi día del auxiliar, auto-entrega y bandeja del asesor)._
