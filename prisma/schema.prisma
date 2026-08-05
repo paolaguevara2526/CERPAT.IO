@@ -79,6 +79,20 @@ enum EstadoPago {
   no_obligado
 }
 
+// Estado de una visita del asesor/auditor al cliente.
+enum EstadoVisita {
+  programada
+  realizada
+  cancelada
+}
+
+// Estado de un compromiso derivado de una visita (acta).
+enum EstadoCompromiso {
+  pendiente
+  cumplido
+  cancelado
+}
+
 // ---------- TENANT: ORGANIZACION (firma contable) ----------
 // Raíz del aislamiento multi-tenant. Todo el dominio cuelga de aquí.
 // Un usuario root de plataforma (Usuario.esRootPlataforma) vive por fuera de
@@ -126,6 +140,10 @@ model Organizacion {
   eventosTarea     EventoTarea[]
   lotesCaptura     LoteCaptura[]
 
+  // Visitas a clientes (asesor/auditor) y sus compromisos
+  visitas          Visita[]
+  compromisosVisita CompromisoVisita[]
+
   // Revisoría Fiscal
   grupos    GrupoEmpresarial[]
   hallazgos Hallazgo[]
@@ -172,6 +190,9 @@ model Usuario {
   areasComoAuxiliar  AsignacionClienteArea[] @relation("AuxiliarArea")
   entregasRealizadas EntregaInsumo[]
   eventosTarea       EventoTarea[]
+  visitasComoResponsable Visita[]           @relation("VisitaResponsable")
+  visitasCreadas         Visita[]           @relation("VisitasCreadas")
+  compromisosComoResponsable CompromisoVisita[] @relation("CompromisoResponsable")
 
   // Email único por organización (dos firmas distintas pueden repetir email).
   @@unique([organizacionId, email])
@@ -256,6 +277,7 @@ model Empresa {
   municipiosIca           EmpresaMunicipioIca[]
   vencimientosEmpresa     VencimientoEmpresa[]
   entregasInsumo          EntregaInsumo[]
+  visitas                 Visita[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -907,4 +929,63 @@ model SubtareaVencimiento {
 
   @@index([vencimientoId])
   @@map("subtareas_vencimiento")
+}
+
+// ---------- VISITAS A CLIENTES (asesor / auditor) ----------
+
+// Visita de un asesor o auditor a un cliente. El "acta" se llena aquí mismo:
+// objetivo, recomendaciones y una lista de compromisos (cada uno con su fecha
+// límite y responsable) para el seguimiento por cliente y asesor.
+model Visita {
+  id              String       @id @default(uuid())
+  organizacionId  String
+  empresaId       String
+  responsableId   String? // asesor o auditor que realiza la visita
+  fecha           DateTime // fecha de la visita
+  hora            String? // "HH:MM" opcional
+  objetivo        String? // objetivo / motivo de la visita
+  recomendaciones String? // recomendaciones o sugerencias (texto del acta)
+  estado          EstadoVisita @default(programada)
+  observaciones   String?
+  // Vínculo al Plan de Trabajo (las visitas recurrentes del plan lo llevan; Fase 3).
+  // Se guarda como referencia simple (sin FK) hasta implementar la generación.
+  actividadPlanId String?
+  periodo         String? // "YYYY-MM" del período del plan (visitas recurrentes)
+  creadoPorId     String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organizacion Organizacion       @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa            @relation(fields: [empresaId], references: [id])
+  responsable  Usuario?           @relation("VisitaResponsable", fields: [responsableId], references: [id])
+  creadoPor    Usuario?           @relation("VisitasCreadas", fields: [creadoPorId], references: [id])
+  compromisos  CompromisoVisita[]
+
+  @@index([organizacionId])
+  @@index([empresaId])
+  @@index([fecha])
+  @@index([responsableId])
+  @@map("visitas")
+}
+
+// Compromiso acordado en una visita: qué se hará, para cuándo y quién responde.
+model CompromisoVisita {
+  id             String           @id @default(uuid())
+  organizacionId String
+  visitaId       String
+  descripcion    String
+  fechaLimite    DateTime?
+  responsableId  String? // responsable del compromiso (asesor/auxiliar)
+  estado         EstadoCompromiso @default(pendiente)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  visita       Visita       @relation(fields: [visitaId], references: [id], onDelete: Cascade)
+  responsable  Usuario?     @relation("CompromisoResponsable", fields: [responsableId], references: [id])
+
+  @@index([organizacionId])
+  @@index([visitaId])
+  @@index([fechaLimite])
+  @@map("compromisos_visita")
 }

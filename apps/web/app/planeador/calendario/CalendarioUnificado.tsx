@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TareaDetalleModal from './TareaDetalleModal';
+import VisitaModal from '../visitas/VisitaModal';
 
 const AREAS = ['Impuestos', 'Informes', 'Cumplimiento', 'Nómina', 'Tesorería'];
 
@@ -27,9 +28,16 @@ const VENC_META: Record<string, { label: string; color: string }> = {
   no_presentado: { label: 'No presentado', color: '#cf4436' },
   no_obligado: { label: 'No obligado', color: '#9aa3b2' },
 };
+// Estados de una VISITA (asesor/auditor al cliente).
+const VISITA_META: Record<string, { label: string; color: string }> = {
+  programada: { label: 'Programada', color: '#2f6fd0' },
+  realizada: { label: 'Realizada', color: '#22a670' },
+  cancelada: { label: 'Cancelada', color: '#9aa3b2' },
+};
 // Color de cada etiqueta (para el punto/tag que distingue la fuente en "Todas").
 const ETIQUETA_COLOR: Record<string, string> = {
   Vencimientos: '#7a5bd0',
+  Visitas: '#d6008c',
   Impuestos: '#2f6fd0',
   Informes: '#c67c00',
   Cumplimiento: '#1c8a5e',
@@ -41,7 +49,7 @@ const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 type Evento = {
-  key: string; tipo: 'vencimiento' | 'tarea'; id: string; fecha: string;
+  key: string; tipo: 'vencimiento' | 'tarea' | 'visita'; id: string; fecha: string;
   titulo: string; empresa: string | null; etiqueta: string;
   estado: string; estadoLabel: string; color: string; vencido: boolean;
   // Extras de vencimiento (para su detalle):
@@ -111,6 +119,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
   const [arrastrando, setArrastrando] = useState<string | null>(null);
   const [sobreDia, setSobreDia] = useState<string | null>(null);
   const [detalle, setDetalle] = useState<Evento | null>(null);
+  const [visitaId, setVisitaId] = useState<string | null>(null);
   const reqId = useRef(0);
 
   const cargar = useCallback(async (m: string) => {
@@ -120,13 +129,15 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
     const [y, mm] = m.split('-').map(Number);
     const ultimoDia = new Date(Date.UTC(y, mm, 0)).getUTCDate();
     try {
-      const [rv, rt] = await Promise.all([
+      const [rv, rt, rvi] = await Promise.all([
         fetch(`/api/vencimientos?anio=${y}&mes=${mm}`, { cache: 'no-store' }),
         // Tareas cuya fecha de vencimiento cae en el mes visible (no por período).
         fetch(`/api/planeador/gestion/tareas?venceDesde=${m}-01&venceHasta=${m}-${pad(ultimoDia)}`, { cache: 'no-store' }),
+        fetch(`/api/visitas?anio=${y}&mes=${mm}`, { cache: 'no-store' }),
       ]);
       const dv = await rv.json().catch(() => ({}));
       const dt = await rt.json().catch(() => ({}));
+      const dvi = await rvi.json().catch(() => ({}));
       if (mine !== reqId.current) return; // llegó una carga más nueva
       const evs: Evento[] = [];
       for (const v of (dv.vencimientos ?? [])) {
@@ -147,6 +158,17 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           key: `t-${t.id}`, tipo: 'tarea', id: t.id, fecha: f,
           titulo: t.titulo, empresa: t.empresa ?? null, etiqueta: t.area || 'Sin área',
           estado: t.estado, estadoLabel: em.label, color: em.color, vencido: pend && f < hoy,
+        });
+      }
+      for (const v of (dvi.visitas ?? [])) {
+        const em = VISITA_META[v.estado] ?? { label: v.estado, color: '#5b6a82' };
+        const f = (v.fecha || '').slice(0, 10);
+        const objetivo = v.objetivo && String(v.objetivo).trim() ? v.objetivo : 'Visita';
+        evs.push({
+          key: `vi-${v.id}`, tipo: 'visita', id: v.id, fecha: f,
+          titulo: v.hora ? `${objetivo} · ${v.hora}` : objetivo,
+          empresa: v.empresa ?? null, etiqueta: 'Visitas',
+          estado: v.estado, estadoLabel: em.label, color: em.color, vencido: false,
         });
       }
       setEventos(evs);
@@ -206,11 +228,15 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
     setAviso(null);
     const url = ev.tipo === 'vencimiento'
       ? `/api/vencimientos/${encodeURIComponent(ev.id)}`
+      : ev.tipo === 'visita'
+      ? `/api/visitas/${encodeURIComponent(ev.id)}`
       : `/api/planeador/gestion/tareas/${encodeURIComponent(ev.id)}`;
+    // La visita guarda su día en "fecha"; tareas y vencimientos en "fechaVencimiento".
+    const cuerpo = ev.tipo === 'visita' ? { fecha: nuevaFecha } : { fechaVencimiento: nuevaFecha };
     try {
       const r = await fetch(url, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fechaVencimiento: nuevaFecha }),
+        body: JSON.stringify(cuerpo),
       });
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
@@ -283,7 +309,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <MultiSelect label="Etiquetas" opciones={['Vencimientos', ...AREAS]} sel={etiquetas} onChange={setEtiquetas}
+        <MultiSelect label="Etiquetas" opciones={['Vencimientos', 'Visitas', ...AREAS]} sel={etiquetas} onChange={setEtiquetas}
           etiquetar={(o) => (o === 'Vencimientos' ? '🧾 ' : '📋 ') + o} color={(o) => ETIQUETA_COLOR[o]} />
         <MultiSelect label="Clientes" opciones={clientes} sel={clientesSel} onChange={setClientesSel} anchoMenu={260} />
         <select value={cumpl} onChange={(e) => setCumpl(e.target.value)} style={selStyle} title="Filtrar por estado">
@@ -294,7 +320,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         </select>
         {hayFiltro && <button onClick={() => { setEtiquetas([]); setClientesSel([]); setCumpl(''); }} className="dbtn" style={{ fontSize: 12 }}>Limpiar</button>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11, color: 'var(--muted)' }}>
-          {(etiquetas.length ? etiquetas : ['Vencimientos', ...AREAS]).map((et) => (
+          {(etiquetas.length ? etiquetas : ['Vencimientos', 'Visitas', ...AREAS]).map((et) => (
             <span key={et} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 9, height: 9, borderRadius: 3, background: ETIQUETA_COLOR[et] ?? '#9aa3b2' }} /> {et}
             </span>
@@ -362,7 +388,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                         <div key={ev.key} draggable
                           onDragStart={(e) => { setArrastrando(ev.key); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.key); }}
                           onDragEnd={() => { setArrastrando(null); setSobreDia(null); }}
-                          onClick={() => setDetalle(ev)}
+                          onClick={() => (ev.tipo === 'visita' ? setVisitaId(ev.id) : setDetalle(ev))}
                           title={`${ev.titulo}${ev.empresa ? ' · ' + ev.empresa : ''} · ${ev.estadoLabel}`}
                           style={{ borderLeft: `3px solid ${col}`, background: `${col}12`, borderRadius: 4, padding: '3px 6px', cursor: 'grab' }}>
                           {mostrarEstados && (
@@ -406,6 +432,8 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         ? <TareaDetalleModal id={detalle.id} onClose={() => setDetalle(null)} onChanged={() => cargar(mes)} />
         : <DetalleModal ev={detalle} onClose={() => setDetalle(null)} onChanged={() => cargar(mes)} />
       )}
+
+      {visitaId && <VisitaModal id={visitaId} onClose={() => setVisitaId(null)} onSaved={() => cargar(mes)} />}
     </>
   );
 }

@@ -14,6 +14,7 @@ import { planRouter } from './routes/plan.js';
 import { adminRouter } from './routes/admin.js';
 import { hallazgosRouter } from './routes/hallazgos.js';
 import { vencimientosRouter } from './routes/vencimientos.js';
+import { visitasRouter } from './routes/visitas.js';
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/plan', planRouter);
 app.use('/admin', adminRouter);
 app.use('/hallazgos', hallazgosRouter);
 app.use('/vencimientos', vencimientosRouter);
+app.use('/visitas', visitasRouter);
 
 // TODO (Claude Code): agregar aquí, en el mismo patrón, los routers de:
 // /auth, /usuarios, /empresas, /pagos, /catalogos, /vencimientos, /parametros, /auditoria

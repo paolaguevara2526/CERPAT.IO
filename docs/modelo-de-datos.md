@@ -73,6 +73,19 @@ Todas (salvo `Organizacion` y el root) pertenecen a una organización vía
   consecutivo `desde`–`hasta`, `cantidad`, `fecha`. Registro diario del auxiliar
   dentro de la tarea mensual.
 
+### Visitas a clientes (asesor / auditor)
+
+- **`Visita`** — visita de un asesor o auditor a un cliente, con su **acta** hecha
+  en la app: `empresaId`, `responsableId` (asesor/auditor), `fecha`, `hora?`,
+  `objetivo?`, `recomendaciones?`, `estado` (`EstadoVisita`: `programada` /
+  `realizada` / `cancelada`), `observaciones?`. `actividadPlanId`/`periodo` quedan
+  reservados para las visitas recurrentes del plan (Fase 3, aún sin FK). Es una
+  fuente más del **calendario** (etiqueta "Visitas").
+- **`CompromisoVisita`** — compromiso acordado en una visita: `descripcion`,
+  `fechaLimite?`, `responsableId?`, `estado` (`EstadoCompromiso`: `pendiente` /
+  `cumplido` / `cancelado`). Varios por visita; base del seguimiento por cliente
+  y asesor (Fase 2).
+
 ## Relaciones
 
 El diagrama entidad-relación se deriva del `schema.prisma`. El diagrama de
