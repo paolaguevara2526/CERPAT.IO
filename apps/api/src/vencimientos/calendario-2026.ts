@@ -6203,6 +6203,15 @@ export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; rent
       "departamento": "Casanare",
       "obligacion": "ICA",
       "periodicidad": "Bimestral",
+      "periodo": "may-jun",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-14"
+    },
+    {
+      "municipio": "Yopal",
+      "departamento": "Casanare",
+      "obligacion": "ICA",
+      "periodicidad": "Bimestral",
       "periodo": "jul-ago",
       "ultimo_digito": "",
       "fecha_vencimiento": "2026-10-02"

@@ -103,6 +103,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
   const [clientesSel, setClientesSel] = useState<string[]>([]);
   const [cumpl, setCumpl] = useState('');
   const [mostrarEstados, setMostrarEstados] = useState(true);
+  const [mostrarFinde, setMostrarFinde] = useState(true);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +193,10 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
   const celdas: (number | null)[] = [...Array(primerDow).fill(null), ...Array.from({ length: diasEnMes }, (_, i) => i + 1)];
   while (celdas.length % 7 !== 0) celdas.push(null);
   const hoy = hoyISO();
+  // Toggle de fin de semana: al ocultarlo mostramos 5 columnas (Lun–Vie) quitando
+  // las celdas de sábado/domingo (posiciones 5 y 6 de cada semana de 7).
+  const cols = mostrarFinde ? 7 : 5;
+  const celdasVis = mostrarFinde ? celdas : celdas.filter((_, i) => i % 7 < 5);
 
   // Reprograma la fecha de un evento (arrastrar a otro día).
   async function reprogramar(ev: Evento, nuevaFecha: string) {
@@ -224,10 +229,11 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
     const titulo = `${MESES[m - 1]} ${y}`;
     const filas: string[] = [];
     for (let i = 0; i < celdas.length; i += 7) {
-      const semana = celdas.slice(i, i + 7).map((dia) => {
+      const semanaCeldas = mostrarFinde ? celdas.slice(i, i + 7) : celdas.slice(i, i + 5);
+      const semana = semanaCeldas.map((dia) => {
         if (!dia) return '<td class="empty"></td>';
         const items = porDia.get(`${mes}-${pad(dia)}`) ?? [];
-        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}"><b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
+        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}"><b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}${e.municipio ? `<span class="muni">📍 ${escapar(e.municipio)}</span>` : ''}${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
         return `<td><div class="dn">${dia}</div>${cards}</td>`;
       }).join('');
       filas.push(`<tr>${semana}</tr>`);
@@ -242,11 +248,12 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       td.empty{background:#fafbfc;} .dn{font-size:11px;font-weight:700;color:#556;margin-bottom:3px;}
       .c{font-size:9px;padding:2px 4px;margin-bottom:3px;background:#f7f8fa;border-radius:3px;}
       .c b{display:block;} .c span{display:block;color:#667;} .c i{font-style:normal;font-size:8px;}
+      .c .muni{font-weight:700;color:#334;}
       @media print{@page{size:landscape;margin:10mm;}}
     </style></head><body>
       <h1>Calendario — ${titulo}${etiquetas.length ? ` · ${etiquetas.join(', ')}` : ''}</h1>
       <div class="sub">Plan de trabajo y vencimientos tributarios · CERPAT</div>
-      <table><thead><tr>${DIAS.map((d) => `<th>${d}</th>`).join('')}</tr></thead><tbody>${filas.join('')}</tbody></table>
+      <table><thead><tr>${DIAS.slice(0, cols).map((d) => `<th>${d}</th>`).join('')}</tr></thead><tbody>${filas.join('')}</tbody></table>
     </body></html>`);
     w.document.close();
     w.focus();
@@ -267,6 +274,9 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           <button onClick={() => setMes(mesActual())} className="dbtn" style={{ fontSize: 12.5 }}>Hoy</button>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }} title="Mostrar u ocultar los estados en las tarjetas">
             <input type="checkbox" checked={mostrarEstados} onChange={(e) => setMostrarEstados(e.target.checked)} style={{ accentColor: '#2E5090' }} /> Estados
+          </label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }} title="Mostrar u ocultar las columnas de sábado y domingo">
+            <input type="checkbox" checked={mostrarFinde} onChange={(e) => setMostrarFinde(e.target.checked)} style={{ accentColor: '#2E5090' }} /> Sáb/Dom
           </label>
           <button onClick={imprimir} className="dbtn" style={{ fontSize: 12.5 }}>🖨 Imprimir</button>
         </div>
@@ -305,16 +315,17 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>{error}</div>
       ) : (
         <div className="panel" style={{ padding: 0, overflow: 'hidden', opacity: cargando ? 0.6 : 1, transition: 'opacity .15s' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
-            {DIAS.map((d, idx) => (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols},1fr)` }}>
+            {DIAS.slice(0, cols).map((d, idx) => (
               <div key={d} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', color: idx >= 5 ? '#8a94a6' : 'var(--muted)', borderBottom: '1px solid var(--line)', background: idx >= 5 ? 'rgba(91,106,130,0.12)' : 'var(--panel-2)' }}>{d}</div>
             ))}
-            {celdas.map((dia, i) => {
+            {celdasVis.map((dia, i) => {
               const diaISO = dia ? `${mes}-${pad(dia)}` : '';
               const items = dia ? (porDia.get(diaISO) ?? []) : [];
               const esHoy = diaISO === hoy;
               const activo = sobreDia === diaISO && arrastrando;
-              const finde = !!dia && (i % 7) >= 5;            // sábado/domingo
+              const colIdx = i % cols;
+              const finde = !!dia && mostrarFinde && colIdx >= 5;  // sábado/domingo (solo si se muestran)
               const festivo = !!dia && festivos.has(diaISO);  // festivo de Colombia
               return (
                 <div key={i}
@@ -328,7 +339,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                     if (ev && dia) reprogramar(ev, diaISO);
                   }}
                   style={{
-                    minHeight: 104, padding: 6, borderRight: (i + 1) % 7 === 0 ? 'none' : '1px solid var(--line)', borderBottom: '1px solid var(--line)',
+                    minHeight: 104, padding: 6, borderRight: colIdx === cols - 1 ? 'none' : '1px solid var(--line)', borderBottom: '1px solid var(--line)',
                     background: !dia ? 'var(--panel-2)'
                       : activo ? 'rgba(46,80,144,0.10)'
                       : esHoy ? 'rgba(52,201,139,0.10)'
@@ -365,6 +376,11 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                           {ev.empresa && (
                             <div style={{ fontSize: 9.5, lineHeight: 1.2, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {ev.empresa}
+                            </div>
+                          )}
+                          {ev.municipio && (
+                            <div style={{ fontSize: 9.5, lineHeight: 1.2, fontWeight: 700, color: col, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`Municipio: ${ev.municipio}`}>
+                              📍 {ev.municipio}
                             </div>
                           )}
                         </div>
