@@ -4,6 +4,7 @@
 
 import { fetchTareas, TareasTabla, nombrePeriodo } from '../tareas';
 import CapturaDelDia from './CapturaDelDia';
+import ListoParaProcesar from './ListoParaProcesar';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,9 +20,11 @@ export default async function MiDiaPage() {
       </div>
       <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>Tus tareas del período como asesor o auxiliar.</p>
 
-      {/* Captura del día: registro de lotes multi-cliente sin ir uno por uno (F1.3). */}
-      <div style={{ marginBottom: 20 }}>
+      {/* Cockpit por rol (cada sección se oculta sola si no aplica al usuario):
+          captura del día (auxiliar) y listo para procesar (asesor). */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
         <CapturaDelDia />
+        <ListoParaProcesar />
       </div>
 
       <h2 style={{ fontSize: 14, fontWeight: 800, margin: '0 0 8px' }}>Mis tareas del período</h2>
