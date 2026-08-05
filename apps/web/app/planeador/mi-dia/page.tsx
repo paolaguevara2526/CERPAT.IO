@@ -1,6 +1,9 @@
-// apps/web/app/planeador/mi-dia/page.tsx — tareas asignadas al usuario en sesión.
+// apps/web/app/planeador/mi-dia/page.tsx — cockpit del ejecutor (auxiliar/asesor).
+// Encabezado por "Captura del día" (registra lotes de todos sus clientes en un
+// solo lugar) y, debajo, todas sus tareas del período.
 
 import { fetchTareas, TareasTabla, nombrePeriodo } from '../tareas';
+import CapturaDelDia from './CapturaDelDia';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +19,12 @@ export default async function MiDiaPage() {
       </div>
       <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>Tus tareas del período como asesor o auxiliar.</p>
 
+      {/* Captura del día: registro de lotes multi-cliente sin ir uno por uno (F1.3). */}
+      <div style={{ marginBottom: 20 }}>
+        <CapturaDelDia />
+      </div>
+
+      <h2 style={{ fontSize: 14, fontWeight: 800, margin: '0 0 8px' }}>Mis tareas del período</h2>
       {error ? (
         <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>
       ) : tareas.length === 0 ? (

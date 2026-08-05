@@ -468,6 +468,72 @@ planRouter.delete('/lotes/:id', requireAuth, async (req: AuthedRequest, res) => 
   res.json({ ok: true });
 });
 
+// GET /plan/mi-dia/captura — resumen de las tareas "Captura de documentos" del
+// usuario (todas sus empresas del período), con el conteo de lotes registrados y
+// los de hoy, para capturar sin ir cliente por cliente. F1.3 — "Mi día del auxiliar".
+planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.json({ periodo: null, hoy: null, total: 0, capturadosHoy: 0, tareas: [] });
+
+  const now = new Date();
+  const periodo = typeof req.query.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.query.periodo)
+    ? req.query.periodo
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const u = req.user!;
+  const uid = u.sub;
+
+  // Coordinación/root ve todas las capturas del período; el ejecutor, las suyas.
+  const scope = puedeGestionar(u) ? {} : { OR: [{ asesorId: uid }, { auxiliarId: uid }] };
+
+  const tareas = await prisma.tarea.findMany({
+    where: {
+      organizacionId: org.id, periodo, actividadPlanId: { not: null },
+      actividadPlan: { esCapturaDocumentos: true },
+      ...scope,
+    },
+    select: {
+      id: true, estado: true,
+      empresa: { select: { nombre: true } },
+      area: { select: { nombre: true } },
+    },
+    orderBy: [{ empresa: { nombre: 'asc' } }],
+    take: 500,
+  });
+
+  const ids = tareas.map((t) => t.id);
+  // Límites del día (UTC) para contar los lotes capturados hoy.
+  const hoyIni = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const hoyFin = new Date(hoyIni.getTime() + 24 * 3600 * 1000);
+  const [agg, aggHoy] = ids.length
+    ? await Promise.all([
+        prisma.loteCaptura.groupBy({ by: ['tareaId'], where: { tareaId: { in: ids } }, _count: { _all: true }, _max: { fecha: true } }),
+        prisma.loteCaptura.groupBy({ by: ['tareaId'], where: { tareaId: { in: ids }, fecha: { gte: hoyIni, lt: hoyFin } }, _count: { _all: true } }),
+      ])
+    : [[] as any[], [] as any[]];
+  const totMap = new Map(agg.map((a) => [a.tareaId, { n: a._count._all, ult: a._max.fecha as Date | null }]));
+  const hoyMap = new Map(aggHoy.map((a) => [a.tareaId, a._count._all]));
+
+  let capturadosHoy = 0;
+  const filas = tareas.map((t) => {
+    const tot = totMap.get(t.id);
+    const lh = hoyMap.get(t.id) ?? 0;
+    if (lh > 0) capturadosHoy++;
+    return {
+      id: t.id, estado: t.estado,
+      empresa: t.empresa?.nombre ?? '—', area: t.area?.nombre ?? null,
+      totalLotes: tot?.n ?? 0, lotesHoy: lh, ultimaFecha: tot?.ult ?? null,
+    };
+  });
+
+  res.json({
+    periodo,
+    hoy: hoyIni.toISOString().slice(0, 10),
+    total: filas.length,
+    capturadosHoy,
+    tareas: filas,
+  });
+});
+
 // PATCH /tareas/:id/registro — captura del "registro en software" (comprobantes)
 // por el ejecutor (asesor/auxiliar) o coordinación. cantidadRegistros la calcula
 // el frontend desde el rango, pero es editable, así que aquí solo se valida.
