@@ -159,14 +159,18 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
   - **Entrega híbrida** (`EntregaInsumo`): una **general** (habilita todas las áreas)
     y opcionales **por área** (adelantan una). Una tarea de procesamiento se
     **habilita** si existe la entrega general **o** la de su área.
-  - **Disparo mixto:** entrega general **automática** cuando toda la captura del
-    cliente queda *terminada*, **y** botones (general / por área) para adelantarla.
+  - **Disparo mixto:** entrega **automática** cuando toda la captura del cliente
+    queda *terminada* (general, o por área si hay insumo del cliente), **y** botones
+    (general / por área) para adelantarla o revertirla a mano. ✅ implementado.
   - **Eventos** (`EventoTarea`): cada cambio de estado registra quién y cuándo.
   - Incrementos: **F1.1** fundamentos (fase + tablas + registro de eventos) ✅ ·
     **F1.2a** entrega + bloqueo/habilitación ✅ · **F1.2b** captura por lotes
     (`LoteCaptura`) ✅ · **F1.3** *Mi día del auxiliar* — captura multi-cliente en
-    un solo lugar ✅. Pendiente: **auto-entrega** (entrega general automática al
-    terminar la captura) y bandeja *"listo para procesar"* del asesor.
+    un solo lugar ✅ · **auto-entrega** ✅ — al terminar toda la captura del cliente,
+    la firma se libera sola (entrega `auto`): **general** si no hay áreas con insumo
+    del cliente, o **por área** solo para las que dependen de la firma (las de insumo
+    del cliente quedan pendientes, se marcan a mano); si la captura se reabre, revierte
+    solo lo `auto`. Pendiente: bandeja *"listo para procesar"* del asesor.
 - **F2 — Vistas por rol.** *Mi día del auxiliar* ✅ (captura del día multi-cliente
   con registro de lotes en línea, sección de la página **Mi Día**). Falta la
   bandeja del asesor y el tablero de flujo del coordinador/gerente — todas sobre
@@ -178,4 +182,4 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
 
 ---
 
-_Última actualización: 2026-08-05 (F1.3 — Mi día del auxiliar)._
+_Última actualización: 2026-08-05 (F1.3 — Mi día del auxiliar + auto-entrega)._

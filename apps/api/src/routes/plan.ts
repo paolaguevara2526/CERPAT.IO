@@ -114,6 +114,51 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
 
 const ESTADOS_VALIDOS = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'auditado', 'no_realizado'];
 const REQUIEREN_SUBTAREAS = ['terminado', 'auditado'];
+const CAPTURA_LISTA = ['terminado', 'auditado'];
+
+// Auto-entrega (F1 — flujo del cierre): cuando TODA la captura del cliente queda
+// terminada, libera automáticamente el insumo de la firma hacia el procesamiento.
+// Respeta el modelo híbrido (docs/metodologia-operacion.md §F1):
+//  - Si el cliente NO tiene áreas con "insumo del cliente", crea la entrega GENERAL
+//    (habilita todas las áreas de una vez).
+//  - Si tiene áreas "insumo del cliente", crea entregas POR ÁREA solo para las que
+//    dependen de la firma; las del cliente quedan pendientes (se marcan a mano al
+//    recibirlas). Así la demora del insumo externo no la asume la firma.
+// Si la captura deja de estar terminada (se reabre), revierte solo lo 'auto' — nunca
+// una entrega 'manual' hecha por coordinación. Best-effort: no bloquea el cambio de estado.
+async function evaluarAutoEntrega(orgId: string, empresaId: string, periodo: string, tareaId: string, usuarioId: string | null): Promise<void> {
+  const capturas = await prisma.tarea.findMany({
+    where: { organizacionId: orgId, empresaId, periodo, actividadPlan: { fase: 'captura' } },
+    select: { estado: true },
+  });
+  if (capturas.length === 0) return; // sin captura interna: no hay nada que auto-entregar
+  const capturaLista = capturas.every((t) => CAPTURA_LISTA.includes(t.estado));
+
+  const asigs = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: orgId, empresaId },
+    select: { areaId: true, insumoCliente: true },
+  });
+  const hayInsumoCliente = asigs.some((a) => a.insumoCliente);
+  const areasFirma = asigs.filter((a) => !a.insumoCliente).map((a) => a.areaId);
+
+  if (!capturaLista) {
+    const r = await prisma.entregaInsumo.deleteMany({ where: { organizacionId: orgId, empresaId, periodo, origen: 'auto' } });
+    if (r.count > 0) await prisma.eventoTarea.create({ data: { organizacionId: orgId, tareaId, tipo: 'entrega', estadoAnterior: 'entregado', estadoNuevo: 'revertido', usuarioId } });
+    return;
+  }
+
+  // Crea las entregas que falten (idempotente): general, o por área si hay insumo del cliente.
+  const objetivo: (string | null)[] = hayInsumoCliente ? areasFirma : [null];
+  let creadas = 0;
+  for (const areaId of objetivo) {
+    const existe = await prisma.entregaInsumo.findFirst({ where: { organizacionId: orgId, empresaId, periodo, areaId } });
+    if (!existe) {
+      await prisma.entregaInsumo.create({ data: { organizacionId: orgId, empresaId, periodo, areaId, origen: 'auto', entregadoPorId: usuarioId } });
+      creadas++;
+    }
+  }
+  if (creadas > 0) await prisma.eventoTarea.create({ data: { organizacionId: orgId, tareaId, tipo: 'entrega', estadoAnterior: null, estadoNuevo: 'entregado', usuarioId } });
+}
 
 // PATCH /plan/tareas/:id/estado  { estado }  — cambia el estado con reglas de negocio.
 planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, res) => {
@@ -123,7 +168,7 @@ planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, r
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   const tarea = await prisma.tarea.findFirst({
     where: { id: req.params.id, organizacionId: org?.id },
-    include: { subtareas: true },
+    include: { subtareas: true, actividadPlan: { select: { fase: true } } },
   });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
 
@@ -145,6 +190,17 @@ planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, r
   await prisma.eventoTarea.create({
     data: { organizacionId: tarea.organizacionId, tareaId: tarea.id, tipo: 'estado', estadoAnterior: tarea.estado, estadoNuevo: estado, usuarioId: u.sub },
   });
+
+  // Auto-entrega: si la tarea es de captura, reevalúa si el insumo del cliente ya
+  // quedó listo (o dejó de estarlo). Best-effort: no interrumpe el cambio de estado.
+  if (tarea.actividadPlan?.fase === 'captura' && tarea.periodo) {
+    try {
+      await evaluarAutoEntrega(tarea.organizacionId, tarea.empresaId, tarea.periodo, tarea.id, u.sub);
+    } catch (e) {
+      console.error('[auto-entrega] falló al reevaluar', { tareaId: tarea.id, error: e instanceof Error ? e.message : e });
+    }
+  }
+
   res.json({ ok: true, id: actualizada.id, estado: actualizada.estado });
 });
 
