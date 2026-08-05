@@ -176,7 +176,12 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
   se muestra según las asignaciones del usuario): *Captura del día* del auxiliar ✅
   (multi-cliente con lotes en línea) y *Listo para procesar* del asesor ✅ (sus tareas
   de procesamiento ya habilitadas por la entrega del insumo, con estado en línea).
-  Falta el tablero de flujo del coordinador/gerente sobre la misma columna.
+  **Tablero de flujo del cierre** ✅ (`/planeador/flujo`, endpoint `/plan/flujo`) — la
+  vista del coordinador/gerente: por cliente, en qué **etapa** de la cadena va
+  (Captura → Entrega → Procesamiento → Revisión), su **etapa actual**, avance y si
+  está **en riesgo**; el resumen destaca el **cuello** del período (etapa con más
+  clientes detenidos) y la distribución por etapa. Se deriva de las fases de las
+  tareas y las entregas; los tiempos llegan en F3.
 - **F3 — Medición de tiempos.** Lead time, tiempo de handoff, cumplimiento **a
   tiempo** por cada eje.
 - **F4 — Automatización.** SLAs/alertas, notificaciones por correo, integraciones
@@ -184,4 +189,4 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
 
 ---
 
-_Última actualización: 2026-08-05 (F1 completo — Mi día del auxiliar, auto-entrega y bandeja del asesor)._
+_Última actualización: 2026-08-05 (F1 completo + F2 tablero de flujo del cierre)._
