@@ -876,7 +876,7 @@ let loggedInEmail = uiState.loggedInEmail || null;
 let currentUser = uiState.currentUser || null;
 // Email del usuario propietario (gerencia). La descarga del listado de clientes
 // solo se habilita para este usuario. Si inicias sesión con otro correo, cámbialo aquí.
-const OWNER_EMAIL = 'gerencia@cerpat.com';
+const OWNER_EMAIL = 'gerencia@cerpat.io';
 function isOwner(){ return (loggedInEmail||'').trim().toLowerCase() === OWNER_EMAIL.toLowerCase(); }
 function persistUiState(){
   uiState.loggedInEmail = loggedInEmail;
