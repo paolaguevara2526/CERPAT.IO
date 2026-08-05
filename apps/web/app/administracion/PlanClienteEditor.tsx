@@ -8,7 +8,9 @@ type Empresa = { id: string; nombre: string };
 type Usuario = { id: string; nombre: string };
 type Act = { id: string; codigo: string; nombre: string; periodicidadCatalogo: string | null; enPlan: boolean; periodicidad: string | null };
 type AreaGrupo = { area: string; areaId: string | null; actividades: Act[] };
-type Asig = { asesorId: string | null; auxiliarId: string | null; talla: string | null };
+type Asig = { asesorId: string | null; auxiliarId: string | null; talla: string | null; insumoCliente: boolean };
+type EntregaArea = { areaId: string; area: string; entregado: boolean; por?: string | null; origen?: string; en?: string };
+type Entregas = { general: { entregado: boolean; por?: string | null; origen?: string; en?: string }; areas: EntregaArea[] };
 
 const PERIODICIDADES = ['Mensual', 'Bimestral', 'Trimestral', 'Cuatrimestral', 'Semestral', 'Anual'];
 const TALLAS = ['', 'S', 'M', 'L', 'XL'];
@@ -21,8 +23,9 @@ export default function PlanClienteEditor() {
   const [areas, setAreas] = useState<AreaGrupo[]>([]);
   // estado editable: id -> { activa, periodicidad }
   const [sel, setSel] = useState<Record<string, { activa: boolean; periodicidad: string }>>({});
-  // asignación por área: areaId -> { asesorId, auxiliarId, talla }
+  // asignación por área: areaId -> { asesorId, auxiliarId, talla, insumoCliente }
   const [asig, setAsig] = useState<Record<string, Asig>>({});
+  const [entregas, setEntregas] = useState<Entregas | null>(null);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,21 +52,44 @@ export default function PlanClienteEditor() {
       const ra = await fetch(`/api/admin/asignaciones/${eid}`, { cache: 'no-store' });
       const da = await ra.json();
       const m: Record<string, Asig> = {};
-      if (ra.ok) for (const x of da.areas ?? []) m[x.areaId] = { asesorId: x.asesorId ?? null, auxiliarId: x.auxiliarId ?? null, talla: x.talla ?? null };
+      if (ra.ok) for (const x of da.areas ?? []) m[x.areaId] = { asesorId: x.asesorId ?? null, auxiliarId: x.auxiliarId ?? null, talla: x.talla ?? null, insumoCliente: !!x.insumoCliente };
       setAsig(m);
     } catch { setError('Error de red.'); }
     setCargando(false);
   }, []);
 
+  const cargarEntregas = useCallback(async (eid: string, per: string) => {
+    if (!eid) { setEntregas(null); return; }
+    try {
+      const r = await fetch(`/api/admin/entregas/${eid}?periodo=${per}`, { cache: 'no-store' });
+      const d = await r.json();
+      setEntregas(r.ok ? { general: d.general, areas: d.areas } : null);
+    } catch { setEntregas(null); }
+  }, []);
+
   useEffect(() => { cargarPlan(empresaId); }, [empresaId, cargarPlan]);
+  useEffect(() => { cargarEntregas(empresaId, periodo); }, [empresaId, periodo, cargarEntregas]);
+
+  async function entregar(areaId: string | null, revertir: boolean) {
+    if (!empresaId) return;
+    setError(null);
+    try {
+      const r = await fetch(`/api/admin/entregas/${empresaId}`, {
+        method: revertir ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ periodo, areaId }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.error || 'No se pudo actualizar la entrega.'); return; }
+      cargarEntregas(empresaId, periodo);
+    } catch { setError('Error de red.'); }
+  }
 
   const toggle = (id: string) => setSel((s) => ({ ...s, [id]: { ...s[id], activa: !s[id]?.activa } }));
   const setPer = (id: string, periodicidad: string) => setSel((s) => ({ ...s, [id]: { ...s[id], periodicidad } }));
-  const setAsigCampo = (areaId: string, campo: keyof Asig, valor: string) =>
-    setAsig((a) => {
-      const prev = a[areaId] ?? { asesorId: null, auxiliarId: null, talla: null };
-      return { ...a, [areaId]: { ...prev, [campo]: valor || null } };
-    });
+  const VACIA_ASIG: Asig = { asesorId: null, auxiliarId: null, talla: null, insumoCliente: false };
+  const setAsigCampo = (areaId: string, campo: 'asesorId' | 'auxiliarId' | 'talla', valor: string) =>
+    setAsig((a) => ({ ...a, [areaId]: { ...(a[areaId] ?? VACIA_ASIG), [campo]: valor || null } }));
+  const toggleInsumoCliente = (areaId: string) =>
+    setAsig((a) => ({ ...a, [areaId]: { ...(a[areaId] ?? VACIA_ASIG), insumoCliente: !(a[areaId]?.insumoCliente) } }));
   const marcarArea = (g: AreaGrupo, activa: boolean) => setSel((s) => { const n = { ...s }; for (const a of g.actividades) n[a.id] = { ...n[a.id], activa }; return n; });
 
   async function guardar() {
@@ -71,7 +97,7 @@ export default function PlanClienteEditor() {
     const activas = Object.entries(sel).filter(([, v]) => v.activa).map(([id]) => id);
     const periodicidades: Record<string, string> = {};
     for (const id of activas) periodicidades[id] = sel[id].periodicidad;
-    const asignaciones = Object.entries(asig).map(([areaId, v]) => ({ areaId, asesorId: v.asesorId, auxiliarId: v.auxiliarId, talla: v.talla }));
+    const asignaciones = Object.entries(asig).map(([areaId, v]) => ({ areaId, asesorId: v.asesorId, auxiliarId: v.auxiliarId, talla: v.talla, insumoCliente: v.insumoCliente }));
     try {
       const [res, resA] = await Promise.all([
         fetch(`/api/admin/plan-cliente/${empresaId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activas, periodicidades }) }),
@@ -144,6 +170,10 @@ export default function PlanClienteEditor() {
                     <select value={asig[g.areaId]?.talla ?? ''} onChange={(e) => setAsigCampo(g.areaId!, 'talla', e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 12, width: 76 }} title="Talla del cliente en esta área">
                       {TALLAS.map((t) => <option key={t} value={t}>{t || 'Talla'}</option>)}
                     </select>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', color: 'var(--ink)' }} title="El insumo de esta área lo provee el cliente (auxiliar externo)">
+                      <input type="checkbox" checked={asig[g.areaId]?.insumoCliente ?? false} onChange={() => toggleInsumoCliente(g.areaId!)} />
+                      Insumo del cliente
+                    </label>
                   </div>
                 )}
                 {g.actividades.map((a) => {
@@ -164,6 +194,23 @@ export default function PlanClienteEditor() {
             ))}
           </div>
 
+          {/* Entregas del insumo del período */}
+          {entregas && (
+            <div className="panel" style={{ padding: '12px 14px', marginTop: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontWeight: 800, fontSize: 13.5 }}>Entregas del insumo</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>período {periodo}</span>
+              </div>
+              <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 10px' }}>Cuando el insumo está listo, <b>libera</b> el área para habilitar su procesamiento. La entrega general habilita todas las áreas.</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <EntregaChip label="Todo el insumo (general)" e={entregas.general} onLiberar={() => entregar(null, false)} onRevertir={() => entregar(null, true)} />
+                {entregas.areas.map((a) => (
+                  <EntregaChip key={a.areaId} label={a.area} e={a} onLiberar={() => entregar(a.areaId, false)} onRevertir={() => entregar(a.areaId, true)} />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
             <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13 }}>{guardando ? 'Guardando…' : 'Guardar plan'}</button>
             <span className="sp" style={{ flex: 1 }} />
@@ -173,6 +220,25 @@ export default function PlanClienteEditor() {
           </div>
           <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '8px 2px 0' }}>Guardar cambia el plan y los responsables; Generar crea las tareas del período según periodicidad. Las actividades <b>vinculadas a un vencimiento</b> no se generan como tarea (se controlan en Vencimientos) y, si quedaron duplicadas vacías, Generar las quita.</p>
         </>
+      )}
+    </div>
+  );
+}
+
+// Chip de entrega: liberar (habilita el procesamiento) o revertir.
+function EntregaChip({ label, e, onLiberar, onRevertir }: { label: string; e?: { entregado: boolean; por?: string | null }; onLiberar: () => void; onRevertir: () => void }) {
+  const entregado = !!e?.entregado;
+  const verde = '#22a670';
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: `1px solid ${entregado ? verde + '66' : 'var(--edge-strong)'}`, background: entregado ? verde + '14' : 'var(--panel)', borderRadius: 8, padding: '6px 10px' }}>
+      <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>{label}</span>
+      {entregado ? (
+        <>
+          <span style={{ fontSize: 11.5, color: verde, fontWeight: 700 }}>✓ Entregado{e?.por ? ` · ${e.por}` : ''}</span>
+          <button className="dbtn" onClick={onRevertir} title="Revertir la entrega" style={{ fontSize: 11, padding: '3px 7px' }}>↺</button>
+        </>
+      ) : (
+        <button className="dbtn primary" onClick={onLiberar} style={{ fontSize: 11.5, padding: '4px 9px' }}>Liberar</button>
       )}
     </div>
   );

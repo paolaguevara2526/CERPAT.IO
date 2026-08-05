@@ -751,14 +751,14 @@ adminRouter.get('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async
 
   const [areas, asign] = await Promise.all([
     prisma.area.findMany({ where: { organizacionId: id }, orderBy: { orden: 'asc' }, select: { id: true, nombre: true } }),
-    prisma.asignacionClienteArea.findMany({ where: { organizacionId: id, empresaId: empresa.id }, select: { areaId: true, asesorId: true, auxiliarId: true, talla: true } }),
+    prisma.asignacionClienteArea.findMany({ where: { organizacionId: id, empresaId: empresa.id }, select: { areaId: true, asesorId: true, auxiliarId: true, talla: true, insumoCliente: true } }),
   ]);
   const byArea = new Map(asign.map((a) => [a.areaId, a]));
   res.json({
     empresa,
     areas: areas.map((ar) => {
       const a = byArea.get(ar.id);
-      return { areaId: ar.id, area: ar.nombre, asesorId: a?.asesorId ?? null, auxiliarId: a?.auxiliarId ?? null, talla: a?.talla ?? null };
+      return { areaId: ar.id, area: ar.nombre, asesorId: a?.asesorId ?? null, auxiliarId: a?.auxiliarId ?? null, talla: a?.talla ?? null, insumoCliente: !!a?.insumoCliente };
     }),
   });
 });
@@ -785,12 +785,73 @@ adminRouter.put('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async
       const asesorId = it?.asesorId && userOk.has(String(it.asesorId)) ? String(it.asesorId) : null;
       const auxiliarId = it?.auxiliarId && userOk.has(String(it.auxiliarId)) ? String(it.auxiliarId) : null;
       const talla = typeof it?.talla === 'string' && it.talla.trim() ? it.talla.trim() : null;
+      const insumoCliente = !!it?.insumoCliente;
       await tx.asignacionClienteArea.upsert({
         where: { empresaId_areaId: { empresaId: empresa.id, areaId } },
-        create: { organizacionId: id, empresaId: empresa.id, areaId, asesorId, auxiliarId, talla },
-        update: { asesorId, auxiliarId, talla },
+        create: { organizacionId: id, empresaId: empresa.id, areaId, asesorId, auxiliarId, talla, insumoCliente },
+        update: { asesorId, auxiliarId, talla, insumoCliente },
       });
     }
   });
+  res.json({ ok: true });
+});
+
+// ---------- Entregas de insumo (F1.2): liberar el insumo por cliente/período ----------
+// Modelo híbrido: entrega general (areaId null) o por área. Habilita el procesamiento.
+
+// GET /admin/entregas/:empresaId?periodo=YYYY-MM — estado de entregas del período.
+adminRouter.get('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const periodo = typeof req.query.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.query.periodo) ? req.query.periodo : null;
+  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
+
+  const [areas, entregas] = await Promise.all([
+    prisma.area.findMany({ where: { organizacionId: id }, orderBy: { orden: 'asc' }, select: { id: true, nombre: true } }),
+    prisma.entregaInsumo.findMany({ where: { organizacionId: id, empresaId: empresa.id, periodo }, select: { areaId: true, entregadoEn: true, origen: true, entregadoPor: { select: { nombre: true } } } }),
+  ]);
+  const byArea = new Map(entregas.map((e) => [e.areaId ?? '__general__', e]));
+  const fmt = (e: any) => e ? { entregado: true, en: e.entregadoEn, origen: e.origen, por: e.entregadoPor?.nombre ?? null } : { entregado: false };
+  res.json({
+    periodo,
+    general: fmt(byArea.get('__general__')),
+    areas: areas.map((ar) => ({ areaId: ar.id, area: ar.nombre, ...fmt(byArea.get(ar.id)) })),
+  });
+});
+
+// POST /admin/entregas/:empresaId { periodo, areaId|null } — libera (idempotente).
+adminRouter.post('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req: any, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const periodo = typeof req.body?.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.body.periodo) ? req.body.periodo : null;
+  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
+  const areaId = req.body?.areaId ? String(req.body.areaId) : null;
+  if (areaId) {
+    const ok = await prisma.area.findFirst({ where: { id: areaId, organizacionId: id }, select: { id: true } });
+    if (!ok) return res.status(422).json({ error: 'Área inválida.' });
+  }
+  const existe = await prisma.entregaInsumo.findFirst({ where: { empresaId: empresa.id, periodo, areaId } });
+  if (!existe) {
+    await prisma.entregaInsumo.create({
+      data: { organizacionId: id, empresaId: empresa.id, periodo, areaId, origen: 'manual', entregadoPorId: req.user?.sub ?? null },
+    });
+  }
+  res.json({ ok: true });
+});
+
+// DELETE /admin/entregas/:empresaId { periodo, areaId|null } — revierte la entrega.
+adminRouter.delete('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const periodo = typeof req.body?.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.body.periodo) ? req.body.periodo : null;
+  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
+  const areaId = req.body?.areaId ? String(req.body.areaId) : null;
+  await prisma.entregaInsumo.deleteMany({ where: { organizacionId: id, empresaId: empresa.id, periodo, areaId } });
   res.json({ ok: true });
 });
