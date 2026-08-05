@@ -12,6 +12,7 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
       { label: 'Inicio', icon: '🏠', href: '/planeador' },
       { label: 'Mi Día', icon: '☆', href: '/planeador/mi-dia' },
       { label: 'Calendario', icon: '📅', href: '/planeador/calendario' },
+      { label: 'Visitas', icon: '🤝', href: '/planeador/visitas' },
       { label: 'Plan de Trabajo', icon: '📊', href: '/planeador/cronograma' },
       { label: 'Tablero', icon: '▦', href: '/planeador/tablero' },
       { label: 'Flujo del cierre', icon: '🔀', href: '/planeador/flujo' },
