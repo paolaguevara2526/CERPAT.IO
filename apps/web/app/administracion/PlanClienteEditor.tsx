@@ -3,6 +3,7 @@
 // tiene en su plan y su periodicidad, y regenera sus tareas del período.
 
 import { useEffect, useState, useCallback } from 'react';
+import { descargarXlsx, hoyISO, enLotes } from './exportar';
 
 type Empresa = { id: string; nombre: string };
 type Usuario = { id: string; nombre: string };
@@ -30,6 +31,8 @@ export default function PlanClienteEditor() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [exportando, setExportando] = useState(false);
+  const [progreso, setProgreso] = useState(0);
   const [periodo, setPeriodo] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`; });
 
   useEffect(() => {
@@ -124,10 +127,64 @@ export default function PlanClienteEditor() {
 
   const totalActivas = Object.values(sel).filter((v) => v.activa).length;
 
+  // Descarga en Excel el plan de trabajo de TODOS los clientes: una fila por
+  // (cliente, actividad en su plan), con periodicidad y responsables por área.
+  async function descargarTodos() {
+    if (!empresas.length || exportando) return;
+    setExportando(true); setProgreso(0); setError(null); setAviso(null);
+    const nombreUsuario = (id: string | null | undefined) => (id ? (usuarios.find((u) => u.id === id)?.nombre ?? '') : '');
+    let listos = 0;
+    try {
+      const porCliente = await enLotes(empresas, 5, async (emp) => {
+        const filas: (string | number)[][] = [];
+        try {
+          const [rp, ra] = await Promise.all([
+            fetch(`/api/admin/plan-cliente/${emp.id}`, { cache: 'no-store' }),
+            fetch(`/api/admin/asignaciones/${emp.id}`, { cache: 'no-store' }),
+          ]);
+          const dp = await rp.json();
+          const da = await ra.json().catch(() => ({}));
+          const asigMap: Record<string, Asig> = {};
+          if (ra.ok) for (const x of da.areas ?? []) asigMap[x.areaId] = { asesorId: x.asesorId ?? null, auxiliarId: x.auxiliarId ?? null, talla: x.talla ?? null, insumoCliente: !!x.insumoCliente };
+          if (rp.ok) {
+            for (const g of (dp.areas ?? []) as AreaGrupo[]) {
+              const a = g.areaId ? asigMap[g.areaId] : undefined;
+              for (const act of g.actividades) {
+                if (!act.enPlan) continue;
+                filas.push([
+                  emp.nombre, g.area, act.codigo, act.nombre,
+                  act.periodicidad || act.periodicidadCatalogo || '',
+                  nombreUsuario(a?.asesorId), nombreUsuario(a?.auxiliarId),
+                  a?.talla ?? '', a?.insumoCliente ? 'Sí' : 'No',
+                ]);
+              }
+            }
+          }
+        } catch { /* si un cliente falla, se omite y se sigue */ }
+        setProgreso(Math.round((++listos / empresas.length) * 100));
+        return filas;
+      });
+
+      const encabezado = ['Cliente', 'Área', 'Código', 'Actividad', 'Periodicidad', 'Asesor', 'Auxiliar', 'Talla', 'Insumo del cliente'];
+      const filas = porCliente.flat();
+      if (filas.length === 0) { setError('No hay actividades en los planes para exportar.'); return; }
+      await descargarXlsx(`planes-por-cliente-cerpat-${hoyISO()}.xlsx`, [{ nombre: 'Planes por cliente', filas: [encabezado, ...filas] }]);
+      setAviso(`Excel generado: ${filas.length} actividad(es) de ${empresas.length} cliente(s).`);
+    } catch { setError('No se pudo generar el Excel de planes.'); }
+    finally { setExportando(false); setProgreso(0); }
+  }
+
   return (
     <div>
-      <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>Plan de trabajo por cliente</h2>
-      <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 14px' }}>Elige el cliente y, por cada área: define el <b>asesor</b> y <b>auxiliar</b> responsables, marca qué <b>actividades</b> tiene en su plan y su periodicidad. Luego genera sus tareas del período.</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>Plan de trabajo por cliente</h2>
+          <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 14px' }}>Elige el cliente y, por cada área: define el <b>asesor</b> y <b>auxiliar</b> responsables, marca qué <b>actividades</b> tiene en su plan y su periodicidad. Luego genera sus tareas del período.</p>
+        </div>
+        <button className="dbtn" onClick={descargarTodos} disabled={exportando || empresas.length === 0} style={{ fontSize: 13, whiteSpace: 'nowrap' }} title="Descarga en Excel el plan de trabajo de todos los clientes">
+          {exportando ? `Generando… ${progreso}%` : '⬇ Descargar todos (Excel)'}
+        </button>
+      </div>
 
       {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
       {aviso && <div style={{ background: '#E7F6EC', color: '#027a48', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{aviso}</div>}

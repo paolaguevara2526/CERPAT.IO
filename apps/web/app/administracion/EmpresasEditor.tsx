@@ -3,6 +3,7 @@
 // activar/desactivar y borrado. Contra la API vía /api/admin/empresas.
 
 import { useEffect, useState, useCallback } from 'react';
+import { descargarXlsx, hoyISO } from './exportar';
 
 type Empresa = {
   id: string; nombre: string; nit: string | null; servicio: string | null; asesorNombre: string | null; activo: boolean; grupoId: string | null;
@@ -59,6 +60,18 @@ export default function EmpresasEditor() {
 
   const filtrada = items.filter((e) => !q || `${e.nombre} ${e.nit ?? ''} ${e.asesorNombre ?? ''}`.toLowerCase().includes(q.toLowerCase()));
 
+  async function descargar() {
+    const encabezado = ['Cliente', 'NIT', 'Servicio', 'Grupo', 'Asesor', 'Activo',
+      'Email representante', 'Email administración', 'Email contabilidad', 'Email talento humano', 'Email tesorería'];
+    const filas = filtrada.map((e) => [
+      e.nombre, e.nit ?? '', e.servicio ?? '', nombreGrupo(e.grupoId) ?? '', e.asesorNombre ?? '', e.activo ? 'Sí' : 'No',
+      e.emailRepresentante ?? '', e.emailAdministracion ?? '', e.emailContabilidad ?? '', e.emailTalentoHumano ?? '', e.emailTesoreria ?? '',
+    ]);
+    try {
+      await descargarXlsx(`clientes-cerpat-${hoyISO()}.xlsx`, [{ nombre: 'Clientes', filas: [encabezado, ...filas] }]);
+    } catch { setError('No se pudo generar el Excel.'); }
+  }
+
   return (
     <div>
       {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
@@ -68,6 +81,7 @@ export default function EmpresasEditor() {
           <input type="checkbox" checked={incluirInactivos} onChange={(e) => setIncluirInactivos(e.target.checked)} /> Incluir inactivos
         </label>
         <span style={{ fontSize: 12.5, color: 'var(--muted)', marginLeft: 'auto' }}>{filtrada.length} cliente(s)</span>
+        <button className="dbtn" onClick={descargar} disabled={cargando || filtrada.length === 0} style={{ fontSize: 13 }} title="Descarga el listado de clientes (según el filtro actual) en Excel">⬇ Descargar Excel</button>
         <button className="dbtn primary" onClick={() => setEditar('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo cliente</button>
       </div>
 
