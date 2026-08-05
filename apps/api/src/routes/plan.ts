@@ -130,6 +130,10 @@ planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, r
   }
 
   const actualizada = await prisma.tarea.update({ where: { id: tarea.id }, data: { estado: estado as any } });
+  // Bitácora: registra el cambio de estado (quién y cuándo) para medir tiempos.
+  await prisma.eventoTarea.create({
+    data: { organizacionId: tarea.organizacionId, tareaId: tarea.id, tipo: 'estado', estadoAnterior: tarea.estado, estadoNuevo: estado, usuarioId: u.sub },
+  });
   res.json({ ok: true, id: actualizada.id, estado: actualizada.estado });
 });
 

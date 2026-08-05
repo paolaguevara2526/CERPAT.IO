@@ -17,14 +17,22 @@ type Form = {
   codigo: string; nombre: string; areaId: string; grupo: string; periodicidad: string;
   documentoFormato: string; descripcion: string; orden: string;
   generaPago: boolean; requiereAuditoria: boolean; esRegistroSoftware: boolean; activo: boolean;
-  obligacionVencimiento: string;
+  obligacionVencimiento: string; fase: string;
 };
 
 const VACIO: Form = {
   codigo: '', nombre: '', areaId: '', grupo: '', periodicidad: '', documentoFormato: '', descripcion: '', orden: '0',
   generaPago: false, requiereAuditoria: false, esRegistroSoftware: false, activo: true,
-  obligacionVencimiento: '',
+  obligacionVencimiento: '', fase: '',
 };
+
+// Fase en la cadena del cierre (la captura del auxiliar habilita el procesamiento del asesor).
+const FASES: { key: string; label: string }[] = [
+  { key: '', label: 'Sin clasificar' },
+  { key: 'captura', label: 'Captura (insumo · auxiliar)' },
+  { key: 'procesamiento', label: 'Procesamiento (asesor)' },
+  { key: 'revision', label: 'Revisión' },
+];
 
 // Vincula el checklist de una actividad a un vencimiento tributario. La clave
 // (value) se guarda en ActividadPlan.obligacionVencimiento; el generador la usa
@@ -85,7 +93,7 @@ export default function ActividadesEditor() {
       periodicidad: a.periodicidad ?? '', documentoFormato: a.documentoFormato ?? '', descripcion: a.descripcion ?? '',
       orden: String(a.orden ?? 0), generaPago: !!a.generaPago, requiereAuditoria: !!a.requiereAuditoria,
       esRegistroSoftware: !!a.esRegistroSoftware, activo: a.activo !== false,
-      obligacionVencimiento: a.obligacionVencimiento ?? '',
+      obligacionVencimiento: a.obligacionVencimiento ?? '', fase: a.fase ?? '',
     });
     setSubs(a.subtareas ?? []);
   }
@@ -201,6 +209,16 @@ export default function ActividadesEditor() {
               <label><span style={lbl}>Documento / formato</span><input style={input} value={form.documentoFormato} onChange={(e) => set('documentoFormato', e.target.value)} /></label>
             </div>
             <label><span style={lbl}>Descripción</span><textarea rows={2} style={{ ...input, resize: 'vertical' }} value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} /></label>
+
+            <label>
+              <span style={lbl}>Fase en el flujo del cierre</span>
+              <select style={input} value={form.fase} onChange={(e) => set('fase', e.target.value)}>
+                {FASES.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+              </select>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                La <b>captura</b> (auxiliar) habilita el <b>procesamiento</b> (asesor). Sin clasificar = no participa del bloqueo del flujo.
+              </span>
+            </label>
 
             <label>
               <span style={lbl}>Vincular al vencimiento (hereda el checklist)</span>

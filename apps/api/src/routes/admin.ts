@@ -151,6 +151,7 @@ function datosActividad(body: any, esCreacion: boolean): Record<string, any> {
   if ('areaId' in (body ?? {})) data.areaId = body.areaId || null;
   for (const c of TEXTO_ACT) if (c in (body ?? {})) data[c] = typeof body[c] === 'string' && body[c].trim() ? body[c].trim() : null;
   for (const b of BOOL_ACT) if (b in (body ?? {})) data[b] = !!body[b];
+  if ('fase' in (body ?? {})) data.fase = ['captura', 'procesamiento', 'revision'].includes(body.fase) ? body.fase : null;
   if (body?.orden !== undefined && body.orden !== null && body.orden !== '') data.orden = Number(body.orden) || 0;
   if (esCreacion && data.orden === undefined) data.orden = 0;
   return data;

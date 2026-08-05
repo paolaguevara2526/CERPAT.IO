@@ -53,6 +53,18 @@ Todas (salvo `Organizacion` y el root) pertenecen a una organización vía
 - **Configuración (fila única por organización)** — `ParametrosLiquidacion`
   (tasa de mora, UVT, SMMLV, etc.) y `Apariencia` (marca de la app).
 
+### Flujo del cierre (F1 — ver [`metodologia-operacion.md`](./metodologia-operacion.md))
+
+- **`ActividadPlan.fase`** (`FaseActividad?`: `captura` / `procesamiento` /
+  `revision`) — ubica la actividad en la cadena del cierre. La captura (auxiliar)
+  habilita el procesamiento (asesor). `null` = sin clasificar (no bloquea).
+- **`EntregaInsumo`** — entrega del insumo de un cliente por período. `areaId`
+  `null` = **general** (habilita todas las áreas); `areaId` ≠ null = **por área**.
+  `origen` (`auto` / `manual`), `entregadoPor`, `entregadoEn`. Único por
+  (`empresaId`, `periodo`, `areaId`).
+- **`EventoTarea`** — bitácora de una tarea (`tipo` `estado`/`entrega`, estado
+  anterior/nuevo, usuario, fecha); base para medir tiempos de ciclo y de handoff.
+
 ## Relaciones
 
 El diagrama entidad-relación se deriva del `schema.prisma`. El diagrama de
