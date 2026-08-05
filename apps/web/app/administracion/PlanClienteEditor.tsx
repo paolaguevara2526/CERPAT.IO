@@ -5,18 +5,24 @@
 import { useEffect, useState, useCallback } from 'react';
 
 type Empresa = { id: string; nombre: string };
+type Usuario = { id: string; nombre: string };
 type Act = { id: string; codigo: string; nombre: string; periodicidadCatalogo: string | null; enPlan: boolean; periodicidad: string | null };
 type AreaGrupo = { area: string; areaId: string | null; actividades: Act[] };
+type Asig = { asesorId: string | null; auxiliarId: string | null; talla: string | null };
 
 const PERIODICIDADES = ['Mensual', 'Bimestral', 'Trimestral', 'Cuatrimestral', 'Semestral', 'Anual'];
+const TALLAS = ['', 'S', 'M', 'L', 'XL'];
 const input: React.CSSProperties = { padding: '7px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
 
 export default function PlanClienteEditor() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [empresaId, setEmpresaId] = useState('');
   const [areas, setAreas] = useState<AreaGrupo[]>([]);
   // estado editable: id -> { activa, periodicidad }
   const [sel, setSel] = useState<Record<string, { activa: boolean; periodicidad: string }>>({});
+  // asignación por área: areaId -> { asesorId, auxiliarId, talla }
+  const [asig, setAsig] = useState<Record<string, Asig>>({});
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +31,7 @@ export default function PlanClienteEditor() {
 
   useEffect(() => {
     fetch('/api/admin/empresas', { cache: 'no-store' }).then((r) => r.json()).then((d) => setEmpresas((d.items ?? []).map((e: any) => ({ id: e.id, nombre: e.nombre })))).catch(() => {});
+    fetch('/api/admin/usuarios', { cache: 'no-store' }).then((r) => r.json()).then((d) => setUsuarios((d.usuarios ?? []).filter((u: any) => u.activo !== false).map((u: any) => ({ id: u.id, nombre: u.nombre })))).catch(() => {});
   }, []);
 
   const cargarPlan = useCallback(async (eid: string) => {
@@ -38,6 +45,12 @@ export default function PlanClienteEditor() {
       const s: Record<string, { activa: boolean; periodicidad: string }> = {};
       for (const g of d.areas ?? []) for (const a of g.actividades) s[a.id] = { activa: a.enPlan, periodicidad: a.periodicidad || a.periodicidadCatalogo || 'Mensual' };
       setSel(s);
+      // Asignaciones (asesor/auxiliar/talla) por área del cliente.
+      const ra = await fetch(`/api/admin/asignaciones/${eid}`, { cache: 'no-store' });
+      const da = await ra.json();
+      const m: Record<string, Asig> = {};
+      if (ra.ok) for (const x of da.areas ?? []) m[x.areaId] = { asesorId: x.asesorId ?? null, auxiliarId: x.auxiliarId ?? null, talla: x.talla ?? null };
+      setAsig(m);
     } catch { setError('Error de red.'); }
     setCargando(false);
   }, []);
@@ -46,6 +59,11 @@ export default function PlanClienteEditor() {
 
   const toggle = (id: string) => setSel((s) => ({ ...s, [id]: { ...s[id], activa: !s[id]?.activa } }));
   const setPer = (id: string, periodicidad: string) => setSel((s) => ({ ...s, [id]: { ...s[id], periodicidad } }));
+  const setAsigCampo = (areaId: string, campo: keyof Asig, valor: string) =>
+    setAsig((a) => {
+      const prev = a[areaId] ?? { asesorId: null, auxiliarId: null, talla: null };
+      return { ...a, [areaId]: { ...prev, [campo]: valor || null } };
+    });
   const marcarArea = (g: AreaGrupo, activa: boolean) => setSel((s) => { const n = { ...s }; for (const a of g.actividades) n[a.id] = { ...n[a.id], activa }; return n; });
 
   async function guardar() {
@@ -53,10 +71,17 @@ export default function PlanClienteEditor() {
     const activas = Object.entries(sel).filter(([, v]) => v.activa).map(([id]) => id);
     const periodicidades: Record<string, string> = {};
     for (const id of activas) periodicidades[id] = sel[id].periodicidad;
+    const asignaciones = Object.entries(asig).map(([areaId, v]) => ({ areaId, asesorId: v.asesorId, auxiliarId: v.auxiliarId, talla: v.talla }));
     try {
-      const res = await fetch(`/api/admin/plan-cliente/${empresaId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activas, periodicidades }) });
+      const [res, resA] = await Promise.all([
+        fetch(`/api/admin/plan-cliente/${empresaId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activas, periodicidades }) }),
+        fetch(`/api/admin/asignaciones/${empresaId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ asignaciones }) }),
+      ]);
       const d = await res.json();
-      if (!res.ok) setError(d.error || 'No se pudo guardar.'); else setAviso(`Plan guardado: ${d.activas} actividad(es) activas para este cliente.`);
+      const dA = await resA.json().catch(() => ({}));
+      if (!res.ok) setError(d.error || 'No se pudo guardar el plan.');
+      else if (!resA.ok) setError(dA.error || 'El plan se guardó, pero fallaron las asignaciones.');
+      else setAviso(`Guardado: ${d.activas} actividad(es) en el plan y responsables por área. Al generar/regenerar, tareas y vencimientos heredan estos responsables.`);
     } catch { setError('Error de red.'); }
     setGuardando(false);
   }
@@ -76,7 +101,7 @@ export default function PlanClienteEditor() {
   return (
     <div>
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>Plan de trabajo por cliente</h2>
-      <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 14px' }}>Elige el cliente y marca qué actividades tiene en su plan (por área) y su periodicidad. Luego genera sus tareas del período.</p>
+      <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 14px' }}>Elige el cliente y, por cada área: define el <b>asesor</b> y <b>auxiliar</b> responsables, marca qué <b>actividades</b> tiene en su plan y su periodicidad. Luego genera sus tareas del período.</p>
 
       {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
       {aviso && <div style={{ background: '#E7F6EC', color: '#027a48', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{aviso}</div>}
@@ -105,6 +130,22 @@ export default function PlanClienteEditor() {
                     <button className="dbtn" onClick={() => marcarArea(g, false)} style={{ fontSize: 11.5, padding: '4px 8px' }}>Ninguna</button>
                   </span>
                 </div>
+                {g.areaId && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10, paddingBottom: 10, borderBottom: '1px dashed var(--edge-strong)' }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: 'var(--muted)' }}>Responsables</span>
+                    <select value={asig[g.areaId]?.asesorId ?? ''} onChange={(e) => setAsigCampo(g.areaId!, 'asesorId', e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 12, minWidth: 150 }}>
+                      <option value="">— Asesor —</option>
+                      {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                    </select>
+                    <select value={asig[g.areaId]?.auxiliarId ?? ''} onChange={(e) => setAsigCampo(g.areaId!, 'auxiliarId', e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 12, minWidth: 150 }}>
+                      <option value="">— Auxiliar —</option>
+                      {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                    </select>
+                    <select value={asig[g.areaId]?.talla ?? ''} onChange={(e) => setAsigCampo(g.areaId!, 'talla', e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 12, width: 76 }} title="Talla del cliente en esta área">
+                      {TALLAS.map((t) => <option key={t} value={t}>{t || 'Talla'}</option>)}
+                    </select>
+                  </div>
+                )}
                 {g.actividades.map((a) => {
                   const s = sel[a.id] ?? { activa: false, periodicidad: a.periodicidadCatalogo || 'Mensual' };
                   return (
