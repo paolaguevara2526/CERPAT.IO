@@ -874,6 +874,10 @@ function loadUiState(){
 let uiState = loadUiState();
 let loggedInEmail = uiState.loggedInEmail || null;
 let currentUser = uiState.currentUser || null;
+// Email del usuario propietario (gerencia). La descarga del listado de clientes
+// solo se habilita para este usuario. Si inicias sesión con otro correo, cámbialo aquí.
+const OWNER_EMAIL = 'gerencia@cerpat.com';
+function isOwner(){ return (loggedInEmail||'').trim().toLowerCase() === OWNER_EMAIL.toLowerCase(); }
 function persistUiState(){
   uiState.loggedInEmail = loggedInEmail;
   uiState.currentUser = currentUser;
@@ -1444,6 +1448,20 @@ function downloadUserTemplate(){
     ['María Torres','maria.torres@cerpat.io','cerpat2026','Asesor','Sí']
   ];
   downloadCsvGeneric(rows, 'plantilla-usuarios-masivos.csv');
+}
+// Descarga del listado de clientes (solo disponible para el usuario propietario).
+function downloadClientesCsv(){
+  if(!isOwner()){ alert('Esta descarga solo está disponible para tu usuario.'); return; }
+  const list = data.admin.empresas || [];
+  const rows = [['Empresa','NIT','Tipo','Sector','Régimen','Municipio','Periodicidad IVA']];
+  list.forEach(e=>{
+    rows.push([
+      e.nombre||'', e.nit||'', e.tipo||'', e.sector||'',
+      e.regimen||'', e.municipio||'', e.periodicidadIva||''
+    ]);
+  });
+  const hoy = todayStr();
+  downloadCsvGeneric(rows, `clientes-cerpat-${hoy}.csv`);
 }
 function handleTasksFileUpload(ev){
   const file = ev.target.files[0];
@@ -2245,7 +2263,10 @@ function empresasAdminHtml(){
   return `
     <div class="view-head">
       <div><div class="view-title">Empresas (clientes)</div><div class="view-sub">Base de clientes de la firma · ${list.length} empresa(s)</div></div>
-      <button class="btn" onclick="openEmpresaAdminModal()">+ Nueva Empresa</button>
+      <div style="display:flex;gap:8px;">
+        ${isOwner()?`<button class="btn btn-outline" onclick="downloadClientesCsv()">⬇ Descargar listado</button>`:''}
+        <button class="btn" onclick="openEmpresaAdminModal()">+ Nueva Empresa</button>
+      </div>
     </div>
     <div class="table-scroll">
     <table class="data">
