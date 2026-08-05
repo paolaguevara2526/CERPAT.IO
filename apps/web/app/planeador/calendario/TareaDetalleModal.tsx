@@ -32,7 +32,10 @@ type Detalle = {
   soporteLink: string | null; requiereSoporte: boolean; observaciones: string | null;
   estadoPago: string; valorPago: number | null; generaPago: boolean; requiereRevisionTecnica: boolean;
   comprobanteDesde: string | null; comprobanteHasta: string | null; cantidadRegistros: number | null; esRegistroSoftware: boolean;
+  esCapturaDocumentos?: boolean;
 };
+type Lote = { id: string; tipoDocumento: string; desde: string | null; hasta: string | null; cantidad: number | null; fecha: string };
+const TIPOS_DOC = ['Egresos', 'Facturas de compra', 'Facturas de venta', 'Documento equivalente', 'Notas contables', 'Nómina', 'Ingresos'];
 
 function fFecha(iso: string | null): string {
   if (!iso) return '—';
@@ -49,6 +52,10 @@ function iniciales(n: string): string {
 const lbl: React.CSSProperties = { fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' };
 const box: React.CSSProperties = { border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px', background: 'var(--panel)' };
 const inp: React.CSSProperties = { width: '100%', padding: '8px 11px', borderRadius: 6, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
+const thL: React.CSSProperties = { textAlign: 'left', padding: '4px 6px', borderBottom: '1px solid var(--line)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.3, color: 'var(--muted)' };
+const thC: React.CSSProperties = { ...thL, textAlign: 'center' };
+const tdL: React.CSSProperties = { padding: '5px 6px', borderBottom: '1px solid var(--line)', textAlign: 'left' };
+const tdC: React.CSSProperties = { ...tdL, textAlign: 'center', whiteSpace: 'nowrap' };
 
 export default function TareaDetalleModal({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged?: () => void }) {
   const [t, setT] = useState<Detalle | null>(null);
@@ -59,6 +66,8 @@ export default function TareaDetalleModal({ id, onClose, onChanged }: { id: stri
   const [link, setLink] = useState('');
   const [guardandoLink, setGuardandoLink] = useState(false);
   const [linkOk, setLinkOk] = useState(false);
+  const [lotes, setLotes] = useState<Lote[]>([]);
+  const [nl, setNl] = useState({ tipoDocumento: '', desde: '', hasta: '', cantidad: '', fecha: '' });
 
   async function cargar() {
     setCargando(true); setError(null);
@@ -70,7 +79,25 @@ export default function TareaDetalleModal({ id, onClose, onChanged }: { id: stri
       // Defensivo: si la API aún no trae los campos nuevos, no romper el render.
       setT({ ...tt, asignados: Array.isArray(tt.asignados) ? tt.asignados : [], etiquetas: Array.isArray(tt.etiquetas) ? tt.etiquetas : [] });
       setLink(tt.soporteLink ?? '');
+      if (tt.esCapturaDocumentos) cargarLotes();
     } catch { setError('Error de red.'); } finally { setCargando(false); }
+  }
+  async function cargarLotes() {
+    try {
+      const r = await fetch(`/api/planeador/gestion/tareas/${id}/lotes`, { cache: 'no-store' });
+      const d = await r.json(); if (r.ok) setLotes(d.lotes ?? []);
+    } catch { /* noop */ }
+  }
+  async function addLote() {
+    if (!nl.tipoDocumento.trim()) { setAviso('Indica el tipo de documento.'); return; }
+    const r = await fetch(`/api/planeador/gestion/tareas/${id}/lotes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nl) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setAviso(d.error || 'No se pudo agregar el lote.'); return; }
+    setLotes((p) => [d.lote, ...p]); setNl({ tipoDocumento: '', desde: '', hasta: '', cantidad: '', fecha: '' }); onChanged?.();
+  }
+  async function delLote(loteId: string) {
+    const r = await fetch(`/api/planeador/gestion/lotes/${loteId}`, { method: 'DELETE' });
+    if (r.ok) setLotes((p) => p.filter((x) => x.id !== loteId));
   }
   useEffect(() => { cargar(); /* eslint-disable-next-line */ }, [id]);
   useEffect(() => {
@@ -195,6 +222,44 @@ export default function TareaDetalleModal({ id, onClose, onChanged }: { id: stri
                     </div>
                   ) : <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Sin etiquetas</span>}
                 </div>
+
+                {/* DETALLE DE CAPTURA (lotes) — solo actividad "Captura de documentos" */}
+                {t.esCapturaDocumentos && (
+                  <div style={box}>
+                    <div style={{ ...lbl, marginBottom: 6 }}>📥 Detalle de captura</div>
+                    <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.4 }}>Registra cada lote capturado: tipo de documento, consecutivo desde–hasta y cantidad.</p>
+                    {lotes.length > 0 && (
+                      <div style={{ overflowX: 'auto', marginBottom: 8 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                          <thead><tr>
+                            <th style={thL}>Documento</th><th style={thC}>Desde</th><th style={thC}>Hasta</th><th style={thC}>Cant.</th><th style={thC}>Fecha</th><th></th>
+                          </tr></thead>
+                          <tbody>
+                            {lotes.map((l) => (
+                              <tr key={l.id}>
+                                <td style={tdL}>{l.tipoDocumento}</td>
+                                <td style={tdC}>{l.desde ?? '—'}</td>
+                                <td style={tdC}>{l.hasta ?? '—'}</td>
+                                <td style={tdC}>{l.cantidad ?? '—'}</td>
+                                <td style={tdC}>{fFecha(l.fecha)}</td>
+                                <td style={{ ...tdC, width: 28 }}><button onClick={() => delLote(l.id)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 13 }}>🗑</button></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <input list="tipos-doc" value={nl.tipoDocumento} onChange={(e) => setNl({ ...nl, tipoDocumento: e.target.value })} placeholder="Tipo de documento" style={{ ...inp, width: 190, padding: '6px 9px', fontSize: 12 }} />
+                      <datalist id="tipos-doc">{TIPOS_DOC.map((x) => <option key={x} value={x} />)}</datalist>
+                      <input value={nl.desde} onChange={(e) => setNl({ ...nl, desde: e.target.value })} placeholder="Desde" style={{ ...inp, width: 84, padding: '6px 9px', fontSize: 12 }} />
+                      <input value={nl.hasta} onChange={(e) => setNl({ ...nl, hasta: e.target.value })} placeholder="Hasta" style={{ ...inp, width: 84, padding: '6px 9px', fontSize: 12 }} />
+                      <input type="number" min={0} value={nl.cantidad} onChange={(e) => setNl({ ...nl, cantidad: e.target.value })} placeholder="Cant." style={{ ...inp, width: 70, padding: '6px 9px', fontSize: 12 }} />
+                      <input type="date" value={nl.fecha} onChange={(e) => setNl({ ...nl, fecha: e.target.value })} title="Fecha del lote (por defecto hoy)" style={{ ...inp, width: 140, padding: '6px 9px', fontSize: 12 }} />
+                      <button onClick={addLote} className="dbtn primary" style={{ fontSize: 12 }}>＋ Agregar lote</button>
+                    </div>
+                  </div>
+                )}
 
                 {/* SOPORTE DOCUMENTAL */}
                 <div style={{ ...box, borderColor: 'color-mix(in srgb, var(--brand, #2E5090) 40%, var(--line))' }}>

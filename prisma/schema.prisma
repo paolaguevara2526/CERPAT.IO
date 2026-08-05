@@ -124,6 +124,7 @@ model Organizacion {
   asignacionesArea AsignacionClienteArea[]
   entregasInsumo   EntregaInsumo[]
   eventosTarea     EventoTarea[]
+  lotesCaptura     LoteCaptura[]
 
   // Revisoría Fiscal
   grupos    GrupoEmpresarial[]
@@ -492,6 +493,7 @@ model Tarea {
   etiquetas TareaEtiqueta[]
   subtareas Subtarea[]
   eventos   EventoTarea[]
+  lotesCaptura LoteCaptura[]
 
   @@index([organizacionId])
   @@index([fechaVencimiento])
@@ -654,6 +656,9 @@ model ActividadPlan {
   // flujo: la captura (auxiliar) habilita el procesamiento (asesor). Ver F1 en
   // docs/metodologia-operacion.md. Null = sin clasificar (no participa del bloqueo).
   fase               FaseActividad?
+  // Actividad especial "Captura de documentos": su tarea muestra el detalle de
+  // lotes (tipo de documento · consecutivo desde–hasta · cantidad · fecha).
+  esCapturaDocumentos Boolean @default(false)
   orden              Int     @default(0)
   activo             Boolean @default(true)
 
@@ -773,6 +778,28 @@ model EventoTarea {
   @@index([organizacionId])
   @@index([tareaId])
   @@map("eventos_tarea")
+}
+
+// Lote de captura de documentos (dentro de la tarea "Captura de documentos"):
+// el auxiliar registra, por tipo de documento, el rango de consecutivos y la
+// cantidad capturada, con su fecha. Trabajo diario dentro de la tarea del mes.
+model LoteCaptura {
+  id             String   @id @default(uuid())
+  organizacionId String
+  tareaId        String
+  tipoDocumento  String
+  desde          String?
+  hasta          String?
+  cantidad       Int?
+  fecha          DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  tarea        Tarea        @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@index([tareaId])
+  @@map("lotes_captura")
 }
 
 // ---------- Parametrización de vencimientos tributarios ----------

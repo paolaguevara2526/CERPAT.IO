@@ -17,13 +17,13 @@ type Form = {
   codigo: string; nombre: string; areaId: string; grupo: string; periodicidad: string;
   documentoFormato: string; descripcion: string; orden: string;
   generaPago: boolean; requiereAuditoria: boolean; esRegistroSoftware: boolean; activo: boolean;
-  obligacionVencimiento: string; fase: string;
+  obligacionVencimiento: string; fase: string; esCapturaDocumentos: boolean;
 };
 
 const VACIO: Form = {
   codigo: '', nombre: '', areaId: '', grupo: '', periodicidad: '', documentoFormato: '', descripcion: '', orden: '0',
   generaPago: false, requiereAuditoria: false, esRegistroSoftware: false, activo: true,
-  obligacionVencimiento: '', fase: '',
+  obligacionVencimiento: '', fase: '', esCapturaDocumentos: false,
 };
 
 // Fase en la cadena del cierre (la captura del auxiliar habilita el procesamiento del asesor).
@@ -93,7 +93,7 @@ export default function ActividadesEditor() {
       periodicidad: a.periodicidad ?? '', documentoFormato: a.documentoFormato ?? '', descripcion: a.descripcion ?? '',
       orden: String(a.orden ?? 0), generaPago: !!a.generaPago, requiereAuditoria: !!a.requiereAuditoria,
       esRegistroSoftware: !!a.esRegistroSoftware, activo: a.activo !== false,
-      obligacionVencimiento: a.obligacionVencimiento ?? '', fase: a.fase ?? '',
+      obligacionVencimiento: a.obligacionVencimiento ?? '', fase: a.fase ?? '', esCapturaDocumentos: !!a.esCapturaDocumentos,
     });
     setSubs(a.subtareas ?? []);
   }
@@ -234,6 +234,7 @@ export default function ActividadesEditor() {
               <label style={chk}><input type="checkbox" checked={form.generaPago} onChange={(e) => set('generaPago', e.target.checked)} /> Genera pago</label>
               <label style={chk}><input type="checkbox" checked={form.requiereAuditoria} onChange={(e) => set('requiereAuditoria', e.target.checked)} /> Requiere auditoría</label>
               <label style={chk}><input type="checkbox" checked={form.esRegistroSoftware} onChange={(e) => set('esRegistroSoftware', e.target.checked)} /> Registro en software</label>
+              <label style={chk} title="Muestra el detalle de lotes: tipo de documento, consecutivo desde–hasta, cantidad y fecha"><input type="checkbox" checked={form.esCapturaDocumentos} onChange={(e) => set('esCapturaDocumentos', e.target.checked)} /> Captura de documentos</label>
               <label style={chk}><input type="checkbox" checked={form.activo} onChange={(e) => set('activo', e.target.checked)} /> Activa</label>
               <label style={{ ...chk, marginLeft: 'auto' }}>Orden <input type="number" style={{ ...input, width: 70, padding: '5px 8px' }} value={form.orden} onChange={(e) => set('orden', e.target.value)} /></label>
             </div>
