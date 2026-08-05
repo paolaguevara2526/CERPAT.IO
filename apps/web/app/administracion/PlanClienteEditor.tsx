@@ -91,7 +91,7 @@ export default function PlanClienteEditor() {
     try {
       const res = await fetch(`/api/admin/plan-cliente/${empresaId}/generar?periodo=${periodo}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const d = await res.json();
-      if (!res.ok) setError(d.error || 'No se pudieron generar las tareas.'); else setAviso(`Tareas de ${periodo}: ${d.creadas} creada(s)${d.yaExistian ? `, ${d.yaExistian} ya existían` : ''}.`);
+      if (!res.ok) setError(d.error || 'No se pudieron generar las tareas.'); else setAviso(`Tareas de ${periodo}: ${d.creadas} creada(s)${d.yaExistian ? `, ${d.yaExistian} ya existían` : ''}${d.eliminadasDuplicadas ? `. Se quitaron ${d.eliminadasDuplicadas} tarea(s) duplicada(s) con vencimiento (vacías)` : ''}.`);
     } catch { setError('Error de red.'); }
     setGuardando(false);
   }
@@ -171,7 +171,7 @@ export default function PlanClienteEditor() {
             <input style={{ ...input, width: 110 }} value={periodo} onChange={(e) => setPeriodo(e.target.value)} placeholder="YYYY-MM" />
             <button className="dbtn navy" onClick={generar} disabled={guardando} style={{ fontSize: 13 }}>Generar</button>
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '8px 2px 0' }}>Guardar cambia el plan del cliente; Generar crea sus tareas del período según periodicidad (no duplica las que ya existan).</p>
+          <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '8px 2px 0' }}>Guardar cambia el plan y los responsables; Generar crea las tareas del período según periodicidad. Las actividades <b>vinculadas a un vencimiento</b> no se generan como tarea (se controlan en Vencimientos) y, si quedaron duplicadas vacías, Generar las quita.</p>
         </>
       )}
     </div>

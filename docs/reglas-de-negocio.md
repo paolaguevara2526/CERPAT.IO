@@ -98,13 +98,16 @@
       checklist/responsable (sin sobrescribir chulos ni un responsable ya
       asignado). Objetivo: la declaración se controla en Vencimientos (con su
       checklist y avance) y no se duplica como tarea del plan.
-    - **No se duplica la declaración como tarea del plan:** el generador del plan
-      (`prisma/plan-generar.ts`) **no crea tarea** para las actividades vinculadas a
-      un vencimiento (`obligacionVencimiento != null`); esas se controlan en
-      Vencimientos. Las tareas-duplicado ya generadas se limpian con
-      `prisma/plan-limpiar-duplicados.ts`, que borra **solo las vacías** (sin
-      avance) y conserva las que tengan trabajo (dry-run por defecto; `--apply`
-      para borrar).
+    - **No se duplica la declaración como tarea del plan:** ni el sembrador
+      (`prisma/plan-generar.ts`) ni el botón **Generar por cliente**
+      (`POST /admin/plan-cliente/:empresaId/generar`) crean tarea para las
+      actividades vinculadas a un vencimiento (`obligacionVencimiento != null`);
+      esas se controlan en Vencimientos. Además, ese botón **limpia** las
+      tareas-duplicado **vacías** ya generadas de ese cliente (estado
+      `por_iniciar`, auditoría `pendiente`, sin subtareas realizadas ni
+      comprobantes/registros) y conserva las que tengan avance. Para una limpieza
+      masiva de todos los clientes: `prisma/plan-limpiar-duplicados.ts` (dry-run
+      por defecto; `--apply` para borrar).
     - **Avance por área incluye los vencimientos vinculados:** el panel de
       Coordinación (`/plan/cumplimiento`) suma, además de las tareas del plan, los
       **vencimientos del período vinculados a una actividad**, atribuidos al área

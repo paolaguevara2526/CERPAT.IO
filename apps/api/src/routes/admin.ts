@@ -694,7 +694,7 @@ adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinaci
 
   const planes = await prisma.planClienteActividad.findMany({
     where: { organizacionId: id, empresaId: empresa.id, activa: true },
-    select: { actividadPlanId: true, periodicidad: true, actividad: { select: { nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true } } },
+    select: { actividadPlanId: true, periodicidad: true, actividad: { select: { nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true, obligacionVencimiento: true } } },
   });
   const asign = await prisma.asignacionClienteArea.findMany({ where: { organizacionId: id, empresaId: empresa.id }, select: { areaId: true, asesorId: true, auxiliarId: true } });
   const asignPorArea = new Map(asign.map((a) => [a.areaId, { asesorId: a.asesorId, auxiliarId: a.auxiliarId }]));
@@ -704,6 +704,7 @@ adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinaci
   const nuevas = [];
   for (const p of planes) {
     if (!p.actividad) continue;
+    if (p.actividad.obligacionVencimiento) continue; // se controla en Vencimientos, no se duplica como tarea
     const per = p.periodicidad || p.actividad.periodicidad;
     if (!aplicaEnMesPlan(per, month)) continue;
     if (yaExiste.has(p.actividadPlanId)) continue;
@@ -716,7 +717,25 @@ adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinaci
     });
   }
   const r = nuevas.length ? await prisma.tarea.createMany({ data: nuevas as any }) : { count: 0 };
-  res.json({ ok: true, periodo, creadas: r.count, yaExistian: existentes.length });
+
+  // Limpia las tareas-duplicado ya generadas de este cliente cuya actividad está
+  // vinculada a un vencimiento, pero SOLO las vacías (sin avance): estado
+  // 'por_iniciar', auditoría 'pendiente', sin subtareas realizadas y sin
+  // comprobantes/registros. Conserva las que tengan trabajo y las no vinculadas.
+  let eliminadasDuplicadas = 0;
+  const linkedActs = await prisma.actividadPlan.findMany({ where: { organizacionId: id, obligacionVencimiento: { not: null } }, select: { id: true } });
+  const linkedIds = linkedActs.map((a) => a.id);
+  if (linkedIds.length) {
+    const dup = await prisma.tarea.findMany({
+      where: { organizacionId: id, empresaId: empresa.id, actividadPlanId: { in: linkedIds } },
+      select: { id: true, estado: true, auditoria: true, comprobanteDesde: true, comprobanteHasta: true, cantidadRegistros: true, subtareas: { select: { estado: true } } },
+    });
+    const vacias = dup.filter((t) => t.estado === 'por_iniciar' && t.auditoria === 'pendiente'
+      && !t.subtareas.some((s) => s.estado === 'realizada') && !t.comprobanteDesde && !t.comprobanteHasta && t.cantidadRegistros == null);
+    if (vacias.length) eliminadasDuplicadas = (await prisma.tarea.deleteMany({ where: { id: { in: vacias.map((t) => t.id) } } })).count;
+  }
+
+  res.json({ ok: true, periodo, creadas: r.count, yaExistian: existentes.length, eliminadasDuplicadas });
 });
 
 // ---------- Asignaciones cliente × área (asesor responsable / auxiliar ejecutor / talla) ----------
