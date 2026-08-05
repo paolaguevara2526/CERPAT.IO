@@ -297,6 +297,7 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
   // Nunca se tocan las entradas manuales (generado=false).
   const existentes = await prisma.vencimientoEmpresa.findMany({
     where: { organizacionId: org.id, empresaId: empresa.id, anio, generado: true },
+    include: { _count: { select: { subtareas: true } } },
   });
   const existNac = existentes.filter((e) => e.municipioId == null);
   const existIca = existentes.filter((e) => e.municipioId != null);
@@ -312,7 +313,9 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
 
   // Vínculos: al CREAR un vencimiento hereda el responsable (del área de la
   // actividad del plan vinculada) y copia su checklist (subtareas plantilla).
-  // Los vencimientos ya existentes no se tocan (conservan su checklist/chulos).
+  // Los vencimientos ya EXISTENTES vinculados que aún no tengan checklist/
+  // responsable también se rellenan (backfill), sin sobrescribir chulos ni un
+  // responsable ya asignado.
   const actividadesVinc = await prisma.actividadPlan.findMany({
     where: { organizacionId: org.id, activo: true, obligacionVencimiento: { not: null } },
     select: { obligacionVencimiento: true, areaId: true, subtareas: { orderBy: { orden: 'asc' }, select: { texto: true, orden: true } } },
@@ -333,8 +336,23 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
       ...(vinc?.subtareas.length ? { subtareas: { create: vinc.subtareas.map((s) => ({ texto: s.texto, orden: s.orden })) } } : {}),
     };
   };
+  // Relleno para un vencimiento EXISTENTE vinculado: responsable si está vacío y
+  // checklist si aún no tiene ninguna subtarea. Devuelve null si no hay nada que
+  // rellenar. No sobrescribe chulos ni un responsable ya asignado.
+  const backfillData = (ex: (typeof existentes)[number]): Record<string, unknown> | null => {
+    const k = vinculoDeObligacion(ex.obligacion);
+    const vinc = k ? vincPorKey.get(k) : undefined;
+    if (!vinc) return null;
+    const resp = vinc.areaId ? respPorArea.get(vinc.areaId) : undefined;
+    const data: Record<string, unknown> = {};
+    if (ex.asesorId == null && resp?.asesorId) data.asesorId = resp.asesorId;
+    if (ex.auxiliarId == null && resp?.auxiliarId) data.auxiliarId = resp.auxiliarId;
+    if (ex._count.subtareas === 0 && vinc.subtareas.length)
+      data.subtareas = { create: vinc.subtareas.map((s) => ({ texto: s.texto, orden: s.orden })) };
+    return Object.keys(data).length ? data : null;
+  };
 
-  let creados = 0, actualizados = 0, sinCambios = 0, eliminados = 0, conservadosConPago = 0;
+  let creados = 0, actualizados = 0, sinCambios = 0, eliminados = 0, conservadosConPago = 0, enriquecidos = 0;
 
   await prisma.$transaction(async (tx) => {
     // --- Nacionales ---
@@ -349,11 +367,16 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
           },
         });
         creados++;
-      } else if (ex.fechaVencimiento.getTime() !== v.fechaVencimiento.getTime()) {
-        await tx.vencimientoEmpresa.update({ where: { id: ex.id }, data: { fechaVencimiento: v.fechaVencimiento } });
-        actualizados++;
       } else {
-        sinCambios++;
+        const fechaCambia = ex.fechaVencimiento.getTime() !== v.fechaVencimiento.getTime();
+        const bf = backfillData(ex);
+        if (fechaCambia || bf) {
+          await tx.vencimientoEmpresa.update({ where: { id: ex.id }, data: { ...(fechaCambia ? { fechaVencimiento: v.fechaVencimiento } : {}), ...(bf ?? {}) } });
+          if (fechaCambia) actualizados++;
+          if (bf) enriquecidos++;
+        } else {
+          sinCambios++;
+        }
       }
     }
     for (const e of existNac) {
@@ -375,11 +398,16 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
           },
         });
         creados++;
-      } else if (ex.fechaVencimiento.getTime() !== v.fechaVencimiento.getTime()) {
-        await tx.vencimientoEmpresa.update({ where: { id: ex.id }, data: { fechaVencimiento: v.fechaVencimiento } });
-        actualizados++;
       } else {
-        sinCambios++;
+        const fechaCambia = ex.fechaVencimiento.getTime() !== v.fechaVencimiento.getTime();
+        const bf = backfillData(ex);
+        if (fechaCambia || bf) {
+          await tx.vencimientoEmpresa.update({ where: { id: ex.id }, data: { ...(fechaCambia ? { fechaVencimiento: v.fechaVencimiento } : {}), ...(bf ?? {}) } });
+          if (fechaCambia) actualizados++;
+          if (bf) enriquecidos++;
+        } else {
+          sinCambios++;
+        }
       }
     }
     for (const e of existIca) {
@@ -391,7 +419,7 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
     }
   });
 
-  res.json({ ok: true, empresa: empresa.nombre, anio, resumen: { creados, actualizados, sinCambios, eliminados, conservadosConPago }, sinCalendario });
+  res.json({ ok: true, empresa: empresa.nombre, anio, resumen: { creados, actualizados, sinCambios, eliminados, conservadosConPago, enriquecidos }, sinCalendario });
 });
 
 // DELETE /vencimientos/:id — elimina un pago pendiente agregado a mano
