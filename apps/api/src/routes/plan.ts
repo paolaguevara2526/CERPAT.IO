@@ -74,17 +74,27 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
       where,
       select: {
         id: true, titulo: true, estado: true, prioridad: true, auditoria: true,
-        fechaInicio: true, fechaVencimiento: true, periodo: true,
+        fechaInicio: true, fechaVencimiento: true, periodo: true, empresaId: true, areaId: true,
         empresa: { select: { nombre: true } },
         area: { select: { nombre: true } },
         asesor: { select: { nombre: true } },
         auxiliar: { select: { nombre: true } },
+        actividadPlan: { select: { fase: true } },
       },
       orderBy: [{ fechaVencimiento: 'asc' }, { titulo: 'asc' }],
       skip: paginado ? (page - 1) * pageSize : 0,
       take: paginado ? pageSize : 500,
     }),
   ]);
+
+  // Bloqueo del flujo: una tarea de PROCESAMIENTO está bloqueada hasta que el
+  // insumo del cliente se haya entregado (entrega general o de su área) en el período.
+  const entregas = await prisma.entregaInsumo.findMany({ where: { organizacionId: org.id, periodo }, select: { empresaId: true, areaId: true } });
+  const entSet = new Set(entregas.map((e) => `${e.empresaId}|${e.areaId ?? 'gen'}`));
+  const bloqueada = (t: (typeof tareas)[number]) =>
+    t.actividadPlan?.fase === 'procesamiento'
+    && !entSet.has(`${t.empresaId}|gen`)
+    && !(t.areaId ? entSet.has(`${t.empresaId}|${t.areaId}`) : false);
 
   res.json({
     periodo,
@@ -97,6 +107,7 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
       fechaVencimiento: t.fechaVencimiento, periodo: t.periodo,
       empresa: t.empresa?.nombre ?? null, area: t.area?.nombre ?? null,
       asesor: t.asesor?.nombre ?? null, auxiliar: t.auxiliar?.nombre ?? null,
+      fase: t.actividadPlan?.fase ?? null, bloqueada: bloqueada(t),
     })),
   });
 });

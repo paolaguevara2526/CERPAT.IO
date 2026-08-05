@@ -9,6 +9,7 @@ export type Tarea = {
   id: string; titulo: string; estado: string; prioridad: string; auditoria: string;
   fechaVencimiento: string; periodo: string | null;
   empresa: string | null; area: string | null; asesor: string | null; auxiliar: string | null;
+  fase?: string | null; bloqueada?: boolean;
 };
 export type TareasResp = { periodo: string | null; total: number; page?: number; pageSize?: number; totalPaginas?: number; tareas: Tarea[] };
 
@@ -62,7 +63,10 @@ export function TareasTabla({ tareas, mostrarAsesor = true, gestionable = false 
               <tr><td colSpan={cols} style={{ padding: 34, textAlign: 'center', color: 'var(--muted)' }}>No hay tareas con estos filtros.</td></tr>
             ) : tareas.map((t) => (
               <tr key={t.id}>
-                <td style={{ fontWeight: 600 }}>{t.titulo}</td>
+                <td style={{ fontWeight: 600 }}>
+                  {t.titulo}
+                  {t.bloqueada && <span title="Esperando la entrega del insumo del cliente" style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#b47814', background: '#fbf0d9', border: '1px solid #edd9a8', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>🔒 Bloqueada</span>}
+                </td>
                 <td style={{ color: 'var(--muted)' }}>{t.empresa ?? '—'}</td>
                 <td style={{ color: 'var(--muted)' }}>{t.area ?? '—'}</td>
                 {mostrarAsesor && <td style={{ color: 'var(--muted)' }}>{t.asesor ?? '—'}</td>}
