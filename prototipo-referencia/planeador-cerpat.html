@@ -874,10 +874,12 @@ function loadUiState(){
 let uiState = loadUiState();
 let loggedInEmail = uiState.loggedInEmail || null;
 let currentUser = uiState.currentUser || null;
-// Email del usuario propietario (gerencia). La descarga del listado de clientes
-// solo se habilita para este usuario. Si inicias sesión con otro correo, cámbialo aquí.
-const OWNER_EMAIL = 'gerencia@cerpat.io';
-function isOwner(){ return (loggedInEmail||'').trim().toLowerCase() === OWNER_EMAIL.toLowerCase(); }
+// La descarga del listado de clientes solo se habilita para usuarios con rol
+// Administrador (p. ej. gerencia). Se resuelve contra el usuario logueado.
+function isOwner(){
+  const u = loggedInEmail ? findUserByEmail(loggedInEmail) : null;
+  return !!(u && (u.roles||[]).includes('Administrador'));
+}
 function persistUiState(){
   uiState.loggedInEmail = loggedInEmail;
   uiState.currentUser = currentUser;
@@ -1449,9 +1451,9 @@ function downloadUserTemplate(){
   ];
   downloadCsvGeneric(rows, 'plantilla-usuarios-masivos.csv');
 }
-// Descarga del listado de clientes (solo disponible para el usuario propietario).
+// Descarga del listado de clientes (solo disponible para rol Administrador).
 function downloadClientesCsv(){
-  if(!isOwner()){ alert('Esta descarga solo está disponible para tu usuario.'); return; }
+  if(!isOwner()){ alert('Esta descarga solo está disponible para administradores.'); return; }
   const list = data.admin.empresas || [];
   const rows = [['Empresa','NIT','Tipo','Sector','Régimen','Municipio','Periodicidad IVA']];
   list.forEach(e=>{
