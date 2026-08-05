@@ -162,10 +162,15 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
   - **Disparo mixto:** entrega general **automática** cuando toda la captura del
     cliente queda *terminada*, **y** botones (general / por área) para adelantarla.
   - **Eventos** (`EventoTarea`): cada cambio de estado registra quién y cuándo.
-  - Incrementos: **F1.1** fundamentos (fase + tablas + registro de eventos) ·
-    **F1.2** entrega + bloqueo/habilitación · **F1.3** bandeja "listo para procesar".
-- **F2 — Vistas por rol.** Bandeja del asesor, *Mi día* del auxiliar, tablero de
-  flujo del coordinador/gerente — todas sobre la misma columna.
+  - Incrementos: **F1.1** fundamentos (fase + tablas + registro de eventos) ✅ ·
+    **F1.2a** entrega + bloqueo/habilitación ✅ · **F1.2b** captura por lotes
+    (`LoteCaptura`) ✅ · **F1.3** *Mi día del auxiliar* — captura multi-cliente en
+    un solo lugar ✅. Pendiente: **auto-entrega** (entrega general automática al
+    terminar la captura) y bandeja *"listo para procesar"* del asesor.
+- **F2 — Vistas por rol.** *Mi día del auxiliar* ✅ (captura del día multi-cliente
+  con registro de lotes en línea, sección de la página **Mi Día**). Falta la
+  bandeja del asesor y el tablero de flujo del coordinador/gerente — todas sobre
+  la misma columna.
 - **F3 — Medición de tiempos.** Lead time, tiempo de handoff, cumplimiento **a
   tiempo** por cada eje.
 - **F4 — Automatización.** SLAs/alertas, notificaciones por correo, integraciones
@@ -173,4 +178,4 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
 
 ---
 
-_Última actualización: 2026-08-05._
+_Última actualización: 2026-08-05 (F1.3 — Mi día del auxiliar)._
