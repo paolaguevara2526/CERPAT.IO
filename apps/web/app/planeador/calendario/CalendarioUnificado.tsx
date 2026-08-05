@@ -37,7 +37,7 @@ const VISITA_META: Record<string, { label: string; color: string }> = {
 // Color de cada etiqueta (para el punto/tag que distingue la fuente en "Todas").
 const ETIQUETA_COLOR: Record<string, string> = {
   Vencimientos: '#7a5bd0',
-  Visitas: '#d6008c',
+  Visitas: '#e11900',
   Impuestos: '#2f6fd0',
   Informes: '#c67c00',
   Cumplimiento: '#1c8a5e',
@@ -259,7 +259,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       const semana = semanaCeldas.map((dia) => {
         if (!dia) return '<td class="empty"></td>';
         const items = porDia.get(`${mes}-${pad(dia)}`) ?? [];
-        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}"><b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}${e.municipio ? `<span class="muni">📍 ${escapar(e.municipio)}</span>` : ''}${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
+        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}">${e.tipo === 'visita' ? '<i style="color:#e11900;font-weight:800;text-transform:uppercase">🤝 Visita</i>' : ''}<b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}${e.municipio ? `<span class="muni">📍 ${escapar(e.municipio)}</span>` : ''}${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
         return `<td><div class="dn">${dia}</div>${cards}</td>`;
       }).join('');
       filas.push(`<tr>${semana}</tr>`);
@@ -391,6 +391,11 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                           onClick={() => (ev.tipo === 'visita' ? setVisitaId(ev.id) : setDetalle(ev))}
                           title={`${ev.titulo}${ev.empresa ? ' · ' + ev.empresa : ''} · ${ev.estadoLabel}`}
                           style={{ borderLeft: `3px solid ${col}`, background: `${col}12`, borderRadius: 4, padding: '3px 6px', cursor: 'grab' }}>
+                          {ev.tipo === 'visita' && (
+                            <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#fff', background: '#e11900', borderRadius: 20, padding: '0 6px', marginBottom: 2, marginRight: 3 }}>
+                              🤝 Visita
+                            </span>
+                          )}
                           {mostrarEstados && (
                             <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: col, background: `${col}22`, borderRadius: 20, padding: '0 6px', marginBottom: 2 }}>
                               {ev.vencido ? 'Vencido' : ev.estadoLabel}
