@@ -93,9 +93,11 @@
       (copia de las `SubtareaPlantilla` de esa actividad → `SubtareaVencimiento`) y
       el **responsable** (asesor/auxiliar de la asignación cliente×área de la
       actividad). El asesor marca el checklist (**chulo**) desde el **calendario**.
-      Solo se copia al **crear** el vencimiento: al regenerar, los existentes
-      conservan sus chulos. Objetivo: la declaración se controla en Vencimientos
-      (con su checklist y avance) y no se duplica como tarea del plan.
+      Se copia al **crear** el vencimiento y, al **regenerar**, también se
+      **rellena** en los vencimientos **existentes** vinculados que aún no tengan
+      checklist/responsable (sin sobrescribir chulos ni un responsable ya
+      asignado). Objetivo: la declaración se controla en Vencimientos (con su
+      checklist y avance) y no se duplica como tarea del plan.
     - **No se duplica la declaración como tarea del plan:** el generador del plan
       (`prisma/plan-generar.ts`) **no crea tarea** para las actividades vinculadas a
       un vencimiento (`obligacionVencimiento != null`); esas se controlan en
