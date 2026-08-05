@@ -8,6 +8,7 @@ import ActividadesEditor from './ActividadesEditor';
 import VencimientosEditor from './VencimientosEditor';
 import EmpresasEditor from './EmpresasEditor';
 import PlanClienteEditor from './PlanClienteEditor';
+import AsignacionesEditor from './AsignacionesEditor';
 import ConfigTributariaEditor from './ConfigTributariaEditor';
 
 type Tab = { id: string; label: string; tipo?: string };
@@ -16,6 +17,7 @@ const TABS: Tab[] = [
   { id: 'empresas', label: 'Empresas' },
   { id: 'config-tributaria', label: 'Config. tributaria' },
   { id: 'plan-cliente', label: 'Plan por cliente' },
+  { id: 'asignaciones', label: 'Asignaciones' },
   { id: 'actividades', label: 'Cat. Tareas' },
   { id: 'vencimientos', label: 'Vencimientos' },
   { id: 'areas', label: 'Áreas', tipo: 'areas' },
@@ -51,6 +53,7 @@ export default function AdminPanel() {
         : activo.id === 'empresas' ? <EmpresasEditor />
         : activo.id === 'config-tributaria' ? <ConfigTributariaEditor />
         : activo.id === 'plan-cliente' ? <PlanClienteEditor />
+        : activo.id === 'asignaciones' ? <AsignacionesEditor />
         : activo.id === 'vencimientos' ? <VencimientosEditor />
         : <ParametrosEditor />}
     </div>

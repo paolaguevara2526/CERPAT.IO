@@ -718,3 +718,59 @@ adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinaci
   const r = nuevas.length ? await prisma.tarea.createMany({ data: nuevas as any }) : { count: 0 };
   res.json({ ok: true, periodo, creadas: r.count, yaExistian: existentes.length });
 });
+
+// ---------- Asignaciones cliente × área (asesor responsable / auxiliar ejecutor / talla) ----------
+// De aquí heredan el responsable las tareas del plan y los vencimientos vinculados.
+
+// GET /admin/asignaciones/:empresaId — todas las áreas con su asignación actual.
+adminRouter.get('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true, nombre: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+  const [areas, asign] = await Promise.all([
+    prisma.area.findMany({ where: { organizacionId: id }, orderBy: { orden: 'asc' }, select: { id: true, nombre: true } }),
+    prisma.asignacionClienteArea.findMany({ where: { organizacionId: id, empresaId: empresa.id }, select: { areaId: true, asesorId: true, auxiliarId: true, talla: true } }),
+  ]);
+  const byArea = new Map(asign.map((a) => [a.areaId, a]));
+  res.json({
+    empresa,
+    areas: areas.map((ar) => {
+      const a = byArea.get(ar.id);
+      return { areaId: ar.id, area: ar.nombre, asesorId: a?.asesorId ?? null, auxiliarId: a?.auxiliarId ?? null, talla: a?.talla ?? null };
+    }),
+  });
+});
+
+// PUT /admin/asignaciones/:empresaId  { asignaciones: [{ areaId, asesorId|null, auxiliarId|null, talla|null }] }
+adminRouter.put('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+  const items: any[] = Array.isArray(req.body?.asignaciones) ? req.body.asignaciones : [];
+  const [areas, users] = await Promise.all([
+    prisma.area.findMany({ where: { organizacionId: id }, select: { id: true } }),
+    prisma.usuario.findMany({ where: { organizacionId: id }, select: { id: true } }),
+  ]);
+  const areaOk = new Set(areas.map((a) => a.id));
+  const userOk = new Set(users.map((u) => u.id));
+
+  await prisma.$transaction(async (tx) => {
+    for (const it of items) {
+      const areaId = String(it?.areaId ?? '');
+      if (!areaOk.has(areaId)) continue;
+      const asesorId = it?.asesorId && userOk.has(String(it.asesorId)) ? String(it.asesorId) : null;
+      const auxiliarId = it?.auxiliarId && userOk.has(String(it.auxiliarId)) ? String(it.auxiliarId) : null;
+      const talla = typeof it?.talla === 'string' && it.talla.trim() ? it.talla.trim() : null;
+      await tx.asignacionClienteArea.upsert({
+        where: { empresaId_areaId: { empresaId: empresa.id, areaId } },
+        create: { organizacionId: id, empresaId: empresa.id, areaId, asesorId, auxiliarId, talla },
+        update: { asesorId, auxiliarId, talla },
+      });
+    }
+  });
+  res.json({ ok: true });
+});
