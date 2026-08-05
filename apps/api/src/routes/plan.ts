@@ -786,6 +786,110 @@ planRouter.delete('/tareas/:id/subtareas/:subId', requireAuth, async (req: Authe
   res.json({ ok: true });
 });
 
+// GET /plan/flujo?periodo=YYYY-MM — tablero de flujo del cierre (F2). Por cliente,
+// en qué etapa de la cadena va (Captura → Entrega → Procesamiento → Revisión),
+// cuál es su etapa actual (dónde está el foco/cuello), su avance y si está en riesgo.
+// Es la vista del coordinador/gerente sobre la misma columna que auxiliar y asesor.
+planRouter.get('/flujo', requireAuth, async (req, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.json({ periodo: null, resumen: null, clientes: [] });
+
+  const now = new Date();
+  const periodo = typeof req.query.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.query.periodo)
+    ? req.query.periodo
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const [tareas, entregas] = await Promise.all([
+    prisma.tarea.findMany({
+      where: { organizacionId: org.id, periodo, actividadPlanId: { not: null } },
+      select: {
+        estado: true, fechaVencimiento: true,
+        empresa: { select: { id: true, nombre: true } },
+        actividadPlan: { select: { fase: true } },
+      },
+    }),
+    prisma.entregaInsumo.findMany({ where: { organizacionId: org.id, periodo }, select: { empresaId: true } }),
+  ]);
+  const entregadoSet = new Set(entregas.map((e) => e.empresaId));
+
+  type Fase = { total: number; hechas: number; curso: number };
+  type Cli = { empresaId: string; empresa: string; cap: Fase; proc: Fase; rev: Fase; total: number; hechas: number; vencidas: number };
+  const nuevaFase = (): Fase => ({ total: 0, hechas: 0, curso: 0 });
+  const map = new Map<string, Cli>();
+
+  for (const t of tareas) {
+    const c = map.get(t.empresa.id) ?? { empresaId: t.empresa.id, empresa: t.empresa.nombre, cap: nuevaFase(), proc: nuevaFase(), rev: nuevaFase(), total: 0, hechas: 0, vencidas: 0 };
+    const ejec = EJECUTADA.includes(t.estado);
+    const curso = t.estado === 'en_curso' || t.estado === 'en_revision';
+    const venc = !ejec && t.fechaVencimiento < now;
+    c.total++; if (ejec) c.hechas++; if (venc) c.vencidas++;
+    const f = t.actividadPlan?.fase;
+    const b = f === 'captura' ? c.cap : f === 'procesamiento' ? c.proc : f === 'revision' ? c.rev : null;
+    if (b) { b.total++; if (ejec) b.hechas++; if (curso) b.curso++; }
+    map.set(t.empresa.id, c);
+  }
+
+  const estadoEtapa = (f: Fase): 'na' | 'listo' | 'en_curso' | 'pendiente' => {
+    if (f.total === 0) return 'na';
+    if (f.hechas >= f.total) return 'listo';
+    if (f.hechas > 0 || f.curso > 0) return 'en_curso';
+    return 'pendiente';
+  };
+  const pct = (e: number, t: number) => (t ? Math.round((e / t) * 100) : 0);
+
+  const ETAPAS = ['captura', 'entrega', 'procesamiento', 'revision', 'cierre'] as const;
+  const porEtapa: Record<string, number> = { captura: 0, entrega: 0, procesamiento: 0, revision: 0, cierre: 0 };
+  let enRiesgoTotal = 0;
+
+  const clientes = Array.from(map.values()).map((c) => {
+    const estCap = estadoEtapa(c.cap);
+    const estProc = estadoEtapa(c.proc);
+    const estRev = estadoEtapa(c.rev);
+    const entregado = entregadoSet.has(c.empresaId);
+    const estEntrega = c.proc.total > 0 ? (entregado ? 'entregado' : 'pendiente') : 'na';
+
+    let etapaActual: string;
+    if (estCap === 'pendiente' || estCap === 'en_curso') etapaActual = 'captura';
+    else if (estEntrega === 'pendiente') etapaActual = 'entrega';
+    else if (estProc === 'pendiente' || estProc === 'en_curso') etapaActual = 'procesamiento';
+    else if (estRev === 'pendiente' || estRev === 'en_curso') etapaActual = 'revision';
+    else etapaActual = 'cierre';
+    porEtapa[etapaActual]++;
+
+    const enRiesgo = c.vencidas > 0;
+    if (enRiesgo) enRiesgoTotal++;
+
+    return {
+      empresaId: c.empresaId, empresa: c.empresa,
+      etapas: {
+        captura: { estado: estCap, total: c.cap.total, hechas: c.cap.hechas },
+        entrega: { estado: estEntrega },
+        procesamiento: { estado: estProc, total: c.proc.total, hechas: c.proc.hechas },
+        revision: { estado: estRev, total: c.rev.total, hechas: c.rev.hechas },
+      },
+      etapaActual, avance: pct(c.hechas, c.total),
+      enRiesgo, vencidas: c.vencidas,
+    };
+  });
+
+  // Cuello: la etapa (sin contar "cierre") donde hay más clientes detenidos hoy.
+  let cuello: string | null = null;
+  let maxEtapa = 0;
+  for (const e of ETAPAS) {
+    if (e === 'cierre') continue;
+    if (porEtapa[e] > maxEtapa) { maxEtapa = porEtapa[e]; cuello = e; }
+  }
+
+  // Orden: en riesgo primero, luego los menos avanzados (necesitan atención).
+  clientes.sort((a, b) => Number(b.enRiesgo) - Number(a.enRiesgo) || a.avance - b.avance || a.empresa.localeCompare(b.empresa));
+
+  res.json({
+    periodo,
+    resumen: { clientes: clientes.length, porEtapa, cuello, enRiesgo: enRiesgoTotal, cerrados: porEtapa.cierre },
+    clientes,
+  });
+});
+
 planRouter.get('/cumplimiento', async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, periodo: null, kpis: null, porArea: [], porCliente: [] });
