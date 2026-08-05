@@ -43,6 +43,14 @@ enum EstadoSubtarea {
   no_realizada
 }
 
+// Fase de una actividad en la cadena del cierre (ver docs/metodologia-operacion.md).
+// captura = insumo del auxiliar · procesamiento = trabajo del asesor · revision.
+enum FaseActividad {
+  captura
+  procesamiento
+  revision
+}
+
 // Revisoría Fiscal · Portal de Hallazgos
 enum RiesgoNivel {
   alto
@@ -114,6 +122,8 @@ model Organizacion {
   actividadesPlan  ActividadPlan[]
   planesCliente    PlanClienteActividad[]
   asignacionesArea AsignacionClienteArea[]
+  entregasInsumo   EntregaInsumo[]
+  eventosTarea     EventoTarea[]
 
   // Revisoría Fiscal
   grupos    GrupoEmpresarial[]
@@ -159,6 +169,8 @@ model Usuario {
   vencimientosComoAuxiliar VencimientoEmpresa[] @relation("VencAuxiliar")
   areasComoAsesor    AsignacionClienteArea[] @relation("AsesorArea")
   areasComoAuxiliar  AsignacionClienteArea[] @relation("AuxiliarArea")
+  entregasRealizadas EntregaInsumo[]
+  eventosTarea       EventoTarea[]
 
   // Email único por organización (dos firmas distintas pueden repetir email).
   @@unique([organizacionId, email])
@@ -242,6 +254,7 @@ model Empresa {
   configuracionTributaria ConfiguracionTributaria?
   municipiosIca           EmpresaMunicipioIca[]
   vencimientosEmpresa     VencimientoEmpresa[]
+  entregasInsumo          EntregaInsumo[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -478,6 +491,7 @@ model Tarea {
   asignados TareaAsignado[]
   etiquetas TareaEtiqueta[]
   subtareas Subtarea[]
+  eventos   EventoTarea[]
 
   @@index([organizacionId])
   @@index([fechaVencimiento])
@@ -610,6 +624,7 @@ model Area {
   actividades  ActividadPlan[]
   asignaciones AsignacionClienteArea[]
   tareas       Tarea[]
+  entregasInsumo EntregaInsumo[]
 
   @@unique([organizacionId, nombre])
   @@index([organizacionId])
@@ -635,6 +650,10 @@ model ActividadPlan {
   // "renta", "rub"); al generar el vencimiento se copia el checklist de la
   // actividad vinculada. Independiente del código (sobrevive a re-codificaciones).
   obligacionVencimiento String?
+  // Fase en la cadena del cierre (captura / procesamiento / revisión). Define el
+  // flujo: la captura (auxiliar) habilita el procesamiento (asesor). Ver F1 en
+  // docs/metodologia-operacion.md. Null = sin clasificar (no participa del bloqueo).
+  fase               FaseActividad?
   orden              Int     @default(0)
   activo             Boolean @default(true)
 
@@ -688,6 +707,11 @@ model AsignacionClienteArea {
   asesorId       String?
   auxiliarId     String?
   talla          String? // S / M / L / XL — tamaño de la empresa por área
+  // El insumo (captura) de esta área lo provee el CLIENTE (auxiliar externo), no
+  // la firma. Cuando es true: no hay captura interna que auto-entregue; la entrega
+  // se marca a mano (recepción del cliente) y la demora del insumo NO es de la
+  // firma. Ver F1 en docs/metodologia-operacion.md.
+  insumoCliente  Boolean @default(false)
 
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -698,6 +722,57 @@ model AsignacionClienteArea {
   @@unique([empresaId, areaId])
   @@index([organizacionId])
   @@map("asignacion_cliente_area")
+}
+
+// ---------- Flujo del cierre: entregas de insumo y eventos (F1) ----------
+// Ver docs/metodologia-operacion.md.
+
+// Entrega del insumo de un cliente para un período. Modelo híbrido:
+//   - areaId NULL  → entrega GENERAL: habilita el procesamiento de todas las áreas.
+//   - areaId ≠ NULL → entrega POR ÁREA: adelanta solo esa área.
+// Una tarea de procesamiento se considera "habilitada" si existe la entrega
+// general o la de su área. Se crea sola cuando toda la captura del cliente queda
+// terminada (origen "auto") o con el botón "Entregar insumo" (origen "manual").
+model EntregaInsumo {
+  id             String   @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  periodo        String // "YYYY-MM"
+  areaId         String? // NULL = entrega general
+  entregadoPorId String?
+  origen         String   @default("manual") // "auto" | "manual"
+  entregadoEn    DateTime @default(now())
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  area         Area?        @relation(fields: [areaId], references: [id])
+  entregadoPor Usuario?     @relation(fields: [entregadoPorId], references: [id])
+
+  @@unique([empresaId, periodo, areaId])
+  @@index([organizacionId])
+  @@index([empresaId, periodo])
+  @@map("entregas_insumo")
+}
+
+// Bitácora de eventos de una tarea (cambios de estado, entrega…). Cada evento
+// guarda quién y cuándo, para medir tiempos de ciclo y de handoff más adelante.
+model EventoTarea {
+  id             String   @id @default(uuid())
+  organizacionId String
+  tareaId        String
+  tipo           String // "estado" | "entrega" | ...
+  estadoAnterior String?
+  estadoNuevo    String?
+  usuarioId      String?
+  createdAt      DateTime @default(now())
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  tarea        Tarea        @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  usuario      Usuario?     @relation(fields: [usuarioId], references: [id])
+
+  @@index([organizacionId])
+  @@index([tareaId])
+  @@map("eventos_tarea")
 }
 
 // ---------- Parametrización de vencimientos tributarios ----------

@@ -44,6 +44,16 @@ INSUMO (Auxiliar)  →  PROCESAMIENTO POR ÁREA (Asesor)  →  REVISIÓN  →  R
 y con eso **habilita y avisa** a Impuestos e Informes; *"ya puedes empezar"*. El
 control del flujo nace de modelar esa entrega, no de tareas sueltas.
 
+**¿Quién provee el insumo? Firma o cliente.** No siempre la firma pone el auxiliar
+contable. En algunos servicios el **auxiliar es del cliente**, así que el insumo
+**no depende de nosotros**. Se marca por **cliente × área** (`AsignacionClienteArea.insumoCliente`):
+- **Insumo de la firma** (interno) — hay captura interna; la entrega puede ser
+  **automática** al terminar esa captura. La demora del insumo **es de la firma**.
+- **Insumo del cliente** (externo) — no hay captura interna; la entrega se marca a
+  mano (**recepción del cliente**) y esa demora **no es de la firma** (se mide como
+  cumplimiento del cliente, y el *lead time* separa la espera al cliente de nuestro
+  procesamiento). Es la razón de fondo del modelo **híbrido**.
+
 ## 2. Roles y responsabilidades (RACI)
 
 Los roles existen en el esquema (`Rol`, `AsignacionClienteArea` con asesor/auxiliar
@@ -143,8 +153,17 @@ base se agregan los **tiempos** cuando existan los eventos con marca de tiempo.
 - **F0 — Fijar la metodología.** Este documento + su mapa visual, validados con el
   equipo. *(en curso)*
 - **F1 — La columna vertebral.** Eventos de transición con marca de tiempo + evento
-  de **entrega** que notifica + **dependencias** mínimas (insumo del área →
-  procesamiento del área).
+  de **entrega** que notifica + **dependencias** (insumo → procesamiento).
+  **Diseño confirmado:**
+  - **Fase por actividad** (`ActividadPlan.fase`: captura / procesamiento / revisión).
+  - **Entrega híbrida** (`EntregaInsumo`): una **general** (habilita todas las áreas)
+    y opcionales **por área** (adelantan una). Una tarea de procesamiento se
+    **habilita** si existe la entrega general **o** la de su área.
+  - **Disparo mixto:** entrega general **automática** cuando toda la captura del
+    cliente queda *terminada*, **y** botones (general / por área) para adelantarla.
+  - **Eventos** (`EventoTarea`): cada cambio de estado registra quién y cuándo.
+  - Incrementos: **F1.1** fundamentos (fase + tablas + registro de eventos) ·
+    **F1.2** entrega + bloqueo/habilitación · **F1.3** bandeja "listo para procesar".
 - **F2 — Vistas por rol.** Bandeja del asesor, *Mi día* del auxiliar, tablero de
   flujo del coordinador/gerente — todas sobre la misma columna.
 - **F3 — Medición de tiempos.** Lead time, tiempo de handoff, cumplimiento **a
