@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { alcancePortal } from '../auth/alcance-db.js';
 
 export const visitasRouter = Router();
 
@@ -105,19 +106,6 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
     })),
   });
 });
-
-// Alcance de empresas visibles para el PORTAL: 'todas' (usuario de la firma) |
-// string[] (cliente ligado a empresa/grupo) | null (sin acceso).
-async function alcancePortal(u: AuthedRequest['user'], orgId: string): Promise<'todas' | string[] | null> {
-  if (!u) return null;
-  if (esUsuarioFirma(u)) return 'todas';
-  if (u.empresaCliente) return [u.empresaCliente];
-  if (u.grupoCliente) {
-    const empresas = await prisma.empresa.findMany({ where: { organizacionId: orgId, grupoId: u.grupoCliente }, select: { id: true } });
-    return empresas.map((e) => e.id);
-  }
-  return null;
-}
 
 // GET /visitas/portal — visitas del cliente (solo lectura) con su acta completa.
 // Aislado por empresa/grupo del cliente; el usuario de la firma puede ver todo.

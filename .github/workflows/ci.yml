@@ -41,5 +41,8 @@ jobs:
       - name: Compilar API (typecheck)
         run: npm run build --workspace=apps/api
 
+      - name: Pruebas (aislamiento del portal y accesos por rol)
+        run: npm test
+
       - name: Construir Web
         run: npm run build --workspace=apps/web
