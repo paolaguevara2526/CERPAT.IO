@@ -454,15 +454,20 @@ function MultiSelect({ label, opciones, sel, onChange, etiquetar, color, anchoMe
   etiquetar?: (o: string) => string; color?: (o: string) => string | undefined; anchoMenu?: number;
 }) {
   const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!abierto) return;
+    if (!abierto) { setBusqueda(''); return; }
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [abierto]);
   const resumen = sel.length === 0 ? 'Todos' : sel.length === 1 ? sel[0] : `${sel.length} seleccionados`;
   const toggle = (o: string) => onChange(sel.includes(o) ? sel.filter((x) => x !== o) : [...sel, o]);
+  // Buscador (para listas largas, p. ej. clientes): filtra por texto sin acentos.
+  const conBuscador = opciones.length > 8;
+  const normb = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const visibles = busqueda.trim() ? opciones.filter((o) => normb(etiquetar ? etiquetar(o) : o).includes(normb(busqueda.trim()))) : opciones;
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button type="button" onClick={() => setAbierto((v) => !v)} title={`Filtrar por ${label.toLowerCase()}`}
@@ -472,9 +477,14 @@ function MultiSelect({ label, opciones, sel, onChange, etiquetar, color, anchoMe
         <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--muted)' }}>▾</span>
       </button>
       {abierto && (
-        <div className="panel" style={{ position: 'absolute', zIndex: 30, top: 'calc(100% + 4px)', left: 0, minWidth: anchoMenu ?? 190, maxHeight: 300, overflowY: 'auto', padding: 6, boxShadow: '0 8px 26px rgba(10,18,34,0.20)' }}>
+        <div className="panel" style={{ position: 'absolute', zIndex: 30, top: 'calc(100% + 4px)', left: 0, minWidth: anchoMenu ?? 190, maxHeight: 320, overflowY: 'auto', padding: 6, boxShadow: '0 8px 26px rgba(10,18,34,0.20)' }}>
+          {conBuscador && (
+            <input autoFocus value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder={`Buscar ${label.toLowerCase()}…`}
+              style={{ ...selStyle, width: '100%', marginBottom: 6, position: 'sticky', top: -6, cursor: 'text' }} />
+          )}
           {opciones.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)', padding: '6px 8px' }}>Sin opciones este mes</div>}
-          {opciones.map((o) => {
+          {opciones.length > 0 && visibles.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)', padding: '6px 8px' }}>Sin resultados para “{busqueda}”</div>}
+          {visibles.map((o) => {
             const activo = sel.includes(o);
             const col = color?.(o);
             return (
