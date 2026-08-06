@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { descargarXlsx, hoyISO, enLotes } from './exportar';
+import ImportarAsignacionesModal from './ImportarAsignacionesModal';
 
 type Empresa = { id: string; nombre: string };
 type Usuario = { id: string; nombre: string };
@@ -33,6 +34,7 @@ export default function PlanClienteEditor() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
   const [progreso, setProgreso] = useState(0);
+  const [importar, setImportar] = useState(false);
   const [periodo, setPeriodo] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`; });
 
   useEffect(() => {
@@ -181,10 +183,17 @@ export default function PlanClienteEditor() {
           <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>Plan de trabajo por cliente</h2>
           <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 14px' }}>Elige el cliente y, por cada área: define el <b>asesor</b> y <b>auxiliar</b> responsables, marca qué <b>actividades</b> tiene en su plan y su periodicidad. Luego genera sus tareas del período.</p>
         </div>
-        <button className="dbtn" onClick={descargarTodos} disabled={exportando || empresas.length === 0} style={{ fontSize: 13, whiteSpace: 'nowrap' }} title="Descarga en Excel el plan de trabajo de todos los clientes">
-          {exportando ? `Generando… ${progreso}%` : '⬇ Descargar todos (Excel)'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="dbtn" onClick={descargarTodos} disabled={exportando || empresas.length === 0} style={{ fontSize: 13, whiteSpace: 'nowrap' }} title="Descarga en Excel el plan de trabajo de todos los clientes">
+            {exportando ? `Generando… ${progreso}%` : '⬇ Descargar todos (Excel)'}
+          </button>
+          <button className="dbtn" onClick={() => setImportar(true)} style={{ fontSize: 13, whiteSpace: 'nowrap' }} title="Carga masiva de asesor/auxiliar/talla por Cliente × Área desde el Excel descargado">
+            ⬆ Importar asignaciones (Excel)
+          </button>
+        </div>
       </div>
+
+      {importar && <ImportarAsignacionesModal onClose={() => setImportar(false)} onImported={() => { setAviso('Asignaciones importadas correctamente.'); if (empresaId) cargarPlan(empresaId); }} />}
 
       {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
       {aviso && <div style={{ background: '#E7F6EC', color: '#027a48', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{aviso}</div>}
