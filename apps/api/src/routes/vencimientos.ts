@@ -235,6 +235,34 @@ vencimientosRouter.get('/portal-pagos', requireAuth, async (req: AuthedRequest, 
   });
 });
 
+// GET /vencimientos/portal?anio=&mes= — vencimientos del cliente para el
+// Calendario (solo lectura, aislado por NIT/grupo). Si viene mes, filtra ese mes.
+vencimientosRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgCerpat();
+  if (!org) return res.json({ vencimientos: [] });
+  const alcance = await alcancePortal(req.user, org.id);
+  if (alcance === null) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
+  const scope = alcance === 'todas' ? {} : { empresaId: { in: alcance } };
+  const anio = Number(req.query.anio) || new Date().getFullYear();
+  const mes = Number(req.query.mes);
+  const where: any = { organizacionId: org.id, anio, generado: true, ...scope };
+  if (Number.isFinite(mes) && mes >= 1 && mes <= 12) {
+    where.fechaVencimiento = { gte: new Date(Date.UTC(anio, mes - 1, 1)), lt: new Date(Date.UTC(anio, mes, 1)) };
+  }
+  const items = await prisma.vencimientoEmpresa.findMany({
+    where, orderBy: { fechaVencimiento: 'asc' },
+    select: { id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } } },
+  });
+  const hoy = new Date();
+  res.json({
+    vencimientos: items.map((v) => ({
+      id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
+      empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+      vencido: !PRESENTADOS.includes(v.estado) && v.estado !== 'no_obligado' && v.fechaVencimiento < hoy,
+    })),
+  });
+});
+
 // GET /vencimientos/pendientes — pagos pendientes agregados a mano
 // (generado=false), de cualquier año. Sirve para registrar deudas de años
 // anteriores o impuestos que no se cargaron al sistema. Alimenta la sección
