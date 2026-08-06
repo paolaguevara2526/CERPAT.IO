@@ -50,6 +50,15 @@ async function orgCerpat() {
   return prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
 }
 
+// Normaliza texto (sin acentos/mayúsculas) para emparejar municipios/nombres.
+const norm = (s: string) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+// Alias de municipios cuyo nombre/departamento en los Excel difiere del catálogo.
+const ALIAS_MUNI: Record<string, { nombre: string; departamento: string }> = {
+  'bogota|d.c.': { nombre: 'Bogotá, D.C.', departamento: 'Bogotá, D.C.' },
+  'bogota|bogota': { nombre: 'Bogotá, D.C.', departamento: 'Bogotá, D.C.' },
+  'cartagena|bolivar': { nombre: 'Cartagena De Indias', departamento: 'Bolívar' },
+};
+
 // GET /vencimientos?anio=&empresaId=&mes=&estado=
 vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
@@ -254,6 +263,93 @@ vencimientosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
     select: { id: true },
   });
   res.status(201).json({ ok: true, id: creado.id });
+});
+
+// POST /vencimientos/importar — carga masiva de vencimientos desde un Excel/CSV
+// (parseado en el navegador y enviado como filas JSON). Cada fila crea un
+// VencimientoEmpresa "a mano" (generado=false). Empareja cliente por NIT (o
+// nombre) y municipio por nombre+departamento. Es idempotente (no duplica: misma
+// empresa · municipio · fecha · obligación · año). Con dryRun (por defecto) solo
+// previsualiza el plan; sin dryRun escribe. Solo Administrador / root.
+vencimientosRouter.post('/importar', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede importar vencimientos.' });
+  const org = await orgCerpat();
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const b = req.body ?? {};
+
+  const obligacion = typeof b.obligacion === 'string' ? b.obligacion.trim() : '';
+  if (!obligacion) return res.status(422).json({ error: 'Indica la obligación (p. ej. "Exógena municipal (medios magnéticos)").' });
+  const anio = Number(b.anio);
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) return res.status(422).json({ error: 'Año inválido.' });
+  const periodicidad = typeof b.periodicidad === 'string' && b.periodicidad.trim() ? b.periodicidad.trim() : null;
+  const dryRun = b.dryRun !== false; // por defecto previsualiza (no escribe)
+  const filas = Array.isArray(b.filas) ? b.filas : [];
+  if (!filas.length) return res.status(422).json({ error: 'El archivo no tiene filas para importar.' });
+  if (filas.length > 2000) return res.status(422).json({ error: 'Demasiadas filas (máx. 2000 por carga).' });
+
+  // Índices de empresas (por NIT en dígitos, y por nombre) y municipios.
+  const soloDig = (s: unknown) => String(s ?? '').replace(/\D/g, '');
+  const empresas = await prisma.empresa.findMany({ where: { organizacionId: org.id }, select: { id: true, nombre: true, nit: true } });
+  const empPorNit = new Map<string, { id: string; nombre: string }>();
+  for (const e of empresas) { const d = soloDig(e.nit); if (d) empPorNit.set(d, e); }
+  const empPorNombre = new Map(empresas.map((e) => [norm(e.nombre), e]));
+
+  const munis = await prisma.municipio.findMany({ where: { organizacionId: org.id }, select: { id: true, nombre: true, departamento: true } });
+  const mByND = new Map(munis.map((m) => [`${norm(m.nombre)}|${norm(m.departamento)}`, m]));
+  const mByN = new Map<string, typeof munis>();
+  for (const m of munis) { const k = norm(m.nombre); (mByN.get(k) ?? mByN.set(k, []).get(k)!).push(m); }
+  const resolverMuni = (mu: string, dep: string): { muni: (typeof munis)[number] | null; ok: boolean } => {
+    if (!mu.trim()) return { muni: null, ok: true }; // sin municipio (obligación no municipal)
+    const t = ALIAS_MUNI[`${norm(mu)}|${norm(dep)}`] ?? { nombre: mu, departamento: dep };
+    const ex = mByND.get(`${norm(t.nombre)}|${norm(t.departamento)}`);
+    if (ex) return { muni: ex, ok: true };
+    const c = mByN.get(norm(t.nombre)) ?? [];
+    return c.length === 1 ? { muni: c[0], ok: true } : { muni: null, ok: false };
+  };
+
+  const fechaSolo = (v: unknown): Date | null => {
+    if (typeof v !== 'string') return null;
+    const s = v.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    const d = new Date(`${s}T00:00:00.000Z`);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  // Dedup contra lo ya cargado de esa obligación/año.
+  const existentes = await prisma.vencimientoEmpresa.findMany({ where: { organizacionId: org.id, anio, obligacion }, select: { empresaId: true, municipioId: true, fechaVencimiento: true } });
+  const clave = (empId: string, muniId: string | null, fISO: string) => `${empId}|${muniId ?? ''}|${fISO}`;
+  const yaHay = new Set(existentes.map((v) => clave(v.empresaId, v.municipioId, v.fechaVencimiento.toISOString().slice(0, 10))));
+
+  const datos: any[] = [];
+  const preview: string[] = [];
+  const problemas: string[] = [];
+  let duplicados = 0;
+
+  filas.forEach((f: any, i: number) => {
+    const linea = i + 1;
+    const nitDig = soloDig(f?.nit);
+    const empresa = nitDig ? empPorNit.get(nitDig) : (f?.empresa ? empPorNombre.get(norm(String(f.empresa))) : undefined);
+    if (!empresa) { problemas.push(`Fila ${linea}: cliente no encontrado (${f?.nit || f?.empresa || 'sin dato'}).`); return; }
+    const { muni, ok } = resolverMuni(f?.municipio ? String(f.municipio) : '', f?.departamento ? String(f.departamento) : '');
+    if (!ok) { problemas.push(`Fila ${linea}: municipio no encontrado (${f?.municipio} / ${f?.departamento}).`); return; }
+    const fecha = fechaSolo(String(f?.fecha ?? ''));
+    if (!fecha) { problemas.push(`Fila ${linea}: fecha inválida (${f?.fecha ?? 'vacía'}); usa AAAA-MM-DD.`); return; }
+    const fISO = fecha.toISOString().slice(0, 10);
+    const k = clave(empresa.id, muni ? muni.id : null, fISO);
+    if (yaHay.has(k)) { duplicados++; return; }
+    yaHay.add(k);
+    let valorPago: number | null = null;
+    if (f?.valor != null && f.valor !== '') { const n = Number(f.valor); if (isFinite(n) && n >= 0) valorPago = n; }
+    const periodo = typeof f?.periodo === 'string' && f.periodo.trim() ? f.periodo.trim() : null;
+    datos.push({ organizacionId: org.id, empresaId: empresa.id, anio, obligacion, periodicidad, periodo, municipioId: muni ? muni.id : null, fechaVencimiento: fecha, valorPago, generado: false });
+    if (preview.length < 60) preview.push(`${empresa.nombre}${muni ? ` · ${muni.nombre}` : ''} · ${fISO}`);
+  });
+
+  if (dryRun) {
+    return res.json({ dryRun: true, totalFilas: filas.length, crear: datos.length, duplicados, problemas, preview });
+  }
+  if (datos.length) await prisma.vencimientoEmpresa.createMany({ data: datos });
+  return res.json({ dryRun: false, creados: datos.length, duplicados, problemas });
 });
 
 // POST /vencimientos/regenerar/:empresaId — regenera los vencimientos
