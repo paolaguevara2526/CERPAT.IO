@@ -144,6 +144,79 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
     } catch { setError('Error de red.'); setGuardando(false); }
   }
 
+  // ----- Acta imprimible (Fase 2): abre una ventana lista para imprimir/PDF -----
+  function imprimirActa() {
+    const esc = (s: string) => (s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+    const nombre = (arr: Opcion[], id: string) => arr.find((x) => x.id === id)?.nombre ?? '';
+    const fechaLarga = (iso: string) => { if (!iso) return '—'; try { return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }); } catch { return iso; } };
+    const cliente = nombre(datos.empresas, form.empresaId) || '—';
+    const asesor = nombre(datos.usuarios, form.responsableId) || '—';
+    const estadoLabel = VISITA_ESTADOS.find((s) => s.k === form.estado)?.label ?? form.estado;
+
+    const lista = (items: string[]) => items.filter((t) => t.trim()).map((t, i) => `<li>${esc(t)}</li>`).join('') || '<li class="vacio">—</li>';
+    const compromisoFilas = compromisos.filter((c) => c.descripcion.trim()).map((c) => {
+      const resp = c.responsableTipo === 'cliente' ? (esc(c.responsableExterno) || '—') : (esc(nombre(datos.usuarios, c.responsableId)) || '—');
+      const dir = c.responsableTipo === 'cliente' ? 'Cliente' : 'Firma';
+      const est = COMPROMISO_ESTADOS.find((s) => s.k === c.estado)?.label ?? c.estado;
+      return `<tr><td>${esc(c.descripcion)}</td><td>${resp}<br><span class="mini">${dir}</span></td><td>${esc(c.area) || '—'}</td><td>${c.fechaLimite ? fechaLarga(c.fechaLimite) : '—'}</td><td>${est}</td></tr>`;
+    }).join('') || '<tr><td colspan="5" class="vacio">Sin compromisos.</td></tr>';
+
+    const w = window.open('', '_blank');
+    if (!w) { setError('Habilita las ventanas emergentes para imprimir el acta.'); return; }
+    w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Acta de visita — ${esc(cliente)}</title>
+    <style>
+      *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;color:#16233b;}
+      body{margin:0;padding:0;}
+      .doc{max-width:720px;margin:0 auto;padding:26px 30px;}
+      .head{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2.5px solid #23406e;padding-bottom:10px;margin-bottom:16px;}
+      .brand{font-size:20px;font-weight:800;color:#23406e;letter-spacing:.5px;}
+      .brand small{display:block;font-size:10px;font-weight:600;color:#5b6a82;letter-spacing:2px;text-transform:uppercase;}
+      h1{font-size:16px;margin:0;text-align:right;color:#23406e;} h1 small{display:block;font-size:10.5px;color:#5b6a82;font-weight:600;}
+      .datos{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;font-size:12px;margin-bottom:6px;}
+      .datos div{padding:4px 0;border-bottom:1px solid #eef1f6;}
+      .datos b{color:#5b6a82;font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;display:block;}
+      h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:#23406e;border-bottom:1px solid #e2e7ef;padding-bottom:4px;margin:18px 0 8px;}
+      ol{margin:0;padding-left:20px;} ol li{font-size:12px;margin:3px 0;} .vacio{color:#9aa3b2;list-style:none;margin-left:-16px;}
+      table{width:100%;border-collapse:collapse;font-size:11px;margin-top:4px;}
+      th{background:#f1f3f7;text-align:left;padding:6px 8px;border:1px solid #d6dae2;font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:#5b6a82;}
+      td{padding:6px 8px;border:1px solid #d6dae2;vertical-align:top;} .mini{font-size:9px;color:#7a5bd0;font-weight:700;text-transform:uppercase;}
+      .firmas{display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:46px;}
+      .firma{border-top:1.5px solid #16233b;padding-top:7px;text-align:center;}
+      .firma b{display:block;font-size:12px;} .firma span{font-size:10.5px;color:#5b6a82;}
+      .foot{margin-top:26px;font-size:9.5px;color:#9aa3b2;text-align:center;}
+      @media print{@page{size:A4 portrait;margin:14mm;} .doc{padding:0;}}
+    </style></head><body><div class="doc">
+      <div class="head">
+        <div class="brand">CERPAT<small>Planeador contable</small></div>
+        <h1>ACTA DE VISITA<small>${fechaLarga(form.fecha)}</small></h1>
+      </div>
+      <div class="datos">
+        <div><b>Cliente</b>${esc(cliente)}</div>
+        <div><b>Responsable (asesor/auditor)</b>${esc(asesor)}</div>
+        <div><b>Fecha</b>${fechaLarga(form.fecha)}${form.hora ? ` · ${esc(form.hora)}` : ''}</div>
+        <div><b>Estado</b>${esc(estadoLabel)}</div>
+        <div><b>Área / proceso</b>${esc(form.area) || '—'}</div>
+        <div><b>Lugar</b>${esc(form.lugar) || '—'}</div>
+      </div>
+      <div style="font-size:12px;padding:6px 0;"><b style="color:#5b6a82;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;display:block;">Objetivo / motivo</b>${esc(form.objetivo) || '—'}</div>
+
+      <h2>Actividades realizadas</h2><ol>${lista(actividades)}</ol>
+      <h2>Compromisos adquiridos</h2>
+      <table><thead><tr><th>Compromiso</th><th>Responsable</th><th>Área</th><th>Fecha límite</th><th>Estado</th></tr></thead><tbody>${compromisoFilas}</tbody></table>
+      <h2>Recomendaciones / sugerencias</h2><ol>${lista(recomendaciones)}</ol>
+      <h2>Observaciones</h2><ol>${lista(observaciones)}</ol>
+
+      <div class="firmas">
+        <div class="firma"><b>${esc(asesor)}</b><span>Asesor / Auditor · CERPAT</span></div>
+        <div class="firma"><b>&nbsp;</b><span>Representante del cliente · ${esc(cliente)}</span></div>
+      </div>
+      <div class="foot">Documento generado desde el Planeador CERPAT.</div>
+    </div></body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 350);
+  }
+
   async function eliminarVisita() {
     if (!editar || !confirm('¿Eliminar esta visita y su acta?')) return;
     setGuardando(true);
@@ -252,10 +325,11 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
                 {editar ? <button className="dbtn" onClick={eliminarVisita} disabled={guardando} style={{ fontSize: 13, color: '#cf4436', borderColor: '#f3d4d0' }}>Eliminar</button> : <span />}
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="dbtn" onClick={onClose} style={{ fontSize: 13 }}>Cancelar</button>
+                  <button className="dbtn" onClick={imprimirActa} style={{ fontSize: 13 }}>🖨 Imprimir acta</button>
                   <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13 }}>{guardando ? 'Guardando…' : editar ? 'Guardar acta' : 'Agendar visita'}</button>
                 </div>
               </div>
-              {editar && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>Los compromisos se guardan al salir de cada campo; las listas del acta, con “Guardar acta”.</p>}
+              {editar && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>Los compromisos se guardan al salir de cada campo; las listas del acta, con “Guardar acta”. Guarda antes de imprimir para el acta definitiva.</p>}
             </>
           )}
         </div>
