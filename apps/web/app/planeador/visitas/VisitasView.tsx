@@ -98,7 +98,8 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Visitas</h1>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <a href="/mis-visitas" title="Ver el portal como lo ve el cliente" className="dbtn" style={{ textDecoration: 'none', fontSize: 12.5, marginRight: 4 }}>👁 Portal del cliente</a>
           <button onClick={() => setTab('lista')} style={tabBtn('lista', 'Lista')}>📋 Lista</button>
           <button onClick={() => setTab('seguimiento')} style={tabBtn('seguimiento', 'Seguimiento')}>📊 Seguimiento</button>
         </div>
