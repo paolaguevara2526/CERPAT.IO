@@ -16,7 +16,7 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
   // Cliente externo (Revisoría Fiscal) sin rol de personal: va al portal.
   const STAFF = ['Administrador', 'Coordinador', 'Asesor', 'Auditor', 'Auxiliar'];
   const esStaff = sesion.esRoot || sesion.roles.some((r) => STAFF.includes(r));
-  if (!esStaff && (sesion.empresaCliente || sesion.grupoCliente)) redirect('/hallazgos');
+  if (!esStaff && (sesion.empresaCliente || sesion.grupoCliente)) redirect('/portal');
 
   return (
     <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '14px', display: 'flex', justifyContent: 'center' }}>
