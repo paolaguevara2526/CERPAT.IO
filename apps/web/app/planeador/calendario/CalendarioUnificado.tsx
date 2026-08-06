@@ -253,25 +253,30 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
     const w = window.open('', '_blank');
     if (!w) return;
     const titulo = `${MESES[m - 1]} ${y}`;
+    const festivosImp = festivosColombia(y); // festivos de Colombia del año visible
     const filas: string[] = [];
     for (let i = 0; i < celdas.length; i += 7) {
       const semanaCeldas = mostrarFinde ? celdas.slice(i, i + 7) : celdas.slice(i, i + 5);
       const semana = semanaCeldas.map((dia) => {
         if (!dia) return '<td class="empty"></td>';
-        const items = porDia.get(`${mes}-${pad(dia)}`) ?? [];
+        const diaISO = `${mes}-${pad(dia)}`;
+        const esFestivo = festivosImp.has(diaISO);
+        const items = porDia.get(diaISO) ?? [];
         const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}">${e.tipo === 'visita' ? '<i style="color:#e11900;font-weight:800;text-transform:uppercase">🤝 Visita</i>' : ''}<b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}${e.municipio ? `<span class="muni">📍 ${escapar(e.municipio)}</span>` : ''}${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
-        return `<td><div class="dn">${dia}</div>${cards}</td>`;
+        return `<td${esFestivo ? ' class="fest"' : ''}><div class="dn${esFestivo ? ' festdn' : ''}">${dia}${esFestivo ? ' <span class="ftag">Festivo</span>' : ''}</div>${cards}</td>`;
       }).join('');
       filas.push(`<tr>${semana}</tr>`);
     }
     w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Calendario ${titulo}</title>
     <style>
-      *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;}
+      *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
       h1{font-size:18px;margin:0 0 4px;} .sub{color:#667;font-size:12px;margin:0 0 12px;}
       table{width:100%;border-collapse:collapse;table-layout:fixed;}
       th{background:#f1f3f7;font-size:10px;text-transform:uppercase;letter-spacing:.4px;padding:6px 4px;border:1px solid #d6dae2;}
       td{border:1px solid #d6dae2;vertical-align:top;height:96px;padding:4px;}
       td.empty{background:#fafbfc;} .dn{font-size:11px;font-weight:700;color:#556;margin-bottom:3px;}
+      td.fest{background:#fdf1f0;} .dn.festdn{color:#cf4436;}
+      .ftag{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:#cf4436;background:#f6d7d2;border-radius:8px;padding:0 4px;margin-left:4px;}
       .c{font-size:9px;padding:2px 4px;margin-bottom:3px;background:#f7f8fa;border-radius:3px;}
       .c b{display:block;} .c span{display:block;color:#667;} .c i{font-style:normal;font-size:8px;}
       .c .muni{font-weight:700;color:#334;}
