@@ -604,14 +604,16 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
   res.json({ ok: true, empresa: empresa.nombre, anio, resumen: { creados, actualizados, sinCambios, eliminados, conservadosConPago, enriquecidos }, sinCalendario });
 });
 
-// DELETE /vencimientos/:id — elimina un pago pendiente agregado a mano
-// (Administrador / root). Solo entradas manuales (generado=false); los
-// vencimientos del generador no se borran desde aquí.
+// DELETE /vencimientos/:id — elimina un vencimiento (Administrador / root).
+// Sirve tanto para los pagos pendientes agregados a mano (generado=false) como
+// para un vencimiento generado que no le aplica al cliente (p. ej. RUB en una
+// persona natural). Es un borrado puntual; si luego se regenera con la config
+// correcta, el generador ya no lo vuelve a crear.
 vencimientosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
-  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede eliminar pagos pendientes.' });
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede eliminar vencimientos.' });
   const org = await orgCerpat();
-  const r = await prisma.vencimientoEmpresa.deleteMany({ where: { id: req.params.id, organizacionId: org?.id, generado: false } });
-  if (r.count === 0) return res.status(404).json({ error: 'Pago pendiente no encontrado (o no es una entrada manual).' });
+  const r = await prisma.vencimientoEmpresa.deleteMany({ where: { id: req.params.id, organizacionId: org?.id } });
+  if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
   res.json({ ok: true });
 });
 
