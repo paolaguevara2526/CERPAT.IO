@@ -1,8 +1,10 @@
 // apps/web/app/clientes/page.tsx
 //
-// Primera vista "cableada": Server Component que consulta la API (server-side,
-// sin CORS) y muestra los clientes reales guardados en Postgres.
-// Los correos NO se muestran aquí a propósito (página pública sin auth).
+// Vista de Clientes (Gestión): Server Component que consulta la API (server-side,
+// sin CORS) y muestra los clientes reales guardados en Postgres. Los correos NO se
+// muestran aquí. Acceso restringido a Administrador/root (bloqueo por URL).
+
+import { exigirRuta } from '@/lib/acceso-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +38,7 @@ async function getEmpresas(): Promise<{ data: Respuesta | null; error: string | 
 }
 
 export default async function ClientesPage() {
+  await exigirRuta('/clientes'); // solo Administrador / root
   const { data, error } = await getEmpresas();
   const empresas = data?.empresas ?? [];
 

@@ -1,21 +1,15 @@
 // apps/web/app/vencimientos/page.tsx — Vencimientos tributarios por cliente.
 // Acceso: usuarios de la firma. Edición (estado/notas): solo Administrador / root.
 
-import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/lib/session';
+import { exigirRuta } from '@/lib/acceso-server';
 import LogoutButton from '@/app/_components/LogoutButton';
 import VencimientosView from './VencimientosView';
 
 export const dynamic = 'force-dynamic';
-const ROLES_FIRMA = ['Administrador', 'Coordinador', 'Asesor', 'Auxiliar', 'Auditor'];
 
 export default async function VencimientosPage() {
-  const sesion = await getSessionUser();
-  if (!sesion) redirect('/login');
-  if (sesion.debeCambiarPassword) redirect('/cambiar-clave');
-
-  const esFirma = sesion.esRoot || sesion.roles.some((r) => ROLES_FIRMA.includes(r));
-  if (!esFirma) redirect('/planeador');
+  // Solo Coordinador / Auditor (y Administrador). Bloquea acceso por URL.
+  const sesion = await exigirRuta('/vencimientos');
   const esEditor = sesion.esRoot || sesion.roles.includes('Administrador');
 
   return (

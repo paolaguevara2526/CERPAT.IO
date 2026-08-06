@@ -5,8 +5,7 @@
 // server-side y muestra KPIs, cumplimiento por área, seguimiento por asesor/
 // auxiliar y clientes en riesgo del período.
 
-import { redirect } from 'next/navigation';
-import { getSessionUser } from '@/lib/session';
+import { exigirRuta } from '@/lib/acceso-server';
 import LogoutButton from '@/app/_components/LogoutButton';
 
 export const dynamic = 'force-dynamic';
@@ -74,9 +73,8 @@ function TablaPersonas({ titulo, sub, filas }: { titulo: string; sub: string; fi
 }
 
 export default async function CoordinacionPage({ searchParams }: { searchParams?: { periodo?: string } }) {
-  const sesion = await getSessionUser();
-  if (!sesion) redirect('/login');
-  if (sesion.debeCambiarPassword) redirect('/cambiar-clave');
+  // Solo Coordinador / Auditor (y Administrador). Bloquea acceso por URL.
+  const sesion = await exigirRuta('/coordinacion');
 
   const periodoParam = typeof searchParams?.periodo === 'string' && /^\d{4}-\d{2}$/.test(searchParams.periodo) ? searchParams.periodo : undefined;
   const { data, error } = await getCumplimiento(periodoParam);

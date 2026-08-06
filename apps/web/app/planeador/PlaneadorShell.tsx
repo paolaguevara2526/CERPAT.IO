@@ -9,8 +9,8 @@ import TemaSelector from './TemaSelector';
 
 const CLAVE = 'cerpat_sidebar_colapsado';
 
-export default function PlaneadorShell({ esAdmin, esGestorHallazgos, children }: {
-  esAdmin: boolean; esGestorHallazgos: boolean; children: React.ReactNode;
+export default function PlaneadorShell({ roles, esRoot, children }: {
+  roles: string[]; esRoot: boolean; children: React.ReactNode;
 }) {
   const [colapsado, setColapsado] = useState(false);
   const [listo, setListo] = useState(false);
@@ -33,7 +33,7 @@ export default function PlaneadorShell({ esAdmin, esGestorHallazgos, children }:
       {/* Barra lateral deslizante */}
       <div style={{ width: colapsado ? 0 : 210, transition: listo ? 'width .2s ease' : 'none', overflow: 'hidden', flexShrink: 0 }}>
         <div style={{ width: 210, height: '100%', display: 'flex' }}>
-          <PlaneadorSidebar esAdmin={esAdmin} esGestorHallazgos={esGestorHallazgos} />
+          <PlaneadorSidebar roles={roles} esRoot={esRoot} />
         </div>
       </div>
 

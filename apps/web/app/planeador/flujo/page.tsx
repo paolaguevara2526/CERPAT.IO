@@ -4,6 +4,7 @@
 // está en riesgo. Sobre la misma columna que auxiliar y asesor.
 
 import { apiFetch } from '@/lib/session';
+import { exigirRuta } from '@/lib/acceso-server';
 import { nombrePeriodo } from '../tareas';
 
 export const dynamic = 'force-dynamic';
@@ -66,6 +67,7 @@ function Flecha() {
 }
 
 export default async function FlujoPage({ searchParams }: { searchParams?: Record<string, string> }) {
+  await exigirRuta('/planeador/flujo'); // solo Coordinador / Auditor (y Admin)
   const periodo = searchParams?.periodo && /^\d{4}-\d{2}$/.test(searchParams.periodo) ? searchParams.periodo : undefined;
   const { data, error } = await fetchFlujo(periodo);
   const r = data?.resumen;

@@ -2,14 +2,13 @@
 // Cualquier usuario de la firma puede agendar; el acta la edita el responsable o
 // coordinación (validado en el backend).
 
-import { getSessionUser } from '@/lib/session';
+import { exigirRuta } from '@/lib/acceso-server';
 import VisitasView from './VisitasView';
 
 export const dynamic = 'force-dynamic';
 
 export default async function VisitasPage() {
-  const sesion = await getSessionUser();
-  const STAFF = ['Administrador', 'Coordinador', 'Asesor', 'Auditor', 'Auxiliar'];
-  const puedeAgendar = !!sesion && (sesion.esRoot || sesion.roles.some((r) => STAFF.includes(r)));
-  return <VisitasView puedeAgendar={puedeAgendar} />;
+  // Solo Asesor / Coordinador / Auditor (y Administrador). Bloquea acceso por URL.
+  await exigirRuta('/planeador/visitas');
+  return <VisitasView puedeAgendar={true} />;
 }

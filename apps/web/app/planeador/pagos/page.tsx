@@ -6,6 +6,7 @@
 // (DIAN) a hoy. Debajo queda solo el botón "+ Agregar pago pendiente".
 
 import { apiFetch } from '@/lib/session';
+import { exigirRuta } from '@/lib/acceso-server';
 import VencimientoPagoEditor from '../VencimientoPagoEditor';
 import PendientesManuales from '../PendientesManuales';
 import BorrarPendiente from '../BorrarPendiente';
@@ -118,6 +119,7 @@ function enRiesgoPago(fechaLimite: string | null, consecuencia: string, pagado: 
 }
 
 export default async function PagosPage({ searchParams }: { searchParams?: Record<string, string> }) {
+  await exigirRuta('/planeador/pagos'); // solo Asesor / Coordinador / Auditor (y Admin)
   const cliente = searchParams?.cliente || '';
   const estado = searchParams?.estado || '';
   const anio = new Date().getFullYear();
