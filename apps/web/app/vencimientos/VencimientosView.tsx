@@ -51,6 +51,8 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [importar, setImportar] = useState(false);
   const [filtros, setFiltros] = useState<Record<Col, Set<string> | null>>(sinFiltros);
+  const [aEliminar, setAEliminar] = useState<Venc | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
   const cargarBase = useCallback(async () => {
     try {
@@ -80,6 +82,18 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
     // Cambiar estado o fecha afecta KPIs y semáforo; la fecha además reordena la lista.
     if (campo === 'estado') cargarBase();
     else if (campo === 'fechaVencimiento') { cargarBase(); cargarLista(); }
+  }
+
+  async function eliminar(v: Venc) {
+    setEliminando(true); setError(null);
+    try {
+      const r = await fetch(`/api/vencimientos/${v.id}`, { method: 'DELETE' });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.error || 'No se pudo eliminar.'); setEliminando(false); return; }
+      setItems((p) => p.filter((x) => x.id !== v.id)); // quita de la lista sin recargar todo
+      setAEliminar(null);
+      cargarBase(); // el conteo/KPIs cambia
+    } catch { setError('Error de red.'); }
+    setEliminando(false);
   }
 
   // Valores distintos por columna (Vence en orden cronológico; el resto alfabético).
@@ -145,14 +159,15 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
             {th('vence', 'Vence')}
             {th('estado', 'Estado')}
             {th('notas', 'Notas', true, { minWidth: 160 })}
+            {esEditor && <th style={{ width: 44 }}></th>}
           </tr></thead>
           <tbody>
             {cargando ? (
-              <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
+              <tr><td colSpan={esEditor ? 7 : 6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin vencimientos. Si aún no corres el generador, no habrá datos.</td></tr>
+              <tr><td colSpan={esEditor ? 7 : 6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin vencimientos. Si aún no corres el generador, no habrá datos.</td></tr>
             ) : filtrados.length === 0 ? (
-              <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Ninguno cumple los filtros.</td></tr>
+              <tr><td colSpan={esEditor ? 7 : 6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Ninguno cumple los filtros.</td></tr>
             ) : filtrados.map((v) => {
               const em = ESTADO_META[v.estado] ?? ESTADO_META.pendiente;
               return (
@@ -184,12 +199,43 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
                         style={{ width: '100%', padding: '5px 7px', borderRadius: 4, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 12, fontFamily: 'var(--ui)' }} />
                     ) : (<span style={{ color: 'var(--muted)', fontSize: 12.5 }}>{v.notas ?? '—'}</span>)}
                   </td>
+                  {esEditor && (
+                    <td style={{ textAlign: 'center' }}>
+                      <button onClick={() => setAEliminar(v)} title="Eliminar vencimiento" aria-label="Eliminar vencimiento"
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: '#cf4436', cursor: 'pointer' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H6a1 1 0 01-1-1V6M10 11v6M14 11v6" /></svg>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {aEliminar && (
+        <div onClick={() => !eliminando && setAEliminar(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
+          <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 440 }}>
+            <div className="win-bar"><span className="win-title">Eliminar vencimiento</span></div>
+            <div className="win-body" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5 }}>
+                ¿Estás seguro de querer eliminar este vencimiento? Esta acción no se puede deshacer.
+              </p>
+              <div style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 6, padding: '9px 11px', fontSize: 12.5 }}>
+                <div style={{ fontWeight: 700 }}>{aEliminar.empresa ?? '—'}</div>
+                <div style={{ color: 'var(--muted)' }}>{aEliminar.obligacion}{aEliminar.periodo ? ` · ${aEliminar.periodo}` : ''} · vence {fmtFecha(aEliminar.fechaVencimiento)}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 2 }}>
+                <button className="dbtn" onClick={() => setAEliminar(null)} disabled={eliminando} style={{ fontSize: 13 }}>Cancelar</button>
+                <button className="dbtn" onClick={() => eliminar(aEliminar)} disabled={eliminando} style={{ fontSize: 13, background: '#cf4436', borderColor: '#cf4436', color: '#fff' }}>
+                  {eliminando ? 'Eliminando…' : 'Sí, eliminar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
