@@ -146,6 +146,16 @@ y root ven todo. Un usuario con varios roles ve la **unión** de lo permitido.
 > por URL sin permiso. Esto complementa (no reemplaza) la validación por rol en cada
 > endpoint del backend.
 
+**Alcance de datos para Asesor/Auxiliar (vista acotada).** Un usuario **Asesor** o
+**Auxiliar** *sin* rol elevado (Administrador/Coordinador/Auditor) solo ve **lo suyo**
+en las vistas internas — forzado en el backend (`esStaffAcotado`):
+- **Tablero, Lista y Calendario (tareas)** → solo tareas donde es **asesor o auxiliar**.
+- **Calendario (visitas)** → solo visitas donde es el **responsable**.
+- **Calendario (vencimientos)** y **Pagos** → solo vencimientos de sus **empresas
+  asignadas** (Asignación cliente × área, donde figura como asesor o auxiliar).
+
+Coordinador, Auditor, Administrador y root ven todo. "Mi Día" siempre es del usuario.
+
 ## Seguridad (no negociable)
 
 - Contraseñas siempre con hash (bcrypt/argon2), nunca en texto plano.

@@ -13,3 +13,14 @@ export async function alcancePortal(u: UsuarioToken, orgId: string): Promise<'to
   }
   return resolverAlcance(u, grupoEmpresaIds);
 }
+
+// Empresas asignadas a un usuario (donde figura como asesor o auxiliar en la
+// Asignación cliente × área). Base del alcance de un Asesor/Auxiliar en las vistas
+// internas (Calendario/Pagos). Puede ser [] si no tiene clientes asignados.
+export async function empresasAsignadas(uid: string, orgId: string): Promise<string[]> {
+  const asigs = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: orgId, OR: [{ asesorId: uid }, { auxiliarId: uid }] },
+    select: { empresaId: true },
+  });
+  return [...new Set(asigs.map((a) => a.empresaId))];
+}

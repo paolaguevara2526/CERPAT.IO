@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { esFirma, resolverAlcance } from './alcance.js';
+import { esFirma, resolverAlcance, esStaffAcotado } from './alcance.js';
 
 const firma = { esRoot: false, roles: ['Coordinador'], empresaCliente: null, grupoCliente: null };
 const root = { esRoot: true, roles: [], empresaCliente: null, grupoCliente: null };
@@ -48,4 +48,25 @@ test('sin vínculo y sin sesión → sin acceso (null)', () => {
 test('el cliente por empresa ignora ids de grupo ajenos', () => {
   // Aunque llegue una lista de grupo, un cliente ligado a empresa solo ve la suya.
   assert.deepEqual(resolverAlcance(clienteEmpresa, ['emp-X', 'emp-Y']), ['emp-A']);
+});
+
+// --- esStaffAcotado: Asesor/Auxiliar sin rol elevado ven SOLO lo suyo ---
+test('Asesor y Auxiliar (sin rol elevado) tienen vista acotada', () => {
+  assert.equal(esStaffAcotado({ esRoot: false, roles: ['Asesor'], empresaCliente: null, grupoCliente: null }), true);
+  assert.equal(esStaffAcotado({ esRoot: false, roles: ['Auxiliar'], empresaCliente: null, grupoCliente: null }), true);
+});
+
+test('un rol elevado o root NO es acotado (ve todo)', () => {
+  assert.equal(esStaffAcotado({ esRoot: false, roles: ['Coordinador'], empresaCliente: null, grupoCliente: null }), false);
+  assert.equal(esStaffAcotado({ esRoot: false, roles: ['Auditor'], empresaCliente: null, grupoCliente: null }), false);
+  assert.equal(esStaffAcotado({ esRoot: false, roles: ['Administrador'], empresaCliente: null, grupoCliente: null }), false);
+  assert.equal(esStaffAcotado(root), false);
+  // Asesor que además es Coordinador: gana el rol elevado (ve todo).
+  assert.equal(esStaffAcotado({ esRoot: false, roles: ['Asesor', 'Coordinador'], empresaCliente: null, grupoCliente: null }), false);
+});
+
+test('un cliente externo no es staff acotado', () => {
+  assert.equal(esStaffAcotado(clienteEmpresa), false);
+  assert.equal(esStaffAcotado(clienteGrupo), false);
+  assert.equal(esStaffAcotado(null), false);
 });

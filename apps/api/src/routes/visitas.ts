@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { alcancePortal } from '../auth/alcance-db.js';
+import { esStaffAcotado } from '../auth/alcance.js';
 
 export const visitasRouter = Router();
 
@@ -77,6 +78,8 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   if (typeof req.query.empresaId === 'string' && req.query.empresaId) where.empresaId = req.query.empresaId;
   if (typeof req.query.responsableId === 'string' && req.query.responsableId) where.responsableId = req.query.responsableId;
   if (typeof req.query.estado === 'string' && ESTADOS_VISITA.includes(req.query.estado)) where.estado = req.query.estado;
+  // Alcance: un Asesor/Auxiliar solo ve las visitas donde es el responsable.
+  if (esStaffAcotado(req.user)) where.responsableId = req.user!.sub;
 
   const visitas = await prisma.visita.findMany({
     where,

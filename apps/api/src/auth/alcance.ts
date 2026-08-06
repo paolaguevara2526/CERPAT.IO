@@ -11,6 +11,16 @@ export function esFirma(u: UsuarioToken): boolean {
   return !!u && (u.esRoot || (u.roles.length > 0 && !u.empresaCliente && !u.grupoCliente));
 }
 
+// ¿Es personal con vista ACOTADA a lo suyo? Asesor/Auxiliar SIN rol elevado
+// (Administrador/Coordinador/Auditor) ni root: solo ve lo de sus empresas/tareas
+// asignadas. Un rol elevado o root ve todo (devuelve false).
+export function esStaffAcotado(u: UsuarioToken): boolean {
+  if (!u || u.esRoot) return false;
+  if (u.empresaCliente || u.grupoCliente) return false; // cliente externo, no personal
+  if (u.roles.some((r) => ['Administrador', 'Coordinador', 'Auditor'].includes(r))) return false;
+  return u.roles.some((r) => ['Asesor', 'Auxiliar'].includes(r));
+}
+
 // Alcance de empresas visibles:
 //   'todas'    → usuario de la firma (ve todo).
 //   string[]   → cliente: solo su empresa, o las empresas de su grupo.
