@@ -12,6 +12,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { alcancePortal } from '../auth/alcance-db.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
 
@@ -923,19 +924,6 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
   });
 });
 
-// Alcance del PORTAL del cliente: 'todas' (usuario de la firma) | string[]
-// (empresas del cliente por empresa/grupo) | null (sin acceso).
-async function alcancePortalPlan(u: AuthedRequest['user'], orgId: string): Promise<'todas' | string[] | null> {
-  if (!u) return null;
-  const esFirma = u.esRoot || (u.roles.length > 0 && !u.empresaCliente && !u.grupoCliente);
-  if (esFirma) return 'todas';
-  if (u.empresaCliente) return [u.empresaCliente];
-  if (u.grupoCliente) {
-    const empresas = await prisma.empresa.findMany({ where: { organizacionId: orgId, grupoId: u.grupoCliente }, select: { id: true } });
-    return empresas.map((e) => e.id);
-  }
-  return null;
-}
 const TAREA_LABEL: Record<string, string> = {
   por_iniciar: 'Por iniciar', en_curso: 'En curso', en_revision: 'En revisión',
   terminado: 'Terminado', auditado: 'Auditado', no_realizado: 'No realizado',
@@ -947,7 +935,7 @@ planRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   const anio = Number(req.query.anio) || new Date().getFullYear();
   if (!org) return res.json({ anio, kpis: null, matriz: [], actividades: [] });
-  const alcance = await alcancePortalPlan(req.user, org.id);
+  const alcance = await alcancePortal(req.user, org.id);
   if (alcance === null) return res.status(403).json({ error: 'Sin acceso al plan de trabajo.' });
   const scope = alcance === 'todas' ? {} : { empresaId: { in: alcance } };
 

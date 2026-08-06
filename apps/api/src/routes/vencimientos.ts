@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { alcancePortal } from '../auth/alcance-db.js';
 import { vencimientosNacionales, vencimientosIca, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
@@ -48,18 +49,6 @@ function puedeEditar(u: AuthedRequest['user']): boolean {
 }
 async function orgCerpat() {
   return prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
-}
-// Alcance del PORTAL del cliente: 'todas' (usuario de la firma, para previsualizar)
-// | string[] (empresas del cliente por empresa/grupo) | null (sin acceso).
-async function alcancePortal(u: AuthedRequest['user'], orgId: string): Promise<'todas' | string[] | null> {
-  if (!u) return null;
-  if (esUsuarioFirma(u)) return 'todas';
-  if (u.empresaCliente) return [u.empresaCliente];
-  if (u.grupoCliente) {
-    const empresas = await prisma.empresa.findMany({ where: { organizacionId: orgId, grupoId: u.grupoCliente }, select: { id: true } });
-    return empresas.map((e) => e.id);
-  }
-  return null;
 }
 
 // Normaliza texto (sin acentos/mayúsculas) para emparejar municipios/nombres.
