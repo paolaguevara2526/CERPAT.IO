@@ -13,7 +13,9 @@ export default async function AdministracionPage() {
   if (!sesion) redirect('/login');
   if (sesion.debeCambiarPassword) redirect('/cambiar-clave');
   const esAdmin = sesion.esRoot || sesion.roles.includes('Administrador');
-  if (!esAdmin) redirect('/planeador');
+  const esCoordinacion = esAdmin || sesion.roles.includes('Coordinador');
+  // Coordinación entra pero solo ve Empresas, Config. tributaria y Plan por cliente.
+  if (!esCoordinacion) redirect('/planeador');
 
   return (
     <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 70% -10%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '14px', display: 'flex', justifyContent: 'center' }}>
@@ -38,7 +40,7 @@ export default async function AdministracionPage() {
         </div>
 
         <div className="win-body" style={{ padding: '18px 22px 26px' }}>
-          <AdminPanel />
+          <AdminPanel esAdmin={esAdmin} />
         </div>
 
         <div className="win-status"><span className="led" /> Administración · {sesion.nombre}</div>

@@ -13,6 +13,7 @@ import { hashPassword } from '../auth/password.js';
 export const adminRouter = Router();
 
 const soloAdmin = requireRol('Administrador');
+const soloCoordinacion = requireRol('Administrador', 'Coordinador');
 const PASSWORD_TEMPORAL_DEFECTO = 'Cerpat2026*';
 
 async function orgId(): Promise<string | null> {
@@ -329,7 +330,7 @@ adminRouter.get('/roles', requireAuth, async (_req, res) => {
   res.json({ roles });
 });
 
-adminRouter.get('/usuarios', requireAuth, soloAdmin, async (_req, res) => {
+adminRouter.get('/usuarios', requireAuth, soloCoordinacion, async (_req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const usuarios = await prisma.usuario.findMany({
@@ -449,7 +450,7 @@ function datosEmpresa(body: any): Record<string, any> {
   return data;
 }
 
-adminRouter.get('/empresas', requireAuth, soloAdmin, async (req, res) => {
+adminRouter.get('/empresas', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const incluirInactivos = req.query.incluirInactivos === '1' || req.query.incluirInactivos === 'true';
@@ -464,7 +465,7 @@ adminRouter.get('/empresas', requireAuth, soloAdmin, async (req, res) => {
   res.json({ total: items.length, items });
 });
 
-adminRouter.post('/empresas', requireAuth, soloAdmin, async (req, res) => {
+adminRouter.post('/empresas', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data = datosEmpresa(req.body);
@@ -473,7 +474,7 @@ adminRouter.post('/empresas', requireAuth, soloAdmin, async (req, res) => {
   res.status(201).json({ ok: true, id: e.id });
 });
 
-adminRouter.patch('/empresas/:id', requireAuth, soloAdmin, async (req, res) => {
+adminRouter.patch('/empresas/:id', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data = datosEmpresa(req.body);
@@ -483,7 +484,7 @@ adminRouter.patch('/empresas/:id', requireAuth, soloAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-adminRouter.delete('/empresas/:id', requireAuth, soloAdmin, async (req, res) => {
+adminRouter.delete('/empresas/:id', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   try {
@@ -527,7 +528,7 @@ adminRouter.get('/config-tributaria/:empresaId', requireAuth, async (req, res) =
 });
 
 // Guardar config nacional (upsert).
-adminRouter.put('/config-tributaria/:empresaId', requireAuth, soloAdmin, async (req, res) => {
+adminRouter.put('/config-tributaria/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
@@ -548,7 +549,7 @@ adminRouter.put('/config-tributaria/:empresaId', requireAuth, soloAdmin, async (
 });
 
 // Agregar un municipio ICA a la empresa.
-adminRouter.post('/config-tributaria/:empresaId/ica', requireAuth, soloAdmin, async (req, res) => {
+adminRouter.post('/config-tributaria/:empresaId/ica', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
@@ -574,7 +575,7 @@ adminRouter.post('/config-tributaria/:empresaId/ica', requireAuth, soloAdmin, as
 });
 
 // Editar un municipio ICA.
-adminRouter.patch('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloAdmin, async (req, res) => {
+adminRouter.patch('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const b = req.body ?? {};
@@ -591,7 +592,7 @@ adminRouter.patch('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloA
 });
 
 // Quitar un municipio ICA.
-adminRouter.delete('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloAdmin, async (req, res) => {
+adminRouter.delete('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId();
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const r = await prisma.empresaMunicipioIca.deleteMany({ where: { id: req.params.icaId, empresaId: req.params.empresaId, organizacionId: id } });
@@ -614,7 +615,6 @@ adminRouter.get('/municipios', requireAuth, async (req, res) => {
 
 // ---------- Plan de trabajo por cliente (PlanClienteActividad) ----------
 
-const soloCoordinacion = requireRol('Administrador', 'Coordinador');
 const PASO_PLAN: Record<string, number> = { Mensual: 1, Bimestral: 2, Trimestral: 3, Cuatrimestral: 4, Semestral: 6, Anual: 12 };
 function aplicaEnMesPlan(periodicidad: string | null, mes1a12: number): boolean {
   const n = PASO_PLAN[(periodicidad || '').trim()];

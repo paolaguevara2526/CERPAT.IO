@@ -34,7 +34,7 @@ export const ACCESO_RUTA: Record<string, string[]> = {
   '/clientes': [], // solo Administrador/root
   '/coordinacion': ['Coordinador', 'Auditor'],
   '/usuarios': [], // solo Administrador/root
-  '/administracion': [], // solo Administrador/root
+  '/administracion': ['Coordinador'], // Coordinador: solo Empresas, Config. tributaria y Plan por cliente
   // Servicios
   '/servicios/retenciones': TODOS,
   '/servicios/punto-equilibrio': TODOS,

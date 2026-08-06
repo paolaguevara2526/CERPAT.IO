@@ -444,7 +444,10 @@ vencimientosRouter.post('/importar', requireAuth, async (req: AuthedRequest, res
 // obligaciones de ICA marcadas que no tienen fechas en el calendario municipal.
 // Solo Administrador / root.
 vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: AuthedRequest, res) => {
-  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede regenerar vencimientos.' });
+  // Parte de "Config. tributaria": lo puede hacer Administrador o Coordinador (o root).
+  const u = req.user;
+  if (!(u && (u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)))))
+    return res.status(403).json({ error: 'Solo Administrador o Coordinación puede regenerar vencimientos.' });
   const org = await orgCerpat();
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
 

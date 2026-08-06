@@ -23,8 +23,8 @@ const CASOS: { rol: string; ve: string[]; noVe: string[] }[] = [
   },
   {
     rol: 'Coordinador',
-    ve: ['/planeador/visitas', '/planeador/pagos', '/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion'],
-    noVe: ['/clientes', '/usuarios', '/administracion', '/hallazgos'],
+    ve: ['/planeador/visitas', '/planeador/pagos', '/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion', '/administracion'],
+    noVe: ['/clientes', '/usuarios', '/hallazgos'],
   },
   {
     rol: 'Auditor',
