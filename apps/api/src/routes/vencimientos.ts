@@ -49,6 +49,18 @@ function puedeEditar(u: AuthedRequest['user']): boolean {
 async function orgCerpat() {
   return prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
 }
+// Alcance del PORTAL del cliente: 'todas' (usuario de la firma, para previsualizar)
+// | string[] (empresas del cliente por empresa/grupo) | null (sin acceso).
+async function alcancePortal(u: AuthedRequest['user'], orgId: string): Promise<'todas' | string[] | null> {
+  if (!u) return null;
+  if (esUsuarioFirma(u)) return 'todas';
+  if (u.empresaCliente) return [u.empresaCliente];
+  if (u.grupoCliente) {
+    const empresas = await prisma.empresa.findMany({ where: { organizacionId: orgId, grupoId: u.grupoCliente }, select: { id: true } });
+    return empresas.map((e) => e.id);
+  }
+  return null;
+}
 
 // Normaliza texto (sin acentos/mayúsculas) para emparejar municipios/nombres.
 const norm = (s: string) => (s || '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -171,6 +183,54 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
         diasMora: im.dias, interesMora: im.interes, sancion: san.sancion,
         empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
       };
+    }),
+  });
+});
+
+// GET /vencimientos/portal-pagos?anio= — PAGOS del cliente (solo lectura, aislado
+// por NIT/grupo). Junta las obligaciones en ciclo de pago (generadas) y los pagos
+// pendientes agregados a mano, con valor, límite, mora y sanción a hoy.
+vencimientosRouter.get('/portal-pagos', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgCerpat();
+  const anio = Number(req.query.anio) || new Date().getFullYear();
+  if (!org) return res.json({ anio, vencimientos: [], pendientes: [] });
+  const alcance = await alcancePortal(req.user, org.id);
+  if (alcance === null) return res.status(403).json({ error: 'Sin acceso a pagos.' });
+  const scope = alcance === 'todas' ? {} : { empresaId: { in: alcance } };
+  const pl = await cargarParamsLiq(org.id);
+
+  const [ciclo, manual] = await Promise.all([
+    prisma.vencimientoEmpresa.findMany({
+      where: { organizacionId: org.id, anio, generado: true, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] }, obligacion: { notIn: [...OBLIGACIONES_SIN_PAGO] }, ...scope },
+      orderBy: [{ estado: 'asc' }, { fechaVencimiento: 'asc' }],
+      select: { id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true, empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } } },
+    }),
+    prisma.vencimientoEmpresa.findMany({
+      where: { organizacionId: org.id, generado: false, ...scope },
+      orderBy: [{ estado: 'asc' }, { anio: 'desc' }, { fechaVencimiento: 'asc' }],
+      select: { id: true, obligacion: true, anio: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true, notas: true, empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } } },
+    }),
+  ]);
+
+  const calcular = (v: any, anioUvt: number) => {
+    const valor = v.valorPago != null ? Number(v.valorPago) : null;
+    const lp = limitePago(v.fechaVencimiento, v.obligacion, valor, pl.uvt);
+    const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento, new Date(), pl.tasaAnual);
+    const san = sancionAplica(v.estado, lp.consecuencia, lp.fechaLimitePago)
+      ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: pl.sancionMinUvt, pct: pl.pct, anioUvt })
+      : { meses: 0, sancion: 0 };
+    return { valor, lp, im, san };
+  };
+
+  res.json({
+    anio,
+    vencimientos: ciclo.map((v) => {
+      const { valor, lp, im, san } = calcular(v, v.fechaVencimiento.getFullYear());
+      return { id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado, valorPago: valor, fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia, diasMora: im.dias, interesMora: im.interes, sancion: san.sancion, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null };
+    }),
+    pendientes: manual.map((v) => {
+      const { valor, lp, im, san } = calcular(v, v.anio);
+      return { id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado, notas: v.notas, valorPago: valor, fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia, diasMora: im.dias, interesMora: im.interes, sancion: san.sancion, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null };
     }),
   });
 });

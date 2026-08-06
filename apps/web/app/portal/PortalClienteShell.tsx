@@ -16,7 +16,7 @@ const SECCIONES: { titulo: string; items: Item[] }[] = [
       { label: 'Calendario', icon: '📅', href: '/portal/calendario', soon: true },
       { label: 'Visitas', icon: '🤝', href: '/portal/visitas' },
       { label: 'Plan de Trabajo', icon: '📊', href: '/portal/plan', soon: true },
-      { label: 'Pagos', icon: '💲', href: '/portal/pagos', soon: true },
+      { label: 'Pagos', icon: '💲', href: '/portal/pagos' },
       { label: 'Hallazgos', icon: '🔎', href: '/portal/hallazgos' },
     ],
   },
