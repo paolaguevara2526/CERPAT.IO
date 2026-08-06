@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import VisitaModal, { VISITA_ESTADOS } from './VisitaModal';
 import FiltroColumna from '../../administracion/FiltroColumna';
+import SeguimientoVisitas from './SeguimientoVisitas';
 
 type Visita = {
   id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null;
@@ -41,6 +42,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
   const [error, setError] = useState<string | null>(null);
   const [editar, setEditar] = useState<string | 'nueva' | null>(null);
   const [filtros, setFiltros] = useState<Record<Col, Set<string> | null>>(sinFiltros);
+  const [tab, setTab] = useState<'lista' | 'seguimiento'>('lista');
 
   const cargar = useCallback(async (m: string) => {
     setCargando(true); setError(null);
@@ -87,20 +89,34 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
     </th>
   );
 
+  const tabBtn = (k: 'lista' | 'seguimiento', texto: string): React.CSSProperties => ({
+    fontSize: 13, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'var(--ui)',
+    border: '1px solid ' + (tab === k ? 'var(--navy)' : 'var(--edge-strong)'), background: tab === k ? 'var(--navy)' : 'var(--panel)', color: tab === k ? '#fff' : 'var(--muted)',
+  });
+
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Visitas</h1>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={() => setTab('lista')} style={tabBtn('lista', 'Lista')}>📋 Lista</button>
+          <button onClick={() => setTab('seguimiento')} style={tabBtn('seguimiento', 'Seguimiento')}>📊 Seguimiento</button>
+        </div>
+      </div>
+
+      {error && <div className="panel" style={{ padding: '12px 14px', color: '#b42318', fontWeight: 600, marginBottom: 10 }}>{error}</div>}
+
+      {tab === 'seguimiento' ? <SeguimientoVisitas /> : (
+      <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => setMes(desplazar(mes, -1))} className="dbtn" style={{ fontSize: 13 }}>‹</button>
           <span style={{ fontSize: 13.5, fontWeight: 700, textTransform: 'capitalize', minWidth: 140, textAlign: 'center' }}>{MESES[m - 1]} {y}</span>
           <button onClick={() => setMes(desplazar(mes, 1))} className="dbtn" style={{ fontSize: 13 }}>›</button>
           <button onClick={() => setMes(mesActual())} className="dbtn" style={{ fontSize: 12.5 }}>Hoy</button>
-          {puedeAgendar && <button className="dbtn primary" onClick={() => setEditar('nueva')} style={{ fontSize: 13 }}>＋ Agendar visita</button>}
         </div>
+        {puedeAgendar && <button className="dbtn primary" onClick={() => setEditar('nueva')} style={{ fontSize: 13 }}>＋ Agendar visita</button>}
       </div>
-
-      {error && <div className="panel" style={{ padding: '12px 14px', color: '#b42318', fontWeight: 600, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{visitasFiltradas.length}{hayFiltro ? ` de ${visitas.length}` : ''} visita(s)</span>
@@ -143,6 +159,8 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
         </div>
       </div>
       <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '8px 2px 0' }}>Haz clic en una visita para abrir su acta (objetivo, compromisos y recomendaciones). Usa el embudo (▼) de cada columna para filtrar. Las visitas también aparecen en el Calendario.</p>
+      </>
+      )}
 
       {editar && <VisitaModal id={editar === 'nueva' ? null : editar} onClose={() => setEditar(null)} onSaved={() => cargar(mes)} />}
     </>

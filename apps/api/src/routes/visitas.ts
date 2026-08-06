@@ -106,6 +106,52 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   });
 });
 
+// GET /visitas/compromisos — todos los compromisos (matriz de seguimiento y
+// dashboard). Enriquecidos con cliente, visita, responsable y asesor de la visita.
+// Filtro opcional por año de la visita (?anio=). Cualquier usuario de la firma.
+// Se define antes de /:id para no chocar con esa ruta.
+visitasRouter.get('/compromisos', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
+  const org = await orgCerpat();
+  if (!org) return res.json({ compromisos: [] });
+
+  const anio = parseInt(String(req.query.anio ?? ''), 10);
+  const visitaWhere: any = {};
+  if (Number.isFinite(anio)) visitaWhere.fecha = { gte: new Date(Date.UTC(anio, 0, 1)), lt: new Date(Date.UTC(anio + 1, 0, 1)) };
+
+  const cs = await prisma.compromisoVisita.findMany({
+    where: { organizacionId: org.id, visita: visitaWhere },
+    take: 5000,
+    orderBy: [{ fechaLimite: 'asc' }, { createdAt: 'asc' }],
+    include: {
+      responsable: { select: { id: true, nombre: true } },
+      visita: { select: { id: true, fecha: true, objetivo: true, empresa: { select: { id: true, nombre: true } }, responsable: { select: { id: true, nombre: true } } } },
+    },
+  });
+
+  return res.json({
+    compromisos: cs.map((c) => ({
+      id: c.id,
+      descripcion: c.descripcion,
+      estado: c.estado,
+      fechaLimite: c.fechaLimite ? c.fechaLimite.toISOString().slice(0, 10) : null,
+      area: c.area,
+      responsableTipo: c.responsableTipo,
+      // Nombre a mostrar del responsable (interno o externo).
+      responsable: c.responsableTipo === 'cliente' ? (c.responsableExterno ?? 'Cliente') : (c.responsable?.nombre ?? 'Sin asignar'),
+      responsableId: c.responsableId,
+      empresa: c.visita.empresa?.nombre ?? null,
+      empresaId: c.visita.empresa?.id ?? null,
+      visitaId: c.visitaId,
+      visitaFecha: c.visita.fecha.toISOString().slice(0, 10),
+      objetivo: c.visita.objetivo,
+      // Asesor de la visita (para seguimiento por asesor, incluso en compromisos del cliente).
+      asesor: c.visita.responsable?.nombre ?? null,
+      asesorId: c.visita.responsable?.id ?? null,
+    })),
+  });
+});
+
 // GET /visitas/:id — detalle con el acta completa.
 visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
