@@ -8,7 +8,7 @@ const ACCESOS: Acceso[] = [
   { titulo: 'Visitas', desc: 'Las actas de las visitas de tu equipo asesor y los compromisos acordados.', href: '/portal/visitas', icon: '🤝' },
   { titulo: 'Hallazgos', desc: 'Los hallazgos de tu Revisoría Fiscal y su estado de resolución.', href: '/portal/hallazgos', icon: '🔎' },
   { titulo: 'Calendario', desc: 'Tus visitas y las fechas de tus obligaciones tributarias.', href: '/portal/calendario', icon: '📅' },
-  { titulo: 'Plan de Trabajo', desc: 'El cumplimiento de las actividades contables de tu empresa.', href: null, icon: '📊' },
+  { titulo: 'Plan de Trabajo', desc: 'El cumplimiento de las actividades contables de tu empresa.', href: '/portal/plan', icon: '📊' },
   { titulo: 'Pagos', desc: 'Tus obligaciones por pagar, con fechas y valores.', href: '/portal/pagos', icon: '💲' },
   { titulo: 'Calculadora de retenciones', desc: 'Retención en la fuente por concepto, con tarifas al día.', href: '/servicios/retenciones', icon: '🧮', externo: true },
 ];

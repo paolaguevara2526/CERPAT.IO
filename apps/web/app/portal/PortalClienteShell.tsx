@@ -15,7 +15,7 @@ const SECCIONES: { titulo: string; items: Item[] }[] = [
       { label: 'Inicio', icon: '🏠', href: '/portal' },
       { label: 'Calendario', icon: '📅', href: '/portal/calendario' },
       { label: 'Visitas', icon: '🤝', href: '/portal/visitas' },
-      { label: 'Plan de Trabajo', icon: '📊', href: '/portal/plan', soon: true },
+      { label: 'Plan de Trabajo', icon: '📊', href: '/portal/plan' },
       { label: 'Pagos', icon: '💲', href: '/portal/pagos' },
       { label: 'Hallazgos', icon: '🔎', href: '/portal/hallazgos' },
     ],

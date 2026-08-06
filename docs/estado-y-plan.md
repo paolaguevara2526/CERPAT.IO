@@ -224,6 +224,20 @@ en [`docs/mockups/visitas-acta-seguimiento.html`](./mockups/visitas-acta-seguimi
 - [x] Fase 4 — **Portal del cliente** (solo lectura) en `/mis-visitas`, aislado por
   empresa/grupo (reusa el patrón de Hallazgos).
 
+### Módulo Portal del Cliente ✅ (en producción)
+Portal propio del cliente en `cerpat.io/portal` (menú lateral, **solo lectura**,
+aislado por **NIT/grupo**). El usuario Cliente aterriza aquí al iniciar sesión.
+- [x] Fase 1 — Shell + navegación: Inicio, Visitas y Hallazgos (reutilizados) +
+  Servicios (calculadoras públicas).
+- [x] Fase 2 — **Pagos**: obligaciones por pagar con límite, mora y sanción
+  (`GET /vencimientos/portal-pagos`).
+- [x] Fase 3 — **Calendario**: sus visitas + sus vencimientos, con festivos
+  (`GET /vencimientos/portal`).
+- [x] Fase 4 — **Plan de Trabajo**: matriz de cumplimiento (áreas × meses) +
+  listado de actividades de su empresa (`GET /plan/portal`).
+- Login del cliente: un Administrador crea el usuario Cliente en *Usuarios* (con
+  empresa o grupo); el sistema genera su contraseña temporal.
+
 ## En diseño — Plan de Trabajo Contable (cumplimiento) 🚧
 
 Dirección nueva (idea del equipo): en vez de depender de que cada usuario cargue
