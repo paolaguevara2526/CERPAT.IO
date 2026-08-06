@@ -106,6 +106,76 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   });
 });
 
+// Alcance de empresas visibles para el PORTAL: 'todas' (usuario de la firma) |
+// string[] (cliente ligado a empresa/grupo) | null (sin acceso).
+async function alcancePortal(u: AuthedRequest['user'], orgId: string): Promise<'todas' | string[] | null> {
+  if (!u) return null;
+  if (esUsuarioFirma(u)) return 'todas';
+  if (u.empresaCliente) return [u.empresaCliente];
+  if (u.grupoCliente) {
+    const empresas = await prisma.empresa.findMany({ where: { organizacionId: orgId, grupoId: u.grupoCliente }, select: { id: true } });
+    return empresas.map((e) => e.id);
+  }
+  return null;
+}
+
+// GET /visitas/portal — visitas del cliente (solo lectura) con su acta completa.
+// Aislado por empresa/grupo del cliente; el usuario de la firma puede ver todo.
+// Se define antes de /:id para no chocar con esa ruta.
+visitasRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgCerpat();
+  if (!org) return res.json({ visitas: [] });
+  const alcance = await alcancePortal(req.user, org.id);
+  if (alcance === null) return res.status(403).json({ error: 'Sin acceso al portal de visitas.' });
+
+  const where: any = { organizacionId: org.id };
+  if (alcance !== 'todas') where.empresaId = { in: alcance };
+  // El usuario de la firma puede acotar por empresa (para previsualizar).
+  if (typeof req.query.empresaId === 'string' && req.query.empresaId) where.empresaId = req.query.empresaId;
+
+  const visitas = await prisma.visita.findMany({
+    where,
+    take: 2000,
+    orderBy: { fecha: 'desc' },
+    include: {
+      empresa: { select: { id: true, nombre: true } },
+      responsable: { select: { nombre: true } },
+      items: { orderBy: { orden: 'asc' } },
+      compromisos: { orderBy: [{ fechaLimite: 'asc' }, { createdAt: 'asc' }], include: { responsable: { select: { nombre: true } } } },
+    },
+  });
+
+  return res.json({
+    esFirma: alcance === 'todas',
+    visitas: visitas.map((v) => {
+      const itemsDe = (t: TipoItem) => v.items.filter((it) => it.tipo === t).map((it) => it.texto);
+      return {
+        id: v.id,
+        empresa: v.empresa?.nombre ?? null,
+        empresaId: v.empresa?.id ?? null,
+        fecha: v.fecha.toISOString().slice(0, 10),
+        hora: v.hora,
+        lugar: v.lugar,
+        area: v.area,
+        objetivo: v.objetivo,
+        estado: v.estado,
+        asesor: v.responsable?.nombre ?? null,
+        actividades: itemsDe('actividad'),
+        recomendaciones: itemsDe('recomendacion'),
+        observaciones: itemsDe('observacion'),
+        compromisos: v.compromisos.map((c) => ({
+          descripcion: c.descripcion,
+          responsableTipo: c.responsableTipo,
+          responsable: c.responsableTipo === 'cliente' ? (c.responsableExterno ?? 'Cliente') : (c.responsable?.nombre ?? 'Sin asignar'),
+          area: c.area,
+          fechaLimite: c.fechaLimite ? c.fechaLimite.toISOString().slice(0, 10) : null,
+          estado: c.estado,
+        })),
+      };
+    }),
+  });
+});
+
 // GET /visitas/compromisos — todos los compromisos (matriz de seguimiento y
 // dashboard). Enriquecidos con cliente, visita, responsable y asesor de la visita.
 // Filtro opcional por año de la visita (?anio=). Cualquier usuario de la firma.

@@ -212,6 +212,18 @@ Portal para clientes externos (asamblea/gerencia) + revisor fiscal. Ver
 - [x] Vistas React (revisor / empresa / grupo) en `/hallazgos`.
 - [x] Administración: grupos (pestaña Grupos), asignar empresa→grupo y usuarios `Cliente` ligados a empresa/grupo.
 
+### Módulo Visitas · Actas y seguimiento ✅ (en producción)
+Visita del asesor/auditor al cliente con acta y seguimiento de compromisos. Mockup
+en [`docs/mockups/visitas-acta-seguimiento.html`](./mockups/visitas-acta-seguimiento.html).
+- [x] Fase 1 — Acta enriquecida: compromisos con dirección **firma/cliente**
+  (responsable interno o externo) y área; actividades, recomendaciones y
+  observaciones como **listas enumeradas** (`ItemActa`); `Visita.area`/`lugar`.
+- [x] Fase 2 — Acta **imprimible** para firma (encabezado + bloque de firmas).
+- [x] Fase 3 — **Matriz de seguimiento** de compromisos + **tablero** (cumplimiento
+  por asesor/área/cliente), con filtros tipo Excel y exportación (`/planeador/visitas`).
+- [x] Fase 4 — **Portal del cliente** (solo lectura) en `/mis-visitas`, aislado por
+  empresa/grupo (reusa el patrón de Hallazgos).
+
 ## En diseño — Plan de Trabajo Contable (cumplimiento) 🚧
 
 Dirección nueva (idea del equipo): en vez de depender de que cada usuario cargue
