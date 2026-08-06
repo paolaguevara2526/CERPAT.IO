@@ -1,24 +1,13 @@
 'use client';
-// Calendario unificado del planeador: fusiona TAREAS del plan de trabajo y
-// VENCIMIENTOS tributarios en un solo mes. Filtro por etiqueta (Vencimientos /
-// áreas del plan), arrastrar una tarjeta a otro día para reprogramar su fecha,
+// Calendario del planeador: reúne VISITAS y VENCIMIENTOS tributarios en un solo
+// mes. El Plan de Trabajo NO va en el calendario (vive en Lista · Mi día ·
+// Tablero, que son operación interna). Filtro por etiqueta (Vencimientos /
+// Visitas) y cliente, arrastrar una tarjeta a otro día para reprogramar su fecha,
 // clic para ver el detalle e imprimir el mes. Todo contra los proxies /api.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import TareaDetalleModal from './TareaDetalleModal';
 import VisitaModal from '../visitas/VisitaModal';
 
-const AREAS = ['Impuestos', 'Informes', 'Cumplimiento', 'Nómina', 'Tesorería'];
-
-// Estados de una TAREA del plan.
-const TAREA_META: Record<string, { label: string; color: string }> = {
-  por_iniciar: { label: 'Por iniciar', color: '#5b6a82' },
-  en_curso: { label: 'En curso', color: '#2f6fd0' },
-  en_revision: { label: 'En revisión', color: '#c67c00' },
-  terminado: { label: 'Terminado', color: '#22a670' },
-  auditado: { label: 'Auditado', color: '#1c8a5e' },
-  no_realizado: { label: 'No realizado', color: '#cf4436' },
-};
 // Estados de un VENCIMIENTO tributario (enum EstadoPago).
 const VENC_META: Record<string, { label: string; color: string }> = {
   pendiente: { label: 'Pendiente', color: '#5b6a82' },
@@ -38,18 +27,13 @@ const VISITA_META: Record<string, { label: string; color: string }> = {
 const ETIQUETA_COLOR: Record<string, string> = {
   Vencimientos: '#7a5bd0',
   Visitas: '#e11900',
-  Impuestos: '#2f6fd0',
-  Informes: '#c67c00',
-  Cumplimiento: '#1c8a5e',
-  Nómina: '#cf4436',
-  Tesorería: '#0d8f8f',
 };
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 type Evento = {
-  key: string; tipo: 'vencimiento' | 'tarea' | 'visita'; id: string; fecha: string;
+  key: string; tipo: 'vencimiento' | 'visita'; id: string; fecha: string;
   titulo: string; empresa: string | null; etiqueta: string;
   estado: string; estadoLabel: string; color: string; vencido: boolean;
   // Extras de vencimiento (para su detalle):
@@ -127,16 +111,12 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
     setCargando(true);
     setError(null);
     const [y, mm] = m.split('-').map(Number);
-    const ultimoDia = new Date(Date.UTC(y, mm, 0)).getUTCDate();
     try {
-      const [rv, rt, rvi] = await Promise.all([
+      const [rv, rvi] = await Promise.all([
         fetch(`/api/vencimientos?anio=${y}&mes=${mm}`, { cache: 'no-store' }),
-        // Tareas cuya fecha de vencimiento cae en el mes visible (no por período).
-        fetch(`/api/planeador/gestion/tareas?venceDesde=${m}-01&venceHasta=${m}-${pad(ultimoDia)}`, { cache: 'no-store' }),
         fetch(`/api/visitas?anio=${y}&mes=${mm}`, { cache: 'no-store' }),
       ]);
       const dv = await rv.json().catch(() => ({}));
-      const dt = await rt.json().catch(() => ({}));
       const dvi = await rvi.json().catch(() => ({}));
       if (mine !== reqId.current) return; // llegó una carga más nueva
       const evs: Evento[] = [];
@@ -147,17 +127,6 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           titulo: v.obligacion, empresa: v.empresa ?? null, etiqueta: 'Vencimientos',
           estado: v.estado, estadoLabel: em.label, color: em.color, vencido: !!v.vencido,
           municipio: v.municipio ?? null, periodo: v.periodo ?? null, soporteLink: v.soporteLink ?? null, createdAt: v.createdAt ?? null, valorPago: v.valorPago ?? null,
-        });
-      }
-      const hoy = hoyISO();
-      for (const t of (dt.tareas ?? [])) {
-        const em = TAREA_META[t.estado] ?? { label: t.estado, color: '#5b6a82' };
-        const f = (t.fechaVencimiento || '').slice(0, 10);
-        const pend = ['por_iniciar', 'en_curso', 'en_revision'].includes(t.estado);
-        evs.push({
-          key: `t-${t.id}`, tipo: 'tarea', id: t.id, fecha: f,
-          titulo: t.titulo, empresa: t.empresa ?? null, etiqueta: t.area || 'Sin área',
-          estado: t.estado, estadoLabel: em.label, color: em.color, vencido: pend && f < hoy,
         });
       }
       for (const v of (dvi.visitas ?? [])) {
@@ -226,12 +195,10 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
     const prev = eventos;
     setEventos((list) => list.map((e) => (e.key === ev.key ? { ...e, fecha: nuevaFecha } : e)));
     setAviso(null);
-    const url = ev.tipo === 'vencimiento'
-      ? `/api/vencimientos/${encodeURIComponent(ev.id)}`
-      : ev.tipo === 'visita'
+    const url = ev.tipo === 'visita'
       ? `/api/visitas/${encodeURIComponent(ev.id)}`
-      : `/api/planeador/gestion/tareas/${encodeURIComponent(ev.id)}`;
-    // La visita guarda su día en "fecha"; tareas y vencimientos en "fechaVencimiento".
+      : `/api/vencimientos/${encodeURIComponent(ev.id)}`;
+    // La visita guarda su día en "fecha"; el vencimiento en "fechaVencimiento".
     const cuerpo = ev.tipo === 'visita' ? { fecha: nuevaFecha } : { fechaVencimiento: nuevaFecha };
     try {
       const r = await fetch(url, {
@@ -283,7 +250,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       @media print{@page{size:landscape;margin:10mm;}}
     </style></head><body>
       <h1>Calendario — ${titulo}${etiquetas.length ? ` · ${etiquetas.join(', ')}` : ''}</h1>
-      <div class="sub">Plan de trabajo y vencimientos tributarios · CERPAT</div>
+      <div class="sub">Visitas y vencimientos tributarios · CERPAT</div>
       <table><thead><tr>${DIAS.slice(0, cols).map((d) => `<th>${d}</th>`).join('')}</tr></thead><tbody>${filas.join('')}</tbody></table>
     </body></html>`);
     w.document.close();
@@ -314,8 +281,8 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <MultiSelect label="Etiquetas" opciones={['Vencimientos', 'Visitas', ...AREAS]} sel={etiquetas} onChange={setEtiquetas}
-          etiquetar={(o) => (o === 'Vencimientos' ? '🧾 ' : '📋 ') + o} color={(o) => ETIQUETA_COLOR[o]} />
+        <MultiSelect label="Etiquetas" opciones={['Vencimientos', 'Visitas']} sel={etiquetas} onChange={setEtiquetas}
+          etiquetar={(o) => (o === 'Vencimientos' ? '🧾 ' : '🤝 ') + o} color={(o) => ETIQUETA_COLOR[o]} />
         <MultiSelect label="Clientes" opciones={clientes} sel={clientesSel} onChange={setClientesSel} anchoMenu={260} />
         <select value={cumpl} onChange={(e) => setCumpl(e.target.value)} style={selStyle} title="Filtrar por estado">
           <option value="">Todos los estados</option>
@@ -325,7 +292,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         </select>
         {hayFiltro && <button onClick={() => { setEtiquetas([]); setClientesSel([]); setCumpl(''); }} className="dbtn" style={{ fontSize: 12 }}>Limpiar</button>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11, color: 'var(--muted)' }}>
-          {(etiquetas.length ? etiquetas : ['Vencimientos', 'Visitas', ...AREAS]).map((et) => (
+          {(etiquetas.length ? etiquetas : ['Vencimientos', 'Visitas']).map((et) => (
             <span key={et} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 9, height: 9, borderRadius: 3, background: ETIQUETA_COLOR[et] ?? '#9aa3b2' }} /> {et}
             </span>
@@ -435,13 +402,10 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'rgba(207,68,54,0.15)' }} /> Festivo (no se labora)</span>
       </div>
       <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '6px 2px 0' }}>
-        Cada tarjeta es una tarea o un vencimiento en su fecha. Arrástrala a otro día para reprogramarla; haz clic para ver el detalle. El color de la tarjeta indica el estado (rojo = vencido).
+        Cada tarjeta es una visita o un vencimiento en su fecha. Arrástrala a otro día para reprogramarla; haz clic para ver el detalle. El color de la tarjeta indica el estado (rojo = vencido).
       </p>
 
-      {detalle && (detalle.tipo === 'tarea'
-        ? <TareaDetalleModal id={detalle.id} onClose={() => setDetalle(null)} onChanged={() => cargar(mes)} />
-        : <DetalleModal ev={detalle} onClose={() => setDetalle(null)} onChanged={() => cargar(mes)} />
-      )}
+      {detalle && <DetalleModal ev={detalle} onClose={() => setDetalle(null)} onChanged={() => cargar(mes)} />}
 
       {visitaId && <VisitaModal id={visitaId} onClose={() => setVisitaId(null)} onSaved={() => cargar(mes)} />}
     </>

@@ -69,14 +69,14 @@ _Última actualización: 2026-08-02._
 `presentado_sin_pago`, `presentado_pagado`, `presentado_cero` ("Presentado en
 $0"), `no_presentado`, `no_obligado`. El Administrador los edita en línea.
 
-**`cerpat.io/planeador/calendario` — Calendario unificado.** Fusiona en un solo
-mes las **tareas del plan** y los **vencimientos**. Filtros múltiples (etiquetas,
-clientes, estado), interruptor para ocultar estados, **arrastrar** para
-reprogramar, **imprimir** el mes, y **sábados/domingos/festivos** de Colombia
-marcados (festivos calculados en código: fijos + Ley Emiliani + Pascua). Clic en
-una tarea abre su **modal completo** (pestañas General/Fiscal/Auditoría) y clic
-en un vencimiento su detalle; ambos con **Soporte Documental** (link editable
-Drive/OneDrive donde va quedando el trabajo).
+**`cerpat.io/planeador/calendario` — Calendario.** Reúne en un solo mes las
+**visitas** y los **vencimientos** (el **Plan de Trabajo NO va en el calendario**:
+es operación interna y vive en Lista · Mi día · Tablero). Filtros (etiquetas
+Vencimientos/Visitas, clientes, estado), interruptor para ocultar estados,
+**arrastrar** para reprogramar, **imprimir** el mes, y **sábados/domingos/festivos**
+de Colombia marcados (festivos calculados en código: fijos + Ley Emiliani +
+Pascua). Clic en una **visita** abre su acta y clic en un **vencimiento** su
+detalle (con **Soporte Documental**, link editable Drive/OneDrive).
 
 **`cerpat.io/planeador/pagos` — Pagos.** Controla en **un solo listado "Por
 pagar"** todo lo pendiente de pago: los **vencimientos tributarios** ya marcados
