@@ -223,8 +223,8 @@ function Editor({ usuario, roles, empresas, grupos, onClose, onGuardado, onError
           </div>
           {esCliente && (
             <div style={{ border: '1px solid var(--edge)', borderRadius: 6, padding: '10px 12px', background: 'var(--panel-2)' }}>
-              <span style={{ ...lbl, marginBottom: 6 }}>Portal de Hallazgos · alcance del cliente</span>
-              <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 8px' }}>Elige <strong>una empresa</strong> (ve solo esa) <strong>o un grupo</strong> (ve el consolidado de sus empresas).</p>
+              <span style={{ ...lbl, marginBottom: 6 }}>Portal del cliente · alcance (empresa o grupo)</span>
+              <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 8px' }}>Este usuario entra a <strong>cerpat.io/portal</strong> (solo lectura) con su contraseña temporal. Elige <strong>una empresa</strong> (ve solo esa) <strong>o un grupo</strong> (ve el consolidado de sus empresas).</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <label><span style={lbl}>Empresa</span>
                   <select style={input} value={form.empresaClienteId} onChange={(e) => { set('empresaClienteId', e.target.value); if (e.target.value) set('grupoClienteId', ''); }}>
