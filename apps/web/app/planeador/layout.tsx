@@ -17,8 +17,6 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
   const STAFF = ['Administrador', 'Coordinador', 'Asesor', 'Auditor', 'Auxiliar'];
   const esStaff = sesion.esRoot || sesion.roles.some((r) => STAFF.includes(r));
   if (!esStaff && (sesion.empresaCliente || sesion.grupoCliente)) redirect('/hallazgos');
-  const esAdmin = sesion.esRoot || sesion.roles.includes('Administrador');
-  const esGestorHallazgos = esAdmin || sesion.roles.includes('Auditor');
 
   return (
     <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '14px', display: 'flex', justifyContent: 'center' }}>
@@ -35,7 +33,7 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
           </div>
         </div>
 
-        <PlaneadorShell esAdmin={esAdmin} esGestorHallazgos={esGestorHallazgos}>{children}</PlaneadorShell>
+        <PlaneadorShell roles={sesion.roles} esRoot={sesion.esRoot}>{children}</PlaneadorShell>
 
         <div className="win-status">
           <span className="led" /> Conectado · {sesion.nombre}

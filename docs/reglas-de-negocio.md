@@ -124,6 +124,28 @@
       presentación, entra en `OBLIGACIONES_SIN_PAGO`. Fechas parametrizadas por año
       en `RUB_FECHAS` (generador de la API y sembrador masivo, mantener en sync).
 
+## Acceso por rol al Planeador (menú y URL)
+
+Cada ítem del menú se muestra según el rol, y el acceso se bloquea también por URL
+(guarda de ruta en el Server Component). Fuente única: `apps/web/lib/acceso.ts`
+(`ACCESO_RUTA` + `puedeVerRuta`) y `acceso-server.ts` (`exigirRuta`). Administrador
+y root ven todo. Un usuario con varios roles ve la **unión** de lo permitido.
+
+| Sección | Auxiliar | Asesor | Coordinador | Auditor |
+|---|---|---|---|---|
+| Inicio, Mi Día, Calendario, Tablero, Lista | ✅ | ✅ | ✅ | ✅ |
+| Visitas | — | ✅ | ✅ | ✅ |
+| Pagos | — | ✅ | ✅ | ✅ |
+| Vencimientos, Auditoría, Plan de Trabajo, Flujo del cierre | — | — | ✅ | ✅ |
+| Gestión › Coordinación | — | — | ✅ | ✅ |
+| Gestión › Clientes / Usuarios / Administración | — | — | — | — (solo Admin) |
+| Servicios › Calculadora, Punto de equilibrio, Más herramientas | ✅ | ✅ | ✅ | ✅ |
+| Servicios › Portal de Hallazgos | — | — | — | ✅ |
+
+> El menú oculta lo no permitido y las páginas redirigen a `/planeador` si se entra
+> por URL sin permiso. Esto complementa (no reemplaza) la validación por rol en cada
+> endpoint del backend.
+
 ## Seguridad (no negociable)
 
 - Contraseñas siempre con hash (bcrypt/argon2), nunca en texto plano.

@@ -4,6 +4,7 @@
 // GET /plan/cumplimiento (una llamada por mes).
 
 import { apiFetch } from '@/lib/session';
+import { exigirRuta } from '@/lib/acceso-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,7 @@ function colorPct(p: number): { fg: string; bg: string } {
 }
 
 export default async function CronogramaPage({ searchParams }: { searchParams?: Record<string, string> }) {
+  await exigirRuta('/planeador/cronograma'); // solo Coordinador / Auditor (y Admin)
   const now = new Date();
   const anio = /^\d{4}$/.test(searchParams?.anio ?? '') ? Number(searchParams!.anio) : now.getFullYear();
   const eje = searchParams?.eje === 'area' ? 'area' : 'cliente';

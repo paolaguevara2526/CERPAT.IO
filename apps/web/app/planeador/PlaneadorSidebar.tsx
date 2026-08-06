@@ -3,8 +3,9 @@
 // Planeador / Gestión / Servicios. Resalta el ítem activo por la ruta.
 
 import { usePathname } from 'next/navigation';
+import { puedeVerRuta } from '@/lib/acceso';
 
-type Item = { label: string; icon: string; href?: string; soon?: boolean; adminOnly?: boolean; gestorHallazgos?: boolean };
+type Item = { label: string; icon: string; href: string; soon?: boolean };
 const SECTIONS: { titulo: string; items: Item[] }[] = [
   {
     titulo: 'Planeador',
@@ -27,8 +28,8 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
     items: [
       { label: 'Clientes', icon: '🏢', href: '/clientes' },
       { label: 'Coordinación', icon: '📊', href: '/coordinacion' },
-      { label: 'Usuarios', icon: '🧗', href: '/usuarios', adminOnly: true },
-      { label: 'Administración', icon: '⚙️', href: '/administracion', adminOnly: true },
+      { label: 'Usuarios', icon: '🧗', href: '/usuarios' },
+      { label: 'Administración', icon: '⚙️', href: '/administracion' },
     ],
   },
   {
@@ -36,18 +37,19 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
     items: [
       { label: 'Calculadora de retenciones', icon: '🧮', href: '/servicios/retenciones' },
       { label: 'Punto de equilibrio', icon: '📈', href: '/servicios/punto-equilibrio' },
-      { label: 'Portal de Hallazgos', icon: '🔎', href: '/hallazgos', gestorHallazgos: true },
+      { label: 'Portal de Hallazgos', icon: '🔎', href: '/hallazgos' },
       { label: 'Más herramientas', icon: '🧰', href: '/servicios' },
     ],
   },
 ];
 
-export default function PlaneadorSidebar({ esAdmin = false, esGestorHallazgos = false }: { esAdmin?: boolean; esGestorHallazgos?: boolean }) {
+export default function PlaneadorSidebar({ roles, esRoot = false }: { roles: string[]; esRoot?: boolean }) {
   const path = usePathname();
-  const secciones = SECTIONS.map((sec) => ({
-    ...sec,
-    items: sec.items.filter((it) => (!it.adminOnly || esAdmin) && (!it.gestorHallazgos || esGestorHallazgos)),
-  }));
+  const usuario = { roles, esRoot };
+  // Cada ítem se muestra según el rol (misma fuente que los guardas de ruta).
+  const secciones = SECTIONS
+    .map((sec) => ({ ...sec, items: sec.items.filter((it) => puedeVerRuta(usuario, it.href)) }))
+    .filter((sec) => sec.items.length > 0); // ocultar secciones vacías (p. ej. Gestión)
   return (
     <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210 }}>
       {secciones.map((sec) => (

@@ -1,6 +1,7 @@
 // apps/web/app/planeador/auditoria/page.tsx — Cola de auditoría del período.
 
 import { apiFetch } from '@/lib/session';
+import { exigirRuta } from '@/lib/acceso-server';
 import { nombrePeriodo } from '../tareas';
 import AuditoriaCola, { type TareaAuditoria } from '../AuditoriaCola';
 
@@ -19,6 +20,7 @@ async function fetchAuditoria(): Promise<{ data: Resp | null; error: string | nu
 }
 
 export default async function AuditoriaPage() {
+  await exigirRuta('/planeador/auditoria'); // solo Coordinador / Auditor (y Admin)
   const { data, error } = await fetchAuditoria();
   const tareas = data?.tareas ?? [];
 
