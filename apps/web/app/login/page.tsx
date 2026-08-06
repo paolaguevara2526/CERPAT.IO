@@ -1,15 +1,15 @@
 'use client';
 // apps/web/app/login/page.tsx — pantalla de inicio de sesión.
-// Hero fotográfico (foto de cumbre en /public/login-cumbre.jpg) + tarjeta de
-// login + 4 pilares de marca. Si la imagen aún no existe, degrada a fondo navy y
-// el login sigue funcionando.
+// Hero fotográfico (foto de cumbre en /public/login-cumbre.webp) + formulario
+// separado en HTML/CSS, con capas de animación sutil (parallax, nieve, niebla que
+// deriva, brillo por la ruta a la cima) y velo de legibilidad tras la tarjeta.
+// Respeta prefers-reduced-motion. Si la imagen no existe, degrada a navy.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const VERDE = '#34C98B';
 
-// Íconos de los pilares (línea, verde de marca).
 const ico = (d: string, extra?: React.ReactNode) => (
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={VERDE} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
     <path d={d} />{extra}
@@ -22,6 +22,8 @@ const PILARES: { titulo: string; desc: string; icon: React.ReactNode }[] = [
   { titulo: 'Resultados', desc: 'Alcanzamos juntos nuevas alturas.', icon: ico('M6 21V4m0 0h11l-2 3 2 3H6') },
 ];
 
+type Copo = { left: number; size: number; dur: number; delay: number; dx: number; op: number };
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -29,22 +31,46 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
+  const [copos, setCopos] = useState<Copo[]>([]);
+  const [anim, setAnim] = useState(false);
+  const bgRef = useRef<HTMLDivElement>(null);
+  const skyRef = useRef<HTMLDivElement>(null);
+  const nieveRef = useRef<HTMLDivElement>(null);
+
+  // Solo en cliente (evita desajuste de hidratación) y respeta reduce-motion.
+  useEffect(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+    setAnim(true);
+    setCopos(Array.from({ length: 46 }, () => ({
+      left: Math.random() * 100, size: Math.random() * 2.6 + 1.4, dur: Math.random() * 8 + 7,
+      delay: Math.random() * 9, dx: Math.random() * 8 - 4, op: Math.random() * 0.35 + 0.22,
+    })));
+    const onMove = (e: MouseEvent) => {
+      const x = e.clientX / window.innerWidth - 0.5;
+      const y = e.clientY / window.innerHeight - 0.5;
+      if (bgRef.current) bgRef.current.style.transform = `scale(1.07) translate(${x * -16}px, ${y * -12}px)`;
+      if (skyRef.current) skyRef.current.style.transform = `translate(${x * -34}px, ${y * -20}px)`;
+      if (nieveRef.current) nieveRef.current.style.transform = `translate(${x * -22}px, ${y * -14}px)`;
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setCargando(true);
     try {
       const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'No se pudo iniciar sesión.'); setCargando(false); return; }
       router.replace(data.debeCambiarPassword ? '/cambiar-clave' : data.esCliente ? '/portal' : '/planeador');
     } catch {
-      setError('Error de red. Intenta de nuevo.');
-      setCargando(false);
+      setError('Error de red. Intenta de nuevo.'); setCargando(false);
     }
   }
 
@@ -55,15 +81,67 @@ export default function LoginPage() {
   };
 
   return (
-    <main style={{
-      fontFamily: 'var(--ui)', minHeight: '100vh', position: 'relative',
-      backgroundColor: '#0f1d33',
-      backgroundImage: "linear-gradient(180deg, rgba(9,17,33,0.55) 0%, rgba(9,17,33,0.18) 26%, rgba(9,17,33,0.28) 62%, rgba(9,17,33,0.72) 100%), url('/login-cumbre.jpg')",
-      backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundAttachment: 'fixed',
-    }}>
-      <div style={{ position: 'relative', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', gap: 24, padding: '30px 20px 20px' }}>
+    <main style={{ fontFamily: 'var(--ui)', minHeight: '100vh', position: 'relative', overflow: 'hidden', backgroundColor: '#0f1d33' }}>
+      <style>{`
+        @keyframes cerpat-caer { 0%{transform:translate(0,-8vh);opacity:0} 12%{opacity:1} 100%{transform:translate(var(--dx),104vh);opacity:.15} }
+        @keyframes cerpat-derivar { from{transform:translateX(-4%)} to{transform:translateX(4%)} }
+        @keyframes cerpat-brillo { 0%{opacity:0} 20%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+      `}</style>
 
-        {/* Encabezado: logo + lema */}
+      {/* Capa 0 · foto de fondo (parallax) */}
+      <div ref={bgRef} aria-hidden style={{
+        position: 'absolute', inset: 0, transform: 'scale(1.07)', transformOrigin: 'center',
+        transition: 'transform .18s ease-out', willChange: 'transform',
+        backgroundColor: '#0f1d33', backgroundImage: "url('/login-cumbre.webp')",
+        backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+      }} />
+
+      {/* Capa 1 · niebla/nubosidad que deriva muy lento */}
+      {anim && (
+        <div ref={skyRef} aria-hidden style={{ position: 'absolute', inset: '-6%', pointerEvents: 'none', transition: 'transform .3s ease-out', willChange: 'transform' }}>
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.5, mixBlendMode: 'screen',
+            background: 'radial-gradient(60% 40% at 25% 30%, rgba(255,255,255,0.10), transparent 60%), radial-gradient(50% 35% at 75% 22%, rgba(255,255,255,0.08), transparent 60%)',
+            animation: 'cerpat-derivar 26s ease-in-out infinite alternate' }} />
+        </div>
+      )}
+
+      {/* Capa 2 · nieve */}
+      {anim && (
+        <div ref={nieveRef} aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none', transition: 'transform .3s ease-out' }}>
+          {copos.map((c, i) => (
+            <span key={i} style={{
+              position: 'absolute', top: 0, left: `${c.left}%`, width: c.size, height: c.size, borderRadius: '50%',
+              background: '#fff', opacity: c.op, filter: 'blur(0.3px)',
+              // @ts-expect-error variable CSS personalizada
+              '--dx': `${c.dx}vw`,
+              animation: `cerpat-caer ${c.dur}s linear ${c.delay}s infinite`,
+            }} />
+          ))}
+        </div>
+      )}
+
+      {/* Capa 3 · brillo recorriendo la ruta a la cima (aprox. sobre el pico derecho) */}
+      {anim && (
+        <svg aria-hidden viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', top: 0, right: 0, width: '46%', height: '100%', pointerEvents: 'none', opacity: 0.9 }}>
+          <defs>
+            <filter id="cerpat-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <path id="cerpat-ruta" d="M150 486 C 190 420 210 380 250 322 S 322 200 360 96" fill="none" />
+          </defs>
+          <use href="#cerpat-ruta" stroke={VERDE} strokeOpacity="0.28" strokeWidth="1.6" strokeDasharray="2 8" strokeLinecap="round" />
+          <circle r="3.6" fill={VERDE} filter="url(#cerpat-glow)" style={{ animation: 'cerpat-brillo 5.5s ease-in-out infinite' }}>
+            <animateMotion dur="5.5s" repeatCount="indefinite" rotate="auto"><mpath href="#cerpat-ruta" /></animateMotion>
+          </circle>
+        </svg>
+      )}
+
+      {/* Capa 4 · velos de legibilidad: global muy leve + oscurecido sutil tras la tarjeta */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'linear-gradient(180deg, rgba(9,17,33,0.34) 0%, rgba(9,17,33,0.04) 28%, rgba(9,17,33,0.10) 64%, rgba(9,17,33,0.55) 100%), radial-gradient(620px 500px at 50% 46%, rgba(6,12,24,0.30), transparent 72%)' }} />
+
+      {/* Contenido */}
+      <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', gap: 24, padding: '30px 20px 20px' }}>
         <header style={{ textAlign: 'center', maxWidth: 620 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-cerpat-blanco.svg" alt="CERPAT" style={{ height: 46, width: 'auto', filter: 'drop-shadow(0 2px 10px rgba(0,0,0,.5))' }} />
@@ -72,7 +150,6 @@ export default function LoginPage() {
           </p>
         </header>
 
-        {/* Tarjeta de login */}
         <div className="win" style={{ width: '100%', maxWidth: 400, boxShadow: '0 26px 70px rgba(0,0,0,.55)' }}>
           <div className="win-bar">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -103,8 +180,7 @@ export default function LoginPage() {
           <div className="win-status"><span className="led" /> CERPAT · guiamos a nuestros clientes a la cima</div>
         </div>
 
-        {/* Pilares de marca */}
-        <footer style={{ width: '100%', maxWidth: 1100, background: 'rgba(9,17,33,0.55)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 18px' }}>
+        <footer style={{ width: '100%', maxWidth: 1100, background: 'rgba(9,17,33,0.5)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 18px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16 }}>
             {PILARES.map((p) => (
               <div key={p.titulo} style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
