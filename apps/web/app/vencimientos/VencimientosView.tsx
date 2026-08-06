@@ -4,6 +4,7 @@
 // /api/vencimientos/... (permisos validados en el backend).
 
 import { useEffect, useState, useCallback } from 'react';
+import ImportarVencimientosModal from './ImportarVencimientosModal';
 
 const ANIO = 2026;
 type Empresa = { id: string; nombre: string };
@@ -35,6 +36,7 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   const [estado, setEstado] = useState('');
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [importar, setImportar] = useState(false);
 
   const cargarBase = useCallback(async () => {
     try {
@@ -78,8 +80,13 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
 
   return (
     <>
-      <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Vencimientos {ANIO}</h1>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Vencimientos {ANIO}</h1>
+        {esEditor && <button className="dbtn" onClick={() => setImportar(true)} style={{ fontSize: 13 }}>⬆ Importar Excel</button>}
+      </div>
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>Obligaciones tributarias generadas por cliente según su configuración y el calendario DIAN. {esEditor ? 'Marca presentado/pagado y ajusta la fecha si un calendario municipal cambió.' : 'Solo consulta.'}</p>
+
+      {importar && <ImportarVencimientosModal onClose={() => setImportar(false)} onImported={() => { cargarBase(); cargarLista(); }} />}
 
       {error && <div className="panel" style={{ padding: '10px 14px', color: '#b42318', fontWeight: 600, marginBottom: 14 }}>{error}</div>}
 
