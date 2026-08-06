@@ -138,7 +138,8 @@ y root ven todo. Un usuario con varios roles ve la **unión** de lo permitido.
 | Pagos | — | ✅ | ✅ | ✅ |
 | Vencimientos, Auditoría, Plan de Trabajo, Flujo del cierre | — | — | ✅ | ✅ |
 | Gestión › Coordinación | — | — | ✅ | ✅ |
-| Gestión › Clientes / Usuarios / Administración | — | — | — | — (solo Admin) |
+| Gestión › Administración (solo Empresas, Config. tributaria, Plan por cliente) | — | — | ✅ | — |
+| Gestión › Administración (todas las pestañas) · Clientes · Usuarios | — | — | — | — (solo Admin) |
 | Servicios › Calculadora, Punto de equilibrio, Más herramientas | ✅ | ✅ | ✅ | ✅ |
 | Servicios › Portal de Hallazgos | — | — | — | ✅ |
 

@@ -26,13 +26,17 @@ const TABS: Tab[] = [
   { id: 'grupos', label: 'Grupos', tipo: 'grupos' },
 ];
 
-export default function AdminPanel() {
-  const [tab, setTab] = useState('parametros');
-  const activo = TABS.find((t) => t.id === tab)!;
+// Pestañas visibles para Coordinación (sin rol de Administrador).
+const TABS_COORD = ['empresas', 'config-tributaria', 'plan-cliente'];
+
+export default function AdminPanel({ esAdmin = true }: { esAdmin?: boolean }) {
+  const tabs = esAdmin ? TABS : TABS.filter((t) => TABS_COORD.includes(t.id));
+  const [tab, setTab] = useState(tabs[0].id);
+  const activo = tabs.find((t) => t.id === tab) ?? tabs[0];
   return (
     <div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', borderBottom: '1px solid var(--line)', marginBottom: 18, paddingBottom: 2 }}>
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const on = t.id === tab;
           return (
             <button key={t.id} onClick={() => setTab(t.id)}
