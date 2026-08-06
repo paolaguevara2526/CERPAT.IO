@@ -6,7 +6,8 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
-import { alcancePortal } from '../auth/alcance-db.js';
+import { alcancePortal, empresasAsignadas } from '../auth/alcance-db.js';
+import { esStaffAcotado } from '../auth/alcance.js';
 import { vencimientosNacionales, vencimientosIca, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
@@ -69,9 +70,11 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   const empresaId = typeof req.query.empresaId === 'string' && req.query.empresaId ? req.query.empresaId : undefined;
   const estado = typeof req.query.estado === 'string' && ESTADOS.includes(req.query.estado) ? req.query.estado : undefined;
   const mes = Number(req.query.mes);
+  // Alcance: un Asesor/Auxiliar solo ve los vencimientos de sus empresas asignadas.
+  const idsAsignadas = esStaffAcotado(req.user) ? await empresasAsignadas(req.user!.sub, org.id) : null;
 
   const items = await prisma.vencimientoEmpresa.findMany({
-    where: { organizacionId: org.id, anio, ...(empresaId ? { empresaId } : {}), ...(estado ? { estado: estado as any } : {}) },
+    where: { organizacionId: org.id, anio, ...(idsAsignadas ? { empresaId: { in: idsAsignadas } } : empresaId ? { empresaId } : {}), ...(estado ? { estado: estado as any } : {}) },
     orderBy: [{ fechaVencimiento: 'asc' }],
     select: {
       id: true, empresaId: true, obligacion: true, periodicidad: true, periodo: true,
@@ -143,11 +146,13 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
   if (!org) return res.json({ total: 0, vencimientos: [] });
   const pl = await cargarParamsLiq(org.id);
   const anio = Number(req.query.anio) || new Date().getFullYear();
+  // Alcance: un Asesor solo ve los pagos de sus empresas asignadas.
+  const idsAsignadas = esStaffAcotado(req.user) ? await empresasAsignadas(req.user!.sub, org.id) : null;
   const items = await prisma.vencimientoEmpresa.findMany({
     // Solo los generados por el sistema: los pagos pendientes agregados a mano
     // (generado=false) viven en su propia sección para no duplicarse aquí. Las
     // obligaciones de solo presentación (nómina electrónica, PILA) no entran.
-    where: { organizacionId: org.id, anio, generado: true, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] }, obligacion: { notIn: [...OBLIGACIONES_SIN_PAGO] } },
+    where: { organizacionId: org.id, anio, generado: true, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] }, obligacion: { notIn: [...OBLIGACIONES_SIN_PAGO] }, ...(idsAsignadas ? { empresaId: { in: idsAsignadas } } : {}) },
     orderBy: [{ estado: 'asc' }, { fechaVencimiento: 'asc' }],
     select: {
       id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true,
@@ -261,8 +266,9 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
   const org = await orgCerpat();
   if (!org) return res.json({ total: 0, pendientes: [] });
   const pl = await cargarParamsLiq(org.id);
+  const idsAsignadas = esStaffAcotado(req.user) ? await empresasAsignadas(req.user!.sub, org.id) : null;
   const items = await prisma.vencimientoEmpresa.findMany({
-    where: { organizacionId: org.id, generado: false },
+    where: { organizacionId: org.id, generado: false, ...(idsAsignadas ? { empresaId: { in: idsAsignadas } } : {}) },
     orderBy: [{ estado: 'asc' }, { anio: 'desc' }, { fechaVencimiento: 'asc' }],
     select: {
       id: true, obligacion: true, anio: true, periodo: true, fechaVencimiento: true, estado: true,

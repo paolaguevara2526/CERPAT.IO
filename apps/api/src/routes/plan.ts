@@ -13,6 +13,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { alcancePortal } from '../auth/alcance-db.js';
+import { esStaffAcotado } from '../auth/alcance.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
 
@@ -68,6 +69,11 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
     ...(mias ? { OR: [{ asesorId: uid }, { auxiliarId: uid }] } : {}),
     ...(q ? { OR: [{ empresa: { nombre: { contains: q, mode: 'insensitive' } } }, { titulo: { contains: q, mode: 'insensitive' } }] } : {}),
   };
+  // Alcance: un Asesor/Auxiliar solo ve SUS tareas (donde es asesor o auxiliar).
+  // Se combina con AND para no pisar otros OR (búsqueda/estado). Roles elevados ven todo.
+  if (esStaffAcotado(req.user)) {
+    where.AND = [...(where.AND ?? []), { OR: [{ asesorId: uid }, { auxiliarId: uid }] }];
+  }
 
   const [total, tareas] = await Promise.all([
     prisma.tarea.count({ where }),
