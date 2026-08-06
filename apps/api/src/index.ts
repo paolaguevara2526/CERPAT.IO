@@ -19,7 +19,9 @@ import { visitasRouter } from './routes/visitas.js';
 const app = express();
 
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') ?? '*' }));
-app.use(express.json());
+// Límite amplio: la importación masiva de asignaciones (Plan por cliente) envía
+// miles de filas en un solo POST y superaba el tope por defecto de Express (100 KB).
+app.use(express.json({ limit: '10mb' }));
 
 app.use('/health', healthRouter);
 app.use('/auth', authRouter);
