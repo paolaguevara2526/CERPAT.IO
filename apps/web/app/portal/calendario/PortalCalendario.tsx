@@ -22,6 +22,7 @@ export default function PortalCalendario() {
   const [visitas, setVisitas] = useState<any[]>([]);
   const [vencs, setVencs] = useState<any[]>([]);
   const [mostrarFinde, setMostrarFinde] = useState(true);
+  const [mostrarEstados, setMostrarEstados] = useState(true);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +86,9 @@ export default function PortalCalendario() {
           <span style={{ fontSize: 13.5, fontWeight: 700, textTransform: 'capitalize', minWidth: 140, textAlign: 'center' }}>{MESES[m - 1]} {y}</span>
           <button onClick={() => setMes(desplazarMes(mes, 1))} className="dbtn" style={{ fontSize: 13 }}>›</button>
           <button onClick={() => setMes(mesActual())} className="dbtn" style={{ fontSize: 12.5 }}>Hoy</button>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }} title="Mostrar u ocultar el estado en cada tarjeta">
+            <input type="checkbox" checked={mostrarEstados} onChange={(e) => setMostrarEstados(e.target.checked)} style={{ accentColor: '#2E5090' }} /> Estados
+          </label>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }}>
             <input type="checkbox" checked={mostrarFinde} onChange={(e) => setMostrarFinde(e.target.checked)} style={{ accentColor: '#2E5090' }} /> Sáb/Dom
           </label>
@@ -115,8 +119,9 @@ export default function PortalCalendario() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                         {items.map((e) => (
                           <div key={e.key} title={`${e.titulo}${e.empresa ? ' · ' + e.empresa : ''} · ${e.vencido ? 'Vencido' : e.estadoLabel}`}
-                            style={{ fontSize: 10, padding: '2px 5px', borderRadius: 4, background: 'var(--panel-2)', borderLeft: `3px solid ${e.vencido ? '#cf4436' : e.color}`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            <span style={{ marginRight: 3 }}>{e.tipo === 'visita' ? '🤝' : '🧾'}</span>{e.titulo}
+                            style={{ fontSize: 10, padding: '2px 5px', borderRadius: 4, background: 'var(--panel-2)', borderLeft: `3px solid ${e.vencido ? '#cf4436' : e.color}` }}>
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><span style={{ marginRight: 3 }}>{e.tipo === 'visita' ? '🤝' : '🧾'}</span>{e.titulo}</div>
+                            {mostrarEstados && <div style={{ fontSize: 9, fontWeight: 700, color: e.vencido ? '#cf4436' : e.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.vencido ? 'Vencido' : e.estadoLabel}</div>}
                           </div>
                         ))}
                       </div>
