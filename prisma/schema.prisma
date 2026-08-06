@@ -93,6 +93,20 @@ enum EstadoCompromiso {
   cancelado
 }
 
+// ¿Quién responde por un compromiso del acta? La firma (un asesor/auxiliar) o el
+// cliente (una persona externa). Define la dirección del compromiso.
+enum ResponsableCompromiso {
+  firma
+  cliente
+}
+
+// Tipo de ítem enumerado del acta (listas numeradas).
+enum TipoItemActa {
+  actividad
+  recomendacion
+  observacion
+}
+
 // ---------- TENANT: ORGANIZACION (firma contable) ----------
 // Raíz del aislamiento multi-tenant. Todo el dominio cuelga de aquí.
 // Un usuario root de plataforma (Usuario.esRootPlataforma) vive por fuera de
@@ -143,6 +157,7 @@ model Organizacion {
   // Visitas a clientes (asesor/auditor) y sus compromisos
   visitas          Visita[]
   compromisosVisita CompromisoVisita[]
+  itemsActa        ItemActa[]
 
   // Revisoría Fiscal
   grupos    GrupoEmpresarial[]
@@ -943,10 +958,12 @@ model Visita {
   responsableId   String? // asesor o auditor que realiza la visita
   fecha           DateTime // fecha de la visita
   hora            String? // "HH:MM" opcional
+  lugar           String? // lugar de la visita (opcional)
+  area            String? // área / proceso principal de la visita
   objetivo        String? // objetivo / motivo de la visita
-  recomendaciones String? // recomendaciones o sugerencias (texto del acta)
+  recomendaciones String? // (legado) recomendaciones en texto; ahora se usan ItemActa
   estado          EstadoVisita @default(programada)
-  observaciones   String?
+  observaciones   String? // (legado) observaciones en texto; ahora se usan ItemActa
   // Vínculo al Plan de Trabajo (las visitas recurrentes del plan lo llevan; Fase 3).
   // Se guarda como referencia simple (sin FK) hasta implementar la generación.
   actividadPlanId String?
@@ -960,6 +977,7 @@ model Visita {
   responsable  Usuario?           @relation("VisitaResponsable", fields: [responsableId], references: [id])
   creadoPor    Usuario?           @relation("VisitasCreadas", fields: [creadoPorId], references: [id])
   compromisos  CompromisoVisita[]
+  items        ItemActa[]
 
   @@index([organizacionId])
   @@index([empresaId])
@@ -975,7 +993,12 @@ model CompromisoVisita {
   visitaId       String
   descripcion    String
   fechaLimite    DateTime?
-  responsableId  String? // responsable del compromiso (asesor/auxiliar)
+  // Dirección del compromiso: 'firma' (responde un usuario interno) o 'cliente'
+  // (responde una persona externa, cuyo nombre/cargo va en responsableExterno).
+  responsableTipo   ResponsableCompromiso @default(firma)
+  responsableId     String? // usuario de la firma (cuando responsableTipo = firma)
+  responsableExterno String? // nombre y cargo del externo (cuando = cliente)
+  area           String? // área/proceso del compromiso (para seguimiento por área)
   estado         EstadoCompromiso @default(pendiente)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -988,4 +1011,24 @@ model CompromisoVisita {
   @@index([visitaId])
   @@index([fechaLimite])
   @@map("compromisos_visita")
+}
+
+// Ítem enumerado del acta: actividad realizada, recomendación u observación.
+// Se guardan en orden (numeración) por visita.
+model ItemActa {
+  id             String       @id @default(uuid())
+  organizacionId String
+  visitaId       String
+  tipo           TipoItemActa
+  orden          Int          @default(0)
+  texto          String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  visita       Visita       @relation(fields: [visitaId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@index([visitaId])
+  @@map("items_acta")
 }

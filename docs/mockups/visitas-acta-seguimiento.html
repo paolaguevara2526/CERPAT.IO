@@ -1,0 +1,393 @@
+<title>Visitas CERPAT — Propuesta de acta, matriz y dashboard</title>
+<style>
+  :root{
+    --navy:#23406e; --navy-2:#2E5090; --accent:#2fa36b; --accent-soft:#e3f4ec;
+    --bg:#eef1f6; --desk:#e7ebf2; --panel:#ffffff; --panel-2:#f5f7fb;
+    --ink:#16233b; --muted:#5b6a82; --line:#e2e7ef; --edge:#cfd7e3;
+    --pend:#c67c00; --pend-bg:#fdf1dd; --ok:#1f9d63; --ok-bg:#e2f4ea;
+    --venc:#cf4436; --venc-bg:#fbe4e1; --firma:#2E5090; --firma-bg:#e7edf8;
+    --cli:#7a5bd0; --cli-bg:#efeafb;
+    --shadow:0 10px 34px rgba(15,29,51,.13);
+    --ui:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --navy:#16233b; --navy-2:#2a4576; --accent:#3fb97e; --accent-soft:#12352a;
+      --bg:#0d1626; --desk:#0a1220; --panel:#131f33; --panel-2:#0f1a2c;
+      --ink:#e7ecf5; --muted:#9aa8c0; --line:#243349; --edge:#31435f;
+      --pend:#e0a53a; --pend-bg:#3a2c10; --ok:#43c281; --ok-bg:#10321f;
+      --venc:#f0776a; --venc-bg:#3a1a16; --firma:#7ea0e0; --firma-bg:#152444;
+      --cli:#b39bf0; --cli-bg:#241a3d; --shadow:0 10px 34px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --navy:#16233b; --navy-2:#2a4576; --accent:#3fb97e; --accent-soft:#12352a;
+    --bg:#0d1626; --desk:#0a1220; --panel:#131f33; --panel-2:#0f1a2c;
+    --ink:#e7ecf5; --muted:#9aa8c0; --line:#243349; --edge:#31435f;
+    --pend:#e0a53a; --pend-bg:#3a2c10; --ok:#43c281; --ok-bg:#10321f;
+    --venc:#f0776a; --venc-bg:#3a1a16; --firma:#7ea0e0; --firma-bg:#152444;
+    --cli:#b39bf0; --cli-bg:#241a3d; --shadow:0 10px 34px rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --navy:#23406e; --navy-2:#2E5090; --accent:#2fa36b; --accent-soft:#e3f4ec;
+    --bg:#eef1f6; --desk:#e7ebf2; --panel:#ffffff; --panel-2:#f5f7fb;
+    --ink:#16233b; --muted:#5b6a82; --line:#e2e7ef; --edge:#cfd7e3;
+    --pend:#c67c00; --pend-bg:#fdf1dd; --ok:#1f9d63; --ok-bg:#e2f4ea;
+    --venc:#cf4436; --venc-bg:#fbe4e1; --firma:#2E5090; --firma-bg:#e7edf8;
+    --cli:#7a5bd0; --cli-bg:#efeafb; --shadow:0 10px 34px rgba(15,29,51,.13);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:
+      radial-gradient(1200px 480px at 78% -12%, color-mix(in srgb,var(--accent) 14%, transparent), transparent 60%),
+      var(--desk);
+    color:var(--ink);font-family:var(--ui);line-height:1.45;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1160px;margin:0 auto;padding:22px 18px 60px;}
+  .tnum{font-variant-numeric:tabular-nums;}
+
+  /* Encabezado */
+  .masthead{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;justify-content:space-between;margin-bottom:8px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(145deg,var(--navy-2),var(--navy));display:grid;place-items:center;color:#fff;font-size:22px;box-shadow:var(--shadow);}
+  h1{font-size:23px;line-height:1.15;margin:0;letter-spacing:-.2px;text-wrap:balance;}
+  .kicker{font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent);margin:0 0 3px;}
+  .lede{color:var(--muted);font-size:13.5px;margin:2px 0 0;max-width:62ch;}
+  .badge{font-size:11px;font-weight:700;color:var(--muted);border:1px solid var(--edge);border-radius:20px;padding:4px 11px;background:var(--panel);white-space:nowrap;}
+
+  /* Tabs */
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 16px;border-bottom:1px solid var(--line);padding-bottom:0;}
+  .tab{appearance:none;border:0;background:none;font-family:var(--ui);font-size:13.5px;font-weight:700;color:var(--muted);padding:9px 14px;border-radius:9px 9px 0 0;cursor:pointer;position:relative;top:1px;border-bottom:2.5px solid transparent;}
+  .tab:hover{color:var(--ink);}
+  .tab[aria-selected="true"]{color:var(--navy-2);border-bottom-color:var(--accent);background:var(--panel);}
+  :root[data-theme="dark"] .tab[aria-selected="true"], :where(:root:not([data-theme="light"])) .tab[aria-selected="true"]{color:var(--ink);}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .panel-tab{display:none;animation:fade .25s ease;}
+  .panel-tab.on{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  @media (prefers-reduced-motion:reduce){.panel-tab{animation:none;}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);}
+  .pad{padding:20px 22px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media (max-width:720px){.grid2,.grid3{grid-template-columns:1fr;}}
+  label.f{display:block;}
+  .lab{display:block;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:0 0 5px;}
+  .inp{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--edge);background:var(--panel-2);color:var(--ink);font-size:13.5px;font-family:var(--ui);}
+  .inp[readonly]{cursor:default;}
+  .sectitle{display:flex;align-items:center;gap:9px;margin:22px 0 10px;}
+  .sectitle h3{font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin:0;color:var(--ink);}
+  .sectitle .hint{font-size:12px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0;}
+  .sectitle .rule{flex:1;height:1px;background:var(--line);}
+  .btn{appearance:none;font-family:var(--ui);font-weight:700;font-size:13px;border-radius:8px;border:1px solid var(--edge);background:var(--panel);color:var(--ink);padding:8px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;}
+  .btn:hover{border-color:var(--accent);}
+  .btn.pri{background:var(--navy-2);border-color:var(--navy-2);color:#fff;}
+  .btn.ghost{background:transparent;}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* Listas numeradas (recomendaciones/observaciones/actividades) */
+  .numlist{display:flex;flex-direction:column;gap:8px;}
+  .numrow{display:flex;align-items:flex-start;gap:10px;}
+  .numdot{flex:0 0 auto;width:24px;height:24px;border-radius:7px;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:12px;display:grid;place-items:center;margin-top:5px;}
+  .numrow .inp{flex:1;}
+  .numrow .x{border:0;background:none;color:var(--venc);cursor:pointer;font-size:16px;padding:6px;margin-top:2px;}
+
+  /* Compromisos */
+  .comp{border:1px solid var(--line);border-radius:11px;padding:12px 13px;background:var(--panel-2);display:flex;flex-direction:column;gap:10px;}
+  .comp + .comp{margin-top:10px;}
+  .comp-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .dir{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:20px;padding:3px 10px;}
+  .dir.firma{color:var(--firma);background:var(--firma-bg);}
+  .dir.cli{color:var(--cli);background:var(--cli-bg);}
+  .comp-grid{display:grid;grid-template-columns:150px 1fr 140px 120px;gap:9px;align-items:end;}
+  @media (max-width:720px){.comp-grid{grid-template-columns:1fr 1fr;}}
+  .seg{display:inline-flex;border:1px solid var(--edge);border-radius:8px;overflow:hidden;}
+  .seg button{appearance:none;border:0;background:var(--panel);color:var(--muted);font-family:var(--ui);font-weight:700;font-size:12px;padding:7px 12px;cursor:pointer;}
+  .seg button[aria-pressed="true"]{background:var(--navy-2);color:#fff;}
+
+  .chip{font-size:11px;font-weight:800;border-radius:20px;padding:3px 10px;display:inline-block;white-space:nowrap;}
+  .chip.pend{color:var(--pend);background:var(--pend-bg);}
+  .chip.ok{color:var(--ok);background:var(--ok-bg);}
+  .chip.venc{color:var(--venc);background:var(--venc-bg);}
+  .chip.prog{color:var(--firma);background:var(--firma-bg);}
+
+  /* Firmas */
+  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:10px;}
+  @media (max-width:720px){.firmas{grid-template-columns:1fr;}}
+  .firmabox{padding-top:26px;border-top:2px solid var(--edge);text-align:center;}
+  .firmabox b{display:block;font-size:13px;}
+  .firmabox span{font-size:11.5px;color:var(--muted);}
+
+  /* Tabla matriz */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+  .filtpill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--edge);background:var(--panel);border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;}
+  .filtpill .fn{color:var(--muted);font-weight:700;}
+  .filtpill::after{content:"▾";color:var(--muted);font-size:10px;}
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;}
+  table.mx{width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px;}
+  table.mx th{position:sticky;top:0;background:var(--panel-2);text-align:left;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  table.mx th .fn{margin-left:4px;color:var(--edge);}
+  table.mx td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  table.mx tr:last-child td{border-bottom:0;}
+  table.mx tr:hover td{background:var(--panel-2);}
+  .who{display:flex;align-items:center;gap:7px;}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
+
+  /* Dashboard */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+  @media (max-width:720px){.kpis{grid-template-columns:1fr 1fr;}}
+  .kpi{padding:15px 16px;}
+  .kpi .k{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);}
+  .kpi .v{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:5px 0 2px;}
+  .kpi .s{font-size:11.5px;color:var(--muted);}
+  .bar-row{display:grid;grid-template-columns:130px 1fr 42px;align-items:center;gap:10px;margin:9px 0;font-size:12.5px;}
+  .bar-track{background:var(--panel-2);border-radius:7px;height:16px;overflow:hidden;border:1px solid var(--line);}
+  .bar-fill{height:100%;border-radius:7px 0 0 7px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 55%, var(--navy-2)));}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px;}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px;}
+  .stack{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);}
+  .stack span{display:block;}
+
+  .callout{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--panel-2);border-radius:10px;padding:14px 16px;font-size:13px;color:var(--ink);}
+  .callout b{color:var(--navy-2);} :root[data-theme="dark"] .callout b{color:var(--accent);}
+  .note{font-size:11.5px;color:var(--muted);margin-top:10px;}
+  .themebtn{position:fixed;top:12px;right:12px;z-index:20;border:1px solid var(--edge);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--ui);box-shadow:var(--shadow);}
+  ul.clean{margin:8px 0 0;padding-left:18px;} ul.clean li{margin:4px 0;font-size:13px;}
+</style>
+
+<button class="themebtn" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme:dark)').matches);r.setAttribute('data-theme',d?'light':'dark');})()">◐ Tema</button>
+
+<div class="wrap">
+  <div class="masthead">
+    <div class="brand">
+      <div class="logo">🤝</div>
+      <div>
+        <p class="kicker">Planeador CERPAT · Propuesta de diseño</p>
+        <h1>Acta de visita &amp; seguimiento de compromisos</h1>
+        <p class="lede">Cómo quedaría el acta que llena el asesor y la matriz donde reposa todo para dar seguimiento por cliente, por asesor y por área — con dashboard y, a futuro, acceso del cliente.</p>
+      </div>
+    </div>
+    <span class="badge">Mockup · no funcional</span>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" aria-controls="t-acta" id="tab-acta">📝 Acta de visita</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="t-matriz" id="tab-matriz">📊 Matriz de seguimiento</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="t-dash" id="tab-dash">📈 Dashboard</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="t-portal" id="tab-portal">🔐 Portal del cliente</button>
+  </div>
+
+  <!-- ============ ACTA ============ -->
+  <section class="panel-tab on card pad" id="t-acta" role="tabpanel" aria-labelledby="tab-acta">
+    <div class="grid3">
+      <label class="f"><span class="lab">Cliente *</span><input class="inp" readonly value="Soluxionar SAS"></label>
+      <label class="f"><span class="lab">Responsable de la visita (asesor/auditor)</span><input class="inp" readonly value="Tania Lisset Castiblanco"></label>
+      <label class="f"><span class="lab">Área / proceso</span><input class="inp" readonly value="Contabilidad · Tesorería"></label>
+    </div>
+    <div class="grid3" style="margin-top:14px;">
+      <label class="f"><span class="lab">Fecha *</span><input class="inp" readonly value="14/08/2026"></label>
+      <label class="f"><span class="lab">Hora</span><input class="inp" readonly value="10:00 a. m."></label>
+      <label class="f"><span class="lab">Estado</span><input class="inp" readonly value="Programada"></label>
+    </div>
+    <label class="f" style="margin-top:14px;"><span class="lab">Objetivo / motivo</span><input class="inp" readonly value="Revisión de conciliaciones bancarias y cartera"></label>
+
+    <!-- Actividades realizadas -->
+    <div class="sectitle"><h3>Actividades realizadas en la visita</h3><span class="hint">enumeradas · lo que hizo el asesor</span><span class="rule"></span><button class="btn ghost">＋ Agregar</button></div>
+    <div class="numlist">
+      <div class="numrow"><span class="numdot">1</span><input class="inp" readonly value="Revisión de conciliaciones bancarias de julio (3 cuentas)."></div>
+      <div class="numrow"><span class="numdot">2</span><input class="inp" readonly value="Verificación de soportes de cartera y anticipos."><button class="x" title="Quitar">🗑</button></div>
+      <div class="numrow"><span class="numdot">3</span><input class="inp" readonly value="Capacitación al auxiliar en el registro de causaciones."><button class="x" title="Quitar">🗑</button></div>
+    </div>
+
+    <!-- Compromisos -->
+    <div class="sectitle"><h3>Compromisos adquiridos</h3><span class="hint">de la firma con el cliente, o del cliente con la firma</span><span class="rule"></span><button class="btn ghost">＋ Agregar</button></div>
+
+    <div class="comp">
+      <div class="comp-top">
+        <b style="font-size:13.5px;">Enviar la conciliación corregida y el informe de cartera.</b>
+        <span class="dir firma">Compromiso de la firma</span>
+      </div>
+      <div class="comp-grid">
+        <div>
+          <span class="lab">Responsable</span>
+          <div class="seg" role="group" aria-label="Tipo de responsable">
+            <button aria-pressed="true">Firma</button><button aria-pressed="false">Cliente</button>
+          </div>
+        </div>
+        <label class="f"><span class="lab">Quién responde</span><input class="inp" readonly value="Tania Castiblanco (Asesora)"></label>
+        <label class="f"><span class="lab">Fecha límite</span><input class="inp" readonly value="22/08/2026"></label>
+        <div><span class="lab">Estado</span><div><span class="chip pend">Pendiente</span></div></div>
+      </div>
+    </div>
+
+    <div class="comp">
+      <div class="comp-top">
+        <b style="font-size:13.5px;">Entregar extractos bancarios de agosto y soportes de nómina.</b>
+        <span class="dir cli">Compromiso del cliente</span>
+      </div>
+      <div class="comp-grid">
+        <div>
+          <span class="lab">Responsable</span>
+          <div class="seg" role="group" aria-label="Tipo de responsable">
+            <button aria-pressed="false">Firma</button><button aria-pressed="true">Cliente</button>
+          </div>
+        </div>
+        <label class="f"><span class="lab">Nombre y cargo (externo)</span><input class="inp" readonly value="Laura Gómez · Tesorería (cliente)"></label>
+        <label class="f"><span class="lab">Fecha límite</span><input class="inp" readonly value="18/08/2026"></label>
+        <div><span class="lab">Estado</span><div><span class="chip venc">Vencido</span></div></div>
+      </div>
+    </div>
+    <p class="note">💡 El <b>recuadro “Responsable” con botón Firma/Cliente</b> resuelve tu punto 1: si es <b>Firma</b> aparece la lista de asesores; si es <b>Cliente</b>, un campo para el nombre y cargo de la persona externa (y a futuro su correo para el portal). La etiqueta “Compromiso de la firma / del cliente” se pone sola según quién responde.</p>
+
+    <!-- Recomendaciones -->
+    <div class="sectitle"><h3>Recomendaciones / sugerencias</h3><span class="hint">enumeradas</span><span class="rule"></span><button class="btn ghost">＋ Agregar</button></div>
+    <div class="numlist">
+      <div class="numrow"><span class="numdot">1</span><input class="inp" readonly value="Definir política de causación semanal para evitar rezagos."></div>
+      <div class="numrow"><span class="numdot">2</span><input class="inp" readonly value="Centralizar los soportes en la carpeta compartida del cliente."><button class="x" title="Quitar">🗑</button></div>
+    </div>
+
+    <!-- Observaciones -->
+    <div class="sectitle"><h3>Observaciones</h3><span class="hint">enumeradas</span><span class="rule"></span><button class="btn ghost">＋ Agregar</button></div>
+    <div class="numlist">
+      <div class="numrow"><span class="numdot">1</span><input class="inp" readonly value="El módulo de facturación estuvo intermitente durante la visita."></div>
+    </div>
+
+    <!-- Firmas -->
+    <div class="sectitle"><h3>Firmas</h3><span class="hint">para el acta impresa</span><span class="rule"></span></div>
+    <div class="firmas">
+      <div class="firmabox"><b>Tania Lisset Castiblanco</b><span>Asesora · CERPAT</span></div>
+      <div class="firmabox"><b>Representante del cliente</b><span>Soluxionar SAS</span></div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap;">
+      <button class="btn ghost">Cancelar</button>
+      <button class="btn">🖨 Imprimir acta para firma</button>
+      <button class="btn pri">Guardar acta</button>
+    </div>
+  </section>
+
+  <!-- ============ MATRIZ ============ -->
+  <section class="panel-tab card pad" id="t-matriz" role="tabpanel" aria-labelledby="tab-matriz">
+    <p style="margin:0 0 14px;color:var(--muted);font-size:13px;">Cada <b style="color:var(--ink)">compromiso</b> de cada acta cae aquí. Se filtra por cliente, asesor, área, dirección y estado (embudos como en Excel), igual que la matriz de Hallazgos.</p>
+    <div class="toolbar">
+      <span class="filtpill"><span class="fn">Cliente:</span> Todos</span>
+      <span class="filtpill"><span class="fn">Asesor:</span> Todos</span>
+      <span class="filtpill"><span class="fn">Área:</span> Todas</span>
+      <span class="filtpill"><span class="fn">Dirección:</span> Todas</span>
+      <span class="filtpill"><span class="fn">Estado:</span> Todos</span>
+      <span class="filtpill"><span class="fn">Vence:</span> Este mes</span>
+      <span style="flex:1"></span>
+      <button class="btn ghost">⭳ Exportar Excel</button>
+    </div>
+    <div class="tblwrap">
+      <table class="mx">
+        <thead><tr>
+          <th>Cliente <span class="fn">▾</span></th><th>Visita <span class="fn">▾</span></th><th>Compromiso</th>
+          <th>Responsable <span class="fn">▾</span></th><th>Dirección <span class="fn">▾</span></th><th>Área <span class="fn">▾</span></th>
+          <th>Vence <span class="fn">▾</span></th><th>Estado <span class="fn">▾</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><b>Soluxionar SAS</b></td><td class="tnum">14 ago</td><td>Enviar conciliación corregida e informe de cartera</td>
+            <td><span class="who"><span class="dot" style="background:var(--firma)"></span>Tania Castiblanco</span></td><td><span class="chip prog">Firma → Cliente</span></td><td>Contabilidad</td><td class="tnum">22 ago</td><td><span class="chip pend">Pendiente</span></td></tr>
+          <tr><td><b>Soluxionar SAS</b></td><td class="tnum">14 ago</td><td>Entregar extractos bancarios y soportes de nómina</td>
+            <td><span class="who"><span class="dot" style="background:var(--cli)"></span>Laura Gómez (cliente)</span></td><td><span class="chip" style="color:var(--cli);background:var(--cli-bg)">Cliente → Firma</span></td><td>Tesorería</td><td class="tnum">18 ago</td><td><span class="chip venc">Vencido</span></td></tr>
+          <tr><td><b>Transportes Gayco SAS</b></td><td class="tnum">11 ago</td><td>Remitir soportes de retención del bimestre</td>
+            <td><span class="who"><span class="dot" style="background:var(--cli)"></span>Área contable (cliente)</span></td><td><span class="chip" style="color:var(--cli);background:var(--cli-bg)">Cliente → Firma</span></td><td>Impuestos</td><td class="tnum">20 ago</td><td><span class="chip ok">Cumplido</span></td></tr>
+          <tr><td><b>Ecoplanta PRI SAS</b></td><td class="tnum">6 ago</td><td>Preparar informe de hallazgos de revisoría</td>
+            <td><span class="who"><span class="dot" style="background:var(--firma)"></span>Alexandra Ruiz</span></td><td><span class="chip prog">Firma → Cliente</span></td><td>Revisoría</td><td class="tnum">28 ago</td><td><span class="chip pend">Pendiente</span></td></tr>
+          <tr><td><b>Inversiones Asdisan SAS</b></td><td class="tnum">4 ago</td><td>Firmar y devolver acta de la visita anterior</td>
+            <td><span class="who"><span class="dot" style="background:var(--cli)"></span>Gerencia (cliente)</span></td><td><span class="chip" style="color:var(--cli);background:var(--cli-bg)">Cliente → Firma</span></td><td>Gerencia</td><td class="tnum">9 ago</td><td><span class="chip venc">Vencido</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">La fila es el compromiso; al hacer clic se abre el acta completa. Cada quien ve lo suyo: el <b>asesor</b> filtra sus compromisos, la <b>coordinación</b> ve todo, y por <b>área</b> se mide la carga.</p>
+  </section>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section class="panel-tab" id="t-dash" role="tabpanel" aria-labelledby="tab-dash">
+    <div class="kpis">
+      <div class="card kpi"><div class="k">Visitas del mes</div><div class="v tnum">18</div><div class="s">7 clientes</div></div>
+      <div class="card kpi"><div class="k">Compromisos</div><div class="v tnum">42</div><div class="s">24 firma · 18 cliente</div></div>
+      <div class="card kpi"><div class="k">Cumplimiento</div><div class="v tnum" style="color:var(--ok)">71%</div><div class="s">30 de 42 al día</div></div>
+      <div class="card kpi"><div class="k">Vencidos</div><div class="v tnum" style="color:var(--venc)">6</div><div class="s">requieren gestión</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card pad">
+        <div class="sectitle" style="margin-top:0"><h3>Cumplimiento por asesor</h3><span class="rule"></span></div>
+        <div class="bar-row"><span>Tania C.</span><div class="bar-track"><div class="bar-fill" style="width:82%"></div></div><b class="tnum">82%</b></div>
+        <div class="bar-row"><span>Alexandra R.</span><div class="bar-track"><div class="bar-fill" style="width:68%"></div></div><b class="tnum">68%</b></div>
+        <div class="bar-row"><span>Nicolás C.</span><div class="bar-track"><div class="bar-fill" style="width:74%"></div></div><b class="tnum">74%</b></div>
+        <div class="bar-row"><span>Equipo</span><div class="bar-track"><div class="bar-fill" style="width:71%"></div></div><b class="tnum">71%</b></div>
+      </div>
+      <div class="card pad">
+        <div class="sectitle" style="margin-top:0"><h3>Compromisos por estado</h3><span class="rule"></span></div>
+        <div class="stack" style="margin:8px 0 6px;">
+          <span style="width:57%;background:var(--ok)"></span><span style="width:29%;background:var(--pend)"></span><span style="width:14%;background:var(--venc)"></span>
+        </div>
+        <div class="legend"><span><i style="background:var(--ok)"></i>Cumplidos 24</span><span><i style="background:var(--pend)"></i>Pendientes 12</span><span><i style="background:var(--venc)"></i>Vencidos 6</span></div>
+        <div class="sectitle"><h3>Por área</h3><span class="rule"></span></div>
+        <div class="bar-row"><span>Contabilidad</span><div class="bar-track"><div class="bar-fill" style="width:90%"></div></div><b class="tnum">14</b></div>
+        <div class="bar-row"><span>Impuestos</span><div class="bar-track"><div class="bar-fill" style="width:64%"></div></div><b class="tnum">10</b></div>
+        <div class="bar-row"><span>Revisoría</span><div class="bar-track"><div class="bar-fill" style="width:52%"></div></div><b class="tnum">8</b></div>
+        <div class="bar-row"><span>Tesorería</span><div class="bar-track"><div class="bar-fill" style="width:40%"></div></div><b class="tnum">6</b></div>
+      </div>
+    </div>
+
+    <div class="card pad" style="margin-top:14px;">
+      <div class="sectitle" style="margin-top:0"><h3>Top clientes con compromisos abiertos</h3><span class="rule"></span></div>
+      <div class="bar-row"><span>Soluxionar SAS</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><b class="tnum">7</b></div>
+      <div class="bar-row"><span>Transportes Gayco</span><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div><b class="tnum">5</b></div>
+      <div class="bar-row"><span>Ecoplanta PRI</span><div class="bar-track"><div class="bar-fill" style="width:58%"></div></div><b class="tnum">4</b></div>
+    </div>
+    <p class="note">Los números son de ejemplo. El dashboard se alimenta solo de lo que el asesor consigna en cada acta.</p>
+  </section>
+
+  <!-- ============ PORTAL ============ -->
+  <section class="panel-tab" id="t-portal" role="tabpanel" aria-labelledby="tab-portal">
+    <div class="card pad">
+      <div class="sectitle" style="margin-top:0"><h3>Portal del cliente (a futuro)</h3><span class="rule"></span></div>
+      <p style="font-size:13.5px;color:var(--ink);margin:0 0 6px;">Reutilizando lo que ya hicimos en <b>Hallazgos</b>, cada cliente entraría con su usuario y vería <b>solo sus visitas</b>: el acta de cada una, sus compromisos y el estado de cumplimiento.</p>
+      <ul class="clean">
+        <li>Vista de <b>solo lectura</b> por empresa (aislamiento por cliente/grupo, igual que Hallazgos).</li>
+        <li>Historial de actas con opción de <b>descargar el PDF firmado</b>.</li>
+        <li>Semáforo de <b>sus compromisos</b> (lo que debe entregar) y los de la firma.</li>
+      </ul>
+      <div class="callout" style="margin-top:14px;">Esto llega <b>al final</b>: primero el acta enriquecida y la matriz interna; el acceso del cliente se enciende cuando el contenido ya esté sólido.</div>
+    </div>
+  </section>
+
+  <div class="callout" style="margin-top:20px;">
+    <b>Cómo se construye (por fases)</b>
+    <ul class="clean">
+      <li><b>1 · Acta enriquecida:</b> compromisos firma/cliente con responsable externo, y recomendaciones · observaciones · actividades <b>enumeradas</b>.</li>
+      <li><b>2 · Acta imprimible</b> para firma (encabezado, contenido y bloque de firmas).</li>
+      <li><b>3 · Matriz de seguimiento</b> de compromisos con filtros por cliente/asesor/área/estado + exportar.</li>
+      <li><b>4 · Dashboard</b> de cumplimiento (por asesor, cliente, área, estado).</li>
+      <li><b>5 · Portal del cliente</b> (solo lectura), reusando el aislamiento de Hallazgos.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var tabs=[].slice.call(document.querySelectorAll('.tab'));
+    tabs.forEach(function(t){
+      t.addEventListener('click',function(){
+        tabs.forEach(function(x){x.setAttribute('aria-selected','false');});
+        t.setAttribute('aria-selected','true');
+        document.querySelectorAll('.panel-tab').forEach(function(p){p.classList.remove('on');});
+        document.getElementById(t.getAttribute('aria-controls')).classList.add('on');
+        window.scrollTo({top:0,behavior:'smooth'});
+      });
+    });
+    // Demo del toggle Firma/Cliente en los compromisos
+    document.querySelectorAll('.seg').forEach(function(seg){
+      seg.querySelectorAll('button').forEach(function(b){
+        b.addEventListener('click',function(){
+          seg.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed','false');});
+          b.setAttribute('aria-pressed','true');
+        });
+      });
+    });
+  })();
+</script>

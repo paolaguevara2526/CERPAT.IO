@@ -1,7 +1,8 @@
 // apps/api/src/routes/visitas.ts
-// Visitas del asesor/auditor al cliente, con su "acta": objetivo, recomendaciones
-// y compromisos (cada uno con fecha límite y responsable). Fuente adicional del
-// calendario. Lectura: cualquier usuario de la firma. Creación: usuario de la
+// Visitas del asesor/auditor al cliente, con su "acta": objetivo, actividades,
+// recomendaciones y observaciones (enumeradas), y compromisos (cada uno con fecha
+// límite y responsable, que puede ser de la firma o del cliente). Fuente adicional
+// del calendario. Lectura: cualquier usuario de la firma. Creación: usuario de la
 // firma. Edición/borrado del acta: coordinación/Administrador o el responsable.
 
 import { Router } from 'express';
@@ -12,6 +13,8 @@ export const visitasRouter = Router();
 
 const ESTADOS_VISITA = ['programada', 'realizada', 'cancelada'];
 const ESTADOS_COMPROMISO = ['pendiente', 'cumplido', 'cancelado'];
+const TIPOS_ITEM = ['actividad', 'recomendacion', 'observacion'] as const;
+type TipoItem = (typeof TIPOS_ITEM)[number];
 
 async function orgCerpat() {
   return prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
@@ -36,9 +39,29 @@ function limpiarTexto(v: unknown): string | null {
   return t === '' ? null : t;
 }
 
+// Normaliza el responsable de un compromiso: firma (usuario interno) o cliente
+// (persona externa, con nombre/cargo en responsableExterno).
+function datosResponsable(c: any): { responsableTipo: 'firma' | 'cliente'; responsableId: string | null; responsableExterno: string | null } {
+  const tipo = c?.responsableTipo === 'cliente' ? 'cliente' : 'firma';
+  if (tipo === 'cliente') return { responsableTipo: 'cliente', responsableId: null, responsableExterno: limpiarTexto(c?.responsableExterno) };
+  return { responsableTipo: 'firma', responsableId: typeof c?.responsableId === 'string' && c.responsableId ? c.responsableId : null, responsableExterno: null };
+}
+// Compromisos válidos desde el body (para crear junto con la visita).
+function compromisosDesde(org: string, arr: any): any[] {
+  return (Array.isArray(arr) ? arr : [])
+    .map((c: any) => ({ descripcion: limpiarTexto(c?.descripcion), fechaLimite: fechaSolo(c?.fechaLimite), area: limpiarTexto(c?.area), ...datosResponsable(c) }))
+    .filter((c: any) => c.descripcion)
+    .map((c: any) => ({ organizacionId: org, descripcion: c.descripcion, fechaLimite: c.fechaLimite, area: c.area, responsableTipo: c.responsableTipo, responsableId: c.responsableId, responsableExterno: c.responsableExterno, estado: 'pendiente' as const }));
+}
+// Ítems (actividades/recomendaciones/observaciones) desde el body, en orden.
+function itemsDesde(org: string, arr: any): any[] {
+  return (Array.isArray(arr) ? arr : [])
+    .map((it: any, i: number) => ({ tipo: it?.tipo as TipoItem, texto: limpiarTexto(it?.texto), orden: i }))
+    .filter((it: any) => TIPOS_ITEM.includes(it.tipo) && it.texto)
+    .map((it: any) => ({ organizacionId: org, tipo: it.tipo, orden: it.orden, texto: it.texto as string }));
+}
+
 // GET /visitas?anio=&mes=&empresaId=&responsableId=&estado=
-// Devuelve las visitas del mes (para el calendario) o filtradas. Cualquier
-// usuario de la firma.
 visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
   const org = await orgCerpat();
@@ -73,9 +96,9 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
       responsable: v.responsable?.nombre ?? null,
       fecha: v.fecha.toISOString(),
       hora: v.hora,
+      area: v.area,
       objetivo: v.objetivo,
       estado: v.estado,
-      observaciones: v.observaciones,
       compromisosTotal: v.compromisos.length,
       compromisosPendientes: v.compromisos.filter((c) => c.estado === 'pendiente').length,
       compromisosCumplidos: v.compromisos.filter((c) => c.estado === 'cumplido').length,
@@ -83,7 +106,7 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   });
 });
 
-// GET /visitas/:id — detalle con el acta completa (compromisos + recomendaciones).
+// GET /visitas/:id — detalle con el acta completa.
 visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
   const org = await orgCerpat();
@@ -97,9 +120,11 @@ visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
         orderBy: [{ fechaLimite: 'asc' }, { createdAt: 'asc' }],
         include: { responsable: { select: { id: true, nombre: true } } },
       },
+      items: { orderBy: { orden: 'asc' } },
     },
   });
   if (!v) return res.status(404).json({ error: 'Visita no encontrada.' });
+  const itemsDe = (t: TipoItem) => v.items.filter((it) => it.tipo === t).map((it) => it.texto);
   return res.json({
     visita: {
       id: v.id,
@@ -109,23 +134,32 @@ visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
       responsable: v.responsable,
       fecha: v.fecha.toISOString().slice(0, 10),
       hora: v.hora,
+      lugar: v.lugar,
+      area: v.area,
       objetivo: v.objetivo,
-      recomendaciones: v.recomendaciones,
       estado: v.estado,
-      observaciones: v.observaciones,
+      // Legado (texto) por compatibilidad; la UI nueva usa las listas.
+      recomendacionesTexto: v.recomendaciones,
+      observacionesTexto: v.observaciones,
+      actividades: itemsDe('actividad'),
+      recomendaciones: itemsDe('recomendacion'),
+      observaciones: itemsDe('observacion'),
       compromisos: v.compromisos.map((c) => ({
         id: c.id,
         descripcion: c.descripcion,
         fechaLimite: c.fechaLimite ? c.fechaLimite.toISOString().slice(0, 10) : null,
+        responsableTipo: c.responsableTipo,
         responsableId: c.responsableId,
         responsable: c.responsable,
+        responsableExterno: c.responsableExterno,
+        area: c.area,
         estado: c.estado,
       })),
     },
   });
 });
 
-// POST /visitas — agenda una visita (con compromisos iniciales opcionales).
+// POST /visitas — agenda una visita con su acta (compromisos e ítems opcionales).
 visitasRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
   const org = await orgCerpat();
@@ -139,11 +173,8 @@ visitasRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!empresa) return res.status(400).json({ error: 'Cliente no válido.' });
   const estado = typeof b.estado === 'string' && ESTADOS_VISITA.includes(b.estado) ? b.estado : 'programada';
 
-  const compromisosIn = Array.isArray(b.compromisos) ? b.compromisos : [];
-  const compromisosData = compromisosIn
-    .map((c: any) => ({ descripcion: limpiarTexto(c?.descripcion), fechaLimite: fechaSolo(c?.fechaLimite), responsableId: typeof c?.responsableId === 'string' && c.responsableId ? c.responsableId : null }))
-    .filter((c: any) => c.descripcion)
-    .map((c: any) => ({ organizacionId: org.id, descripcion: c.descripcion as string, fechaLimite: c.fechaLimite, responsableId: c.responsableId, estado: 'pendiente' as const }));
+  const compromisosData = compromisosDesde(org.id, b.compromisos);
+  const itemsData = itemsDesde(org.id, b.items);
 
   const visita = await prisma.visita.create({
     data: {
@@ -152,12 +183,13 @@ visitasRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
       responsableId: typeof b.responsableId === 'string' && b.responsableId ? b.responsableId : null,
       fecha,
       hora: limpiarTexto(b.hora),
+      lugar: limpiarTexto(b.lugar),
+      area: limpiarTexto(b.area),
       objetivo: limpiarTexto(b.objetivo),
-      recomendaciones: limpiarTexto(b.recomendaciones),
       estado: estado as any,
-      observaciones: limpiarTexto(b.observaciones),
       creadoPorId: req.user!.sub,
       compromisos: compromisosData.length ? { create: compromisosData } : undefined,
+      items: itemsData.length ? { create: itemsData } : undefined,
     },
     select: { id: true },
   });
@@ -172,7 +204,8 @@ async function puedeEditarVisita(req: AuthedRequest, orgId: string, visitaId: st
   return { v, ok };
 }
 
-// PATCH /visitas/:id — edita datos del acta.
+// PATCH /visitas/:id — edita datos del acta. Si el body trae `items`, reemplaza
+// por completo las listas enumeradas (actividades/recomendaciones/observaciones).
 visitasRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   const org = await orgCerpat();
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
@@ -190,12 +223,21 @@ visitasRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if ('responsableId' in b) data.responsableId = typeof b.responsableId === 'string' && b.responsableId ? b.responsableId : null;
   if ('fecha' in b) { const f = fechaSolo(b.fecha); if (!f) return res.status(400).json({ error: 'Fecha inválida.' }); data.fecha = f; }
   if ('hora' in b) data.hora = limpiarTexto(b.hora);
+  if ('lugar' in b) data.lugar = limpiarTexto(b.lugar);
+  if ('area' in b) data.area = limpiarTexto(b.area);
   if ('objetivo' in b) data.objetivo = limpiarTexto(b.objetivo);
-  if ('recomendaciones' in b) data.recomendaciones = limpiarTexto(b.recomendaciones);
-  if ('observaciones' in b) data.observaciones = limpiarTexto(b.observaciones);
   if ('estado' in b) { if (!ESTADOS_VISITA.includes(b.estado)) return res.status(400).json({ error: 'Estado inválido.' }); data.estado = b.estado; }
 
-  await prisma.visita.update({ where: { id: v.id }, data });
+  const reemplazarItems = 'items' in b;
+  const itemsData = reemplazarItems ? itemsDesde(org.id, b.items) : [];
+
+  await prisma.$transaction(async (tx) => {
+    if (Object.keys(data).length) await tx.visita.update({ where: { id: v.id }, data });
+    if (reemplazarItems) {
+      await tx.itemActa.deleteMany({ where: { visitaId: v.id } });
+      if (itemsData.length) await tx.itemActa.createMany({ data: itemsData.map((it) => ({ ...it, visitaId: v.id })) });
+    }
+  });
   return res.json({ ok: true });
 });
 
@@ -226,7 +268,8 @@ visitasRouter.post('/:id/compromisos', requireAuth, async (req: AuthedRequest, r
       visitaId: v.id,
       descripcion,
       fechaLimite: fechaSolo(b.fechaLimite),
-      responsableId: typeof b.responsableId === 'string' && b.responsableId ? b.responsableId : null,
+      area: limpiarTexto(b.area),
+      ...datosResponsable(b),
       estado: typeof b.estado === 'string' && ESTADOS_COMPROMISO.includes(b.estado) ? (b.estado as any) : 'pendiente',
     },
     select: { id: true },
@@ -246,7 +289,12 @@ visitasRouter.patch('/compromisos/:cid', requireAuth, async (req: AuthedRequest,
   const data: any = {};
   if ('descripcion' in b) { const d = limpiarTexto(b.descripcion); if (!d) return res.status(400).json({ error: 'La descripción no puede quedar vacía.' }); data.descripcion = d; }
   if ('fechaLimite' in b) data.fechaLimite = fechaSolo(b.fechaLimite);
-  if ('responsableId' in b) data.responsableId = typeof b.responsableId === 'string' && b.responsableId ? b.responsableId : null;
+  if ('area' in b) data.area = limpiarTexto(b.area);
+  // Responsable: si viene responsableTipo, se normaliza tipo + interno/externo juntos.
+  if ('responsableTipo' in b || 'responsableId' in b || 'responsableExterno' in b) {
+    const r = datosResponsable({ responsableTipo: b.responsableTipo ?? c.responsableTipo, responsableId: b.responsableId, responsableExterno: b.responsableExterno });
+    data.responsableTipo = r.responsableTipo; data.responsableId = r.responsableId; data.responsableExterno = r.responsableExterno;
+  }
   if ('estado' in b) { if (!ESTADOS_COMPROMISO.includes(b.estado)) return res.status(400).json({ error: 'Estado inválido.' }); data.estado = b.estado; }
   await prisma.compromisoVisita.update({ where: { id: c.id }, data });
   return res.json({ ok: true });

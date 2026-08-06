@@ -82,9 +82,16 @@ Todas (salvo `Organizacion` y el root) pertenecen a una organización vía
   reservados para las visitas recurrentes del plan (Fase 3, aún sin FK). Es una
   fuente más del **calendario** (etiqueta "Visitas").
 - **`CompromisoVisita`** — compromiso acordado en una visita: `descripcion`,
-  `fechaLimite?`, `responsableId?`, `estado` (`EstadoCompromiso`: `pendiente` /
-  `cumplido` / `cancelado`). Varios por visita; base del seguimiento por cliente
-  y asesor (Fase 2).
+  `fechaLimite?`, `estado` (`EstadoCompromiso`: `pendiente` / `cumplido` /
+  `cancelado`), `area?`. El responsable puede ser **de la firma** o **del
+  cliente**: `responsableTipo` (`ResponsableCompromiso`: `firma` / `cliente`),
+  con `responsableId?` (usuario interno, si es firma) o `responsableExterno?`
+  (nombre y cargo del externo, si es cliente). Varios por visita; base del
+  seguimiento por cliente, asesor y área.
+- **`ItemActa`** — ítem enumerado del acta: `tipo` (`TipoItemActa`: `actividad` /
+  `recomendacion` / `observacion`), `orden`, `texto`. Reemplaza a los campos de
+  texto `Visita.recomendaciones` / `Visita.observaciones` (que quedan como legado).
+  `Visita` suma además `area?` y `lugar?`.
 
 ## Relaciones
 
