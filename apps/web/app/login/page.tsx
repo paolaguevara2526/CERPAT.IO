@@ -92,7 +92,7 @@ export default function LoginPage() {
       <div ref={bgRef} aria-hidden style={{
         position: 'absolute', inset: 0, transform: 'scale(1.07)', transformOrigin: 'center',
         transition: 'transform .18s ease-out', willChange: 'transform',
-        backgroundColor: '#0f1d33', backgroundImage: "url('/login-cumbre.webp')",
+        backgroundColor: '#0f1d33', backgroundImage: "url('/login-cumbre.jpg')",
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
       }} />
 
