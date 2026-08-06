@@ -923,6 +923,64 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
   });
 });
 
+// Alcance del PORTAL del cliente: 'todas' (usuario de la firma) | string[]
+// (empresas del cliente por empresa/grupo) | null (sin acceso).
+async function alcancePortalPlan(u: AuthedRequest['user'], orgId: string): Promise<'todas' | string[] | null> {
+  if (!u) return null;
+  const esFirma = u.esRoot || (u.roles.length > 0 && !u.empresaCliente && !u.grupoCliente);
+  if (esFirma) return 'todas';
+  if (u.empresaCliente) return [u.empresaCliente];
+  if (u.grupoCliente) {
+    const empresas = await prisma.empresa.findMany({ where: { organizacionId: orgId, grupoId: u.grupoCliente }, select: { id: true } });
+    return empresas.map((e) => e.id);
+  }
+  return null;
+}
+const TAREA_LABEL: Record<string, string> = {
+  por_iniciar: 'Por iniciar', en_curso: 'En curso', en_revision: 'En revisión',
+  terminado: 'Terminado', auditado: 'Auditado', no_realizado: 'No realizado',
+};
+
+// GET /plan/portal?anio= — Plan de Trabajo del cliente (solo lectura, aislado por
+// NIT/grupo): matriz de cumplimiento (áreas × 12 meses) + listado de actividades.
+planRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const anio = Number(req.query.anio) || new Date().getFullYear();
+  if (!org) return res.json({ anio, kpis: null, matriz: [], actividades: [] });
+  const alcance = await alcancePortalPlan(req.user, org.id);
+  if (alcance === null) return res.status(403).json({ error: 'Sin acceso al plan de trabajo.' });
+  const scope = alcance === 'todas' ? {} : { empresaId: { in: alcance } };
+
+  const tareas = await prisma.tarea.findMany({
+    where: { organizacionId: org.id, actividadPlanId: { not: null }, periodo: { startsWith: `${anio}-` }, ...scope },
+    orderBy: [{ periodo: 'asc' }, { fechaVencimiento: 'asc' }],
+    select: { titulo: true, estado: true, fechaVencimiento: true, periodo: true, area: { select: { nombre: true } } },
+  });
+
+  const hoy = new Date();
+  const areas = new Map<string, { total: number; ejec: number }[]>();
+  let total = 0, ejecutadas = 0;
+  for (const t of tareas) {
+    const mes = Number((t.periodo ?? '').slice(5, 7));
+    if (!(mes >= 1 && mes <= 12)) continue;
+    const esEjec = EJECUTADA.includes(t.estado);
+    total++; if (esEjec) ejecutadas++;
+    const an = t.area?.nombre ?? 'Sin área';
+    if (!areas.has(an)) areas.set(an, Array.from({ length: 12 }, () => ({ total: 0, ejec: 0 })));
+    const cell = areas.get(an)![mes - 1]; cell.total++; if (esEjec) cell.ejec++;
+  }
+  const matriz = [...areas.entries()]
+    .map(([area, meses]) => ({ area, meses: meses.map((c) => (c.total ? Math.round((c.ejec / c.total) * 100) : null)), total: meses.reduce((a, c) => a + c.total, 0) }))
+    .sort((a, b) => a.area.localeCompare(b.area, 'es'));
+
+  const actividades = tareas.map((t) => {
+    const esEjec = EJECUTADA.includes(t.estado);
+    return { titulo: t.titulo, area: t.area?.nombre ?? null, periodo: t.periodo, fechaVencimiento: t.fechaVencimiento, estado: t.estado, estadoLabel: TAREA_LABEL[t.estado] ?? t.estado, vencido: !esEjec && t.fechaVencimiento < hoy };
+  });
+
+  res.json({ anio, kpis: { total, ejecutadas, cumplimiento: total ? Math.round((ejecutadas / total) * 100) : 0 }, matriz, actividades });
+});
+
 planRouter.get('/cumplimiento', async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, periodo: null, kpis: null, porArea: [], porCliente: [] });
