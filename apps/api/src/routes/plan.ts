@@ -39,6 +39,9 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   const area = typeof req.query.area === 'string' && req.query.area ? req.query.area : undefined;
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
   const mias = req.query.mias === '1' || req.query.mias === 'true';
+  // Mi Día: además de "mías", filtra por lo que EJECUTA el usuario según el tipo
+  // de actividad (la captura la hace el auxiliar; el resto, el asesor).
+  const miDia = req.query.miDia === '1' || req.query.miDia === 'true';
   const prioridad = typeof req.query.prioridad === 'string' && ['alta', 'media', 'baja'].includes(req.query.prioridad) ? req.query.prioridad : undefined;
   const asesorId = typeof req.query.asesorId === 'string' && req.query.asesorId ? req.query.asesorId : undefined;
   const auxiliarId = typeof req.query.auxiliarId === 'string' && req.query.auxiliarId ? req.query.auxiliarId : undefined;
@@ -73,6 +76,20 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   // Se combina con AND para no pisar otros OR (búsqueda/estado). Roles elevados ven todo.
   if (esStaffAcotado(req.user)) {
     where.AND = [...(where.AND ?? []), { OR: [{ asesorId: uid }, { auxiliarId: uid }] }];
+  }
+  // Mi Día = solo lo que le toca EJECUTAR al usuario, por tipo de actividad:
+  //  - captura → la ejecuta el auxiliar (o el asesor si no hay auxiliar);
+  //  - procesamiento / revisión / sin fase → las ejecuta el asesor.
+  // Así el asesor ve en Mi Día sus actividades (no la captura de sus auxiliares),
+  // mientras que en la Lista siguen apareciendo ambas (sus tareas + las del área).
+  if (miDia) {
+    where.AND = [...(where.AND ?? []), {
+      OR: [
+        { asesorId: uid, NOT: { actividadPlan: { fase: 'captura' } } },
+        { auxiliarId: uid, actividadPlan: { fase: 'captura' } },
+        { asesorId: uid, auxiliarId: null, actividadPlan: { fase: 'captura' } },
+      ],
+    }];
   }
 
   const [total, tareas] = await Promise.all([

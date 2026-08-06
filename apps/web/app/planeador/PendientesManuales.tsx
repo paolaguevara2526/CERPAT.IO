@@ -36,7 +36,7 @@ const inp: React.CSSProperties = {
   background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)',
 };
 
-export default function PendientesManuales({ empresas, pendientes, mostrarTabla = true }: { empresas: Empresa[]; pendientes: Pendiente[]; mostrarTabla?: boolean }) {
+export default function PendientesManuales({ empresas, pendientes, mostrarTabla = true, editable = true }: { empresas: Empresa[]; pendientes: Pendiente[]; mostrarTabla?: boolean; editable?: boolean }) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -127,9 +127,11 @@ export default function PendientesManuales({ empresas, pendientes, mostrarTabla 
             Deudas agregadas a mano: obligaciones de <strong>años anteriores</strong> o impuestos que no se cargaron al sistema. No dependen del generador de vencimientos.
           </p>
         </div>
-        <button className="dbtn primary" onClick={() => { setAbierto((v) => !v); setError(null); }} style={{ fontSize: 13 }}>
-          {abierto ? 'Cerrar' : '+ Agregar pago pendiente'}
-        </button>
+        {editable && (
+          <button className="dbtn primary" onClick={() => { setAbierto((v) => !v); setError(null); }} style={{ fontSize: 13 }}>
+            {abierto ? 'Cerrar' : '+ Agregar pago pendiente'}
+          </button>
+        )}
       </div>
 
       {abierto && (
@@ -247,15 +249,17 @@ export default function PendientesManuales({ empresas, pendientes, mostrarTabla 
                           ? <><span style={{ fontWeight: 600, color: '#c67c00' }}>${fmtCOP(p.interesMora)}</span><div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{p.diasMora} d de mora</div></>
                           : <span style={{ color: 'var(--muted)' }}>—</span>}
                       </td>
-                      <td><VencimientoPagoEditor id={p.id} valorPago={p.valorPago} estado={p.estado} /></td>
+                      <td><VencimientoPagoEditor id={p.id} valorPago={p.valorPago} estado={p.estado} editable={editable} /></td>
                       <td>
-                        <button
-                          className="dbtn" onClick={() => eliminar(p.id)} disabled={borrando === p.id}
-                          title="Eliminar pago pendiente"
-                          style={{ fontSize: 12, color: '#cf4436', opacity: borrando === p.id ? 0.5 : 1 }}
-                        >
-                          {borrando === p.id ? '…' : 'Eliminar'}
-                        </button>
+                        {editable && (
+                          <button
+                            className="dbtn" onClick={() => eliminar(p.id)} disabled={borrando === p.id}
+                            title="Eliminar pago pendiente"
+                            style={{ fontSize: 12, color: '#cf4436', opacity: borrando === p.id ? 0.5 : 1 }}
+                          >
+                            {borrando === p.id ? '…' : 'Eliminar'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
