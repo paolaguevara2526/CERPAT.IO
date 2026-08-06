@@ -1,8 +1,9 @@
 'use client';
-// Editor del "acta" de una visita: cliente, responsable, fecha/hora, objetivo,
-// recomendaciones y la lista de compromisos (descripción, fecha límite,
-// responsable, estado). Sirve para agendar (crear) y para editar el acta.
-// Reutilizable en la vista de Visitas y en el Calendario.
+// Editor del "acta" de una visita. Incluye datos de la visita, actividades
+// realizadas, recomendaciones y observaciones (listas enumeradas) y compromisos
+// (cada uno con responsable de la FIRMA o del CLIENTE, fecha límite, área y
+// estado). Sirve para agendar (crear) y editar el acta. Reutilizable en la vista
+// de Visitas y en el Calendario.
 
 import { useEffect, useState, useCallback } from 'react';
 
@@ -18,19 +19,46 @@ export const COMPROMISO_ESTADOS: { k: string; label: string; color: string }[] =
   { k: 'cancelado', label: 'Cancelado', color: '#9aa3b2' },
 ];
 
-type Compromiso = { id?: string; descripcion: string; fechaLimite: string; responsableId: string; estado: string };
-type Form = { empresaId: string; responsableId: string; fecha: string; hora: string; objetivo: string; recomendaciones: string; estado: string; observaciones: string };
-const VACIO: Form = { empresaId: '', responsableId: '', fecha: '', hora: '', objetivo: '', recomendaciones: '', estado: 'programada', observaciones: '' };
-const compromisoVacio = (): Compromiso => ({ descripcion: '', fechaLimite: '', responsableId: '', estado: 'pendiente' });
+type Compromiso = { id?: string; descripcion: string; fechaLimite: string; responsableTipo: 'firma' | 'cliente'; responsableId: string; responsableExterno: string; area: string; estado: string };
+type Form = { empresaId: string; responsableId: string; fecha: string; hora: string; lugar: string; area: string; objetivo: string; estado: string };
+const VACIO: Form = { empresaId: '', responsableId: '', fecha: '', hora: '', lugar: '', area: '', objetivo: '', estado: 'programada' };
+const compromisoVacio = (): Compromiso => ({ descripcion: '', fechaLimite: '', responsableTipo: 'firma', responsableId: '', responsableExterno: '', area: '', estado: 'pendiente' });
 
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
+const inputMini: React.CSSProperties = { ...input, padding: '5px 7px', fontSize: 12 };
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 };
+const secTitle: React.CSSProperties = { fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' };
+
+// Lista enumerada editable (actividades / recomendaciones / observaciones).
+function ListaEnumerada({ titulo, hint, icono, items, onChange, placeholder }: { titulo: string; hint: string; icono: string; items: string[]; onChange: (v: string[]) => void; placeholder: string }) {
+  const set = (i: number, v: string) => onChange(items.map((x, j) => (j === i ? v : x)));
+  return (
+    <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: items.length ? 8 : 4 }}>
+        <span style={secTitle}>{icono} {titulo} <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>· {hint}</span></span>
+        <button type="button" className="dbtn" onClick={() => onChange([...items, ''])} style={{ fontSize: 12 }}>＋ Agregar</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 6, background: 'var(--panel-2)', color: 'var(--muted)', fontWeight: 800, fontSize: 11.5, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
+            <input style={input} value={it} onChange={(e) => set(i, e.target.value)} placeholder={placeholder} />
+            <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 15 }}>🗑</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function VisitaModal({ id, onClose, onSaved }: { id: string | null; onClose: () => void; onSaved?: () => void }) {
   const editar = !!id;
   const [form, setForm] = useState<Form>(VACIO);
+  const [actividades, setActividades] = useState<string[]>([]);
+  const [recomendaciones, setRecomendaciones] = useState<string[]>([]);
+  const [observaciones, setObservaciones] = useState<string[]>([]);
   const [compromisos, setCompromisos] = useState<Compromiso[]>([]);
-  const [datos, setDatos] = useState<{ empresas: Opcion[]; usuarios: Opcion[] }>({ empresas: [], usuarios: [] });
+  const [datos, setDatos] = useState<{ empresas: Opcion[]; usuarios: Opcion[]; areas: Opcion[] }>({ empresas: [], usuarios: [], areas: [] });
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,18 +69,18 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
     const d = await r.json();
     if (!r.ok) { setError(d.error || 'No se pudo cargar la visita.'); return; }
     const v = d.visita;
-    setForm({
-      empresaId: v.empresaId ?? '', responsableId: v.responsableId ?? '', fecha: v.fecha ?? '', hora: v.hora ?? '',
-      objetivo: v.objetivo ?? '', recomendaciones: v.recomendaciones ?? '', estado: v.estado ?? 'programada', observaciones: v.observaciones ?? '',
-    });
-    setCompromisos((v.compromisos ?? []).map((c: any) => ({ id: c.id, descripcion: c.descripcion, fechaLimite: c.fechaLimite ?? '', responsableId: c.responsableId ?? '', estado: c.estado })));
+    setForm({ empresaId: v.empresaId ?? '', responsableId: v.responsableId ?? '', fecha: v.fecha ?? '', hora: v.hora ?? '', lugar: v.lugar ?? '', area: v.area ?? '', objetivo: v.objetivo ?? '', estado: v.estado ?? 'programada' });
+    setActividades(v.actividades ?? []);
+    setRecomendaciones(v.recomendaciones ?? []);
+    setObservaciones(v.observaciones ?? []);
+    setCompromisos((v.compromisos ?? []).map((c: any) => ({ id: c.id, descripcion: c.descripcion, fechaLimite: c.fechaLimite ?? '', responsableTipo: c.responsableTipo ?? 'firma', responsableId: c.responsableId ?? '', responsableExterno: c.responsableExterno ?? '', area: c.area ?? '', estado: c.estado })));
   }, []);
 
   useEffect(() => {
     (async () => {
       setCargando(true);
       const fd = await fetch('/api/planeador/gestion/form-datos', { cache: 'no-store' }).then((r) => r.json()).catch(() => ({}));
-      setDatos({ empresas: fd.empresas ?? [], usuarios: fd.usuarios ?? [] });
+      setDatos({ empresas: fd.empresas ?? [], usuarios: fd.usuarios ?? [], areas: fd.areas ?? [] });
       if (id) await cargarDetalle(id);
       setCargando(false);
     })();
@@ -60,23 +88,21 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
     document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h);
   }, [id, cargarDetalle, onClose]);
 
-  // ----- Compromisos (en edición se guardan de una contra la API) -----
-  function addCompromisoLocal() { setCompromisos((cs) => [...cs, compromisoVacio()]); }
-  function setCompromisoLocal(i: number, campo: keyof Compromiso, v: string) {
+  // ----- Compromisos -----
+  function setCompromiso(i: number, campo: keyof Compromiso, v: string) {
     setCompromisos((cs) => cs.map((c, j) => (j === i ? { ...c, [campo]: v } : c)));
   }
-  function quitarCompromisoLocal(i: number) { setCompromisos((cs) => cs.filter((_, j) => j !== i)); }
+  const bodyCompromiso = (c: Compromiso) => ({ descripcion: c.descripcion, fechaLimite: c.fechaLimite || null, responsableTipo: c.responsableTipo, responsableId: c.responsableTipo === 'firma' ? c.responsableId || null : null, responsableExterno: c.responsableTipo === 'cliente' ? c.responsableExterno || null : null, area: c.area || null, estado: c.estado });
 
   async function guardarCompromisoExistente(i: number) {
     if (!editar) return;
     const c = compromisos[i];
     if (!c.descripcion.trim()) return;
-    const body = { descripcion: c.descripcion, fechaLimite: c.fechaLimite || null, responsableId: c.responsableId || null, estado: c.estado };
     if (c.id) {
-      const r = await fetch(`/api/visitas/compromisos/${c.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const r = await fetch(`/api/visitas/compromisos/${c.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyCompromiso(c)) });
       if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.error || 'No se pudo guardar el compromiso.'); }
     } else {
-      const r = await fetch(`/api/visitas/${id}/compromisos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const r = await fetch(`/api/visitas/${id}/compromisos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyCompromiso(c)) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setError(d.error || 'No se pudo agregar el compromiso.'); return; }
       setCompromisos((cs) => cs.map((x, j) => (j === i ? { ...x, id: d.id } : x)));
@@ -88,8 +114,14 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
       const r = await fetch(`/api/visitas/compromisos/${c.id}`, { method: 'DELETE' });
       if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.error || 'No se pudo eliminar el compromiso.'); return; }
     }
-    quitarCompromisoLocal(i);
+    setCompromisos((cs) => cs.filter((_, j) => j !== i));
   }
+
+  const itemsPayload = () => [
+    ...actividades.filter((t) => t.trim()).map((texto) => ({ tipo: 'actividad', texto })),
+    ...recomendaciones.filter((t) => t.trim()).map((texto) => ({ tipo: 'recomendacion', texto })),
+    ...observaciones.filter((t) => t.trim()).map((texto) => ({ tipo: 'observacion', texto })),
+  ];
 
   async function guardar() {
     if (!form.empresaId) { setError('El cliente es obligatorio.'); return; }
@@ -97,13 +129,12 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
     setGuardando(true); setError(null);
     try {
       if (editar) {
-        const r = await fetch(`/api/visitas/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+        const r = await fetch(`/api/visitas/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, items: itemsPayload() }) });
         const d = await r.json().catch(() => ({}));
         if (!r.ok) { setError(d.error || 'No se pudo guardar.'); setGuardando(false); return; }
-        // Compromisos con descripción que aún no tienen id se crean; los que tienen id se actualizan.
         for (let i = 0; i < compromisos.length; i++) if (compromisos[i].descripcion.trim()) await guardarCompromisoExistente(i);
       } else {
-        const payload = { ...form, compromisos: compromisos.filter((c) => c.descripcion.trim()).map((c) => ({ descripcion: c.descripcion, fechaLimite: c.fechaLimite || null, responsableId: c.responsableId || null })) };
+        const payload = { ...form, items: itemsPayload(), compromisos: compromisos.filter((c) => c.descripcion.trim()).map(bodyCompromiso) };
         const r = await fetch('/api/visitas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const d = await r.json().catch(() => ({}));
         if (!r.ok) { setError(d.error || 'No se pudo agendar la visita.'); setGuardando(false); return; }
@@ -123,7 +154,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 620, maxHeight: '92vh', overflow: 'auto' }}>
+      <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 660, maxHeight: '92vh', overflow: 'auto' }}>
         <div className="win-bar">
           <span className="win-title">{editar ? 'Acta de visita' : 'Agendar visita'}</span>
           <div className="win-ctl"><button className="close" onClick={onClose} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
@@ -155,37 +186,67 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
                   </select>
                 </label>
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <label><span style={lbl}>Área / proceso</span>
+                  <input style={input} list="areas-acta" value={form.area} onChange={(e) => set('area', e.target.value)} placeholder="Ej. Contabilidad, Tesorería…" />
+                  <datalist id="areas-acta">{datos.areas.map((a) => <option key={a.id} value={a.nombre} />)}</datalist>
+                </label>
+                <label><span style={lbl}>Lugar</span><input style={input} value={form.lugar} onChange={(e) => set('lugar', e.target.value)} placeholder="Oficina del cliente, virtual…" /></label>
+              </div>
               <label><span style={lbl}>Objetivo / motivo</span><input style={input} value={form.objetivo} onChange={(e) => set('objetivo', e.target.value)} placeholder="Motivo de la visita…" /></label>
 
-              {/* Compromisos del acta */}
+              <ListaEnumerada titulo="Actividades realizadas" hint="lo que hizo el asesor" icono="✅" items={actividades} onChange={setActividades} placeholder="Actividad realizada…" />
+
+              {/* Compromisos */}
               <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' }}>🤝 Compromisos ({compromisos.length})</span>
-                  <button type="button" className="dbtn" onClick={addCompromisoLocal} style={{ fontSize: 12 }}>＋ Agregar</button>
+                  <span style={secTitle}>🤝 Compromisos ({compromisos.length}) <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>· de la firma o del cliente</span></span>
+                  <button type="button" className="dbtn" onClick={() => setCompromisos((cs) => [...cs, compromisoVacio()])} style={{ fontSize: 12 }}>＋ Agregar</button>
                 </div>
-                {compromisos.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>Aún no hay compromisos. Agrega los acuerdos con su fecha y responsable.</div>}
+                {compromisos.length === 0 && <div style={{ fontSize: 12, color: 'var(--muted)' }}>Agrega los acuerdos con su responsable, fecha y estado.</div>}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {compromisos.map((c, i) => (
-                    <div key={c.id ?? `n${i}`} style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '8px 9px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <input style={input} value={c.descripcion} onChange={(e) => setCompromisoLocal(i, 'descripcion', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} placeholder="Compromiso acordado…" />
-                      <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr 130px 30px', gap: 6, alignItems: 'center' }}>
-                        <input type="date" style={{ ...input, padding: '5px 7px', fontSize: 12 }} value={c.fechaLimite} onChange={(e) => setCompromisoLocal(i, 'fechaLimite', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} title="Fecha límite" />
-                        <select style={{ ...input, padding: '5px 7px', fontSize: 12 }} value={c.responsableId} onChange={(e) => { setCompromisoLocal(i, 'responsableId', e.target.value); }} onBlur={() => guardarCompromisoExistente(i)} title="Responsable del compromiso">
-                          <option value="">— Responsable —</option>
-                          {datos.usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
-                        </select>
-                        <select style={{ ...input, padding: '5px 7px', fontSize: 12 }} value={c.estado} onChange={(e) => { setCompromisoLocal(i, 'estado', e.target.value); }} onBlur={() => guardarCompromisoExistente(i)} title="Estado">
-                          {COMPROMISO_ESTADOS.map((s) => <option key={s.k} value={s.k}>{s.label}</option>)}
-                        </select>
-                        <button type="button" onClick={() => eliminarCompromiso(i)} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 15 }}>🗑</button>
+                  {compromisos.map((c, i) => {
+                    const esCliente = c.responsableTipo === 'cliente';
+                    return (
+                      <div key={c.id ?? `n${i}`} style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '9px 10px', display: 'flex', flexDirection: 'column', gap: 7, background: 'var(--panel-2)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input style={input} value={c.descripcion} onChange={(e) => setCompromiso(i, 'descripcion', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} placeholder="Compromiso acordado…" />
+                          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, whiteSpace: 'nowrap', color: esCliente ? '#7a5bd0' : '#2E5090', background: esCliente ? '#efeafb' : '#e7edf8', borderRadius: 20, padding: '3px 8px' }}>{esCliente ? 'del cliente' : 'de la firma'}</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 7, alignItems: 'center' }}>
+                          <div style={{ display: 'inline-flex', border: '1px solid var(--edge-strong)', borderRadius: 6, overflow: 'hidden' }}>
+                            {(['firma', 'cliente'] as const).map((t) => (
+                              <button key={t} type="button" onClick={() => { setCompromiso(i, 'responsableTipo', t); }} onBlur={() => guardarCompromisoExistente(i)}
+                                style={{ border: 'none', cursor: 'pointer', fontSize: 11.5, fontWeight: 700, padding: '6px 10px', fontFamily: 'var(--ui)', background: c.responsableTipo === t ? '#2E5090' : 'var(--panel)', color: c.responsableTipo === t ? '#fff' : 'var(--muted)' }}>
+                                {t === 'firma' ? 'Firma' : 'Cliente'}
+                              </button>
+                            ))}
+                          </div>
+                          {esCliente ? (
+                            <input style={inputMini} value={c.responsableExterno} onChange={(e) => setCompromiso(i, 'responsableExterno', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} placeholder="Nombre y cargo (externo)…" />
+                          ) : (
+                            <select style={inputMini} value={c.responsableId} onChange={(e) => setCompromiso(i, 'responsableId', e.target.value)} onBlur={() => guardarCompromisoExistente(i)}>
+                              <option value="">— Responsable de la firma —</option>
+                              {datos.usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                            </select>
+                          )}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr 130px 30px', gap: 7, alignItems: 'center' }}>
+                          <input type="date" style={inputMini} value={c.fechaLimite} onChange={(e) => setCompromiso(i, 'fechaLimite', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} title="Fecha límite" />
+                          <input style={inputMini} list="areas-acta" value={c.area} onChange={(e) => setCompromiso(i, 'area', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} placeholder="Área" title="Área" />
+                          <select style={inputMini} value={c.estado} onChange={(e) => setCompromiso(i, 'estado', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} title="Estado">
+                            {COMPROMISO_ESTADOS.map((s) => <option key={s.k} value={s.k}>{s.label}</option>)}
+                          </select>
+                          <button type="button" onClick={() => eliminarCompromiso(i)} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 15 }}>🗑</button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              <label><span style={lbl}>Recomendaciones / sugerencias</span><textarea style={{ ...input, minHeight: 70, resize: 'vertical' }} value={form.recomendaciones} onChange={(e) => set('recomendaciones', e.target.value)} placeholder="Recomendaciones del acta…" /></label>
-              <label><span style={lbl}>Observaciones</span><textarea style={{ ...input, minHeight: 48, resize: 'vertical' }} value={form.observaciones} onChange={(e) => set('observaciones', e.target.value)} /></label>
+              <ListaEnumerada titulo="Recomendaciones / sugerencias" hint="enumeradas" icono="💡" items={recomendaciones} onChange={setRecomendaciones} placeholder="Recomendación…" />
+              <ListaEnumerada titulo="Observaciones" hint="enumeradas" icono="📝" items={observaciones} onChange={setObservaciones} placeholder="Observación…" />
 
               <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                 {editar ? <button className="dbtn" onClick={eliminarVisita} disabled={guardando} style={{ fontSize: 13, color: '#cf4436', borderColor: '#f3d4d0' }}>Eliminar</button> : <span />}
@@ -194,7 +255,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
                   <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13 }}>{guardando ? 'Guardando…' : editar ? 'Guardar acta' : 'Agendar visita'}</button>
                 </div>
               </div>
-              {editar && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>Los compromisos se guardan al salir de cada campo; el resto del acta, con “Guardar acta”.</p>}
+              {editar && <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>Los compromisos se guardan al salir de cada campo; las listas del acta, con “Guardar acta”.</p>}
             </>
           )}
         </div>
