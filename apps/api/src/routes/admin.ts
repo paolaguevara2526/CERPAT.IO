@@ -796,6 +796,85 @@ adminRouter.put('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async
   res.json({ ok: true });
 });
 
+// POST /admin/asignaciones/importar  { dryRun, filas: [{ cliente, area, asesor, auxiliar, talla, insumo }] }
+// Carga masiva de asignaciones desde el Excel "Planes por cliente" (asesor/auxiliar/
+// talla por Cliente × Área). Empareja por nombre (cliente, área, usuario). Con
+// dryRun devuelve la previsualización sin escribir. Idempotente (upsert por área).
+adminRouter.post('/asignaciones/importar', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const dryRun = !!req.body?.dryRun;
+  const filas: any[] = Array.isArray(req.body?.filas) ? req.body.filas : [];
+  if (!filas.length) return res.status(400).json({ error: 'No hay filas para importar.' });
+
+  const norm = (s: unknown) => String(s ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const [empresas, areas, usuarios] = await Promise.all([
+    prisma.empresa.findMany({ where: { organizacionId: id }, select: { id: true, nombre: true } }),
+    prisma.area.findMany({ where: { organizacionId: id }, select: { id: true, nombre: true } }),
+    prisma.usuario.findMany({ where: { organizacionId: id }, select: { id: true, nombre: true } }),
+  ]);
+  // Mapa nombre→id; marca ambiguos (mismo nombre en dos registros) como 'DUP'.
+  const mapa = (arr: { id: string; nombre: string }[]) => {
+    const m = new Map<string, string>();
+    for (const x of arr) { const k = norm(x.nombre); m.set(k, m.has(k) ? 'DUP' : x.id); }
+    return m;
+  };
+  const empMap = mapa(empresas), areaMap = mapa(areas), userMap = mapa(usuarios);
+  const TALLAS = new Set(['S', 'M', 'L', 'XL']);
+
+  // Deduplica a Cliente × Área (el Excel repite la asignación por cada actividad).
+  const grupos = new Map<string, { cliente: string; area: string; asesor: string; auxiliar: string; talla: string; insumo: string }>();
+  for (const f of filas) {
+    const cliente = String(f?.cliente ?? '').trim();
+    const area = String(f?.area ?? '').trim();
+    if (!cliente || !area) continue;
+    const k = `${norm(cliente)}||${norm(area)}`;
+    const prev = grupos.get(k) ?? { cliente, area, asesor: '', auxiliar: '', talla: '', insumo: '' };
+    const nz = (a: string, b: unknown) => (String(b ?? '').trim() || a); // conserva no vacío
+    grupos.set(k, { cliente, area, asesor: nz(prev.asesor, f?.asesor), auxiliar: nz(prev.auxiliar, f?.auxiliar), talla: nz(prev.talla, f?.talla), insumo: nz(prev.insumo, f?.insumo) });
+  }
+
+  const problemas: string[] = [];
+  const preview: string[] = [];
+  const aplicar: { empresaId: string; areaId: string; asesorId: string | null; auxiliarId: string | null; talla: string | null; insumoCliente: boolean }[] = [];
+
+  for (const g of grupos.values()) {
+    const empresaId = empMap.get(norm(g.cliente));
+    if (!empresaId) { problemas.push(`Cliente no encontrado: "${g.cliente}"`); continue; }
+    if (empresaId === 'DUP') { problemas.push(`Cliente duplicado (nombre ambiguo): "${g.cliente}"`); continue; }
+    const areaId = areaMap.get(norm(g.area));
+    if (!areaId || areaId === 'DUP') { problemas.push(`Área no encontrada: "${g.area}" (cliente ${g.cliente})`); continue; }
+
+    const resolver = (nombre: string, rol: string): { id: string | null; ok: boolean } => {
+      if (!nombre) return { id: null, ok: true }; // vacío = sin asignar
+      const uid = userMap.get(norm(nombre));
+      if (!uid || uid === 'DUP') { problemas.push(`${rol} no encontrado: "${nombre}" (${g.cliente} · ${g.area})`); return { id: null, ok: false }; }
+      return { id: uid, ok: true };
+    };
+    const as = resolver(g.asesor, 'Asesor');
+    const au = resolver(g.auxiliar, 'Auxiliar');
+    if (!as.ok || !au.ok) continue; // no aplicar si un nombre indicado no coincide
+
+    const talla = TALLAS.has(g.talla.toUpperCase()) ? g.talla.toUpperCase() : null;
+    const insumoCliente = /^(s[ií]|si|x|1|true|verdadero)$/i.test(g.insumo.trim());
+    aplicar.push({ empresaId, areaId, asesorId: as.id, auxiliarId: au.id, talla, insumoCliente });
+    if (preview.length < 40) preview.push(`${g.cliente} · ${g.area} → asesor: ${g.asesor || '—'}, aux: ${g.auxiliar || '—'}${talla ? `, talla ${talla}` : ''}`);
+  }
+
+  if (dryRun) return res.json({ actualizar: aplicar.length, problemas, preview, totalFilas: grupos.size });
+
+  await prisma.$transaction(async (tx) => {
+    for (const a of aplicar) {
+      await tx.asignacionClienteArea.upsert({
+        where: { empresaId_areaId: { empresaId: a.empresaId, areaId: a.areaId } },
+        create: { organizacionId: id, empresaId: a.empresaId, areaId: a.areaId, asesorId: a.asesorId, auxiliarId: a.auxiliarId, talla: a.talla, insumoCliente: a.insumoCliente },
+        update: { asesorId: a.asesorId, auxiliarId: a.auxiliarId, talla: a.talla, insumoCliente: a.insumoCliente },
+      });
+    }
+  });
+  res.json({ ok: true, actualizadas: aplicar.length, problemas });
+});
+
 // ---------- Entregas de insumo (F1.2): liberar el insumo por cliente/período ----------
 // Modelo híbrido: entrega general (areaId null) o por área. Habilita el procesamiento.
 
