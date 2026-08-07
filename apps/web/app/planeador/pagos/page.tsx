@@ -5,7 +5,7 @@
 // Con KPIs de riesgo, semáforo, límite de pago (INEFICAZ/RST) e interés de mora
 // (DIAN) a hoy. Debajo queda solo el botón "+ Agregar pago pendiente".
 
-import { apiFetch } from '@/lib/session';
+import { apiFetch, getSessionUser } from '@/lib/session';
 import { exigirRuta } from '@/lib/acceso-server';
 import VencimientoPagoEditor from '../VencimientoPagoEditor';
 import PendientesManuales from '../PendientesManuales';
@@ -124,9 +124,12 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const estado = searchParams?.estado || '';
   const anio = new Date().getFullYear();
 
-  const [{ data: vencs, error }, pendientes, empresas] = await Promise.all([
-    fetchVencPagos(anio), fetchPendientes(), fetchEmpresas(),
+  const [{ data: vencs, error }, pendientes, empresas, sesion] = await Promise.all([
+    fetchVencPagos(anio), fetchPendientes(), fetchEmpresas(), getSessionUser(),
   ]);
+  // Solo el Administrador (o root) modifica el pago; los demás (Asesor, etc.) solo
+  // observan e imprimen. El backend ya valida esto; aquí evitamos mostrar controles.
+  const esEditor = !!sesion && (sesion.esRoot || sesion.roles.includes('Administrador'));
 
   // Listado unificado: vencimientos presentados + pagos pendientes manuales.
   const items: Item[] = [
@@ -184,7 +187,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Por pagar</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-        Vencimientos ya presentados (marca el pago) y pagos pendientes cargados a mano. El interés de mora se calcula a hoy y se actualiza solo.
+        Vencimientos ya presentados {esEditor ? '(marca el pago)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se calcula a hoy y se actualiza solo.
       </p>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -240,8 +243,8 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                           </>
                         : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
-                    <td><VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} /></td>
-                    <td>{i.manual ? <BorrarPendiente id={i.id} /> : null}</td>
+                    <td><VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} editable={esEditor} /></td>
+                    <td>{i.manual && esEditor ? <BorrarPendiente id={i.id} /> : null}</td>
                   </tr>
                 ))}
               </tbody>
@@ -250,7 +253,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         </div>
       )}
 
-      <PendientesManuales empresas={empresas} pendientes={pendientes} mostrarTabla={false} />
+      <PendientesManuales empresas={empresas} pendientes={pendientes} mostrarTabla={false} editable={esEditor} />
     </>
   );
 }

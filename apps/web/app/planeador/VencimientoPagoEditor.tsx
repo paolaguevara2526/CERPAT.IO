@@ -14,7 +14,7 @@ export const VENC_PAGO_META: Record<string, { label: string; color: string }> = 
   no_obligado: { label: 'No obligado', color: '#9aa3b2' },
 };
 
-export default function VencimientoPagoEditor({ id, valorPago, estado }: { id: string; valorPago: number | null; estado: string }) {
+export default function VencimientoPagoEditor({ id, valorPago, estado, editable = true }: { id: string; valorPago: number | null; estado: string; editable?: boolean }) {
   const router = useRouter();
   const [valor, setValor] = useState<string>(valorPago != null ? String(valorPago) : '');
   const [est, setEst] = useState(estado);
@@ -24,6 +24,18 @@ export default function VencimientoPagoEditor({ id, valorPago, estado }: { id: s
 
   const color = (VENC_PAGO_META[est] ?? VENC_PAGO_META.pendiente).color;
   const sucio = valor !== (valorPago != null ? String(valorPago) : '') || est !== estado;
+
+  // Solo lectura: el rol no puede modificar el pago (p. ej. Asesor). Muestra el
+  // valor y el estado sin controles editables.
+  if (!editable) {
+    const meta = VENC_PAGO_META[estado] ?? VENC_PAGO_META.pendiente;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{valorPago != null ? `$${valorPago.toLocaleString('es-CO', { maximumFractionDigits: 0 })}` : '—'}</span>
+        <span className="chip" style={{ color: meta.color, background: `${meta.color}18`, borderColor: `${meta.color}44` }}>{meta.label}</span>
+      </div>
+    );
+  }
 
   async function guardar() {
     setGuardando(true); setError(null); setOk(false);

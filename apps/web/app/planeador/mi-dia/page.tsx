@@ -9,7 +9,7 @@ import ListoParaProcesar from './ListoParaProcesar';
 export const dynamic = 'force-dynamic';
 
 export default async function MiDiaPage() {
-  const { data, error } = await fetchTareas('mias=1');
+  const { data, error } = await fetchTareas('miDia=1');
   const tareas = data?.tareas ?? [];
 
   return (
@@ -18,7 +18,7 @@ export default async function MiDiaPage() {
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Mi Día</h1>
         <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{data?.periodo ? nombrePeriodo(data.periodo) : ''} · {tareas.length} tareas</span>
       </div>
-      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>Tus tareas del período como asesor o auxiliar.</p>
+      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>Las actividades que te toca <strong>ejecutar</strong> en el período. Para ver también lo de tus auxiliares a cargo, usa la <strong>Lista</strong>.</p>
 
       {/* Cockpit por rol (cada sección se oculta sola si no aplica al usuario):
           captura del día (auxiliar) y listo para procesar (asesor). */}
