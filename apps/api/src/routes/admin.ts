@@ -875,6 +875,56 @@ adminRouter.post('/asignaciones/importar', requireAuth, soloCoordinacion, async 
   res.json({ ok: true, actualizadas: aplicar.length, problemas });
 });
 
+// POST /admin/asignaciones/sincronizar-tareas  { dryRun?, alcance? }
+// Re-estampa el asesor/auxiliar de las TAREAS del plan YA generadas según la
+// Asignación cliente×área ACTUAL. La generación estampa el responsable al crear la
+// tarea y no se actualiza sola; tras cambiar asignaciones (import o a mano) hay que
+// correr esto para que el nuevo responsable las vea. Alcance:
+//   'actual'   → período actual y siguientes, sin auditadas (recomendado; conserva historia)
+//   'abiertas' → todas las no auditadas de cualquier período
+//   'todas'    → absolutamente todas (incluye auditadas) — p. ej. antes de iniciar operación
+// Con dryRun solo cuenta lo que cambiaría. Solo Administrador / Coordinación / root.
+adminRouter.post('/asignaciones/sincronizar-tareas', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const dryRun = req.body?.dryRun === true;
+  const alcance = ['todas', 'abiertas', 'actual'].includes(req.body?.alcance) ? req.body.alcance : 'actual';
+
+  const now = new Date();
+  const periodoActual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const asigns = await prisma.asignacionClienteArea.findMany({ where: { organizacionId: id }, select: { empresaId: true, areaId: true, asesorId: true, auxiliarId: true } });
+  const asigMap = new Map(asigns.map((a) => [`${a.empresaId}|${a.areaId}`, { asesorId: a.asesorId, auxiliarId: a.auxiliarId }]));
+
+  const where: any = { organizacionId: id, actividadPlanId: { not: null }, areaId: { not: null } };
+  if (alcance !== 'todas') where.auditoria = { not: 'aprobada' };
+  if (alcance === 'actual') where.periodo = { gte: periodoActual };
+
+  const tareas = await prisma.tarea.findMany({ where, select: { id: true, empresaId: true, areaId: true, asesorId: true, auxiliarId: true } });
+
+  // Agrupa las tareas que cambian por (asesorId|auxiliarId) → pocas updateMany.
+  const buckets = new Map<string, string[]>();
+  let sinAsignacion = 0;
+  for (const t of tareas) {
+    const a = asigMap.get(`${t.empresaId}|${t.areaId}`);
+    if (!a) { sinAsignacion++; continue; }
+    if (t.asesorId === a.asesorId && t.auxiliarId === a.auxiliarId) continue;
+    const k = `${a.asesorId ?? ''}|${a.auxiliarId ?? ''}`;
+    (buckets.get(k) ?? buckets.set(k, []).get(k)!).push(t.id);
+  }
+  const aCambiar = [...buckets.values()].reduce((n, ids) => n + ids.length, 0);
+
+  if (dryRun) return res.json({ dryRun: true, alcance, revisadas: tareas.length, aCambiar, sinAsignacion });
+
+  let actualizadas = 0;
+  for (const [k, ids] of buckets) {
+    const [as, au] = k.split('|');
+    await prisma.tarea.updateMany({ where: { id: { in: ids } }, data: { asesorId: as || null, auxiliarId: au || null } });
+    actualizadas += ids.length;
+  }
+  res.json({ ok: true, alcance, actualizadas, sinAsignacion });
+});
+
 // ---------- Entregas de insumo (F1.2): liberar el insumo por cliente/período ----------
 // Modelo híbrido: entrega general (areaId null) o por área. Habilita el procesamiento.
 

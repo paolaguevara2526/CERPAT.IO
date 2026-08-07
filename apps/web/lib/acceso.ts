@@ -27,6 +27,7 @@ export const ACCESO_RUTA: Record<string, string[]> = {
   '/planeador/tablero': TODOS,
   '/planeador/flujo': ['Coordinador', 'Auditor'], // Flujo del cierre
   '/planeador/lista': TODOS,
+  '/planeador/asignaciones': TODOS, // cada quien ve las suyas; coordinación/admin ve todo
   '/planeador/pagos': ['Asesor', 'Coordinador', 'Auditor'],
   '/vencimientos': ['Coordinador', 'Auditor'],
   '/planeador/auditoria': ['Coordinador', 'Auditor'],
