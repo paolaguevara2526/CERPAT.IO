@@ -7,6 +7,7 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import SyncResponsablesBoton from './SyncResponsablesBoton';
+import FiltroColumna from '../../administracion/FiltroColumna';
 
 export type FilaAsignacion = {
   empresaId: string; empresa: string;
@@ -19,6 +20,9 @@ const norm = (s: unknown) => String(s ?? '').normalize('NFD').replace(/\p{Diacri
 
 type Vista = 'persona' | 'area' | 'cliente';
 type Rol = 'todos' | 'asesor' | 'auxiliar';
+type ColKey = 'empresa' | 'area' | 'asesor' | 'auxiliar';
+type ColFiltros = Record<ColKey, Set<string> | null>;
+const SIN_COL: ColFiltros = { empresa: null, area: null, asesor: null, auxiliar: null };
 
 const C_ASESOR = '#2f6fd0';
 const C_AUX = '#14a8a0';
@@ -51,6 +55,10 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
   const [expandida, setExpandida] = useState<string | null>(null);
   const [ordCli, setOrdCli] = useState<{ col: 'empresa' | 'area' | 'asesor' | 'auxiliar'; dir: 1 | -1 }>({ col: 'empresa', dir: 1 });
   const [ordPer, setOrdPer] = useState<{ col: 'nombre' | 'asesor' | 'auxiliar' | 'total'; dir: 1 | -1 }>({ col: 'total', dir: -1 });
+  const [colFil, setColFil] = useState<ColFiltros>(SIN_COL);
+
+  const valDe = (f: FilaAsignacion, c: ColKey): string =>
+    c === 'empresa' ? f.empresa : c === 'area' ? f.area : c === 'asesor' ? (f.asesor ?? 'Sin asesor') : (f.auxiliar ?? 'Sin auxiliar');
 
   const areas = useMemo(() => {
     const m = new Map<string, { id: string; nombre: string; orden: number }>();
@@ -64,7 +72,8 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
   }, [filas]);
 
   const nq = norm(q);
-  const filtradas = useMemo(() => filas.filter((f) => {
+  // Base: filtros de arriba (buscar / área / persona / rol).
+  const baseTop = useMemo(() => filas.filter((f) => {
     if (nq && ![f.empresa, f.area, f.asesor, f.auxiliar].some((x) => norm(x).includes(nq))) return false;
     if (area && f.areaId !== area) return false;
     if (persona) {
@@ -73,6 +82,20 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
     }
     return true;
   }), [filas, nq, area, persona, rol]);
+
+  // Valores distintos por columna para el embudo (sobre la base de arriba).
+  const COLS: ColKey[] = ['empresa', 'area', 'asesor', 'auxiliar'];
+  const valores = useMemo(() => {
+    const out = {} as Record<ColKey, string[]>;
+    for (const c of COLS) out[c] = [...new Set(baseTop.map((f) => valDe(f, c)))].sort((a, b) => a.localeCompare(b, 'es'));
+    return out;
+  }, [baseTop]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resultado final: base + filtros de embudo por columna.
+  const filtradas = useMemo(
+    () => baseTop.filter((f) => COLS.every((c) => { const s = colFil[c]; return s == null || s.has(valDe(f, c)); })),
+    [baseTop, colFil], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const met = useMemo(() => {
     const emp = new Set<string>(), ar = new Set<string>(), ase = new Set<string>(), aux = new Set<string>();
@@ -116,8 +139,29 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
     return [...filtradas].sort((a, b) => (String(a[col] ?? '~').localeCompare(String(b[col] ?? '~'), 'es')) * dir || a.empresa.localeCompare(b.empresa, 'es'));
   }, [filtradas, ordCli]);
 
-  const hayFiltro = !!(q || area || persona);
-  const limpiar = () => { setQ(''); setArea(''); setPersona(''); setRol('todos'); };
+  const hayColFil = COLS.some((c) => colFil[c] != null);
+  const hayFiltro = !!(q || area || persona) || hayColFil;
+  const limpiar = () => { setQ(''); setArea(''); setPersona(''); setRol('todos'); setColFil(SIN_COL); };
+  const setCol = (c: ColKey, s: Set<string> | null) => setColFil((p) => ({ ...p, [c]: s }));
+  // Embudo estilo Excel en el encabezado de una columna (detiene el clic para no ordenar).
+  const embudo = (c: ColKey) => (
+    <span onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex' }}>
+      <FiltroColumna valores={valores[c]} seleccion={colFil[c]} onCambio={(s) => setCol(c, s)} buscar={c !== 'area'} />
+    </span>
+  );
+  // Encabezado de "Por cliente": ordena al hacer clic y trae su embudo.
+  const thCli = (col: ColKey, txt: string) => (
+    <th style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }} onClick={() => setOrdCli({ col, dir: ordCli.col === col ? (ordCli.dir === 1 ? -1 : 1) : 1 })}>
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+        {txt}{ordCli.col === col ? <span style={{ opacity: 0.7 }}>{ordCli.dir === 1 ? ' ▲' : ' ▼'}</span> : ''}
+        {embudo(col)}
+      </span>
+    </th>
+  );
+  // Encabezado de "Por área": solo etiqueta + embudo (sin orden).
+  const thArea = (c: ColKey, txt: string) => (
+    <th><span style={{ display: 'inline-flex', alignItems: 'center' }}>{txt}{embudo(c)}</span></th>
+  );
   const detallePersona = (id: string) => filtradas.filter((f) => f.asesorId === id || f.auxiliarId === id).sort((a, b) => a.area.localeCompare(b.area, 'es') || a.empresa.localeCompare(b.empresa, 'es'));
 
   const tabBtn = (v: Vista, txt: string) => (
@@ -254,7 +298,7 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
                   </div>
                   <div className="panel"><div className="dt-wrap">
                     <table className="dt">
-                      <thead><tr><th>Cliente</th><th>Asesor</th><th>Auxiliar</th></tr></thead>
+                      <thead><tr>{thArea('empresa', 'Cliente')}{thArea('asesor', 'Asesor')}{thArea('auxiliar', 'Auxiliar')}</tr></thead>
                       <tbody>
                         {g.filas.map((f) => (
                           <tr key={f.empresaId + (f.areaId ?? '')}>
@@ -275,10 +319,10 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
             <div className="panel"><div className="dt-wrap">
               <table className="dt">
                 <thead><tr>
-                  {thSort(ordCli, setOrdCli, 'empresa', 'Cliente')}
-                  {thSort(ordCli, setOrdCli, 'area', 'Área')}
-                  {thSort(ordCli, setOrdCli, 'asesor', 'Asesor')}
-                  {thSort(ordCli, setOrdCli, 'auxiliar', 'Auxiliar')}
+                  {thCli('empresa', 'Cliente')}
+                  {thCli('area', 'Área')}
+                  {thCli('asesor', 'Asesor')}
+                  {thCli('auxiliar', 'Auxiliar')}
                 </tr></thead>
                 <tbody>
                   {porCliente.length === 0 ? (
