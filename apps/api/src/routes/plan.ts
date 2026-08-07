@@ -442,6 +442,63 @@ planRouter.patch('/tareas/:id/pago', requireAuth, async (req: AuthedRequest, res
   res.json({ ok: true, id: actualizada.id, valorPago: actualizada.valorPago != null ? Number(actualizada.valorPago) : null, estadoPago: actualizada.estadoPago });
 });
 
+// GET /plan/asignaciones — tablero de asignaciones (asesor/auxiliar por cliente y
+// área). Coordinación/Administrador/root ve todo; un Asesor/Auxiliar ve solo las
+// empresas donde figura. Base del "tablero por área" y de "qué empresas tengo".
+planRouter.get('/asignaciones', requireAuth, async (req: AuthedRequest, res) => {
+  const u = req.user;
+  const esFirma = !!u && (u.esRoot || (u.roles.length > 0 && !u.empresaCliente && !u.grupoCliente));
+  if (!esFirma) return res.status(403).json({ error: 'Sin acceso a asignaciones.' });
+  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  if (!org) return res.json({ esCoordinacion: false, yoId: u!.sub, areas: [], personas: [] });
+
+  const acotado = esStaffAcotado(u);
+  const uid = u!.sub;
+  const asigs = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: org.id, ...(acotado ? { OR: [{ asesorId: uid }, { auxiliarId: uid }] } : {}) },
+    select: {
+      empresaId: true,
+      empresa: { select: { nombre: true } },
+      area: { select: { id: true, nombre: true, orden: true } },
+      asesor: { select: { id: true, nombre: true } },
+      auxiliar: { select: { id: true, nombre: true } },
+    },
+  });
+
+  // Agrupa por área (cada fila = un cliente con su asesor y auxiliar).
+  const porArea = new Map<string, { areaId: string; area: string; orden: number; filas: any[] }>();
+  for (const a of asigs) {
+    const areaId = a.area?.id ?? '__sin__';
+    const g = porArea.get(areaId) ?? { areaId, area: a.area?.nombre ?? '(sin área)', orden: a.area?.orden ?? 999, filas: [] };
+    g.filas.push({
+      empresaId: a.empresaId, empresa: a.empresa?.nombre ?? '—',
+      asesor: a.asesor?.nombre ?? null, auxiliar: a.auxiliar?.nombre ?? null,
+    });
+    porArea.set(areaId, g);
+  }
+  const areas = [...porArea.values()].sort((x, y) => x.orden - y.orden || x.area.localeCompare(y.area, 'es'));
+  for (const ar of areas) ar.filas.sort((x: any, y: any) => x.empresa.localeCompare(y.empresa, 'es'));
+
+  // Resumen por persona (lectura rápida del coordinador): a cuántos clientes está
+  // asignada cada persona como asesor y como auxiliar.
+  const pers = new Map<string, { id: string; nombre: string; comoAsesor: Set<string>; comoAuxiliar: Set<string> }>();
+  const reg = (id: string | null | undefined, nombre: string | null | undefined, empresaId: string, rol: 'asesor' | 'auxiliar') => {
+    if (!id) return;
+    const p = pers.get(id) ?? { id, nombre: nombre ?? '—', comoAsesor: new Set<string>(), comoAuxiliar: new Set<string>() };
+    (rol === 'asesor' ? p.comoAsesor : p.comoAuxiliar).add(empresaId);
+    pers.set(id, p);
+  };
+  for (const a of asigs) {
+    reg(a.asesor?.id, a.asesor?.nombre, a.empresaId, 'asesor');
+    reg(a.auxiliar?.id, a.auxiliar?.nombre, a.empresaId, 'auxiliar');
+  }
+  const personas = [...pers.values()]
+    .map((p) => ({ id: p.id, nombre: p.nombre, asesorDe: p.comoAsesor.size, auxiliarDe: p.comoAuxiliar.size }))
+    .sort((x, y) => x.nombre.localeCompare(y.nombre, 'es'));
+
+  res.json({ esCoordinacion: puedeGestionar(u!), yoId: uid, areas, personas });
+});
+
 // ---------- Crear / editar / eliminar tareas (Coordinador/Administrador/root) ----------
 
 const PRIORIDADES = ['alta', 'media', 'baja'];

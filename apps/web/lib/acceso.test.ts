@@ -13,7 +13,7 @@ const root = { esRoot: true, roles: [] };
 const CASOS: { rol: string; ve: string[]; noVe: string[] }[] = [
   {
     rol: 'Auxiliar',
-    ve: ['/planeador', '/planeador/mi-dia', '/planeador/calendario', '/planeador/tablero', '/planeador/lista', '/servicios/retenciones', '/servicios/punto-equilibrio', '/servicios'],
+    ve: ['/planeador', '/planeador/mi-dia', '/planeador/calendario', '/planeador/tablero', '/planeador/lista', '/planeador/asignaciones', '/servicios/retenciones', '/servicios/punto-equilibrio', '/servicios'],
     noVe: ['/planeador/visitas', '/planeador/pagos', '/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion', '/clientes', '/usuarios', '/administracion', '/hallazgos'],
   },
   {

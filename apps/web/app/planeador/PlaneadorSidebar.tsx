@@ -18,6 +18,7 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
       { label: 'Tablero', icon: '▦', href: '/planeador/tablero' },
       { label: 'Flujo del cierre', icon: '🔀', href: '/planeador/flujo' },
       { label: 'Lista', icon: '☰', href: '/planeador/lista' },
+      { label: 'Asignaciones', icon: '🧑‍🤝‍🧑', href: '/planeador/asignaciones' },
       { label: 'Pagos', icon: '💲', href: '/planeador/pagos' },
       { label: 'Vencimientos', icon: '🗓', href: '/vencimientos' },
       { label: 'Auditoría', icon: '🛡', href: '/planeador/auditoria' },
