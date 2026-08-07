@@ -465,38 +465,18 @@ planRouter.get('/asignaciones', requireAuth, async (req: AuthedRequest, res) => 
     },
   });
 
-  // Agrupa por área (cada fila = un cliente con su asesor y auxiliar).
-  const porArea = new Map<string, { areaId: string; area: string; orden: number; filas: any[] }>();
-  for (const a of asigs) {
-    const areaId = a.area?.id ?? '__sin__';
-    const g = porArea.get(areaId) ?? { areaId, area: a.area?.nombre ?? '(sin área)', orden: a.area?.orden ?? 999, filas: [] };
-    g.filas.push({
+  // Filas planas (un cliente × área con su asesor y auxiliar). El cliente hace el
+  // pivoteo (por persona / área / cliente), los filtros y las métricas en vivo.
+  const filas = asigs
+    .map((a) => ({
       empresaId: a.empresaId, empresa: a.empresa?.nombre ?? '—',
-      asesor: a.asesor?.nombre ?? null, auxiliar: a.auxiliar?.nombre ?? null,
-    });
-    porArea.set(areaId, g);
-  }
-  const areas = [...porArea.values()].sort((x, y) => x.orden - y.orden || x.area.localeCompare(y.area, 'es'));
-  for (const ar of areas) ar.filas.sort((x: any, y: any) => x.empresa.localeCompare(y.empresa, 'es'));
+      areaId: a.area?.id ?? null, area: a.area?.nombre ?? '(sin área)', areaOrden: a.area?.orden ?? 999,
+      asesorId: a.asesor?.id ?? null, asesor: a.asesor?.nombre ?? null,
+      auxiliarId: a.auxiliar?.id ?? null, auxiliar: a.auxiliar?.nombre ?? null,
+    }))
+    .sort((x, y) => x.areaOrden - y.areaOrden || x.area.localeCompare(y.area, 'es') || x.empresa.localeCompare(y.empresa, 'es'));
 
-  // Resumen por persona (lectura rápida del coordinador): a cuántos clientes está
-  // asignada cada persona como asesor y como auxiliar.
-  const pers = new Map<string, { id: string; nombre: string; comoAsesor: Set<string>; comoAuxiliar: Set<string> }>();
-  const reg = (id: string | null | undefined, nombre: string | null | undefined, empresaId: string, rol: 'asesor' | 'auxiliar') => {
-    if (!id) return;
-    const p = pers.get(id) ?? { id, nombre: nombre ?? '—', comoAsesor: new Set<string>(), comoAuxiliar: new Set<string>() };
-    (rol === 'asesor' ? p.comoAsesor : p.comoAuxiliar).add(empresaId);
-    pers.set(id, p);
-  };
-  for (const a of asigs) {
-    reg(a.asesor?.id, a.asesor?.nombre, a.empresaId, 'asesor');
-    reg(a.auxiliar?.id, a.auxiliar?.nombre, a.empresaId, 'auxiliar');
-  }
-  const personas = [...pers.values()]
-    .map((p) => ({ id: p.id, nombre: p.nombre, asesorDe: p.comoAsesor.size, auxiliarDe: p.comoAuxiliar.size }))
-    .sort((x, y) => x.nombre.localeCompare(y.nombre, 'es'));
-
-  res.json({ esCoordinacion: puedeGestionar(u!), yoId: uid, areas, personas });
+  res.json({ esCoordinacion: puedeGestionar(u!), yoId: uid, filas });
 });
 
 // ---------- Crear / editar / eliminar tareas (Coordinador/Administrador/root) ----------
