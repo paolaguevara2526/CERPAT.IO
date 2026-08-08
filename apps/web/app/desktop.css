@@ -192,3 +192,63 @@ body { margin: 0; }
 .chip { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 4px; letter-spacing: 0.2px; border: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--hi); }
 
 @media (prefers-reduced-motion: reduce) { .dbtn { transition: none; } }
+
+/* ---------- Responsive (móvil / tablet) ----------
+   La metáfora de "ventana de escritorio" se relaja en pantallas pequeñas: el
+   marco ocupa todo el ancho, se recuperan los márgenes para el contenido y se
+   ocultan los adornos que no aportan en móvil (ruta y controles de ventana). */
+
+/* Tablet y pantallas angostas */
+@media (max-width: 1024px) {
+  .win-body { padding: 14px; }
+  .app-content { padding: 14px !important; }
+  .tile { padding: 12px 13px; }
+  .tile .v { font-size: 23px; }
+}
+
+/* Móvil */
+@media (max-width: 760px) {
+  /* El marco de ventana pasa a pantalla completa (sin bordes redondeados ni sombra) */
+  .win {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    box-shadow: none;
+  }
+  .win-bar { height: 46px; padding: 0 2px 0 10px; gap: 8px; }
+  .win-logo { height: 18px; }
+  .win-title { font-size: 13px; }
+  .win-path { display: none; }              /* la URL no aporta en móvil */
+  /* Los botones minimizar/maximizar son adorno de escritorio; el de cerrar SÍ se
+     conserva porque es el que usan los modales para cerrarse. */
+  .win-ctl button:not(.close) { display: none; }
+  .win-ctl button { width: 40px; }
+
+  .win-body { padding: 12px; }
+  .app-content { padding: 12px !important; }
+
+  /* El shell aprovecha todo el ancho de la pantalla */
+  .app-shell { padding: 0 !important; }
+  .app-win { min-height: 100vh !important; border-top: none; }
+
+  /* Tablas: scroll horizontal cómodo y con inercia en iOS */
+  .dt-wrap { -webkit-overflow-scrolling: touch; }
+  .dt { font-size: 13px; }
+  .dt th { padding: 9px 10px; }
+  .dt td { padding: 9px 10px; }
+
+  .tile { padding: 11px 12px; }
+  .tile .v { font-size: 21px; }
+
+  /* Barra de estado: que no se corte el nombre del usuario */
+  .win-status { padding: 6px 10px; flex-wrap: wrap; gap: 8px; }
+
+  /* Áreas táctiles más cómodas */
+  .dbtn { min-height: 34px; }
+}
+
+/* Modales: en móvil ocupan casi toda la pantalla (los diálogos usan .win) */
+@media (max-width: 560px) {
+  .win-bar { height: 44px; }
+  .win-body { padding: 12px; }
+}

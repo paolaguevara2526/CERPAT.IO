@@ -53,7 +53,7 @@ const SECTIONS: { titulo: string; items: Item[] }[] = [
 
 const LS_KEY = 'cerpat.sidebar.areas';
 
-export default function PlaneadorSidebar({ roles, esRoot = false }: { roles: string[]; esRoot?: boolean }) {
+export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = false }: { roles: string[]; esRoot?: boolean; soloIconos?: boolean }) {
   const path = usePathname();
   const usuario = { roles, esRoot };
 
@@ -99,16 +99,34 @@ export default function PlaneadorSidebar({ roles, esRoot = false }: { roles: str
       fontSize: 13, fontWeight: 600, textDecoration: 'none', color: 'inherit', cursor: 'pointer', position: 'relative',
     };
     const activeStyle: React.CSSProperties = active ? { background: 'var(--nav-active-bg)', color: 'var(--nav-active-ink)' } : {};
+    // Modo compacto: solo el ícono, centrado (el nombre va en el tooltip).
+    const compacto: React.CSSProperties = soloIconos ? { justifyContent: 'center', padding: '9px 0' } : {};
     return (
-      <a key={it.label} href={it.href} style={{ ...base, ...activeStyle }}>
+      <a key={it.label} href={it.href} title={it.label} aria-label={it.label} style={{ ...base, ...activeStyle, ...compacto }}>
         <span style={{ width: 18, textAlign: 'center' }}>{it.icon}</span>
-        <span>{it.label}</span>
+        {!soloIconos && <span>{it.label}</span>}
         {active && <span style={{ position: 'absolute', left: -6, top: 7, bottom: 7, width: 3, borderRadius: 3, background: 'var(--nav-accent)' }} />}
       </a>
     );
   };
 
   const inicioVisible = puedeVerRuta(usuario, INICIO.href);
+
+  // Modo compacto (solo íconos): sin acordeón —no hay texto que colapsar—, se
+  // listan todos los ítems con un separador sutil entre áreas.
+  if (soloIconos) {
+    return (
+      <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 2, width: 56, minWidth: 56 }}>
+        {inicioVisible && item(INICIO)}
+        {secciones.map((sec) => (
+          <div key={sec.titulo} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div title={sec.titulo} style={{ height: 1, background: 'currentColor', opacity: 0.18, margin: '8px 8px 6px' }} />
+            {sec.items.map(item)}
+          </div>
+        ))}
+      </aside>
+    );
+  }
 
   return (
     <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210 }}>
