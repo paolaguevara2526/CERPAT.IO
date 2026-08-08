@@ -167,12 +167,12 @@ const CLIENTES = [
   'cliente-ecoplanta', 'cliente-grasscol', 'cliente-servicasinos', 'cliente-sky', 'cliente-transportes-gayco-sas',
 ];
 
-export function Clientes() {
+export function Clientes({ fondo = LILA }: { fondo?: string } = {}) {
   return (
-    <section style={{ background: LILA, padding: '48px 24px' }}>
+    <section style={{ background: fondo, padding: '48px 24px' }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <p style={{ textAlign: 'center', color: TEXTO, fontSize: 14, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 26px' }}>
-          Empresas que confían en nosotros
+          Empresas que nos respaldan
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 30, justifyContent: 'center', alignItems: 'center' }}>
           {CLIENTES.map((c) => (

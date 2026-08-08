@@ -37,9 +37,24 @@ const SERVICIOS = [
 ];
 
 const RAZONES = [
-  { titulo: 'Enfoque en Resultados', texto: 'Trabajamos para mejorar la rentabilidad y la estabilidad financiera de su empresa.' },
-  { titulo: 'Equipo Especializado', texto: 'Más de 30 profesionales en contabilidad, auditoría, tributación y derecho.' },
-  { titulo: 'Respaldo y Certificación', texto: 'Autorizados por la Junta Central de Contadores y certificados ISO 9001:2015.' },
+  { titulo: 'Enfoque en Resultados', texto: 'Trabajamos para mejorar la rentabilidad y estabilidad financiera de tu empresa.' },
+  { titulo: 'Respuesta Ágil y Oportuna', texto: 'Atención rápida y acompañamiento constante en cada proceso o requerimiento.' },
+  { titulo: 'Visión Integral Empresarial', texto: 'Integramos áreas contables, legales y financieras para decisiones más seguras.' },
+];
+
+const TESTIMONIOS = [
+  {
+    nombre: 'Rosman Ñañez', empresa: 'Elecgiteca Manacacias S.A.S.',
+    texto: 'Estamos muy satisfechos con su eficiencia, que nos ha permitido enfocarnos en el crecimiento de nuestra empresa, confiando plenamente en el cumplimiento de nuestras obligaciones tributarias.',
+  },
+  {
+    nombre: 'Gloria Blanco González', empresa: 'BYB Logipetrol S.A.S.',
+    texto: 'El apoyo de Cerpat ha sido fundamental para nuestro crecimiento, destacándose por su profesionalismo, dedicación y eficiencia. Altamente recomendados.',
+  },
+  {
+    nombre: 'Milena Baquero', empresa: 'Administración de Transpubadi S.A.S.',
+    texto: 'Llevamos años utilizando los servicios de CERPAT para una contabilidad segura y confiable, con resultados excepcionales y reportes siempre puntuales.',
+  },
 ];
 
 export default function HomePage() {
@@ -161,7 +176,29 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Clientes />
+      {/* Testimonios */}
+      <section style={{ background: LILA, padding: '70px 24px' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 42 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: INDIGO, marginBottom: 10 }}>Testimonios</div>
+            <h2 style={{ fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: '-0.5px' }}>¿Quiénes confían en nosotros?</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 24 }}>
+            {TESTIMONIOS.map((t) => (
+              <figure key={t.nombre} style={{ ...card, margin: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ color: BRAND, fontSize: 40, lineHeight: 0.7, fontWeight: 700 }}>&ldquo;</div>
+                <blockquote style={{ margin: 0, color: TEXTO, fontSize: 15, lineHeight: 1.8, fontStyle: 'italic', flex: 1 }}>{t.texto}</blockquote>
+                <figcaption style={{ borderTop: `1px solid ${LILA_2}`, paddingTop: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: TITULO }}>{t.nombre}</div>
+                  <div style={{ color: INDIGO, fontSize: 13.5, fontWeight: 500 }}>{t.empresa}</div>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <Clientes fondo="#fff" />
 
       {/* Cierre */}
       <section style={{ background: `linear-gradient(120deg, ${INDIGO}, ${INDIGO_2})`, color: '#fff', padding: '64px 24px' }}>
