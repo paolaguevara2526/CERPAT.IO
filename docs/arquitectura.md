@@ -151,6 +151,25 @@ Fuente de verdad del esquema: [`../prisma/schema.prisma`](../prisma/schema.prism
   - Se involucra temprano el criterio legal/de cumplimiento de la firma.
   - Los módulos con PII exponen menos por defecto (principio de mínimo acceso).
 
+## Otorgar el rol ROOT de plataforma
+
+El rol **root** (`Usuario.esRootPlataforma`) es el permiso más alto y, en el modelo
+multi-tenant, vive **por encima de las firmas**: por eso **no se edita desde la
+interfaz** (un administrador de un cliente no debe poder crear roots de plataforma).
+
+Hoy, en la práctica, el rol **Administrador ya da acceso a todo el producto**
+(`esAdminRol = esRoot || Administrador`); root añade saltarse *cualquier*
+verificación de rol y quedar protegido contra desactivación y borrado.
+
+Dos formas de otorgarlo:
+
+1. **Desde Railway (sin acceso a la base).** En el servicio de la API →
+   *Variables*, agregar `PROMOVER_ROOT_EMAIL = <correo>` y redesplegar. Al
+   arrancar, la API promueve esa cuenta y lo registra en el log. Después,
+   **quitar la variable**. Ver `apps/api/src/bootstrap-root.ts` (idempotente).
+2. **Con acceso a la base.** `npx tsx prisma/set-root.ts <correo>` (o
+   `--quitar` para revocarlo).
+
 Registrar aquí cada decisión de arquitectura relevante junto con su
 justificación (ADR corto: contexto, decisión, consecuencias) a medida que se
 tomen durante la implementación.
