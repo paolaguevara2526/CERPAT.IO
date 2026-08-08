@@ -15,6 +15,7 @@ import { adminRouter } from './routes/admin.js';
 import { hallazgosRouter } from './routes/hallazgos.js';
 import { vencimientosRouter } from './routes/vencimientos.js';
 import { visitasRouter } from './routes/visitas.js';
+import { promoverRootSiSePide } from './bootstrap-root.js';
 
 const app = express();
 
@@ -45,4 +46,6 @@ app.use('/visitas', visitasRouter);
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(PORT, () => {
   console.log(`API escuchando en http://localhost:${PORT}`);
+  // Promoción puntual a root si se pidió por variable de entorno (ver el archivo).
+  void promoverRootSiSePide();
 });
