@@ -78,6 +78,79 @@ Fuente de verdad del esquema: [`../prisma/schema.prisma`](../prisma/schema.prism
     implementar en `apps/api` el middleware de tenant, el filtrado por endpoint
     y la resolución de la organización desde la sesión/subdominio.
 
+### ADR-0002 — Cliente-como-tenant y licenciamiento por módulo
+
+- **Contexto:** además de operar CERPAT por dentro, la plataforma se le **vende a
+  los clientes** — algunas herramientas o todas, según su necesidad (ver
+  [`vision-plataforma.md`](./vision-plataforma.md)). Un cliente que compra debe
+  poder operar por sí mismo, con sus usuarios y sus datos, sin ver los de nadie.
+- **Decisión:** el cliente que compra se modela como **su propia `Organizacion`
+  (tenant)**, reutilizando el mismo aislamiento de ADR-0001 — no se inventa un
+  segundo mecanismo. Sobre eso se agrega una capa de **entitlements**: qué
+  **módulos** tiene habilitado cada tenant (Outsourcing, Auditoría/RF, SARLAFT,
+  Talento, "Cómo trabajamos"), con su plan. El backend valida el entitlement del
+  módulo **además** del `organizacionId` y de los permisos.
+- **Consecuencias:**
+  - Nace el concepto de **módulo** como unidad de producto y de permiso; cada
+    módulo debe tener límites limpios para poder venderse/activarse por separado.
+  - Se requiere un modelo de **suscripción/licencia por tenant × módulo** (y, a
+    futuro, cobro). Encender/apagar un módulo no borra datos: los oculta.
+  - El aislamiento entre tenants deja de ser una comodidad y pasa a ser
+    **innegociable** (comercial **y** regulatorio) — refuerza la regla #0.
+  - La modalidad "portal del cliente" (CERPAT opera, el cliente observa, aislado
+    por `empresaId` dentro del tenant de CERPAT) **convive** con esta: un mismo
+    cliente puede ser atendido por CERPAT *y*, si compra, tener su propio tenant.
+
+### ADR-0003 — Permisos en tres niveles
+
+- **Contexto:** la matriz plana de 5 roles (`acceso.ts`) alcanza para la operación
+  actual, pero con módulos regulados (SARLAFT) y de datos personales (Talento) hay
+  información que **ni un coordinador** debe ver, y con la venta a clientes aparece
+  un nivel por encima de la firma.
+- **Decisión:** permisos en **tres niveles**: (1) **plataforma** — root de CERPAT
+  como operador del SaaS; (2) **organización/tenant** — administrador del cliente;
+  (3) **módulo × acción** — qué puede hacer cada rol dentro de cada módulo. La
+  navegación (menú por área) y los guardas de ruta se derivan de este modelo.
+- **Consecuencias:**
+  - `acceso.ts` evoluciona de "rol → rutas" a "rol → módulos → acciones";
+    conviene hacerlo configurable, no cableado.
+  - El menú por área muestra **solo** las áreas/funciones permitidas — clave para
+    que un cliente-tenant vea únicamente lo que contrató (encaja con ADR-0002).
+  - Separar el rol **empleado** (autoservicio de Talento) del rol de operación.
+
+### ADR-0004 — Navegación por áreas (acordeón) y nomenclatura
+
+- **Contexto:** la barra lateral actual ("Planeador") ya tiene ~12 ítems mezclando
+  el trabajo diario con las áreas de dominio; no escala a cinco módulos.
+- **Decisión:** barra lateral organizada como **acordeón por área** — cada área se
+  despliega y muestra sus funciones al abrirla (recuerda la última abierta; los
+  permisos filtran qué áreas se ven). Búsqueda y notificaciones **globales** arriba.
+  Un **selector de módulo** por encima queda como evolución futura si las áreas
+  crecen, sin rehacer nada. **Nomenclatura (hilo sherpa):** **Mi Ruta** (día a día,
+  transversal y white-label-friendly), **Cómo trabajamos** (sistema de gestión),
+  y nombre funcional para SARLAFT, Talento Humano y Auditoría/RF. *Ruta CERPAT* se
+  reserva para la metodología/promesa de valor, no para el menú.
+- **Consecuencias:**
+  - "Mi Ruta" es **transversal**: agrega las tareas de la persona de **todos** los
+    módulos (las vistas agregan por persona, no por módulo) — las áreas separadas
+    en el menú **no** aíslan el trabajo ni la ficha 360 del cliente.
+  - Los nombres no llevan la marca "CERPAT" dentro del producto, para que funcionen
+    en instancias white-label de clientes (ADR-0002).
+
+### ADR-0005 — Protección de datos personales y sensibles
+
+- **Contexto:** Talento Humano (salarios, préstamos, hoja de vida) y SARLAFT
+  manejan **datos personales y regulados**; además, con la venta a clientes, esos
+  datos son de terceros sobre nuestra infraestructura.
+- **Decisión:** tratar la protección de datos como **fundación transversal** (no
+  como feature de un módulo): acceso restringido por permisos de módulo (ADR-0003),
+  **cifrado de campos sensibles**, **bitácora de acceso** (F3) sobre datos
+  personales, y **políticas de retención**. Cumplir Ley 1581 / Habeas Data
+  (Colombia). Diseñarlo **antes** de guardar el primer dato sensible.
+- **Consecuencias:**
+  - Se involucra temprano el criterio legal/de cumplimiento de la firma.
+  - Los módulos con PII exponen menos por defecto (principio de mínimo acceso).
+
 Registrar aquí cada decisión de arquitectura relevante junto con su
 justificación (ADR corto: contexto, decisión, consecuencias) a medida que se
 tomen durante la implementación.
