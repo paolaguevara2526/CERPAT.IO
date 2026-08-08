@@ -613,6 +613,34 @@ adminRouter.get('/municipios', requireAuth, async (req, res) => {
   res.json({ items });
 });
 
+// GET /admin/municipios/sanciones — municipios con su sanción mínima propia (UVT).
+adminRouter.get('/municipios/sanciones', requireAuth, soloCoordinacion, async (_req, res) => {
+  const id = await orgId();
+  if (!id) return res.json({ municipios: [] });
+  const items = await prisma.municipio.findMany({
+    where: { organizacionId: id }, orderBy: [{ nombre: 'asc' }],
+    select: { id: true, nombre: true, departamento: true, sancionMinimaUvt: true },
+  });
+  res.json({ municipios: items.map((m) => ({ id: m.id, nombre: m.nombre, departamento: m.departamento, sancionMinimaUvt: m.sancionMinimaUvt != null ? Number(m.sancionMinimaUvt) : null })) });
+});
+
+// PATCH /admin/municipios/:id { sancionMinimaUvt } — fija/limpia la sanción mínima
+// propia del municipio (en UVT). Enviar null o vacío la deja en "usa la general".
+adminRouter.patch('/municipios/:id', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const raw = req.body?.sancionMinimaUvt;
+  let val: number | null = null;
+  if (raw !== null && raw !== '' && raw !== undefined) {
+    const n = Number(raw);
+    if (!isFinite(n) || n < 0) return res.status(422).json({ error: 'La sanción mínima debe ser un número ≥ 0 (en UVT).' });
+    val = n;
+  }
+  const r = await prisma.municipio.updateMany({ where: { id: req.params.id, organizacionId: id }, data: { sancionMinimaUvt: val } });
+  if (r.count === 0) return res.status(404).json({ error: 'Municipio no encontrado.' });
+  res.json({ ok: true, sancionMinimaUvt: val });
+});
+
 // ---------- Plan de trabajo por cliente (PlanClienteActividad) ----------
 
 const PASO_PLAN: Record<string, number> = { Mensual: 1, Bimestral: 2, Trimestral: 3, Cuatrimestral: 4, Semestral: 6, Anual: 12 };

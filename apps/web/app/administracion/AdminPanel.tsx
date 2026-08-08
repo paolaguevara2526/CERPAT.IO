@@ -9,12 +9,14 @@ import VencimientosEditor from './VencimientosEditor';
 import EmpresasEditor from './EmpresasEditor';
 import PlanClienteEditor from './PlanClienteEditor';
 import ConfigTributariaEditor from './ConfigTributariaEditor';
+import SancionMunicipioEditor from './SancionMunicipioEditor';
 
 type Tab = { id: string; label: string; tipo?: string };
 const TABS: Tab[] = [
   { id: 'parametros', label: 'Parámetros' },
   { id: 'empresas', label: 'Empresas' },
   { id: 'config-tributaria', label: 'Config. tributaria' },
+  { id: 'sancion-municipio', label: 'Sanción por municipio' },
   { id: 'plan-cliente', label: 'Plan por cliente' },
   { id: 'actividades', label: 'Cat. Tareas' },
   { id: 'vencimientos', label: 'Vencimientos' },
@@ -27,7 +29,7 @@ const TABS: Tab[] = [
 ];
 
 // Pestañas visibles para Coordinación (sin rol de Administrador).
-const TABS_COORD = ['empresas', 'config-tributaria', 'plan-cliente'];
+const TABS_COORD = ['empresas', 'config-tributaria', 'sancion-municipio', 'plan-cliente'];
 
 export default function AdminPanel({ esAdmin = true }: { esAdmin?: boolean }) {
   const tabs = esAdmin ? TABS : TABS.filter((t) => TABS_COORD.includes(t.id));
@@ -54,6 +56,7 @@ export default function AdminPanel({ esAdmin = true }: { esAdmin?: boolean }) {
         : activo.id === 'actividades' ? <ActividadesEditor />
         : activo.id === 'empresas' ? <EmpresasEditor />
         : activo.id === 'config-tributaria' ? <ConfigTributariaEditor />
+        : activo.id === 'sancion-municipio' ? <SancionMunicipioEditor />
         : activo.id === 'plan-cliente' ? <PlanClienteEditor />
         : activo.id === 'vencimientos' ? <VencimientosEditor />
         : <ParametrosEditor />}

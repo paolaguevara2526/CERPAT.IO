@@ -34,6 +34,18 @@ async function cargarParamsLiq(orgId: string) {
   };
 }
 
+// Suma de abonos (pagos parciales) por vencimiento, para calcular el saldo.
+async function abonosPorVencimiento(ids: string[]): Promise<Map<string, number>> {
+  if (!ids.length) return new Map();
+  const rows = await prisma.abonoVencimiento.groupBy({ by: ['vencimientoId'], where: { vencimientoId: { in: ids } }, _sum: { monto: true } });
+  return new Map(rows.map((r) => [r.vencimientoId, Number(r._sum.monto ?? 0)]));
+}
+// Sanción mínima (UVT) propia por municipio; solo los que la tienen definida.
+async function minimosPorMunicipio(orgId: string): Promise<Map<string, number>> {
+  const rows = await prisma.municipio.findMany({ where: { organizacionId: orgId, sancionMinimaUvt: { not: null } }, select: { id: true, sancionMinimaUvt: true } });
+  return new Map(rows.map((m) => [m.id, Number(m.sancionMinimaUvt)]));
+}
+
 export const vencimientosRouter = Router();
 
 const ESTADOS = ['pendiente', 'presentado_sin_pago', 'presentado_pagado', 'presentado_cero', 'no_presentado', 'no_obligado'];
@@ -156,23 +168,27 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
     orderBy: [{ estado: 'asc' }, { fechaVencimiento: 'asc' }],
     select: {
       id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true,
-      empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
+      municipioId: true, empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
     },
   });
+  const [abonoMap, muniMin] = await Promise.all([abonosPorVencimiento(items.map((v) => v.id)), minimosPorMunicipio(org.id)]);
   res.json({
     anio,
     total: items.length,
     vencimientos: items.map((v) => {
       const valor = v.valorPago != null ? Number(v.valorPago) : null;
+      const abonado = abonoMap.get(v.id) ?? 0;
+      const saldo = valor != null ? Math.max(0, valor - abonado) : null;
+      const sancMin = v.municipioId && muniMin.get(v.municipioId) != null ? muniMin.get(v.municipioId)! : pl.sancionMinUvt;
       const lp = limitePago(v.fechaVencimiento, v.obligacion, valor, pl.uvt);
-      // Interés de mora a hoy, solo si está sin pagar.
-      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento, new Date(), pl.tasaAnual);
+      // Interés de mora a hoy sobre el SALDO (valor − abonos); 0 si ya está pagado.
+      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(saldo, v.fechaVencimiento, new Date(), pl.tasaAnual);
       const san = sancionAplica(v.estado, lp.consecuencia, lp.fechaLimitePago)
-        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: pl.sancionMinUvt, pct: pl.pct, anioUvt: v.fechaVencimiento.getFullYear() })
+        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: sancMin, pct: pl.pct, anioUvt: v.fechaVencimiento.getFullYear() })
         : { meses: 0, sancion: 0 };
       return {
         id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
-        valorPago: valor,
+        valorPago: valor, abonado, saldo,
         fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
         diasMora: im.dias, interesMora: im.interes, sancion: san.sancion,
         empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
@@ -197,34 +213,38 @@ vencimientosRouter.get('/portal-pagos', requireAuth, async (req: AuthedRequest, 
     prisma.vencimientoEmpresa.findMany({
       where: { organizacionId: org.id, anio, generado: true, estado: { in: ['presentado_sin_pago', 'presentado_pagado'] }, obligacion: { notIn: [...OBLIGACIONES_SIN_PAGO] }, ...scope },
       orderBy: [{ estado: 'asc' }, { fechaVencimiento: 'asc' }],
-      select: { id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true, empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } } },
+      select: { id: true, obligacion: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true, municipioId: true, empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } } },
     }),
     prisma.vencimientoEmpresa.findMany({
       where: { organizacionId: org.id, generado: false, ...scope },
       orderBy: [{ estado: 'asc' }, { anio: 'desc' }, { fechaVencimiento: 'asc' }],
-      select: { id: true, obligacion: true, anio: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true, notas: true, empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } } },
+      select: { id: true, obligacion: true, anio: true, periodo: true, fechaVencimiento: true, estado: true, valorPago: true, notas: true, municipioId: true, empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } } },
     }),
   ]);
 
+  const [abonoMap, muniMin] = await Promise.all([abonosPorVencimiento([...ciclo, ...manual].map((v) => v.id)), minimosPorMunicipio(org.id)]);
   const calcular = (v: any, anioUvt: number) => {
     const valor = v.valorPago != null ? Number(v.valorPago) : null;
+    const abonado = abonoMap.get(v.id) ?? 0;
+    const saldo = valor != null ? Math.max(0, valor - abonado) : null;
+    const sancMin = v.municipioId && muniMin.get(v.municipioId) != null ? muniMin.get(v.municipioId) : pl.sancionMinUvt;
     const lp = limitePago(v.fechaVencimiento, v.obligacion, valor, pl.uvt);
-    const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento, new Date(), pl.tasaAnual);
+    const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(saldo, v.fechaVencimiento, new Date(), pl.tasaAnual);
     const san = sancionAplica(v.estado, lp.consecuencia, lp.fechaLimitePago)
-      ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: pl.sancionMinUvt, pct: pl.pct, anioUvt })
+      ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: sancMin, pct: pl.pct, anioUvt })
       : { meses: 0, sancion: 0 };
-    return { valor, lp, im, san };
+    return { valor, abonado, saldo, lp, im, san };
   };
 
   res.json({
     anio,
     vencimientos: ciclo.map((v) => {
-      const { valor, lp, im, san } = calcular(v, v.fechaVencimiento.getFullYear());
-      return { id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado, valorPago: valor, fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia, diasMora: im.dias, interesMora: im.interes, sancion: san.sancion, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null };
+      const { valor, abonado, saldo, lp, im, san } = calcular(v, v.fechaVencimiento.getFullYear());
+      return { id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado, valorPago: valor, abonado, saldo, fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia, diasMora: im.dias, interesMora: im.interes, sancion: san.sancion, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null };
     }),
     pendientes: manual.map((v) => {
-      const { valor, lp, im, san } = calcular(v, v.anio);
-      return { id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado, notas: v.notas, valorPago: valor, fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia, diasMora: im.dias, interesMora: im.interes, sancion: san.sancion, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null };
+      const { valor, abonado, saldo, lp, im, san } = calcular(v, v.anio);
+      return { id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado, notas: v.notas, valorPago: valor, abonado, saldo, fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia, diasMora: im.dias, interesMora: im.interes, sancion: san.sancion, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null };
     }),
   });
 });
@@ -272,22 +292,26 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
     orderBy: [{ estado: 'asc' }, { anio: 'desc' }, { fechaVencimiento: 'asc' }],
     select: {
       id: true, obligacion: true, anio: true, periodo: true, fechaVencimiento: true, estado: true,
-      valorPago: true, notas: true,
+      valorPago: true, notas: true, municipioId: true,
       empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
     },
   });
+  const [abonoMap, muniMin] = await Promise.all([abonosPorVencimiento(items.map((v) => v.id)), minimosPorMunicipio(org.id)]);
   res.json({
     total: items.length,
     pendientes: items.map((v) => {
       const valor = v.valorPago != null ? Number(v.valorPago) : null;
+      const abonado = abonoMap.get(v.id) ?? 0;
+      const saldo = valor != null ? Math.max(0, valor - abonado) : null;
+      const sancMin = v.municipioId && muniMin.get(v.municipioId) != null ? muniMin.get(v.municipioId)! : pl.sancionMinUvt;
       const lp = limitePago(v.fechaVencimiento, v.obligacion, valor, pl.uvt);
-      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(valor, v.fechaVencimiento, new Date(), pl.tasaAnual);
+      const im = v.estado === 'presentado_pagado' ? { dias: 0, interes: 0 } : interesMora(saldo, v.fechaVencimiento, new Date(), pl.tasaAnual);
       const san = sancionAplica(v.estado, lp.consecuencia, lp.fechaLimitePago)
-        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: pl.sancionMinUvt, pct: pl.pct, anioUvt: v.anio })
+        ? sancionExtemporaneidad(valor, v.fechaVencimiento, new Date(), { uvt: pl.uvt, sancionMinUvt: sancMin, pct: pl.pct, anioUvt: v.anio })
         : { meses: 0, sancion: 0 };
       return {
         id: v.id, obligacion: v.obligacion, anio: v.anio, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
-        estado: v.estado, notas: v.notas, valorPago: valor,
+        estado: v.estado, notas: v.notas, valorPago: valor, abonado, saldo,
         fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia,
         diasMora: im.dias, interesMora: im.interes, sancion: san.sancion,
         empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
@@ -614,6 +638,59 @@ vencimientosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) =
   const org = await orgCerpat();
   const r = await prisma.vencimientoEmpresa.deleteMany({ where: { id: req.params.id, organizacionId: org?.id } });
   if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
+  res.json({ ok: true });
+});
+
+// ---------- Abonos (pagos parciales) a una obligación ----------
+// Saldo = valorPago − Σ abonos; el interés de mora corre sobre el saldo. Cada
+// abono lleva fecha y una nota. Registrar/eliminar: solo Administrador / root.
+
+// GET /vencimientos/:id/abonos — abonos de una obligación (usuarios de la firma).
+vencimientosRouter.get('/:id/abonos', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a abonos.' });
+  const org = await orgCerpat();
+  const venc = await prisma.vencimientoEmpresa.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true, valorPago: true } });
+  if (!venc) return res.status(404).json({ error: 'Obligación no encontrada.' });
+  const abonos = await prisma.abonoVencimiento.findMany({ where: { vencimientoId: venc.id }, orderBy: [{ fecha: 'asc' }, { createdAt: 'asc' }], select: { id: true, monto: true, fecha: true, notas: true } });
+  const abonado = abonos.reduce((s, a) => s + Number(a.monto), 0);
+  const valor = venc.valorPago != null ? Number(venc.valorPago) : null;
+  res.json({ valorPago: valor, abonado, saldo: valor != null ? Math.max(0, valor - abonado) : null, abonos: abonos.map((a) => ({ id: a.id, monto: Number(a.monto), fecha: a.fecha, notas: a.notas })) });
+});
+
+// POST /vencimientos/:id/abonos { monto, fecha?, notas? } — registra un abono.
+vencimientosRouter.post('/:id/abonos', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede registrar abonos.' });
+  const org = await orgCerpat();
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const venc = await prisma.vencimientoEmpresa.findFirst({ where: { id: req.params.id, organizacionId: org.id }, select: { id: true, valorPago: true, estado: true } });
+  if (!venc) return res.status(404).json({ error: 'Obligación no encontrada.' });
+  const monto = Number(req.body?.monto);
+  if (!isFinite(monto) || monto <= 0) return res.status(422).json({ error: 'El abono debe ser un número mayor que 0.' });
+  const fecha = req.body?.fecha ? new Date(req.body.fecha) : new Date();
+  if (isNaN(fecha.getTime())) return res.status(422).json({ error: 'Fecha de abono inválida.' });
+  const notas = typeof req.body?.notas === 'string' && req.body.notas.trim() ? req.body.notas.trim() : null;
+
+  await prisma.abonoVencimiento.create({ data: { organizacionId: org.id, vencimientoId: venc.id, monto, fecha, notas, registradoPorId: req.user?.sub ?? null } });
+
+  // Si con este abono el saldo llega a 0, marca la obligación como pagada.
+  const agg = await prisma.abonoVencimiento.aggregate({ where: { vencimientoId: venc.id }, _sum: { monto: true } });
+  const abonado = Number(agg._sum.monto ?? 0);
+  const valor = venc.valorPago != null ? Number(venc.valorPago) : null;
+  let estado = venc.estado;
+  if (valor != null && abonado >= valor && venc.estado !== 'presentado_pagado') {
+    await prisma.vencimientoEmpresa.update({ where: { id: venc.id }, data: { estado: 'presentado_pagado' } });
+    estado = 'presentado_pagado';
+  }
+  res.status(201).json({ ok: true, abonado, saldo: valor != null ? Math.max(0, valor - abonado) : null, estado });
+});
+
+// DELETE /vencimientos/abonos/:abonoId — elimina un abono (Administrador / root).
+vencimientosRouter.delete('/abonos/:abonoId', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede eliminar abonos.' });
+  const org = await orgCerpat();
+  const abono = await prisma.abonoVencimiento.findFirst({ where: { id: req.params.abonoId, organizacionId: org?.id }, select: { id: true } });
+  if (!abono) return res.status(404).json({ error: 'Abono no encontrado.' });
+  await prisma.abonoVencimiento.delete({ where: { id: abono.id } });
   res.json({ ok: true });
 });
 
