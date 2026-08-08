@@ -293,9 +293,39 @@ model Empresa {
   vencimientosEmpresa     VencimientoEmpresa[]
   entregasInsumo          EntregaInsumo[]
   visitas                 Visita[]
+  documentos              DocumentoCliente[]
 
   @@index([organizacionId])
   @@map("empresas")
+}
+
+// Documentos del cliente almacenados en la plataforma (actas, informes, soportes).
+// El binario se guarda en Postgres (contenido) junto con su tamaño, para poder
+// medir el almacenamiento consumido por cliente. Aislado por organización.
+enum TipoDocumentoCliente {
+  acta
+  informe
+  soporte
+  otro
+}
+
+model DocumentoCliente {
+  id             String               @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  tipo           TipoDocumentoCliente @default(otro)
+  nombre         String
+  mime           String
+  tamanoBytes    Int
+  contenido      Bytes
+  subidoPorId    String?
+  createdAt      DateTime             @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@index([empresaId])
+  @@map("documentos_cliente")
 }
 
 // ---------- REVISORÍA FISCAL · Portal de Hallazgos ----------

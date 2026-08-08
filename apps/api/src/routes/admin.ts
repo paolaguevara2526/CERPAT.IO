@@ -462,7 +462,10 @@ adminRouter.get('/empresas', requireAuth, soloCoordinacion, async (req, res) => 
       emailRepresentante: true, emailAdministracion: true, emailContabilidad: true, emailTalentoHumano: true, emailTesoreria: true,
     },
   });
-  res.json({ total: items.length, items });
+  // Almacenamiento (bytes y nº de documentos) por cliente, para mostrar el consumo.
+  const almacen = await prisma.documentoCliente.groupBy({ by: ['empresaId'], where: { organizacionId: id }, _sum: { tamanoBytes: true }, _count: { _all: true } });
+  const alMap = new Map(almacen.map((a) => [a.empresaId, { bytes: Number(a._sum.tamanoBytes ?? 0), docs: a._count._all }]));
+  res.json({ total: items.length, items: items.map((e) => ({ ...e, almacenBytes: alMap.get(e.id)?.bytes ?? 0, almacenDocs: alMap.get(e.id)?.docs ?? 0 })) });
 });
 
 adminRouter.post('/empresas', requireAuth, soloCoordinacion, async (req, res) => {
@@ -495,6 +498,70 @@ adminRouter.delete('/empresas/:id', requireAuth, soloCoordinacion, async (req, r
     if (e?.code === 'P2003') return res.status(409).json({ error: 'No se puede eliminar: el cliente tiene tareas o pagos. Desactívalo en su lugar.' });
     throw e;
   }
+});
+
+// ---------- Documentos del cliente (actas, informes, soportes) ----------
+// Se guardan en Postgres (contenido binario) con su tamaño, para medir el
+// almacenamiento por cliente. Subida en base64. Solo Administrador / Coordinación.
+
+const TIPOS_DOC = ['acta', 'informe', 'soporte', 'otro'] as const;
+const MAX_DOC_BYTES = 20 * 1024 * 1024; // 20 MB por archivo
+
+// GET /admin/empresas/:empresaId/documentos — lista (sin binario) + resumen de uso.
+adminRouter.get('/empresas/:empresaId/documentos', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const docs = await prisma.documentoCliente.findMany({
+    where: { empresaId: empresa.id }, orderBy: [{ createdAt: 'desc' }],
+    select: { id: true, tipo: true, nombre: true, mime: true, tamanoBytes: true, createdAt: true },
+  });
+  const totalBytes = docs.reduce((s, d) => s + d.tamanoBytes, 0);
+  const porTipo: Record<string, number> = {};
+  for (const d of docs) porTipo[d.tipo] = (porTipo[d.tipo] ?? 0) + d.tamanoBytes;
+  res.json({ total: docs.length, totalBytes, porTipo, documentos: docs });
+});
+
+// POST /admin/empresas/:empresaId/documentos { tipo, nombre, mime, contenidoBase64 }
+adminRouter.post('/empresas/:empresaId/documentos', requireAuth, soloCoordinacion, async (req: any, res) => {
+  const id = await orgId();
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const b = req.body ?? {};
+  const tipo = TIPOS_DOC.includes(b.tipo) ? b.tipo : 'otro';
+  const nombre = typeof b.nombre === 'string' ? b.nombre.trim() : '';
+  if (!nombre) return res.status(422).json({ error: 'Falta el nombre del archivo.' });
+  const mime = typeof b.mime === 'string' && b.mime.trim() ? b.mime.trim() : 'application/octet-stream';
+  const base64 = typeof b.contenidoBase64 === 'string' ? b.contenidoBase64.replace(/^data:[^;]+;base64,/, '') : '';
+  if (!base64) return res.status(422).json({ error: 'El archivo está vacío.' });
+  let buf: Buffer;
+  try { buf = Buffer.from(base64, 'base64'); } catch { return res.status(422).json({ error: 'Archivo inválido.' }); }
+  if (buf.length === 0) return res.status(422).json({ error: 'El archivo está vacío.' });
+  if (buf.length > MAX_DOC_BYTES) return res.status(413).json({ error: `El archivo supera el máximo de ${Math.round(MAX_DOC_BYTES / 1024 / 1024)} MB.` });
+
+  const doc = await prisma.documentoCliente.create({
+    data: { organizacionId: id, empresaId: empresa.id, tipo: tipo as any, nombre, mime, tamanoBytes: buf.length, contenido: buf, subidoPorId: req.user?.sub ?? null },
+    select: { id: true, tamanoBytes: true },
+  });
+  res.status(201).json({ ok: true, id: doc.id, tamanoBytes: doc.tamanoBytes });
+});
+
+// GET /admin/documentos/:id — descarga (devuelve el archivo en base64).
+adminRouter.get('/documentos/:id', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  const doc = await prisma.documentoCliente.findFirst({ where: { id: req.params.id, organizacionId: id ?? undefined }, select: { nombre: true, mime: true, tamanoBytes: true, contenido: true } });
+  if (!doc) return res.status(404).json({ error: 'Documento no encontrado.' });
+  res.json({ nombre: doc.nombre, mime: doc.mime, tamanoBytes: doc.tamanoBytes, contenidoBase64: Buffer.from(doc.contenido).toString('base64') });
+});
+
+// DELETE /admin/documentos/:id — elimina un documento del cliente.
+adminRouter.delete('/documentos/:id', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId();
+  const r = await prisma.documentoCliente.deleteMany({ where: { id: req.params.id, organizacionId: id ?? undefined } });
+  if (r.count === 0) return res.status(404).json({ error: 'Documento no encontrado.' });
+  res.json({ ok: true });
 });
 
 // ---------- Configuración tributaria por cliente ----------
