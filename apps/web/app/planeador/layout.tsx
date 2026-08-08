@@ -24,7 +24,7 @@ export default async function PlaneadorLayout({ children }: { children: React.Re
         <div className="win-bar">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />
-          <span className="win-title">Planeador CERPAT</span>
+          <span className="win-title">Planeador</span>
           <span className="win-path">cerpat.io/planeador</span>
           <div className="win-ctl">
             <button aria-label="Minimizar"><svg viewBox="0 0 12 12"><rect x="1.5" y="6" width="9" height="1.4" fill="currentColor" /></svg></button>

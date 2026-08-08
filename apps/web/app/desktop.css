@@ -21,7 +21,7 @@
   --navy: #2e5090;      /* azul rey apagado (primario) */
   --navy-hi: #3a5ea6;
   --navy-2: #0f1d33;    /* navy profundo (fondos oscuros / barras) */
-  --green: #34c98b;
+  --green: #48D597;
   --green-2: #22a670;
   --green-edge: #1c8a5e;
 
@@ -33,7 +33,7 @@
   --nav-ink: #dbe4f5;
   --nav-active-bg: rgba(255,255,255,0.12);
   --nav-active-ink: #ffffff;
-  --nav-accent: #34c98b;
+  --nav-accent: #48D597;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -60,7 +60,7 @@
 /* Claro (por defecto): barra navy */
 :root[data-cerpat-theme="claro"] {
   --nav-bg: linear-gradient(180deg,#2e5090,#0f1d33);
-  --nav-ink:#dbe4f5; --nav-active-bg:rgba(255,255,255,0.12); --nav-active-ink:#fff; --nav-accent:#34c98b;
+  --nav-ink:#dbe4f5; --nav-active-bg:rgba(255,255,255,0.12); --nav-active-ink:#fff; --nav-accent:#48D597;
 }
 
 /* Escritorio: barra clara (blanca) con tinta azul — como la imagen */
@@ -72,13 +72,13 @@
 /* Azul profundo: barra navy muy oscuro */
 :root[data-cerpat-theme="navy"] {
   --nav-bg: linear-gradient(180deg,#13294a,#060d18);
-  --nav-ink:#cddaf0; --nav-active-bg:rgba(255,255,255,0.10); --nav-active-ink:#fff; --nav-accent:#34c98b;
+  --nav-ink:#cddaf0; --nav-active-bg:rgba(255,255,255,0.10); --nav-active-ink:#fff; --nav-accent:#48D597;
 }
 
 /* Oscuro: barra gris carbón */
 :root[data-cerpat-theme="oscuro"] {
   --nav-bg: linear-gradient(180deg,#242a3a,#12141c);
-  --nav-ink:#c7ccdc; --nav-active-bg:rgba(255,255,255,0.10); --nav-active-ink:#fff; --nav-accent:#34c98b;
+  --nav-ink:#c7ccdc; --nav-active-bg:rgba(255,255,255,0.10); --nav-active-ink:#fff; --nav-accent:#48D597;
 }
 
 /* Verde CERPAT: barra en degradé verde/teal */
