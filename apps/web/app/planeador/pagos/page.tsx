@@ -11,17 +11,18 @@ import VencimientoPagoEditor from '../VencimientoPagoEditor';
 import PendientesManuales from '../PendientesManuales';
 import BorrarPendiente from '../BorrarPendiente';
 import PagosAcciones from '../PagosAcciones';
+import AbonosBoton from '../AbonosBoton';
 
 export const dynamic = 'force-dynamic';
 
 type VencPago = {
   id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null;
-  fechaVencimiento: string; estado: string; valorPago: number | null; fechaLimitePago: string | null; consecuencia: string;
-  diasMora: number; interesMora: number; sancion: number;
+  fechaVencimiento: string; estado: string; valorPago: number | null; abonado: number; saldo: number | null;
+  fechaLimitePago: string | null; consecuencia: string; diasMora: number; interesMora: number; sancion: number;
 };
 type Pendiente = {
   id: string; obligacion: string; anio: number; periodo: string | null; municipio: string | null;
-  empresa: string | null; fechaVencimiento: string; estado: string; valorPago: number | null; notas: string | null;
+  empresa: string | null; fechaVencimiento: string; estado: string; valorPago: number | null; abonado: number; saldo: number | null; notas: string | null;
   fechaLimitePago: string | null; consecuencia: string; diasMora: number; interesMora: number; sancion: number;
 };
 type EmpresaLite = { id: string; nombre: string };
@@ -29,7 +30,7 @@ type EmpresaLite = { id: string; nombre: string };
 // Fila unificada del listado "Por pagar".
 type Item = {
   id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null;
-  anio: number | null; fechaVencimiento: string; estado: string; valorPago: number | null;
+  anio: number | null; fechaVencimiento: string; estado: string; valorPago: number | null; abonado: number; saldo: number | null;
   fechaLimitePago: string | null; consecuencia: string; diasMora: number; interesMora: number; sancion: number;
   notas: string | null; manual: boolean;
 };
@@ -135,13 +136,13 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const items: Item[] = [
     ...vencs.map((v): Item => ({
       id: v.id, obligacion: v.obligacion, empresa: v.empresa, municipio: v.municipio, periodo: v.periodo,
-      anio: null, fechaVencimiento: v.fechaVencimiento, estado: v.estado, valorPago: v.valorPago,
+      anio: null, fechaVencimiento: v.fechaVencimiento, estado: v.estado, valorPago: v.valorPago, abonado: v.abonado ?? 0, saldo: v.saldo,
       fechaLimitePago: v.fechaLimitePago, consecuencia: v.consecuencia, diasMora: v.diasMora, interesMora: v.interesMora, sancion: v.sancion,
       notas: null, manual: false,
     })),
     ...pendientes.map((p): Item => ({
       id: p.id, obligacion: p.obligacion, empresa: p.empresa, municipio: p.municipio, periodo: p.periodo,
-      anio: p.anio, fechaVencimiento: p.fechaVencimiento, estado: p.estado, valorPago: p.valorPago,
+      anio: p.anio, fechaVencimiento: p.fechaVencimiento, estado: p.estado, valorPago: p.valorPago, abonado: p.abonado ?? 0, saldo: p.saldo,
       fechaLimitePago: p.fechaLimitePago, consecuencia: p.consecuencia, diasMora: p.diasMora, interesMora: p.interesMora, sancion: p.sancion,
       notas: p.notas, manual: true,
     })),
@@ -151,10 +152,12 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
   // KPIs sobre el alcance por cliente (el estado es drill-down de la tabla).
   const scope = items.filter((i) => !cliente || i.empresa === cliente);
-  const suma = (pred: (i: Item) => boolean) => scope.filter(pred).reduce((a, i) => ({ n: a.n + 1, v: a.v + (i.valorPago ?? 0) }), { n: 0, v: 0 });
+  // Lo pendiente se mide por SALDO (valor − abonos); lo pagado, por su valor.
+  const pend = (i: Item) => i.saldo ?? i.valorPago ?? 0;
+  const suma = (pred: (i: Item) => boolean, val: (i: Item) => number = (i) => i.valorPago ?? 0) => scope.filter(pred).reduce((a, i) => ({ n: a.n + 1, v: a.v + val(i) }), { n: 0, v: 0 });
   const kPagado = suma((i) => i.estado === 'presentado_pagado');
-  const kPorPagar = suma((i) => !pagadoDe(i.estado));
-  const kVencido = suma((i) => !pagadoDe(i.estado) && esVencido(i.fechaVencimiento));
+  const kPorPagar = suma((i) => !pagadoDe(i.estado), pend);
+  const kVencido = suma((i) => !pagadoDe(i.estado) && esVencido(i.fechaVencimiento), pend);
   const kRiesgo = suma((i) => enRiesgoPago(i.fechaLimitePago, i.consecuencia, pagadoDe(i.estado)));
   const kInteres = scope.reduce((s, i) => s + (i.interesMora ?? 0), 0);
   const kSancion = scope.reduce((s, i) => s + (i.sancion ?? 0), 0);
@@ -239,11 +242,19 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                         ? <>
                             {i.interesMora > 0 && <div><span style={{ fontWeight: 600, color: '#c67c00' }}>Int. ${fmtCOP(i.interesMora)}</span> <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>({i.diasMora} d)</span></div>}
                             {i.sancion > 0 && <div style={{ fontSize: 11.5, color: '#b3261e', fontWeight: 600 }}>Sanción ${fmtCOP(i.sancion)}</div>}
-                            {!pagadoDe(i.estado) && <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--navy)' }}>Total ${fmtCOP((i.valorPago ?? 0) + i.interesMora + i.sancion)}</div>}
+                            {!pagadoDe(i.estado) && <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--navy)' }}>Total ${fmtCOP((i.saldo ?? i.valorPago ?? 0) + i.interesMora + i.sancion)}</div>}
                           </>
                         : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
-                    <td><VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} editable={esEditor} /></td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
+                        <VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} editable={esEditor} />
+                        {i.abonado > 0 && (
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>Abonado <b style={{ color: '#16794c' }}>${fmtCOP(i.abonado)}</b> · Saldo <b style={{ color: 'var(--navy)' }}>${fmtCOP(i.saldo ?? 0)}</b></div>
+                        )}
+                        <AbonosBoton id={i.id} editable={esEditor} />
+                      </div>
+                    </td>
                     <td>{i.manual && esEditor ? <BorrarPendiente id={i.id} /> : null}</td>
                   </tr>
                 ))}

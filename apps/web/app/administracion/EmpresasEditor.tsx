@@ -4,10 +4,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { descargarXlsx, hoyISO } from './exportar';
+import DocumentosCliente, { fmtBytes } from './DocumentosCliente';
 
 type Empresa = {
   id: string; nombre: string; nit: string | null; servicio: string | null; asesorNombre: string | null; activo: boolean; grupoId: string | null;
   emailRepresentante: string | null; emailAdministracion: string | null; emailContabilidad: string | null; emailTalentoHumano: string | null; emailTesoreria: string | null;
+  almacenBytes?: number; almacenDocs?: number;
 };
 type Grupo = { id: string; nombre: string };
 type Form = Omit<Empresa, 'id' | 'activo'> & { activo: boolean };
@@ -88,12 +90,12 @@ export default function EmpresasEditor() {
       <div className="panel">
         <div className="dt-wrap">
           <table className="dt">
-            <thead><tr><th>Cliente</th><th>NIT</th><th>Servicio</th><th>Grupo</th><th>Asesor</th><th>Activo</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>NIT</th><th>Servicio</th><th>Grupo</th><th>Asesor</th><th style={{ whiteSpace: 'nowrap' }}>Almacenamiento</th><th>Activo</th><th>Acciones</th></tr></thead>
             <tbody>
               {cargando ? (
-                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
+                <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
               ) : filtrada.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin clientes.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin clientes.</td></tr>
               ) : filtrada.map((e) => (
                 <tr key={e.id}>
                   <td style={{ fontWeight: 600 }}>{e.nombre}</td>
@@ -101,6 +103,7 @@ export default function EmpresasEditor() {
                   <td style={{ color: 'var(--muted)' }}>{e.servicio ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{nombreGrupo(e.grupoId) ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{e.asesorNombre ?? '—'}</td>
+                  <td style={{ whiteSpace: 'nowrap', color: (e.almacenBytes ?? 0) > 0 ? 'var(--ink)' : 'var(--muted)', fontSize: 12.5 }}>{(e.almacenBytes ?? 0) > 0 ? `${fmtBytes(e.almacenBytes ?? 0)} · ${e.almacenDocs ?? 0} doc` : '—'}</td>
                   <td><button onClick={() => toggleActivo(e)} title={e.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>{e.activo ? '🟢' : '⚪'}</button></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button onClick={() => setEditar(e)} title="Editar" style={ic('var(--navy)')}>✎</button>
@@ -113,7 +116,7 @@ export default function EmpresasEditor() {
         </div>
       </div>
 
-      {editar && <Editor empresa={editar} grupos={grupos} onClose={() => setEditar(null)} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
+      {editar && <Editor empresa={editar} grupos={grupos} onClose={() => { setEditar(null); cargar(); }} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
     </div>
   );
 }
@@ -143,7 +146,7 @@ function Editor({ empresa, grupos, onClose, onGuardado, onError }: { empresa: Em
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto' }}>
+      <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: nuevo ? 520 : 660, maxHeight: '90vh', overflow: 'auto' }}>
         <div className="win-bar"><span className="win-title">{nuevo ? 'Nuevo cliente' : 'Editar cliente'}</span>
           <div className="win-ctl"><button className="close" onClick={onClose} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
         </div>
@@ -173,6 +176,14 @@ function Editor({ empresa, grupos, onClose, onGuardado, onError }: { empresa: Em
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={form.activo} onChange={(e) => set('activo', e.target.checked)} /> Cliente activo
           </label>
+
+          {!nuevo && (
+            <div style={{ borderTop: '1px solid var(--line)', paddingTop: 14, marginTop: 2 }}>
+              <span style={{ ...lbl, fontSize: 12.5, marginBottom: 8 }}>Documentos y almacenamiento</span>
+              <DocumentosCliente empresaId={(empresa as Empresa).id} />
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
             <button className="dbtn" onClick={onClose} style={{ fontSize: 13 }}>Cancelar</button>
             <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13 }}>{guardando ? 'Guardando…' : nuevo ? 'Crear cliente' : 'Guardar'}</button>

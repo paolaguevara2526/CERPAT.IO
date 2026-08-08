@@ -293,9 +293,39 @@ model Empresa {
   vencimientosEmpresa     VencimientoEmpresa[]
   entregasInsumo          EntregaInsumo[]
   visitas                 Visita[]
+  documentos              DocumentoCliente[]
 
   @@index([organizacionId])
   @@map("empresas")
+}
+
+// Documentos del cliente almacenados en la plataforma (actas, informes, soportes).
+// El binario se guarda en Postgres (contenido) junto con su tamaño, para poder
+// medir el almacenamiento consumido por cliente. Aislado por organización.
+enum TipoDocumentoCliente {
+  acta
+  informe
+  soporte
+  otro
+}
+
+model DocumentoCliente {
+  id             String               @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  tipo           TipoDocumentoCliente @default(otro)
+  nombre         String
+  mime           String
+  tamanoBytes    Int
+  contenido      Bytes
+  subidoPorId    String?
+  createdAt      DateTime             @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@index([empresaId])
+  @@map("documentos_cliente")
 }
 
 // ---------- REVISORÍA FISCAL · Portal de Hallazgos ----------
@@ -417,6 +447,9 @@ model Municipio {
   nombre         String
   departamento   String
   orden          Int          @default(0)
+  // Sanción mínima propia del municipio (en UVT), para las obligaciones municipales
+  // (ICA/ReteICA/AutoICA/exógena municipal). Si es null, se usa la de la firma.
+  sancionMinimaUvt Decimal?   @db.Decimal(6, 2)
   organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresas       Empresa[]
   icaEmpresas    EmpresaMunicipioIca[]
@@ -921,12 +954,33 @@ model VencimientoEmpresa {
   asesor       Usuario?     @relation("VencAsesor", fields: [asesorId], references: [id])
   auxiliar     Usuario?     @relation("VencAuxiliar", fields: [auxiliarId], references: [id])
   subtareas    SubtareaVencimiento[]
+  abonos       AbonoVencimiento[]
 
   @@index([organizacionId])
   @@index([empresaId])
   @@index([anio])
   @@index([fechaVencimiento])
   @@map("vencimientos_empresa")
+}
+
+// Abono (pago parcial) contra una obligación por pagar. El saldo = valorPago − Σ
+// abonos; el interés de mora se calcula sobre el saldo pendiente a hoy. Cada abono
+// lleva su fecha (informativa) y una nota opcional. Solo el Administrador registra.
+model AbonoVencimiento {
+  id              String   @id @default(uuid())
+  organizacionId  String
+  vencimientoId   String
+  monto           Decimal  @db.Decimal(14, 2)
+  fecha           DateTime
+  notas           String?
+  registradoPorId String?
+  createdAt       DateTime @default(now())
+
+  vencimiento VencimientoEmpresa @relation(fields: [vencimientoId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@index([vencimientoId])
+  @@map("abonos_vencimiento")
 }
 
 // Checklist de un vencimiento: copiado de las SubtareaPlantilla de la actividad
