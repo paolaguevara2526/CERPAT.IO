@@ -1,139 +1,104 @@
 // apps/web/app/servicios/page.tsx
-//
-// Sección "Servicios": herramientas para el equipo y los clientes de CERPAT.
-// Estilo "software de escritorio" (desktop.css). Las herramientas ya construidas
-// enlazan a su HTML en /public/servicios; las demás quedan como "Próximamente".
+// Portafolio de servicios (sitio institucional). Contenido migrado del WordPress
+// de cerpat.com/servicios/. Las herramientas internas del equipo se movieron a
+// /herramientas para que esta URL conserve el SEO del sitio anterior.
 
 import type { Metadata } from 'next';
+import { Header, Footer, Hero, BRAND, NAVY, NAVY_DARK, MUTED, card, main } from '../_sitio/Sitio';
 
 export const metadata: Metadata = {
-  title: 'Servicios · Herramientas — CERPAT',
-  description: 'Calculadoras y herramientas contables de CERPAT para el equipo y los clientes.',
+  title: 'Servicios · CERPAT Contadores',
+  description: 'Asesoría contable y financiera, tributaria, revisoría fiscal, auditoría externa y forense, servicios administrativos, oficial de cumplimiento y asesoría jurídica.',
 };
 
-type Tool = { nombre: string; desc: string; href: string | null; icon: React.ReactNode };
+type Servicio = { icono: string; titulo: string; texto: string; items: string[] };
 
-const ico = (d: string, extra?: React.ReactNode) => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-    <path d={d} />{extra}
-  </svg>
-);
-
-const TOOLS: Tool[] = [
+const SERVICIOS: Servicio[] = [
   {
-    nombre: 'Calculadora de retenciones', desc: 'Retención en la fuente por concepto, con tarifas y bases al día.',
-    href: '/servicios/retenciones',
-    icon: (
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round">
-        <rect x="5" y="2" width="14" height="20" rx="2" /><rect x="7.5" y="4.5" width="9" height="3.5" rx="0.8" />
-        <path d="M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18h.01M12 18h.01M15.5 18h.01" />
-      </svg>
-    ),
+    icono: '📊', titulo: 'Asesoría Contable y Financiera',
+    texto: 'Acompañamiento experto para una gestión contable y financiera eficiente, estratégica y alineada con la normativa vigente. Con herramientas actualizadas y diagnósticos precisos te ayudamos a interpretar tus estados financieros, optimizar recursos y tomar decisiones basadas en información confiable.',
+    items: ['Outsourcing contable', 'Presupuestos', 'Estados financieros', 'Sistemas contables', 'Análisis financiero', 'Proyecciones'],
   },
   {
-    nombre: 'Calculadora punto de equilibrio', desc: 'Halla las ventas mínimas para no perder ni ganar: costos fijos y margen.',
-    href: '/servicios/punto-equilibrio',
-    icon: (
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 3v17h17" /><path d="M6 17L19 6" /><path d="M6 8l13 9" />
-      </svg>
-    ),
+    icono: '🧾', titulo: 'Asesoría Tributaria',
+    texto: 'Asesoría especializada para garantizar el cumplimiento oportuno y eficiente de las obligaciones fiscales, alineando la gestión tributaria con los objetivos estratégicos de tu empresa. Diseñamos estrategias que minimizan riesgos, mejoran la eficiencia fiscal y aseguran el cumplimiento ante las autoridades.',
+    items: ['Planeación tributaria', 'Impuestos municipales y nacionales', 'Información exógena en medios digitales', 'Optimización tributaria'],
   },
   {
-    nombre: 'Liquidador de intereses', desc: 'Intereses de mora y sanciones (DIAN) por número de días.',
-    href: null,
-    icon: (
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round">
-        <circle cx="7" cy="7" r="2.4" /><circle cx="17" cy="17" r="2.4" /><path d="M18 6L6 18" />
-      </svg>
-    ),
+    icono: '🛡️', titulo: 'Revisoría Fiscal',
+    texto: 'Auditoría externa y revisoría fiscal enfocadas en garantizar la transparencia, integridad y confiabilidad de la información financiera. Evaluamos estados financieros, procesos contables y sistemas de control interno, asegurando su cumplimiento con las normas legales y fiscales vigentes.',
+    items: ['Auditoría financiera', 'Auditoría de cumplimiento', 'Auditoría de control interno', 'Auditoría de nómina'],
   },
   {
-    nombre: 'Liquidador de prestaciones sociales', desc: 'Cesantías, intereses, prima y vacaciones según el periodo.',
-    href: null,
-    icon: (
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round">
-        <rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.6" /><path d="M6 9v6M18 9v6" />
-      </svg>
-    ),
+    icono: '🔍', titulo: 'Auditoría Externa',
+    texto: 'Vigilancia permanente del cumplimiento normativo, prevención de riesgos y recomendaciones para la mejora continua. Fortalece la credibilidad de tu empresa ante inversionistas, entidades de control y demás grupos de interés.',
+    items: ['Auditoría de estados financieros', 'Evaluación de control interno', 'Auditoría de cumplimiento'],
   },
   {
-    nombre: 'Calendario tributario', desc: 'Vencimientos nacionales y municipales según el NIT.',
-    href: null,
-    icon: (
-      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 2v4M16 2v4M8 14l2.5 2.5L16 12" />
-      </svg>
-    ),
+    icono: '⚖️', titulo: 'Auditoría Forense',
+    texto: 'Detección, prevención e investigación de fraudes, irregularidades financieras y conductas económicas indebidas, mediante técnicas especializadas de auditoría, contabilidad forense y análisis transaccional, alineadas con la normativa colombiana y estándares internacionales.',
+    items: ['Investigación de fraudes', 'Contabilidad forense', 'Análisis transaccional', 'Peritajes y dictámenes'],
   },
   {
-    nombre: 'Portal de documentos', desc: 'Espacio para que los clientes suban y consulten sus soportes.',
-    href: null,
-    icon: ico('M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'),
+    icono: '🗂️', titulo: 'Servicios Administrativos',
+    texto: 'Gestión administrativa integral para optimizar los procesos de tu empresa y liberar la carga operativa del equipo, con procedimientos ordenados y trazables.',
+    items: ['Gestión documental', 'Nómina y seguridad social', 'Tesorería', 'Procesos administrativos'],
+  },
+  {
+    icono: '✅', titulo: 'Oficial de Cumplimiento',
+    texto: 'Gestión de riesgos y cumplimiento normativo empresarial, con acompañamiento en la prevención de lavado de activos y financiación del terrorismo (SARLAFT) y demás obligaciones de cumplimiento.',
+    items: ['SARLAFT', 'Matriz de riesgos', 'Debida diligencia', 'Reportes a entidades de control'],
+  },
+  {
+    icono: '📜', titulo: 'Asesoría Jurídica',
+    texto: 'Asesoría legal estratégica para la protección y el cumplimiento de tu empresa, con acompañamiento en materia corporativa, laboral y tributaria.',
+    items: ['Derecho corporativo', 'Derecho laboral', 'Derecho tributario', 'Contratos'],
   },
 ];
 
-function WinControls() {
-  return (
-    <div className="win-ctl">
-      <button aria-label="Minimizar"><svg viewBox="0 0 12 12"><rect x="1.5" y="6" width="9" height="1.4" fill="currentColor" /></svg></button>
-      <button aria-label="Maximizar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.3}><rect x="1.8" y="1.8" width="8.4" height="8.4" /></svg></button>
-      <button className="close" aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button>
-    </div>
-  );
-}
-
 export default function ServiciosPage() {
-  const disponibles = TOOLS.filter((t) => t.href).length;
   return (
-    <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '26px 18px 44px', display: 'flex', justifyContent: 'center' }}>
-      <div className="win" style={{ width: '100%', maxWidth: 1080 }}>
-        <div className="win-bar">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />
-          <span className="win-title">Servicios</span>
-          <span className="win-path">cerpat.io/servicios</span>
-          <WinControls />
-        </div>
+    <main style={main}>
+      <Header activo="/servicios" />
+      <Hero
+        eyebrow="Te ofrecemos"
+        titulo="Nuestros Servicios"
+        texto="Soluciones profesionales que fortalecen la gestión y el crecimiento de su empresa."
+      />
 
-        <div className="win-toolbar">
-          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Herramientas · <b style={{ color: 'var(--ink)' }}>{disponibles} disponibles</b> · {TOOLS.length - disponibles} en construcción</span>
-        </div>
+      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '56px 24px 20px' }}>
+        <h2 style={{ fontSize: 28, fontWeight: 900, textAlign: 'center', margin: '0 0 10px' }}>Nuestro portafolio completo</h2>
+        <p style={{ textAlign: 'center', color: MUTED, fontSize: 16.5, margin: '0 auto 40px', maxWidth: 700, lineHeight: 1.6 }}>
+          Explora nuestro portafolio integral de servicios, diseñado para fortalecer la gestión, el cumplimiento y el crecimiento de su empresa.
+        </p>
 
-        <div className="win-body">
-          <p style={{ margin: '0 0 16px', color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.6 }}>
-            Calculadoras y utilidades para el equipo y los clientes de CERPAT. Las marcadas como <em>Próximamente</em> se irán habilitando.
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 22 }}>
+          {SERVICIOS.map((s) => (
+            <article key={s.titulo} style={card}>
+              <div style={{ width: 50, height: 50, borderRadius: 12, background: 'rgba(72,213,151,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 14 }}>{s.icono}</div>
+              <h3 style={{ fontSize: 19, fontWeight: 800, margin: '0 0 10px' }}>{s.titulo}</h3>
+              <p style={{ color: MUTED, fontSize: 14.5, lineHeight: 1.65, margin: '0 0 14px' }}>{s.texto}</p>
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {s.items.map((i) => (
+                  <li key={i} style={{ fontSize: 12.5, fontWeight: 700, color: NAVY, background: 'rgba(46,80,144,0.08)', border: '1px solid rgba(46,80,144,0.16)', borderRadius: 999, padding: '4px 11px' }}>{i}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '10px 24px 70px' }}>
+        <div style={{ background: `linear-gradient(135deg, ${NAVY}, ${NAVY_DARK})`, color: '#fff', borderRadius: 14, padding: '40px 32px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 26, fontWeight: 900, margin: '0 0 10px' }}>Da el paso hoy hacia una gestión segura</h2>
+          <p style={{ opacity: 0.9, fontSize: 16.5, margin: '0 0 22px' }}>
+            Tu empresa puede ser nuestro próximo caso de éxito. Los resultados reales comienzan con una decisión inteligente.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            {TOOLS.map((t) => {
-              const disponible = Boolean(t.href);
-              const card = (
-                <div className="tile" style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', opacity: disponible ? 1 : 0.72 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ width: 46, height: 46, borderRadius: 9, display: 'grid', placeItems: 'center', color: disponible ? 'var(--navy)' : 'var(--muted)', background: disponible ? 'rgba(46,80,144,0.10)' : 'var(--panel-2)', border: '1px solid var(--edge)', flex: 'none' }}>{t.icon}</span>
-                    <span style={{ fontWeight: 750, fontSize: 14.5, lineHeight: 1.2 }}>{t.nombre}</span>
-                  </div>
-                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: 12.8, lineHeight: 1.55, flex: 1 }}>{t.desc}</p>
-                  <div>
-                    {disponible
-                      ? <span className="dbtn primary" style={{ fontSize: 12.5, padding: '7px 14px' }}>Abrir →</span>
-                      : <span className="chip" style={{ color: 'var(--muted)', background: 'var(--panel-2)' }}>Próximamente</span>}
-                  </div>
-                </div>
-              );
-              return disponible
-                ? <a key={t.nombre} href={t.href!} style={{ textDecoration: 'none', color: 'inherit' }}>{card}</a>
-                : <div key={t.nombre}>{card}</div>;
-            })}
-          </div>
+          <a href="/contacto" className="dbtn primary" style={{ fontSize: 15.5, padding: '13px 28px' }}>Solicitar cotización</a>
         </div>
+      </section>
 
-        <div className="win-status">
-          <span className="led" /> CERPAT · guiamos a nuestros clientes a la cima
-          <span className="sp" />
-          <span>{disponibles} de {TOOLS.length} herramientas activas</span>
-        </div>
-      </div>
+      <Footer />
     </main>
   );
 }

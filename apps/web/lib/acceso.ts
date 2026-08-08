@@ -40,7 +40,7 @@ export const ACCESO_RUTA: Record<string, string[]> = {
   '/servicios/retenciones': TODOS,
   '/servicios/punto-equilibrio': TODOS,
   '/hallazgos': ['Auditor'], // Portal de Hallazgos
-  '/servicios': TODOS, // Más herramientas
+  '/herramientas': TODOS, // Más herramientas (antes /servicios)
 };
 
 export function esAdminRol(u: UsuarioAcceso): boolean {
