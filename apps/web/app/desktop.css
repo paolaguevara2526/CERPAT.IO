@@ -252,3 +252,27 @@ body { margin: 0; }
   .win-bar { height: 44px; }
   .win-body { padding: 12px; }
 }
+
+/* ---------- iOS / Safari ----------
+   Área segura del iPhone (notch e isla dinámica) cuando la app corre instalada
+   en pantalla completa, y correcciones propias de Safari móvil. */
+@supports (padding: max(0px)) {
+  @media (max-width: 760px) {
+    .app-win {
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    /* El header queda por debajo de la barra de estado del sistema */
+    .win-bar { padding-top: env(safe-area-inset-top); height: calc(46px + env(safe-area-inset-top)); }
+    /* La barra inferior no se esconde tras el indicador de inicio */
+    .win-status { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+  }
+}
+
+@media (max-width: 760px) {
+  /* Safari en iOS hace zoom al enfocar un campo con letra < 16px. Al fijar 16px
+     se evita ese salto de escala, que además desalinea el layout. */
+  input, select, textarea { font-size: 16px !important; }
+  /* Evita el rebote horizontal de la página (las tablas scrollean por dentro) */
+  html, body { overflow-x: hidden; }
+}

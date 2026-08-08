@@ -15,8 +15,11 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#171C8F',
     lang: 'es',
     icons: [
+      // PNG primero: iOS/Safari no acepta SVG como ícono de app.
+      { src: '/icon-192.png', type: 'image/png', sizes: '192x192', purpose: 'any' },
+      { src: '/icon-512.png', type: 'image/png', sizes: '512x512', purpose: 'any' },
+      { src: '/icon-512.png', type: 'image/png', sizes: '512x512', purpose: 'maskable' },
       { src: '/icon.svg', type: 'image/svg+xml', sizes: 'any', purpose: 'any' },
-      { src: '/icon-maskable.svg', type: 'image/svg+xml', sizes: 'any', purpose: 'maskable' },
     ],
   };
 }
