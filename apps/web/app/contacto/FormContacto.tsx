@@ -5,7 +5,7 @@
 // llamada a la API, sin tocar el resto de la página.
 
 import { useState } from 'react';
-import { CONTACTO, NAVY } from '../_sitio/Sitio';
+import { CONTACTO, INDIGO, btnPrimario } from '../_sitio/Sitio';
 
 const SERVICIOS = [
   'Asesoría Contable y Financiera', 'Asesoría Tributaria', 'Revisoría Fiscal', 'Auditoría Forense',
@@ -50,10 +50,10 @@ export default function FormContacto() {
         </label>
       </div>
       <label><span style={etiqueta}>Mensaje</span><textarea style={{ ...campo, minHeight: 120, resize: 'vertical' }} value={f.mensaje} onChange={(e) => set('mensaje', e.target.value)} /></label>
-      <button type="submit" className="dbtn primary" style={{ fontSize: 15.5, padding: '13px 26px', alignSelf: 'flex-start' }}>Enviar solicitud</button>
+      <button type="submit" style={{ ...btnPrimario, alignSelf: 'flex-start', fontFamily: 'inherit' }}>Enviar solicitud</button>
       <p style={{ fontSize: 12.5, color: '#667085', margin: 0 }}>
         Al enviar se abrirá tu gestor de correo con la solicitud lista. También puedes escribirnos directo a{' '}
-        <a href={`mailto:${CONTACTO.email}`} style={{ color: NAVY, fontWeight: 700 }}>{CONTACTO.email}</a>.
+        <a href={`mailto:${CONTACTO.email}`} style={{ color: INDIGO, fontWeight: 700 }}>{CONTACTO.email}</a>.
       </p>
     </form>
   );
