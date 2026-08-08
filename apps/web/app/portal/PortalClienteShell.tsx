@@ -25,7 +25,7 @@ const SECCIONES: { titulo: string; items: Item[] }[] = [
     items: [
       { label: 'Calculadora de retenciones', icon: '🧮', href: '/servicios/retenciones', externo: true },
       { label: 'Punto de equilibrio', icon: '📈', href: '/servicios/punto-equilibrio', externo: true },
-      { label: 'Más herramientas', icon: '🧰', href: '/servicios', externo: true },
+      { label: 'Más herramientas', icon: '🧰', href: '/herramientas', externo: true },
     ],
   },
 ];
