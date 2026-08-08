@@ -1,11 +1,16 @@
 // apps/web/app/page.tsx
 //
-// Home institucional de CERPAT (cerpat.io/). Contenido migrado del WordPress que
-// vivía en cerpat.com. Las páginas interiores son /nosotros, /servicios,
-// /contacto y /trabaja-con-nosotros. El planeador queda en /planeador.
+// Home del sitio institucional (cerpat.io/), migrada del WordPress de cerpat.com
+// conservando su identidad visual: Poppins, índigo #392B87, verde #48D597 y
+// lavanda. Las páginas interiores son /nosotros, /servicios, /contacto y
+// /trabaja-con-nosotros. El planeador (con su propio estilo) vive en /planeador.
 
 import type { Metadata } from 'next';
-import { Header, Footer, BRAND, NAVY, NAVY_DARK, MUTED, CONTACTO, card, main } from './_sitio/Sitio';
+import {
+  Header, Footer, Clientes, FuentePoppins, CONTACTO,
+  INDIGO, INDIGO_2, BRAND, LILA, LILA_2, TEXTO, TITULO,
+  btnVerde, btnLinea, btnBlanco, card, main,
+} from './_sitio/Sitio';
 
 export const metadata: Metadata = {
   title: 'CERPAT Contadores · Asesoría contable, tributaria y revisoría fiscal',
@@ -14,110 +19,197 @@ export const metadata: Metadata = {
 };
 
 const PILARES = [
-  { icono: '🏅', titulo: 'Experiencia profesional', texto: 'Más de 7 años asesorando empresas con soluciones contables y financieras confiables.' },
-  { icono: '🎯', titulo: 'Atención personalizada', texto: 'Analizamos cada caso para ofrecer estrategias adaptadas a sus necesidades.' },
-  { icono: '🛡️', titulo: 'Cumplimiento y seguridad', texto: 'Garantizamos procesos alineados con la normativa vigente y las mejores prácticas.' },
-  { icono: '🤝', titulo: 'Acompañamiento integral', texto: 'Soporte permanente en áreas contables, tributarias, financieras y legales.' },
+  { icono: '🏅', titulo: 'Experiencia Profesional', texto: 'Más de 7 años asesorando empresas con soluciones contables y financieras confiables.' },
+  { icono: '🎯', titulo: 'Atención Personalizada', texto: 'Analizamos cada caso para ofrecer estrategias adaptadas a sus necesidades.' },
+  { icono: '🛡️', titulo: 'Cumplimiento y Seguridad', texto: 'Garantizamos procesos alineados con la normativa vigente y mejores prácticas.' },
+  { icono: '🤝', titulo: 'Acompañamiento Integral', texto: 'Soporte permanente en áreas contables, tributarias, financieras y legales.' },
 ];
 
 const SERVICIOS = [
-  { icono: '📊', titulo: 'Asesoría Contable y Financiera', texto: 'Soluciones contables y financieras para su empresa.' },
-  { icono: '🧾', titulo: 'Asesoría Tributaria', texto: 'Estrategias tributarias eficientes para el crecimiento empresarial.' },
-  { icono: '🛡️', titulo: 'Revisoría Fiscal', texto: 'Control fiscal independiente para seguridad y cumplimiento empresarial.' },
-  { icono: '🔍', titulo: 'Auditoría Externa', texto: 'Evaluación independiente para fortalecer control y transparencia empresarial.' },
-  { icono: '⚖️', titulo: 'Auditoría Forense', texto: 'Detección de fraudes y análisis financiero especializado.' },
-  { icono: '🗂️', titulo: 'Servicios Administrativos', texto: 'Gestión administrativa integral para optimizar procesos empresariales.' },
-  { icono: '✅', titulo: 'Oficial de Cumplimiento', texto: 'Gestión de riesgos y cumplimiento normativo empresarial.' },
-  { icono: '📜', titulo: 'Asesoría Jurídica', texto: 'Asesoría legal estratégica para protección y cumplimiento empresarial.' },
+  { img: 'foto-apoyo-asesoria-contable-y-financiera', titulo: 'Asesoría Contable y Financiera', texto: 'Soluciones contables y financieras para su empresa.' },
+  { img: 'foto-apoyo-asesoria-tributaria', titulo: 'Asesoría Tributaria', texto: 'Estrategias tributarias eficientes para el crecimiento empresarial.' },
+  { img: 'foto-apoyo-auditoria-externa-y-revisoria-fiscal', titulo: 'Revisoría Fiscal', texto: 'Control fiscal independiente para seguridad y cumplimiento empresarial.' },
+  { img: 'foto-apoyo-4b', titulo: 'Auditoría Externa', texto: 'Evaluación independiente para fortalecer control y transparencia empresarial.' },
+  { img: 'foto-apoyo-auditoria-forense', titulo: 'Auditoría Forense', texto: 'Detección de fraudes y análisis financiero especializado.' },
+  { img: 'foto-apoyo-servicios-administrativos', titulo: 'Servicios Administrativos', texto: 'Gestión administrativa integral para optimizar procesos empresariales.' },
+  { img: 'foto-apoyo-oficial-de-cumplimiento', titulo: 'Oficial de Cumplimiento', texto: 'Gestión de riesgos y cumplimiento normativo empresarial.' },
+  { img: 'foto-apoyo-asesoria-juridica-en-derecho-comercial-y-laboral', titulo: 'Asesoría Jurídica', texto: 'Asesoría legal estratégica para protección y cumplimiento empresarial.' },
+];
+
+const RAZONES = [
+  { titulo: 'Enfoque en Resultados', texto: 'Trabajamos para mejorar la rentabilidad y estabilidad financiera de tu empresa.' },
+  { titulo: 'Respuesta Ágil y Oportuna', texto: 'Atención rápida y acompañamiento constante en cada proceso o requerimiento.' },
+  { titulo: 'Visión Integral Empresarial', texto: 'Integramos áreas contables, legales y financieras para decisiones más seguras.' },
+];
+
+const TESTIMONIOS = [
+  {
+    nombre: 'Rosman Ñañez', empresa: 'Elecgiteca Manacacias S.A.S.',
+    texto: 'Estamos muy satisfechos con su eficiencia, que nos ha permitido enfocarnos en el crecimiento de nuestra empresa, confiando plenamente en el cumplimiento de nuestras obligaciones tributarias.',
+  },
+  {
+    nombre: 'Gloria Blanco González', empresa: 'BYB Logipetrol S.A.S.',
+    texto: 'El apoyo de Cerpat ha sido fundamental para nuestro crecimiento, destacándose por su profesionalismo, dedicación y eficiencia. Altamente recomendados.',
+  },
+  {
+    nombre: 'Milena Baquero', empresa: 'Administración de Transpubadi S.A.S.',
+    texto: 'Llevamos años utilizando los servicios de CERPAT para una contabilidad segura y confiable, con resultados excepcionales y reportes siempre puntuales.',
+  },
 ];
 
 export default function HomePage() {
   return (
     <main style={main}>
+      <FuentePoppins />
       <Header activo="/" />
 
-      {/* Hero */}
-      <section style={{ background: `linear-gradient(135deg, ${NAVY_DARK}, ${NAVY})`, color: '#fff', padding: '66px 24px 76px' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ display: 'inline-block', fontSize: 12.5, fontWeight: 800, letterSpacing: 0.6, background: 'rgba(72,213,151,0.16)', color: BRAND, padding: '6px 14px', borderRadius: 999, marginBottom: 20 }}>
-            Contadores públicos · Villavicencio, cobertura nacional
-          </div>
-          <h1 style={{ fontSize: 44, lineHeight: 1.1, fontWeight: 900, margin: '0 0 18px' }}>
-            Impulsa tu empresa con el <span style={{ color: BRAND }}>respaldo de expertos</span>
-          </h1>
-          <p style={{ fontSize: 18, lineHeight: 1.65, opacity: 0.92, margin: '0 0 30px' }}>
-            Acompañamos a empresas y emprendedores con asesoría contable, financiera y legal confiable: cumplimiento
-            normativo, optimización de recursos y apoyo permanente para un crecimiento sostenible y seguro.
-          </p>
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/contacto" className="dbtn primary" style={{ fontSize: 15.5, padding: '13px 26px' }}>Solicita una asesoría</a>
-            <a href="/servicios" className="dbtn ghost" style={{ fontSize: 15.5, padding: '13px 26px' }}>Ver servicios</a>
+      {/* Hero con la foto de la cumbre (motivo de marca del sitio anterior) */}
+      <section style={{
+        background: `linear-gradient(105deg, rgba(57,43,135,.94) 0%, rgba(43,52,135,.86) 55%, rgba(15,23,42,.72) 100%), url('/sitio/vista-cima-montana.webp') center/cover`,
+        color: '#fff', padding: '86px 24px 96px',
+      }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+          <div style={{ maxWidth: 660 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: BRAND, marginBottom: 16 }}>
+              Contadores públicos · Cobertura nacional
+            </div>
+            <h1 style={{ fontSize: 46, lineHeight: 1.14, fontWeight: 700, margin: '0 0 18px', letterSpacing: '-0.8px' }}>
+              Impulsa tu empresa con el <span style={{ color: BRAND }}>respaldo de expertos</span>
+            </h1>
+            <p style={{ fontSize: 18, lineHeight: 1.7, opacity: 0.93, margin: '0 0 30px' }}>
+              Acompañamos a empresas y emprendedores con asesoría contable, financiera y legal confiable:
+              cumplimiento normativo, optimización de recursos y apoyo permanente para un crecimiento
+              sostenible y seguro del negocio.
+            </p>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+              <a href="/contacto" style={btnVerde}>Solicita una asesoría</a>
+              <a href="/servicios" style={btnBlanco}>Ver servicios</a>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Pilares */}
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '54px 24px 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 20 }}>
+      <section style={{ maxWidth: 1180, margin: '0 auto', padding: '58px 24px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 22 }}>
           {PILARES.map((p) => (
             <div key={p.titulo} style={card}>
-              <div style={{ fontSize: 26, marginBottom: 10 }}>{p.icono}</div>
-              <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 7px' }}>{p.titulo}</h3>
-              <p style={{ color: MUTED, fontSize: 14.5, lineHeight: 1.6, margin: 0 }}>{p.texto}</p>
+              <div style={{ width: 52, height: 52, borderRadius: 14, background: LILA, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25, marginBottom: 14 }}>{p.icono}</div>
+              <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: TITULO }}>{p.titulo}</h3>
+              <p style={{ color: TEXTO, fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{p.texto}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Nosotros (resumen) */}
-      <section style={{ background: '#F7F9FB', padding: '62px 24px', marginTop: 56 }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: BRAND, marginBottom: 8 }}>Nosotros</div>
-          <h2 style={{ fontSize: 30, fontWeight: 900, margin: '0 0 16px' }}>Construye el futuro de tu empresa con expertos</h2>
-          <p style={{ color: MUTED, fontSize: 17, lineHeight: 1.75, margin: '0 0 14px' }}>
-            Somos una firma de contadores públicos y asesores financieros, legalmente constituida desde <strong>2019</strong>,
-            con cobertura en todo el territorio nacional y un equipo de <strong>más de 30 profesionales especializados</strong>.
-          </p>
-          <p style={{ color: MUTED, fontSize: 17, lineHeight: 1.75, margin: '0 0 26px' }}>
-            Estamos autorizados por la Junta Central de Contadores y certificados en <strong>ISO 9001:2015</strong> por
-            SGS Colombia S.A.S., garantizando altos estándares de calidad y mejores prácticas.
-          </p>
-          <a href="/nosotros" className="dbtn navy" style={{ fontSize: 15, padding: '12px 24px' }}>Conócenos</a>
+      {/* Nosotros con foto */}
+      <section style={{ maxWidth: 1180, margin: '0 auto', padding: '70px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 44, alignItems: 'center' }}>
+          <div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/sitio/grupo-personas-que-elaboran-plan-negocios-oficina.webp" alt="Equipo de CERPAT trabajando" style={{ width: '100%', height: 'auto', borderRadius: 18, display: 'block' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: BRAND, marginBottom: 10 }}>Nosotros</div>
+            <h2 style={{ fontSize: 32, fontWeight: 700, margin: '0 0 16px', lineHeight: 1.25, letterSpacing: '-0.5px' }}>
+              Impulsa tu Empresa con el Respaldo de Expertos
+            </h2>
+            <p style={{ color: TEXTO, fontSize: 16, lineHeight: 1.8, margin: '0 0 20px' }}>
+              Somos un equipo profesional comprometido con brindar soluciones contables, financieras y legales
+              confiables. Acompañamos a empresas y emprendedores con asesoría estratégica, garantizando cumplimiento
+              normativo, optimización de recursos y apoyo permanente para el crecimiento sostenible y seguro del negocio.
+            </p>
+            <ul style={{ margin: '0 0 26px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 11 }}>
+              {['Crece con respaldo profesional', 'Tu éxito, nuestra prioridad', 'Gestión segura y estratégica'].map((t) => (
+                <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 11, color: TITULO, fontSize: 15.5, fontWeight: 500 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: BRAND, color: '#08301F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>✓</span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+            <a href="/nosotros" style={btnLinea}>Ver más</a>
+          </div>
         </div>
       </section>
 
-      {/* Servicios */}
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '62px 24px 0' }}>
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <h2 style={{ fontSize: 30, fontWeight: 900, margin: '0 0 10px' }}>Nuestros servicios</h2>
-          <p style={{ color: MUTED, fontSize: 16.5, margin: '0 auto', maxWidth: 620, lineHeight: 1.6 }}>
-            Descubre cómo nuestros servicios impulsan tu crecimiento empresarial.
-          </p>
+      {/* Servicios con fotos */}
+      <section style={{ background: LILA, padding: '70px 24px' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: INDIGO, marginBottom: 10 }}>Nuestros Servicios</div>
+            <h2 style={{ fontSize: 32, fontWeight: 700, margin: '0 0 10px', letterSpacing: '-0.5px' }}>Descubre cómo impulsamos tu crecimiento</h2>
+            <p style={{ color: TEXTO, fontSize: 16.5, margin: '0 auto', maxWidth: 640, lineHeight: 1.7 }}>
+              Un portafolio integral para fortalecer la gestión, el cumplimiento y el crecimiento de su empresa.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(268px,1fr))', gap: 24 }}>
+            {SERVICIOS.map((s) => (
+              <a key={s.titulo} href="/servicios" style={{ ...card, padding: 0, overflow: 'hidden', textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/sitio/${s.img}.webp`} alt="" style={{ width: '100%', height: 168, objectFit: 'cover', display: 'block' }} />
+                <div style={{ padding: '20px 22px 24px' }}>
+                  <h3 style={{ fontSize: 17, fontWeight: 700, margin: '0 0 8px', color: TITULO }}>{s.titulo}</h3>
+                  <p style={{ color: TEXTO, fontSize: 14.5, lineHeight: 1.7, margin: 0 }}>{s.texto}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 38 }}>
+            <a href="/servicios" style={btnLinea}>Ver más</a>
+          </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 20 }}>
-          {SERVICIOS.map((s) => (
-            <a key={s.titulo} href="/servicios" style={{ ...card, textDecoration: 'none', color: 'inherit', display: 'block' }}>
-              <div style={{ width: 46, height: 46, borderRadius: 11, background: 'rgba(72,213,151,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 13 }}>{s.icono}</div>
-              <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 7px' }}>{s.titulo}</h3>
-              <p style={{ color: MUTED, fontSize: 14.5, lineHeight: 1.6, margin: 0 }}>{s.texto}</p>
-            </a>
+      </section>
+
+      {/* Por qué nosotros */}
+      <section style={{ maxWidth: 1180, margin: '0 auto', padding: '70px 24px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: BRAND, marginBottom: 10 }}>¿Por qué nosotros?</div>
+          <h2 style={{ fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: '-0.5px' }}>Nuestro compromiso con la excelencia</h2>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 24 }}>
+          {RAZONES.map((r, i) => (
+            <div key={r.titulo} style={{ ...card, borderTop: `4px solid ${i === 1 ? BRAND : INDIGO}` }}>
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 9px' }}>{r.titulo}</h3>
+              <p style={{ color: TEXTO, fontSize: 15, lineHeight: 1.7, margin: 0 }}>{r.texto}</p>
+            </div>
           ))}
         </div>
-        <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <a href="/servicios" className="dbtn navy" style={{ fontSize: 15, padding: '12px 24px' }}>Ver portafolio completo</a>
+      </section>
+
+      {/* Testimonios */}
+      <section style={{ background: LILA, padding: '70px 24px' }}>
+        <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 42 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase', color: INDIGO, marginBottom: 10 }}>Testimonios</div>
+            <h2 style={{ fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: '-0.5px' }}>¿Quiénes confían en nosotros?</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 24 }}>
+            {TESTIMONIOS.map((t) => (
+              <figure key={t.nombre} style={{ ...card, margin: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ color: BRAND, fontSize: 40, lineHeight: 0.7, fontWeight: 700 }}>&ldquo;</div>
+                <blockquote style={{ margin: 0, color: TEXTO, fontSize: 15, lineHeight: 1.8, fontStyle: 'italic', flex: 1 }}>{t.texto}</blockquote>
+                <figcaption style={{ borderTop: `1px solid ${LILA_2}`, paddingTop: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: TITULO }}>{t.nombre}</div>
+                  <div style={{ color: INDIGO, fontSize: 13.5, fontWeight: 500 }}>{t.empresa}</div>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Cierre + contacto */}
-      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '62px 24px 70px' }}>
-        <div style={{ background: `linear-gradient(135deg, ${NAVY}, ${NAVY_DARK})`, color: '#fff', borderRadius: 14, padding: '44px 32px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 27, fontWeight: 900, margin: '0 0 10px' }}>Da el paso hoy hacia una gestión segura</h2>
-          <p style={{ opacity: 0.9, fontSize: 16.5, margin: '0 0 24px' }}>
+      <Clientes fondo="#fff" />
+
+      {/* Cierre */}
+      <section style={{ background: `linear-gradient(120deg, ${INDIGO}, ${INDIGO_2})`, color: '#fff', padding: '64px 24px' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 30, fontWeight: 700, margin: '0 0 12px', letterSpacing: '-0.5px' }}>Da el paso hoy hacia una gestión segura</h2>
+          <p style={{ opacity: 0.92, fontSize: 17, margin: '0 0 28px', lineHeight: 1.7 }}>
             Tu empresa puede ser nuestro próximo caso de éxito. Los resultados reales comienzan con una decisión inteligente.
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/contacto" className="dbtn primary" style={{ fontSize: 15.5, padding: '13px 26px' }}>Solicitar cotización</a>
-            <a href={CONTACTO.telefonoHref} className="dbtn ghost" style={{ fontSize: 15.5, padding: '13px 26px' }}>PBX {CONTACTO.telefono}</a>
+            <a href="/contacto" style={btnVerde}>Solicitar cotización</a>
+            <a href={CONTACTO.telefonoHref} style={btnBlanco}>PBX {CONTACTO.telefono}</a>
           </div>
         </div>
       </section>
