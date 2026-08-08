@@ -10,6 +10,34 @@ import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 
 export const authRouter = Router();
 
+// ---------- Límite de intentos de login (anti fuerza bruta) ----------
+// Ventana deslizante en memoria por IP + correo: tras varios fallos seguidos se
+// bloquea un rato. Los intentos correctos limpian el contador. En memoria basta
+// para el tamaño actual; si algún día hay varias instancias, mover a la BD/Redis.
+const MAX_INTENTOS = 8;
+const VENTANA_MS = 15 * 60 * 1000; // 15 minutos
+const intentos = new Map<string, { n: number; hasta: number }>();
+
+function claveIntento(req: { ip?: string; body?: any }): string {
+  const ip = req.ip ?? 'sin-ip';
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  return `${ip}|${email}`;
+}
+function bloqueado(clave: string): number {
+  const reg = intentos.get(clave);
+  if (!reg) return 0;
+  if (Date.now() > reg.hasta) { intentos.delete(clave); return 0; }
+  return reg.n >= MAX_INTENTOS ? Math.ceil((reg.hasta - Date.now()) / 60000) : 0;
+}
+function registrarFallo(clave: string): void {
+  const ahora = Date.now();
+  const reg = intentos.get(clave);
+  if (!reg || ahora > reg.hasta) intentos.set(clave, { n: 1, hasta: ahora + VENTANA_MS });
+  else intentos.set(clave, { n: reg.n + 1, hasta: reg.hasta });
+  // Limpieza oportunista para que el mapa no crezca sin control.
+  if (intentos.size > 5000) for (const [k, v] of intentos) if (ahora > v.hasta) intentos.delete(k);
+}
+
 async function cargarUsuario(id: string) {
   return prisma.usuario.findUnique({
     where: { id },
@@ -26,6 +54,13 @@ authRouter.post('/login', async (req, res) => {
   const secret = process.env.JWT_SECRET;
   if (!secret) return res.status(500).json({ error: 'Autenticación no configurada (falta JWT_SECRET).' });
 
+  // Demasiados intentos fallidos seguidos: se frena un rato (fuerza bruta).
+  const clave = claveIntento(req);
+  const minutos = bloqueado(clave);
+  if (minutos > 0) {
+    return res.status(429).json({ error: `Demasiados intentos fallidos. Espera ${minutos} minuto(s) e intenta de nuevo.` });
+  }
+
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   const user = await prisma.usuario.findFirst({
     where: { email, organizacionId: org?.id },
@@ -34,8 +69,10 @@ authRouter.post('/login', async (req, res) => {
 
   // Mismo mensaje para usuario inexistente / clave mala (no filtrar cuáles existen).
   if (!user || !user.activo || !verifyPassword(password, user.passwordHash)) {
+    registrarFallo(clave);
     return res.status(401).json({ error: 'Correo o contraseña incorrectos.' });
   }
+  intentos.delete(clave); // login correcto: se limpia el contador
 
   const roles = user.roles.map((r) => r.rol.nombre);
   const token = signJwt({ sub: user.id, org: user.organizacionId, roles, esRoot: user.esRootPlataforma, empresaCliente: user.empresaClienteId, grupoCliente: user.grupoClienteId }, secret);

@@ -2,16 +2,16 @@
 //
 // Lista de usuarios (personal) por organización / tenant.
 //
-// TODO (auth/tenant): la organización debe resolverse desde la sesión y verificar
-// rol/permiso (esta vista debería quedar detrás de login, solo para Administrador/
-// Coordinador). Mientras no hay auth, resuelve la organización demo (slug "cerpat").
+// Requiere sesión: expone datos personales del equipo (nombre, correo, cargo),
+// así que nunca debe responder sin autenticar.
 
 import { Router } from 'express';
 import { prisma } from '../db.js';
+import { requireAuth } from '../auth/middleware.js';
 
 export const usuariosRouter = Router();
 
-usuariosRouter.get('/', async (_req, res) => {
+usuariosRouter.get('/', requireAuth, async (_req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, total: 0, usuarios: [] });
 

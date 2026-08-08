@@ -2,17 +2,17 @@
 //
 // Lista de empresas cliente (por organización / tenant).
 //
-// TODO (auth/tenant): la organización debe resolverse desde la sesión del
-// usuario, y verificar rol/permiso. Mientras no existe auth, este endpoint
-// resuelve la organización demo (slug "cerpat") y NO expone los correos de
-// contacto (son datos personales de clientes; se sirven solo con auth).
+// Requiere sesión: la cartera de clientes (nombre, NIT, servicio, asesor) es
+// información confidencial de la firma. Los correos de contacto siguen fuera de
+// este endpoint (se sirven en Administración).
 
 import { Router } from 'express';
 import { prisma } from '../db.js';
+import { requireAuth } from '../auth/middleware.js';
 
 export const empresasRouter = Router();
 
-empresasRouter.get('/', async (req, res) => {
+empresasRouter.get('/', requireAuth, async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, total: 0, empresas: [] });
 

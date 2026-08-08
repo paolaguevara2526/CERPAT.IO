@@ -5,17 +5,18 @@
 // de endpoints: TODA validación de negocio ocurre aquí, del lado del servidor, nunca
 // solo en el frontend.
 //
-// TODO (Claude Code):
-//  - Agregar middleware de autenticación (verificar sesión antes de cada ruta).
-//  - Agregar verificación de rol/permiso según la acción.
-//  - Completar el resto de reglas de negocio (auditoría bloqueada, asignación automática,
-//    etc.) siguiendo el mismo patrón de este archivo.
+// Todas las rutas exigen sesión (requireAuth). La gestión del plan de trabajo vive
+// en /plan, que además valida rol y responsable por tarea.
 
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db.js';
+import { requireAuth } from '../auth/middleware.js';
 
 export const tareasRouter = Router();
+
+// Sesión obligatoria en todo el router (lectura y escritura).
+tareasRouter.use(requireAuth);
 
 const ESTADOS_QUE_REQUIEREN_SUBTAREAS_COMPLETAS = ['terminado', 'auditado'];
 
