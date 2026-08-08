@@ -5,11 +5,11 @@
 // muestran aquí. Acceso restringido a Administrador/root (bloqueo por URL).
 
 import { exigirRuta } from '@/lib/acceso-server';
+import { apiFetch } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api-production-678b8.up.railway.app';
-const BRAND = '#34C98B';
+const BRAND = '#48D597';
 
 type Empresa = {
   id: string;
@@ -29,7 +29,8 @@ type Respuesta = {
 
 async function getEmpresas(): Promise<{ data: Respuesta | null; error: string | null }> {
   try {
-    const res = await fetch(`${API_URL}/empresas`, { cache: 'no-store' });
+    // apiFetch adjunta el token de la sesión: /empresas exige autenticación.
+    const res = await apiFetch('/empresas');
     if (!res.ok) return { data: null, error: `La API respondió ${res.status}` };
     return { data: (await res.json()) as Respuesta, error: null };
   } catch (e) {
@@ -56,7 +57,7 @@ export default async function ClientesPage() {
           <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 12, padding: '18px 20px', fontSize: 14, fontWeight: 600 }}>
             No se pudieron cargar los clientes: {error}.
             <div style={{ fontWeight: 400, marginTop: 6, color: '#7a271d' }}>
-              Verifica que la API (<code>{API_URL}</code>) esté en línea y responda en <code>/empresas</code>.
+              Verifica que la API esté en línea y responda en <code>/empresas</code>.
             </div>
           </div>
         ) : (

@@ -1029,7 +1029,7 @@ planRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
   res.json({ anio, kpis: { total, ejecutadas, cumplimiento: total ? Math.round((ejecutadas / total) * 100) : 0 }, matriz, actividades });
 });
 
-planRouter.get('/cumplimiento', async (req, res) => {
+planRouter.get('/cumplimiento', requireAuth, async (req, res) => {
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   if (!org) return res.json({ organizacion: null, periodo: null, kpis: null, porArea: [], porCliente: [] });
 

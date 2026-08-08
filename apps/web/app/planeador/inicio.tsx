@@ -1,7 +1,7 @@
 // apps/web/app/planeador/inicio.tsx
 // Helper server-side para el resumen global del período (cumplimiento).
 
-import { API_URL } from '@/lib/session';
+import { apiFetch } from '@/lib/session';
 
 export type Kpis = { total: number; ejecutadas: number; vencidas: number; porAuditar: number; cumplimiento: number };
 export type CumplimientoResp = { organizacion: { nombre: string } | null; periodo: string | null; kpis: Kpis | null };
@@ -9,7 +9,7 @@ export type CumplimientoResp = { organizacion: { nombre: string } | null; period
 export async function fetchCumplimiento(periodo?: string): Promise<{ data: CumplimientoResp | null; error: string | null }> {
   const qs = periodo ? `?periodo=${encodeURIComponent(periodo)}` : '';
   try {
-    const res = await fetch(`${API_URL}/plan/cumplimiento${qs}`, { cache: 'no-store' });
+    const res = await apiFetch(`/plan/cumplimiento${qs}`);
     if (!res.ok) return { data: null, error: `La API respondió ${res.status}` };
     return { data: (await res.json()) as CumplimientoResp, error: null };
   } catch (e) {

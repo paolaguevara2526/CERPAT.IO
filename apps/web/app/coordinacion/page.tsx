@@ -6,11 +6,10 @@
 // auxiliar y clientes en riesgo del período.
 
 import { exigirRuta } from '@/lib/acceso-server';
+import { apiFetch } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
 
 export const dynamic = 'force-dynamic';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api-production-678b8.up.railway.app';
 
 type Kpis = { total: number; ejecutadas: number; vencidas: number; porAuditar: number; cumplimiento: number };
 type PorArea = { area: string; total: number; ejecutadas: number; cumplimiento: number };
@@ -24,7 +23,7 @@ type Respuesta = {
 async function getCumplimiento(periodo?: string): Promise<{ data: Respuesta | null; error: string | null }> {
   const qs = periodo ? `?periodo=${encodeURIComponent(periodo)}` : '';
   try {
-    const res = await fetch(`${API_URL}/plan/cumplimiento${qs}`, { cache: 'no-store' });
+    const res = await apiFetch(`/plan/cumplimiento${qs}`);
     if (!res.ok) return { data: null, error: `La API respondió ${res.status}` };
     return { data: (await res.json()) as Respuesta, error: null };
   } catch (e) {
