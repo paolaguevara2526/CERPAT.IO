@@ -2,9 +2,11 @@
 
 Documento vivo del estado en producción y el roadmap. Actualizar en cada avance.
 Para el **modelo de operación** (flujo, roles, entregas y medición) ver
-[`metodologia-operacion.md`](./metodologia-operacion.md).
+[`metodologia-operacion.md`](./metodologia-operacion.md). Para la **visión de
+plataforma** (de planeador a producto SaaS multi-módulo, modalidades, módulos,
+fundaciones y nomenclatura) ver [`vision-plataforma.md`](./vision-plataforma.md).
 
-_Última actualización: 2026-08-02._
+_Última actualización: 2026-08-08._
 
 ## En producción hoy
 
@@ -42,6 +44,7 @@ _Última actualización: 2026-08-02._
 
 ## Arquitectura decidida
 - **Multi-tenant (SaaS multi-firma):** cada firma contable es una `Organizacion` aislada; todo el dominio lleva `organizacionId`. **Root de plataforma** (`Usuario.esRootPlataforma`) por encima. Ver [`arquitectura.md`](./arquitectura.md) → ADR-0001.
+- **Plataforma multi-módulo (visión):** de planeador a sistema operativo de la firma **y** producto que se le vende a los clientes. Cinco frentes (Outsourcing/asesoría, Auditoría/RF, SARLAFT, Talento Humano, "Cómo trabajamos") sobre una base compartida; navegación en acordeón por área ("Mi Ruta" el día a día). Ver [`vision-plataforma.md`](./vision-plataforma.md) y ADR-0002 (cliente-como-tenant + licenciamiento), ADR-0003 (permisos en 3 niveles), ADR-0004 (navegación/nombres) y ADR-0005 (datos sensibles).
 - **Regla de aislamiento:** el backend filtra por `organizacionId` de la sesión en cada consulta; nunca confiar en el cliente.
 - Stack: Next.js (Vercel) · Express/TS (Railway) · PostgreSQL/Prisma · auth Auth.js/Clerk (pendiente) · n8n (pendiente) · Microsoft 365 correo (pendiente) · Sentry (pendiente).
 - **Sistema de diseño "software de escritorio":** paleta **azul rey apagado**
