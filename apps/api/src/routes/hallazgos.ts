@@ -10,6 +10,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { orgDeSesion } from '../auth/tenant.js';
 
 export const hallazgosRouter = Router();
 
@@ -40,7 +41,7 @@ function vencido(estado: string, plazo: Date | null): boolean {
 
 // Empresas que el usuario puede ver (para selector de grupo / revisor).
 hallazgosRouter.get('/empresas', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ empresas: [] });
   const alcance = await alcanceEmpresas(req.user, org.id);
   if (alcance === null) return res.status(403).json({ error: 'Sin acceso al portal de hallazgos.' });
@@ -67,7 +68,7 @@ async function empresasConsulta(req: AuthedRequest, orgId: string): Promise<{ id
 
 // GET /hallazgos?empresaId= — lista de hallazgos en el alcance.
 hallazgosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ total: 0, hallazgos: [] });
   const { ids, error } = await empresasConsulta(req, org.id);
   if (error) return res.status(error.code).json({ error: error.msg });
@@ -90,7 +91,7 @@ hallazgosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
 
 // GET /hallazgos/resumen?empresaId= — KPIs y desglose por empresa.
 hallazgosRouter.get('/resumen', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ kpis: null, porEmpresa: [] });
   const { ids, error } = await empresasConsulta(req, org.id);
   if (error) return res.status(error.code).json({ error: error.msg });
@@ -141,7 +142,7 @@ function datosHallazgo(body: any): { data: Record<string, any>; error?: string }
 
 hallazgosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!esGestor(req.user!)) return res.status(403).json({ error: 'Solo el revisor fiscal puede crear hallazgos.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresaId = String(req.body?.empresaId ?? '');
   const empresa = empresaId ? await prisma.empresa.findFirst({ where: { id: empresaId, organizacionId: org.id }, select: { id: true } }) : null;
@@ -155,7 +156,7 @@ hallazgosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
 
 hallazgosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!esGestor(req.user!)) return res.status(403).json({ error: 'Solo el revisor fiscal puede editar hallazgos.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const { data, error } = datosHallazgo(req.body);
   if (error) return res.status(422).json({ error });
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
@@ -166,7 +167,7 @@ hallazgosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
 
 hallazgosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!esGestor(req.user!)) return res.status(403).json({ error: 'Solo el revisor fiscal puede eliminar hallazgos.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const r = await prisma.hallazgo.deleteMany({ where: { id: req.params.id, organizacionId: org?.id } });
   if (r.count === 0) return res.status(404).json({ error: 'Hallazgo no encontrado.' });
   res.json({ ok: true });
@@ -176,7 +177,7 @@ hallazgosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
 // empresa (revisor). Útil para reimportar limpio.
 hallazgosRouter.post('/vaciar', requireAuth, async (req: AuthedRequest, res) => {
   if (!esGestor(req.user!)) return res.status(403).json({ error: 'Solo el revisor fiscal puede vaciar los hallazgos.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresaId = String(req.body?.empresaId ?? '');
   const empresa = empresaId ? await prisma.empresa.findFirst({ where: { id: empresaId, organizacionId: org.id }, select: { id: true } }) : null;
@@ -188,7 +189,7 @@ hallazgosRouter.post('/vaciar', requireAuth, async (req: AuthedRequest, res) => 
 // POST /hallazgos/importar  { empresaId, items: [...] } — carga masiva (revisor).
 hallazgosRouter.post('/importar', requireAuth, async (req: AuthedRequest, res) => {
   if (!esGestor(req.user!)) return res.status(403).json({ error: 'Solo el revisor fiscal puede importar hallazgos.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresaId = String(req.body?.empresaId ?? '');
   const empresa = empresaId ? await prisma.empresa.findFirst({ where: { id: empresaId, organizacionId: org.id }, select: { id: true } }) : null;

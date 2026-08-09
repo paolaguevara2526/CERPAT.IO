@@ -226,6 +226,31 @@ Fuente de verdad del esquema: [`../prisma/schema.prisma`](../prisma/schema.prism
     que acepta variables (`apps/web/app/_components/color.ts`).
   - Cambiar el rojo de la firma pasa a ser una línea, no 81.
 
+### ADR-0009 — El tenant sale de la sesión
+
+- **Contexto:** ADR-0001 dejó el diseño de datos multi-tenant, pero la
+  implementación quedó pendiente: los endpoints resolvían la organización con el
+  texto fijo `slug: 'cerpat'` —**40 veces** repartidas por siete routers—. Con una
+  sola firma funcionaba, pero era **el bloqueo para vender la plataforma**
+  (ADR-0002): un segundo tenant habría consultado los datos de CERPAT.
+- **Decisión:** el `organizacionId` sale **del token de la sesión** y de ningún
+  otro lado. Un único resolutor, `auth/tenant.ts → orgDeSesion(req)`, es el punto
+  por donde pasa esa decisión. El **login** es la excepción inevitable —no hay
+  sesión todavía—: encuentra la cuenta por el correo y, si algún día el mismo
+  correo existe en dos firmas, responde pidiendo desambiguar en vez de adivinar.
+  Un **root de plataforma** sin organización propia opera sobre la única que
+  exista; cuando haya varias, tendrá que elegir, y ese es el único punto a tocar.
+- **Consecuencias:**
+  - El aislamiento entre firmas deja de depender de que cada endpoint se acuerde
+    de filtrar bien: hay un solo lugar donde se decide.
+  - Un test de blindaje (`auth/tenant.test.ts`) falla si alguien vuelve a
+    resolver la organización por slug dentro de un endpoint. Sin él, una
+    regresión rompería el aislamiento **en silencio** hasta que hubiera un
+    segundo cliente.
+  - Falta el mecanismo de **descubrimiento de firma** en el login (subdominio,
+    dominio del correo o selector). No hace falta hoy y no bloquea: se decide
+    cuando entre el primer cliente con su propio tenant.
+
 ## Otorgar el rol ROOT de plataforma
 
 El rol **root** (`Usuario.esRootPlataforma`) es el permiso más alto y, en el modelo

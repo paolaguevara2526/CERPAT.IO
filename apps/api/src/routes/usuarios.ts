@@ -7,12 +7,13 @@
 
 import { Router } from 'express';
 import { prisma } from '../db.js';
-import { requireAuth } from '../auth/middleware.js';
+import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { orgDeSesion } from '../auth/tenant.js';
 
 export const usuariosRouter = Router();
 
-usuariosRouter.get('/', requireAuth, async (_req, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+usuariosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ organizacion: null, total: 0, usuarios: [] });
 
   const usuarios = await prisma.usuario.findMany({
@@ -25,8 +26,11 @@ usuariosRouter.get('/', requireAuth, async (_req, res) => {
     },
   });
 
+  // El nombre de la firma se consulta aparte: el token solo trae su identificador.
+  const datosOrg = await prisma.organizacion.findUnique({ where: { id: org.id }, select: { nombre: true, slug: true } });
+
   res.json({
-    organizacion: { nombre: org.nombre, slug: org.slug },
+    organizacion: datosOrg ? { nombre: datosOrg.nombre, slug: datosOrg.slug } : null,
     total: usuarios.length,
     usuarios: usuarios.map((u) => ({
       id: u.id,

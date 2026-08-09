@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { orgDeSesion } from '../auth/tenant.js';
 import { alcancePortal } from '../auth/alcance-db.js';
 import { esStaffAcotado } from '../auth/alcance.js';
 
@@ -18,8 +19,10 @@ const ESTADOS_COMPROMISO = ['pendiente', 'cumplido', 'cancelado'];
 const TIPOS_ITEM = ['actividad', 'recomendacion', 'observacion'] as const;
 type TipoItem = (typeof TIPOS_ITEM)[number];
 
-async function orgCerpat() {
-  return prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+// Organización de la sesión (ver auth/tenant.ts). Antes esto devolvía siempre
+// la firma "cerpat", que era el bloqueo para atender a más de una.
+async function orgActual(req: AuthedRequest) {
+  return orgDeSesion(req);
 }
 // Usuario de la firma (no cliente externo).
 function esUsuarioFirma(u: AuthedRequest['user']): boolean {
@@ -66,7 +69,7 @@ function itemsDesde(org: string, arr: any): any[] {
 // GET /visitas?anio=&mes=&empresaId=&responsableId=&estado=
 visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ visitas: [] });
 
   const where: any = { organizacionId: org.id };
@@ -114,7 +117,7 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
 // Aislado por empresa/grupo del cliente; el usuario de la firma puede ver todo.
 // Se define antes de /:id para no chocar con esa ruta.
 visitasRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ visitas: [] });
   const alcance = await alcancePortal(req.user, org.id);
   if (alcance === null) return res.status(403).json({ error: 'Sin acceso al portal de visitas.' });
@@ -173,7 +176,7 @@ visitasRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
 // Se define antes de /:id para no chocar con esa ruta.
 visitasRouter.get('/compromisos', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ compromisos: [] });
 
   const anio = parseInt(String(req.query.anio ?? ''), 10);
@@ -216,7 +219,7 @@ visitasRouter.get('/compromisos', requireAuth, async (req: AuthedRequest, res) =
 // GET /visitas/:id — detalle con el acta completa.
 visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const v = await prisma.visita.findFirst({
     where: { id: req.params.id, organizacionId: org.id },
@@ -269,7 +272,7 @@ visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
 // POST /visitas — agenda una visita con su acta (compromisos e ítems opcionales).
 visitasRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a visitas.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const b = req.body ?? {};
   const empresaId = typeof b.empresaId === 'string' ? b.empresaId : '';
@@ -314,7 +317,7 @@ async function puedeEditarVisita(req: AuthedRequest, orgId: string, visitaId: st
 // PATCH /visitas/:id — edita datos del acta. Si el body trae `items`, reemplaza
 // por completo las listas enumeradas (actividades/recomendaciones/observaciones).
 visitasRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const { v, ok } = await puedeEditarVisita(req, org.id, req.params.id);
   if (!v) return res.status(404).json({ error: 'Visita no encontrada.' });
@@ -350,7 +353,7 @@ visitasRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
 
 // DELETE /visitas/:id
 visitasRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const { v, ok } = await puedeEditarVisita(req, org.id, req.params.id);
   if (!v) return res.status(404).json({ error: 'Visita no encontrada.' });
@@ -361,7 +364,7 @@ visitasRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
 
 // POST /visitas/:id/compromisos — agrega un compromiso al acta.
 visitasRouter.post('/:id/compromisos', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const { v, ok } = await puedeEditarVisita(req, org.id, req.params.id);
   if (!v) return res.status(404).json({ error: 'Visita no encontrada.' });
@@ -386,7 +389,7 @@ visitasRouter.post('/:id/compromisos', requireAuth, async (req: AuthedRequest, r
 
 // PATCH /visitas/compromisos/:cid — edita/estado de un compromiso.
 visitasRouter.patch('/compromisos/:cid', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const c = await prisma.compromisoVisita.findFirst({ where: { id: req.params.cid, organizacionId: org.id }, include: { visita: { select: { responsableId: true } } } });
   if (!c) return res.status(404).json({ error: 'Compromiso no encontrado.' });
@@ -409,7 +412,7 @@ visitasRouter.patch('/compromisos/:cid', requireAuth, async (req: AuthedRequest,
 
 // DELETE /visitas/compromisos/:cid
 visitasRouter.delete('/compromisos/:cid', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const c = await prisma.compromisoVisita.findFirst({ where: { id: req.params.cid, organizacionId: org.id }, include: { visita: { select: { responsableId: true } } } });
   if (!c) return res.status(404).json({ error: 'Compromiso no encontrado.' });

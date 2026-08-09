@@ -67,11 +67,20 @@ authRouter.post('/login', async (req, res) => {
   const retraso = retrasoDe(clave);
   if (retraso > 0) await esperar(retraso);
 
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
-  const user = await prisma.usuario.findFirst({
-    where: { email, organizacionId: org?.id },
+  // El login es el ÚNICO punto sin sesión, así que no puede tomar la
+  // organización del token: hay que encontrarla por el correo. El correo es
+  // único POR organización, de modo que dos firmas podrían repetirlo; mientras
+  // no pase, la cuenta se resuelve sola. Si algún día pasa, hay que pedir la
+  // firma (subdominio o selector) — y este es el único punto que cambia.
+  const candidatos = await prisma.usuario.findMany({
+    where: { email },
     include: { roles: { include: { rol: true } } },
+    take: 2,
   });
+  if (candidatos.length > 1) {
+    return res.status(409).json({ error: 'Ese correo está registrado en más de una firma. Contacta al administrador.' });
+  }
+  const user = candidatos[0];
 
   // Mismo mensaje para usuario inexistente / clave mala (no filtrar cuáles existen).
   if (!user || !user.activo || !verifyPassword(password, user.passwordHash)) {

@@ -299,9 +299,9 @@ pantallas que funcionan—: se hace vista por vista, cuando haya que tocarlas.
   ruta en el frontend (`lib/acceso.ts` + `exigirRuta`).
 - [x] Todos los endpoints exigen sesión, con **test de blindaje** que lo verifica.
 - [x] Freno a la fuerza bruta en el login (retraso creciente, sin bloquear la cuenta).
-- [ ] **Middleware de tenant**: resolver `organizacionId` desde la sesión en vez del
-  slug fijo `'cerpat'`. **Bloqueante antes de vender la plataforma a clientes**
-  (ADR-0002).
+- [x] **Tenant desde la sesión** (ago 2026): `orgDeSesion(req)` reemplaza el slug
+  fijo en los 40 puntos donde estaba cableado; el login resuelve la cuenta por
+  correo. Era lo bloqueante para vender la plataforma (ADR-0002 / ADR-0009).
 - [ ] Servir correos de clientes solo autenticado.
 
 ### Fase 3 — App real por vistas (reemplazar prototipo)
@@ -494,10 +494,12 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
 mockup con el equipo y luego el modelo de datos + generación.
 
 ## Deuda técnica / notas
-- **`organizacionId` por slug fijo.** Los endpoints resuelven la organización con
-  `slug: 'cerpat'` en vez de tomarla de la sesión. Funciona con un solo tenant,
-  pero **hay que cambiarlo antes de abrir la plataforma a clientes** (ADR-0002) —
-  es la deuda más importante del backend hoy.
+- ~~`organizacionId` por slug fijo~~ — **resuelto (ago 2026, ADR-0009).** El
+  tenant sale del token de la sesión, con un único resolutor
+  (`apps/api/src/auth/tenant.ts`) y un test que impide la regresión. Queda por
+  decidir el **descubrimiento de firma en el login** (subdominio, dominio del
+  correo o selector); no hace falta hasta que entre el primer cliente con tenant
+  propio.
 - `prisma/data/clientes-cerpat.csv` contiene PII de clientes reales; vive en el repo privado por decisión del equipo.
 - Los documentos de clientes se guardan **dentro de Postgres** (no en un
   almacenamiento de objetos). Sirve para el volumen actual; si crece, mover a
