@@ -118,11 +118,38 @@
     - **RUB (Registro Único de Beneficiarios):** obligación de **solo presentación
       (no genera pago)**, **trimestral**, con **fechas fijas nacionales** (iguales
       para todos, **no dependen del NIT**). En 2026: **2-feb, 4-may, 3-ago y
-      3-nov**. Aplica **automáticamente a todas las personas jurídicas**, derivado
-      de `rentaTipo ∈ {persona_juridica, gran_contribuyente, rst_consolidada}` (no
-      requiere marcar cliente por cliente ni casilla nueva). Como las demás de solo
-      presentación, entra en `OBLIGACIONES_SIN_PAGO`. Fechas parametrizadas por año
-      en `RUB_FECHAS` (generador de la API y sembrador masivo, mantener en sync).
+      3-nov**. Como las demás de solo presentación, entra en `OBLIGACIONES_SIN_PAGO`.
+      Fechas parametrizadas por año en `RUB_FECHAS`.
+      **A quién le aplica: depende de la NATURALEZA JURÍDICA del cliente**, es decir
+      del **tipo de empresa** — no de cómo declara renta. Están obligadas las
+      **personas jurídicas**, los **consorcios y uniones temporales** y las
+      **sucursales extranjeras**; las **personas naturales no**. Si el cliente no
+      tiene tipo definido, **no se genera**: no se inventa una obligación.
+      Se aplica automáticamente, sin marcar cliente por cliente. Regla única en
+      `aplicaRub()` (`apps/api/src/vencimientos/generador.ts`), que también importa
+      el sembrador masivo.
+      > **Por qué está escrito así.** Hasta ago-2026 se derivaba de
+      > `rentaTipo ∈ {persona_juridica, gran_contribuyente, rst_consolidada}`. Eso
+      > tenía un efecto silencioso: una persona jurídica con la casilla de *Renta*
+      > en **"No aplica"** —opción legítima— quedaba fuera del objetivo del
+      > generador, y **al regenerar sus vencimientos de RUB se borraban**. Pasó en
+      > producción con tres clientes. Una obligación no puede colgar de un campo
+      > que responde a otra pregunta.
+
+### Regenerar vencimientos: qué borra y qué conserva
+
+**Regenerar** rehace los vencimientos de un cliente según su configuración actual.
+Es la herramienta de mantenimiento, pero **da de baja** lo que la configuración ya
+no contempla — por eso una casilla mal puesta puede llevarse obligaciones reales.
+
+- **Conserva siempre:** los vencimientos con trabajo (estado distinto de pendiente,
+  valor, notas o soporte), las entradas manuales (`generado=false`) y las
+  obligaciones que el generador no administra (p. ej. Exógena de ICA).
+- **Da de baja:** lo generado, sin trabajo, que ya no está en el objetivo.
+- **Antes de aplicar, simula** y muestra qué se va a eliminar y cuánto. El resumen
+  posterior también lo lista.
+- Para **solo agregar** sin riesgo de baja —p. ej. aplicar un checklist nuevo a lo
+  ya cargado— está *Administración → Checklist vencimientos*, que nunca borra.
 
 ## Acceso por rol al Planeador (menú y URL)
 
