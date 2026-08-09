@@ -2,7 +2,7 @@
 // de visitas). El acceso lo controla el layout del portal; los datos van aislados
 // por NIT/grupo desde el backend (GET /visitas/portal).
 
-import PortalVisitas from '@/app/mis-visitas/PortalVisitas';
+import PortalVisitas from './PortalVisitas';
 
 
 export const metadata = { title: 'Visitas' };

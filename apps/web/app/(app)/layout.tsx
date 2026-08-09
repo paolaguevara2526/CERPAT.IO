@@ -13,7 +13,7 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
-import PlaneadorShell from './planeador/PlaneadorShell';
+import BarraApp from './BarraApp';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,9 +29,9 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
   return (
     <main className="app-shell" style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '14px', display: 'flex', justifyContent: 'center' }}>
       <div className="win app-win" style={{ width: '100%', minHeight: 'calc(100vh - 28px)', display: 'flex', flexDirection: 'column' }}>
-        {/* La barra de la app (marca, menú, tema y controles) la dibuja el shell:
-            necesita el estado del menú, así que vive del lado del cliente. */}
-        <PlaneadorShell roles={sesion.roles} esRoot={sesion.esRoot}>{children}</PlaneadorShell>
+        {/* La barra de la app (marca, menú, buscador, tema y controles) la dibuja
+            el marco compartido: necesita estado, así que vive del lado del cliente. */}
+        <BarraApp roles={sesion.roles} esRoot={sesion.esRoot}>{children}</BarraApp>
 
         <div className="win-status">
           <span className="led" /> Conectado · {sesion.nombre}

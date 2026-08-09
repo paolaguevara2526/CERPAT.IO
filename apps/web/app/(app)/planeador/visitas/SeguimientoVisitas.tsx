@@ -4,7 +4,7 @@
 // como en Excel) y exportable a Excel. La fila es el compromiso.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import FiltroColumna from '../../administracion/FiltroColumna';
+import FiltroColumna from '@/app/_components/FiltroColumna';
 import { descargarXlsx, hoyISO } from '../../administracion/exportar';
 
 import { tinte } from '@/app/_components/color';

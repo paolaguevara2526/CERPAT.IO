@@ -7,7 +7,7 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import SyncResponsablesBoton from './SyncResponsablesBoton';
-import FiltroColumna from '../../administracion/FiltroColumna';
+import FiltroColumna from '@/app/_components/FiltroColumna';
 
 import { tinte } from '@/app/_components/color';
 export type FilaAsignacion = {

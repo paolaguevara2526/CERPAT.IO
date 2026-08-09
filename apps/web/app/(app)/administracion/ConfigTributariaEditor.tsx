@@ -4,7 +4,7 @@
 // municipio (reteICA / autoICA). Contra la API vía /api/admin/config-tributaria.
 
 import { useCallback, useEffect, useState } from 'react';
-import FiltroColumna from './FiltroColumna';
+import FiltroColumna from '@/app/_components/FiltroColumna';
 
 type Empresa = { id: string; nombre: string; nit: string | null };
 type Ica = { id: string; municipioId: string; municipio: string | null; departamento: string | null; icaPeriodicidad: string | null; reteica: boolean; reteicaPeriodicidad: string | null; autoica: boolean; autoicaPeriodicidad: string | null; fechaInscripcion: string | null };

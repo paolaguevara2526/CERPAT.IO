@@ -6,7 +6,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ImportarVencimientosModal from './ImportarVencimientosModal';
-import FiltroColumna from '../administracion/FiltroColumna';
+import FiltroColumna from '@/app/_components/FiltroColumna';
 import { useOrden, ThOrden } from '@/app/_components/orden';
 
 import { tinte } from '@/app/_components/color';

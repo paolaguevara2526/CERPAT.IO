@@ -3,16 +3,21 @@
 // crecer a cinco módulos: llegar a todo bajando por el menú deja de ser viable.
 // Aquí se escribe el nombre —o algo parecido— y se salta directo.
 //
-// Solo muestra lo que el rol puede ver, con la misma fuente que la barra lateral
-// y los guardas de ruta: nadie descubre pantallas por el buscador.
+// Los destinos llegan por props (la misma fuente que alimenta el menú), y si se
+// pasan los roles se filtran igual que los guardas de ruta: nadie descubre
+// pantallas por el buscador.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Ico from './iconos';
-import { DESTINOS, coincide } from './navegacion';
+import { coincide, type Destino } from '@/app/(app)/planeador/navegacion';
 import { puedeVerRuta } from '@/lib/acceso';
 
-export default function BuscadorGlobal({ roles, esRoot = false }: { roles: string[]; esRoot?: boolean }) {
+export default function BuscadorGlobal({ destinos, roles, esRoot = false }: {
+  destinos: (Destino & { area: string })[];
+  roles?: string[];
+  esRoot?: boolean;
+}) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [q, setQ] = useState('');
@@ -20,8 +25,8 @@ export default function BuscadorGlobal({ roles, esRoot = false }: { roles: strin
   const campo = useRef<HTMLInputElement>(null);
 
   const permitidos = useMemo(
-    () => DESTINOS.filter((d) => puedeVerRuta({ roles, esRoot }, d.href)),
-    [roles, esRoot],
+    () => (roles ? destinos.filter((d) => puedeVerRuta({ roles, esRoot }, d.href)) : destinos),
+    [destinos, roles, esRoot],
   );
   const resultados = useMemo(
     () => permitidos.filter((d) => coincide(d, q)).slice(0, 8),

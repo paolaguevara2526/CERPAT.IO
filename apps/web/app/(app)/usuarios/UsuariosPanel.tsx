@@ -3,7 +3,7 @@
 // restablecer contraseña y eliminar. Contra la API vía /api/admin/usuarios.
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import FiltroColumna from '../administracion/FiltroColumna';
+import FiltroColumna from '@/app/_components/FiltroColumna';
 
 import { tinte } from '@/app/_components/color';
 type Rol = { id: string; nombre: string };
