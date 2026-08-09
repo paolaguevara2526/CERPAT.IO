@@ -5,16 +5,27 @@
 import { useEffect, useRef, useState } from 'react';
 
 const CLAVE = 'cerpat_tema';
-type Tema = { id: string; nombre: string; sw: [string, string, string] };
+type Tema = { id: string; nombre: string; nota?: string; sw: [string, string, string] };
 // Las muestras reflejan el CROMO (barra superior + menú, que van del mismo color)
 // y el acento: los tres tonos que realmente cambian al elegir un tema.
 const TEMAS: Tema[] = [
   { id: 'claro', nombre: 'Claro (navy)', sw: ['#35589b', 'var(--navy-2)', 'var(--green)'] },
   { id: 'escritorio', nombre: 'Escritorio (clara)', sw: ['#ffffff', '#e4eaf4', '#22a670'] },
   { id: 'navy', nombre: 'Azul profundo', sw: ['#1b3663', '#060d18', 'var(--green)'] },
-  { id: 'oscuro', nombre: 'Oscuro', sw: ['#2f3648', '#12141c', 'var(--green)'] },
+  { id: 'oscuro', nombre: 'Oscuro', nota: 'Toda la app', sw: ['#2f3648', '#12141c', 'var(--green)'] },
   { id: 'verde', nombre: 'Verde CERPAT', sw: ['#1ea56e', '#0c3f2e', 'var(--navy-2)'] },
 ];
+
+// "Oscuro" es el único tema que además oscurece el CONTENIDO (data-theme). Los
+// demás dejan el contenido claro salvo que el sistema operativo pida oscuro, y
+// para eso hay que quitar el atributo: si se dejara puesto en "light", la app
+// ignoraría esa preferencia del equipo de quien la usa.
+export function aplicarTema(id: string) {
+  const raiz = document.documentElement;
+  raiz.setAttribute('data-cerpat-theme', id);
+  if (id === 'oscuro') raiz.setAttribute('data-theme', 'dark');
+  else raiz.removeAttribute('data-theme');
+}
 
 export default function TemaSelector() {
   const [tema, setTema] = useState('claro');
@@ -33,7 +44,7 @@ export default function TemaSelector() {
   function elegir(id: string) {
     setTema(id);
     try { localStorage.setItem(CLAVE, id); } catch { /* ignore */ }
-    document.documentElement.setAttribute('data-cerpat-theme', id);
+    aplicarTema(id);
     setAbierto(false);
   }
 
@@ -54,7 +65,10 @@ export default function TemaSelector() {
               <span style={{ display: 'inline-flex', borderRadius: 5, overflow: 'hidden', border: '1px solid var(--edge)', flexShrink: 0 }}>
                 {t.sw.map((c, i) => <span key={i} style={{ width: 14, height: 18, background: c }} />)}
               </span>
-              <span style={{ fontSize: 13, fontWeight: t.id === tema ? 800 : 600, flex: 1 }}>{t.nombre}</span>
+              <span style={{ fontSize: 13, fontWeight: t.id === tema ? 800 : 600, flex: 1 }}>
+                {t.nombre}
+                {t.nota && <span style={{ display: 'block', fontSize: 10.5, fontWeight: 600, color: 'var(--muted)' }}>{t.nota}</span>}
+              </span>
               {t.id === tema && <span style={{ color: 'var(--exito)', fontWeight: 800 }}>✓</span>}
             </button>
           ))}

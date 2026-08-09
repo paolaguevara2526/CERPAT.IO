@@ -3,6 +3,10 @@
 // Vista de Clientes (Gestión): Server Component que consulta la API (server-side,
 // sin CORS) y muestra los clientes reales guardados en Postgres. Los correos NO se
 // muestran aquí. Acceso restringido a Administrador/root (bloqueo por URL).
+//
+// Usa el sistema de diseño compartido (panel + tabla .dt). Antes traía su propia
+// cabecera, su propio fondo y su propia tabla escritos a mano: era la primera
+// vista cableada y se quedó con estilo aparte, que además no seguía al tema.
 
 import { exigirRuta } from '@/lib/acceso-server';
 import { apiFetch } from '@/lib/session';
@@ -10,8 +14,6 @@ import { apiFetch } from '@/lib/session';
 
 export const metadata = { title: 'Clientes' };
 export const dynamic = 'force-dynamic';
-
-const BRAND = 'var(--green)';
 
 type Empresa = {
   id: string;
@@ -46,63 +48,55 @@ export default async function ClientesPage() {
   const empresas = data?.empresas ?? [];
 
   return (
-    <main style={{ fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', background: '#F5F6F8', minHeight: '100vh', margin: 0, color: '#101828' }}>
-      <header style={{ background: 'linear-gradient(135deg,#20259C,#11154F)', color: '#fff', padding: '28px 32px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ fontSize: 13, opacity: 0.75, fontWeight: 600 }}>Planeador CERPAT · datos en vivo desde la base</div>
-          <h1 style={{ margin: '6px 0 0', fontSize: 26, fontWeight: 800 }}>Clientes {data?.organizacion ? `· ${data.organizacion.nombre}` : ''}</h1>
-        </div>
-      </header>
+    <>
+      <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>
+        Clientes {data?.organizacion ? `· ${data.organizacion.nombre}` : ''}
+      </h1>
+      <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>
+        Empresas cliente de la firma, en vivo desde la base. Los correos de contacto no se muestran aquí por privacidad.
+      </p>
 
-      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 32px 60px' }}>
-        {error ? (
-          <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 12, padding: '18px 20px', fontSize: 14, fontWeight: 600 }}>
-            No se pudieron cargar los clientes: {error}.
-            <div style={{ fontWeight: 400, marginTop: 6, color: 'var(--peligro-fuerte)' }}>
-              Verifica que la API esté en línea y responda en <code>/empresas</code>.
+      {error ? (
+        <div className="panel" style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderColor: 'var(--peligro-borde)', padding: '16px 18px', fontSize: 14, fontWeight: 600 }}>
+          No se pudieron cargar los clientes: {error}.
+          <div style={{ fontWeight: 400, marginTop: 6 }}>
+            Verifica que la API esté en línea y responda en <code>/empresas</code>.
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
+            <span style={{ fontSize: 30, fontWeight: 800, color: 'var(--green-2)' }}>{empresas.length}</span>
+            <span style={{ fontSize: 13.5, color: 'var(--muted)', fontWeight: 600 }}>empresas cliente</span>
+          </div>
+
+          <div className="panel">
+            <div className="dt-wrap dt-alta">
+              <table className="dt">
+                <thead>
+                  <tr>{['Razón social', 'NIT', 'Tipo', 'Servicio', 'Asesor', 'Régimen'].map((h) => <th key={h}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {empresas.length === 0 ? (
+                    <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>No hay empresas cargadas todavía.</td></tr>
+                  ) : (
+                    empresas.map((e) => (
+                      <tr key={e.id}>
+                        <td style={{ fontWeight: 600 }}>{e.nombre}</td>
+                        <td style={{ color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{e.nit ?? '—'}</td>
+                        <td style={{ color: 'var(--muted)' }}>{e.tipo ?? '—'}</td>
+                        <td style={{ color: 'var(--muted)' }}>{e.servicio ?? '—'}</td>
+                        <td style={{ color: 'var(--muted)' }}>{e.asesorNombre ?? '—'}</td>
+                        <td style={{ color: 'var(--muted)' }}>{e.regimen ?? '—'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
-              <span style={{ fontSize: 34, fontWeight: 800, color: BRAND }}>{empresas.length}</span>
-              <span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 600 }}>empresas cliente cargadas en Postgres</span>
-            </div>
-            <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', overflow: 'hidden' }}>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
-                  <thead>
-                    <tr>
-                      {['Razón social', 'NIT', 'Tipo', 'Servicio', 'Asesor', 'Régimen'].map((h) => (
-                        <th key={h} style={{ textAlign: 'left', textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '12px 14px', borderBottom: '1px solid #E4E7EC', whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {empresas.length === 0 ? (
-                      <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>No hay empresas cargadas todavía.</td></tr>
-                    ) : (
-                      empresas.map((e) => (
-                        <tr key={e.id}>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', fontWeight: 600 }}>{e.nombre}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)', fontFamily: 'ui-monospace, monospace' }}>{e.nit ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)' }}>{e.tipo ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)' }}>{e.servicio ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)' }}>{e.asesorNombre ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)' }}>{e.regimen ?? '—'}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 14 }}>
-              Los correos de contacto no se muestran en esta vista pública por privacidad; se servirán con autenticación.
-            </p>
-          </>
-        )}
-      </section>
-    </main>
+        </>
+      )}
+    </>
   );
 }
