@@ -172,13 +172,19 @@ el dato.** Nunca supone un valor.
 | Conciliación fiscal — Dto. 1998/2017 | ingresos **≥ 45.000** | UVT | exentos por debajo |
 | Puede estar en RST — Art. 905 E.T. | ingresos **< 100.000** | UVT | sin tope reducido por actividad |
 
-Valores vigentes (confirmados por la gerencia, ago-2026):
+Valores vigentes (confirmados por la gerencia, ago-2026, y contrastados con la
+norma que los fija):
 
-| Año | UVT | SMMLV |
-|---|---|---|
-| 2024 | $47.065 | $1.300.000 |
-| 2025 | $49.799 | $1.423.500 |
-| 2026 | $52.374 | $1.750.905 |
+| Año | UVT | SMMLV | Norma |
+|---|---|---|---|
+| 2024 | $47.065 | $1.300.000 | Res. DIAN 187/2023 · Dto. 2292/2023 |
+| 2025 | $49.799 | $1.423.500 | Res. DIAN 193/2024 · Dto. 1572/2024 |
+| 2026 | $52.374 | $1.750.905 | Res. DIAN 238/2025 · Dto. 1469/2025 |
+
+El **SMMLV 2026 subió 23%** ($327.405 sobre 2025). Es un salto atípico y conviene
+tenerlo presente: mueve los topes de revisor fiscal (5.000 y 3.000 SMMLV) mucho
+más que el ajuste de la UVT (5,18%), así que clientes que en 2025 estaban
+obligados pueden dejar de estarlo al medirse contra cifras de 2026.
 
 Notas de criterio, confirmadas con el equipo:
 - **Activos brutos = patrimonio bruto** para estos efectos.

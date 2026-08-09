@@ -36,11 +36,15 @@ CREATE UNIQUE INDEX "parametros_anuales_organizacionId_anio_key" ON "parametros_
 ALTER TABLE "parametros_anuales" ADD CONSTRAINT "parametros_anuales_organizacionId_fkey"
     FOREIGN KEY ("organizacionId") REFERENCES "organizaciones"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Valores de UVT y SMMLV confirmados por la gerencia (ago-2026). Se siembran
--- estos y solo estos: un año inventado produciría obligaciones equivocadas en
--- silencio. Los años que falten los carga el equipo en Administración →
--- Parámetros por año, y mientras falte el año que una regla necesita, la regla
--- no calcula: informa que falta el dato.
+-- Valores de UVT y SMMLV confirmados por la gerencia (ago-2026) y contrastados
+-- con la norma que fija cada uno. Se siembran estos y solo estos: un año
+-- inventado produciría obligaciones equivocadas en silencio. Los años que falten
+-- los carga el equipo en Administración → Parámetros por año, y mientras falte el
+-- año que una regla necesita, la regla no calcula: informa que falta el dato.
+--
+--   2024 — UVT Res. DIAN 000187 de 2023 · SMMLV Dto. 2292 de 2023
+--   2025 — UVT Res. DIAN 000193 de 2024 · SMMLV Dto. 1572 de 2024
+--   2026 — UVT Res. DIAN 000238 de 2025 · SMMLV Dto. 1469 de 2025
 INSERT INTO "parametros_anuales" ("id", "organizacionId", "anio", "uvt", "smmlv")
 SELECT gen_random_uuid()::text, o."id", v.anio, v.uvt, v.smmlv
 FROM "organizaciones" o
