@@ -6,13 +6,14 @@ import { useEffect, useRef, useState } from 'react';
 
 const CLAVE = 'cerpat_tema';
 type Tema = { id: string; nombre: string; sw: [string, string, string] };
-// Las muestras reflejan el color de la BARRA de navegación (que es lo que cambia).
+// Las muestras reflejan el CROMO (barra superior + menú, que van del mismo color)
+// y el acento: los tres tonos que realmente cambian al elegir un tema.
 const TEMAS: Tema[] = [
-  { id: 'claro', nombre: 'Claro (navy)', sw: ['#2e5090', '#0f1d33', '#34c98b'] },
-  { id: 'escritorio', nombre: 'Escritorio (clara)', sw: ['#ffffff', '#eef2f9', '#22a670'] },
-  { id: 'navy', nombre: 'Azul profundo', sw: ['#13294a', '#060d18', '#34c98b'] },
-  { id: 'oscuro', nombre: 'Oscuro', sw: ['#242a3a', '#12141c', '#34c98b'] },
-  { id: 'verde', nombre: 'Verde CERPAT', sw: ['#178a5c', '#0c3f2e', '#0f1d33'] },
+  { id: 'claro', nombre: 'Claro (navy)', sw: ['#35589b', '#16294a', '#48D597'] },
+  { id: 'escritorio', nombre: 'Escritorio (clara)', sw: ['#ffffff', '#e4eaf4', '#22a670'] },
+  { id: 'navy', nombre: 'Azul profundo', sw: ['#1b3663', '#060d18', '#48D597'] },
+  { id: 'oscuro', nombre: 'Oscuro', sw: ['#2f3648', '#12141c', '#48D597'] },
+  { id: 'verde', nombre: 'Verde CERPAT', sw: ['#1ea56e', '#0c3f2e', '#0f1d33'] },
 ];
 
 export default function TemaSelector() {
@@ -40,7 +41,9 @@ export default function TemaSelector() {
     <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setAbierto((a) => !a)} title="Apariencia (tema)" aria-label="Apariencia"
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 28, border: '1px solid var(--edge-strong)', borderRadius: 6, background: 'var(--panel)', color: 'var(--ink)', cursor: 'pointer', fontSize: 14, lineHeight: 1, boxShadow: '0 1px 2px var(--lo)' }}
+        // Vive dentro de la barra de la app: se funde con el cromo (hereda su
+        // color) en vez de ser una pastilla blanca sobre el azul.
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 26, border: '1px solid rgba(128,128,128,0.35)', borderRadius: 6, background: 'rgba(128,128,128,0.14)', color: 'inherit', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}
       >🎨</button>
       {abierto && (
         <div style={{ position: 'absolute', top: 34, right: 0, zIndex: 60, background: 'var(--panel)', border: '1px solid var(--edge-strong)', borderRadius: 8, boxShadow: '0 10px 30px var(--lo)', padding: 6, minWidth: 190 }}>

@@ -28,8 +28,13 @@
   --btn-face: linear-gradient(180deg, #ffffff, #eef1f7);
   --shadow-win: 0 12px 34px rgba(17,21,79,0.16), 0 2px 7px rgba(17,21,79,0.10);
 
-  /* Barra de navegación (temas · Apariencia). Solo la barra cambia de color. */
-  --nav-bg: linear-gradient(180deg,#2e5090,#0f1d33);
+  /* Cromo de la aplicación (temas · Apariencia): la barra superior del marco y la
+     barra lateral son UNA sola pieza. Por eso el degradado va encadenado — la
+     barra superior termina en el mismo tono con el que arranca el menú
+     (--chrome-costura), y no se ve una junta de dos azules distintos. */
+  --chrome-bar: linear-gradient(180deg,#35589b,#2e5090);
+  --chrome-ink: #ffffff;
+  --nav-bg: linear-gradient(180deg,#2e5090,#16294a);
   --nav-ink: #dbe4f5;
   --nav-active-bg: rgba(255,255,255,0.12);
   --nav-active-ink: #ffffff;
@@ -54,38 +59,52 @@
   --btn-face:linear-gradient(180deg,#333a4d,#262b39); --shadow-win:0 12px 34px rgba(0,0,0,0.55),0 2px 7px rgba(0,0,0,0.45);
 }
 
-/* ===== TEMAS DE COLOR (Apariencia) — SOLO recolorean la barra de navegación. ===== */
-/* El contenido queda claro; el verde CERPAT (acento) se mantiene constante.        */
+/* ===== TEMAS DE COLOR (Apariencia) — recolorean el CROMO de la app. =====
+   Cromo = barra superior del marco + barra lateral. Van siempre en la misma
+   familia de color y encadenadas: el tono con el que termina la barra superior
+   es el mismo con el que empieza el menú, para que se lean como una sola pieza.
+   El contenido queda claro; el verde CERPAT (acento) se mantiene constante.   */
 
-/* Claro (por defecto): barra navy */
+/* Claro (por defecto): cromo navy */
 :root[data-cerpat-theme="claro"] {
-  --nav-bg: linear-gradient(180deg,#2e5090,#0f1d33);
+  --chrome-bar: linear-gradient(180deg,#35589b,#2e5090); --chrome-ink:#ffffff;
+  --nav-bg: linear-gradient(180deg,#2e5090,#16294a);
   --nav-ink:#dbe4f5; --nav-active-bg:rgba(255,255,255,0.12); --nav-active-ink:#fff; --nav-accent:#48D597;
 }
 
-/* Escritorio: barra clara (blanca) con tinta azul — como la imagen */
+/* Escritorio: cromo claro (blanco) con tinta azul — como la imagen */
 :root[data-cerpat-theme="escritorio"] {
-  --nav-bg: linear-gradient(180deg,#ffffff,#eef2f9);
+  --chrome-bar: linear-gradient(180deg,#ffffff,#f4f7fc); --chrome-ink:#26324a;
+  --nav-bg: linear-gradient(180deg,#f4f7fc,#e4eaf4);
   --nav-ink:#26324a; --nav-active-bg:rgba(39,75,158,0.12); --nav-active-ink:#1f3f83; --nav-accent:#22a670;
 }
 
-/* Azul profundo: barra navy muy oscuro */
+/* Azul profundo: cromo navy muy oscuro */
 :root[data-cerpat-theme="navy"] {
+  --chrome-bar: linear-gradient(180deg,#1b3663,#13294a); --chrome-ink:#ffffff;
   --nav-bg: linear-gradient(180deg,#13294a,#060d18);
   --nav-ink:#cddaf0; --nav-active-bg:rgba(255,255,255,0.10); --nav-active-ink:#fff; --nav-accent:#48D597;
 }
 
-/* Oscuro: barra gris carbón */
+/* Oscuro: cromo gris carbón */
 :root[data-cerpat-theme="oscuro"] {
+  --chrome-bar: linear-gradient(180deg,#2f3648,#242a3a); --chrome-ink:#ffffff;
   --nav-bg: linear-gradient(180deg,#242a3a,#12141c);
   --nav-ink:#c7ccdc; --nav-active-bg:rgba(255,255,255,0.10); --nav-active-ink:#fff; --nav-accent:#48D597;
 }
 
-/* Verde CERPAT: barra en degradé verde/teal */
+/* Verde CERPAT: cromo en degradé verde/teal */
 :root[data-cerpat-theme="verde"] {
+  --chrome-bar: linear-gradient(180deg,#1ea56e,#178a5c); --chrome-ink:#ffffff;
   --nav-bg: linear-gradient(180deg,#178a5c,#0c3f2e);
   --nav-ink:#d9f3e7; --nav-active-bg:rgba(255,255,255,0.14); --nav-active-ink:#fff; --nav-accent:#0f1d33;
 }
+
+/* El logo blanco desaparecería sobre el cromo claro: se cambia por el de color.
+   Selectores con el contenedor para ganarle a la regla base de .win-logo. */
+.win-bar .win-logo-color { display: none; }
+:root[data-cerpat-theme="escritorio"] .win-bar .win-logo-blanco { display: none; }
+:root[data-cerpat-theme="escritorio"] .win-bar .win-logo-color { display: block; }
 
 * { box-sizing: border-box; }
 body { margin: 0; }
@@ -131,16 +150,17 @@ body { margin: 0; }
   box-shadow: var(--shadow-win);
   overflow: hidden;
 }
+/* La barra sigue el tema (igual que el menú): son la misma pieza de cromo. */
 .win-bar {
   display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(180deg, var(--navy-hi), var(--navy-2));
-  color: #fff; padding: 0 4px 0 15px; height: 42px;
+  background: var(--chrome-bar);
+  color: var(--chrome-ink); padding: 0 4px 0 15px; height: 42px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
 }
 /* Controles de ventana estilo Windows (min / max / cerrar) */
 .win-ctl { display: flex; height: 42px; margin-left: 4px; }
-.win-ctl button { width: 44px; height: 42px; border: 0; background: transparent; color: #dce4f5; cursor: pointer; display: grid; place-items: center; }
-.win-ctl button:hover { background: rgba(255,255,255,0.14); }
+.win-ctl button { width: 44px; height: 42px; border: 0; background: transparent; color: currentColor; opacity: 0.85; cursor: pointer; display: grid; place-items: center; }
+.win-ctl button:hover { background: rgba(128,128,128,0.18); opacity: 1; }
 .win-ctl button.close:hover { background: #e0483a; color: #fff; }
 .win-ctl svg { width: 11px; height: 11px; }
 .win-lights { display: flex; gap: 8px; }
@@ -192,6 +212,72 @@ body { margin: 0; }
 .chip { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 4px; letter-spacing: 0.2px; border: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--hi); }
 
 @media (prefers-reduced-motion: reduce) { .dbtn { transition: none; } }
+
+/* ---------- App instalada (PWA) ----------
+   Cuando la app corre instalada, el sistema operativo YA pone su propia barra de
+   ventana con el título y los botones de minimizar/maximizar/cerrar. Nuestro
+   marco simulado quedaba encima del suyo: dos marcos, y un cinturón de espacio
+   desperdiciado alrededor (relleno, esquinas redondeadas y sombra).
+   Instalada, el marco se abre a pantalla completa y se retiran los adornos que
+   el sistema ya provee: los botones falsos de ventana y la ruta. La barra de
+   marca (logo + título) se conserva, más delgada, porque es lo que identifica la
+   sección dentro de la app. */
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui), (display-mode: window-controls-overlay) {
+  .app-shell { padding: 0 !important; }
+  .app-win {
+    border-radius: 0; border-left: none; border-right: none; border-top: none;
+    box-shadow: none; min-height: 100dvh !important;
+  }
+  /* Botones de ventana simulados: el sistema ya tiene los suyos. Solo en la barra
+     de la app (.app-bar); los modales conservan su botón de cerrar. */
+  .app-bar .win-ctl { display: none; }
+  .app-bar .win-path { display: none; }
+  .app-bar { height: 36px; }
+  .app-content { padding: 14px 16px !important; }
+}
+/* iOS añadido a inicio: Safari antiguo no resuelve display-mode, así que el
+   registro del service worker marca el documento y aquí se reusa lo de arriba. */
+:root[data-pwa="1"] .app-shell { padding: 0 !important; }
+:root[data-pwa="1"] .app-win {
+  border-radius: 0; border-left: none; border-right: none; border-top: none;
+  box-shadow: none; min-height: 100dvh !important;
+}
+:root[data-pwa="1"] .app-bar .win-ctl,
+:root[data-pwa="1"] .app-bar .win-path { display: none; }
+:root[data-pwa="1"] .app-bar { height: 36px; }
+
+/* ---------- Aviso de versión nueva ---------- */
+.upd-banner {
+  position: fixed; z-index: 90;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 12px;
+  max-width: calc(100vw - 24px);
+  padding: 11px 12px 11px 15px;
+  background: var(--panel); color: var(--ink);
+  border: 1px solid var(--edge-strong); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(17,21,79,0.20), 0 2px 7px rgba(17,21,79,0.12);
+  font-family: var(--ui); font-size: 13.5px;
+  animation: upd-entra .22s ease-out;
+}
+@keyframes upd-entra { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .upd-banner { animation: none; } }
+.upd-banner .upd-punto {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 0 3px rgba(72,213,151,0.25); flex-shrink: 0;
+}
+.upd-banner .upd-texto { line-height: 1.35; }
+.upd-banner .upd-texto b { display: block; font-size: 13.5px; }
+.upd-banner .upd-texto span { color: var(--muted); font-size: 12.5px; }
+.upd-banner .upd-cerrar {
+  border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  font-size: 18px; line-height: 1; padding: 4px 6px; border-radius: 6px;
+}
+.upd-banner .upd-cerrar:hover { background: var(--panel-2); color: var(--ink); }
+@media (max-width: 560px) {
+  .upd-banner { left: 12px; right: 12px; transform: none; max-width: none; }
+  @keyframes upd-entra { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+}
 
 /* ---------- Responsive (móvil / tablet) ----------
    La metáfora de "ventana de escritorio" se relaja en pantallas pequeñas: el

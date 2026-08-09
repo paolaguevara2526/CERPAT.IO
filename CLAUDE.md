@@ -8,13 +8,16 @@ Monorepo del Planeador CERPAT. **Empieza por [`docs/estado-y-plan.md`](./docs/es
 (estado en producción y roadmap vivo), y luego [`CONTEXTO-PARA-CLAUDE-CODE.md`](./CONTEXTO-PARA-CLAUDE-CODE.md)
 para el contexto de negocio completo antes de implementar funcionalidad nueva.
 
-**Estado actual (resumen):** infraestructura desplegada y en producción — frontend en
-Vercel con dominio `cerpat.io`, API Express + PostgreSQL en Railway, esquema
-**multi-tenant** (`Organizacion` = firma; rol root de plataforma) con **90 clientes reales**
-cargados. La raíz `cerpat.io` sirve hoy el prototipo (localStorage) con **sistema de temas**
-(Apariencia); `cerpat.io/clientes` es la primera vista cableada a la API. En diseño: el
-**Plan de Trabajo Contable** (actividades recurrentes por cliente + seguimiento de
-cumplimiento) — ver `docs/estado-y-plan.md` y `docs/mockups/`.
+**Estado actual (resumen):** en producción y en uso real. Frontend en Vercel
+(`cerpat.io`), API Express + PostgreSQL en Railway con **migraciones versionadas**
+que se aplican en cada despliegue, esquema **multi-tenant** (`Organizacion` = firma;
+rol root de plataforma) con **90 clientes reales**. Hay **autenticación propia**
+(JWT + scrypt, cookie httpOnly) y **todos los endpoints exigen sesión**. La raíz
+`cerpat.io` es el **sitio institucional** de la firma; la aplicación vive en
+`cerpat.io/planeador`, es una **PWA instalable** y su barra lateral es un
+**acordeón por área** ("Mi Ruta"). En marcha: Plan de Trabajo Contable, Pagos
+(con abonos), Vencimientos, Visitas, Hallazgos y Portal del Cliente — ver
+`docs/estado-y-plan.md`.
 
 ## Estructura
 
