@@ -88,7 +88,7 @@ export default function EmpresasEditor() {
       </div>
 
       <div className="panel">
-        <div className="dt-wrap">
+        <div className="dt-wrap dt-alta">
           <table className="dt">
             <thead><tr><th>Cliente</th><th>NIT</th><th>Servicio</th><th>Grupo</th><th>Asesor</th><th style={{ whiteSpace: 'nowrap' }}>Almacenamiento</th><th>Activo</th><th>Acciones</th></tr></thead>
             <tbody>

@@ -214,10 +214,41 @@ body { margin: 0; }
 
 /* ---------- Tabla de datos ---------- */
 .dt-wrap { overflow-x: auto; }
-.dt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.dt th { text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.4px; color: var(--muted); font-weight: 800; padding: 11px 14px; border-bottom: 1px solid var(--edge); white-space: nowrap; background: var(--panel-2); }
+.dt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+.dt th {
+  text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.4px;
+  color: var(--muted); font-weight: 800; padding: 11px 14px; white-space: nowrap;
+  background: var(--panel-2); border-bottom: 1px solid var(--edge);
+  /* Encabezado fijo: con cientos de filas se perdía de vista qué columna era
+     cuál. Solo "pega" cuando el contenedor tiene scroll propio (.dt-alta);
+     en tablas cortas no cambia nada. `border-collapse: separate` es necesario
+     porque con `collapse` el borde no viaja con la celda pegada. */
+  position: sticky; top: 0; z-index: 2;
+}
 .dt td { padding: 10px 14px; border-bottom: 1px solid var(--line); color: var(--ink); }
-.dt tr:last-child td { border-bottom: none; }
+.dt tbody tr:last-child td { border-bottom: none; }
+
+/* Contenedor con scroll propio para tablas largas: el encabezado se queda fijo y
+   los filtros/indicadores de arriba no se van de la pantalla. No fija una altura,
+   solo un tope: una tabla de tres filas se sigue viendo de tres filas. */
+.dt-alta { overflow: auto; max-height: calc(100dvh - 300px); min-height: 180px; }
+@media (max-width: 760px) { .dt-alta { max-height: calc(100dvh - 240px); } }
+
+/* Encabezado ordenable */
+.th-contenido { display: inline-flex; align-items: center; gap: 2px; }
+/* Sirve tanto para el botón (tablas de cliente) como para el enlace (tablas que
+   ordena el servidor, como Pagos, donde el orden viaja en la URL). */
+.dt th .th-orden {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: none; background: transparent; padding: 0; cursor: pointer;
+  font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit;
+  text-decoration: none;
+}
+.dt th .th-orden:hover { color: var(--ink); }
+.dt th .th-orden.activa { color: var(--ink); }
+.th-flecha { font-size: 10px; opacity: 0.35; }
+.dt th .th-orden:hover .th-flecha { opacity: 0.7; }
+.dt th .th-orden.activa .th-flecha { opacity: 1; color: var(--green-2); }
 
 /* ---------- Chips ---------- */
 .chip { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 4px; letter-spacing: 0.2px; border: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--hi); }

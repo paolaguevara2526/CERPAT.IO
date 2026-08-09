@@ -125,7 +125,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
       </div>
 
       <div className="panel">
-        <div className="dt-wrap">
+        <div className="dt-wrap dt-alta">
           <table className="dt">
             <thead><tr>
               {th('fecha', 'Fecha', false, { width: 96 })}

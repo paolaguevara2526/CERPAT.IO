@@ -49,7 +49,7 @@ export function TareasTabla({ tareas, mostrarAsesor = true, gestionable = false 
   const cols = 6 + (mostrarAsesor ? 1 : 0) + (gestionable ? 1 : 0);
   return (
     <div className="panel">
-      <div className="dt-wrap">
+      <div className="dt-wrap dt-alta">
         <table className="dt">
           <thead>
             <tr>
