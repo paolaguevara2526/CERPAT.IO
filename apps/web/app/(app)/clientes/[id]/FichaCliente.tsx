@@ -8,6 +8,7 @@
 // está la clave (gestor de contraseñas), nunca la clave.
 
 import { useCallback, useEffect, useState } from 'react';
+import ObligacionesCliente from './ObligacionesCliente';
 
 type Actividad = { id: string; codigo: string; descripcion: string | null; principal: boolean; orden: number };
 type Representante = { id: string; nombre: string; documento: string | null; cargo: string | null; principal: boolean; desde: string | null; hasta: string | null; email: string | null; telefono: string | null };
@@ -119,6 +120,8 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
           </div>
         )}
       </div>
+
+      <ObligacionesCliente empresaId={empresaId} />
 
       <Lista
         titulo="Actividades económicas (CIIU)"

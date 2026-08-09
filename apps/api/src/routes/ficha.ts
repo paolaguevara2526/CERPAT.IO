@@ -17,6 +17,7 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { orgDeSesion } from '../auth/tenant.js';
+import { obligacionesPorCifras, naturalezaDe } from '../fiscal/reglas.js';
 
 export const fichaRouter = Router();
 
@@ -180,3 +181,107 @@ for (const lista of ['actividades', 'representantes', 'camaras'] as Lista[]) {
     res.json({ ok: true });
   });
 }
+
+// ---------- Cifras y obligaciones derivadas ----------
+//
+// Las normas comparan contra el "año inmediatamente anterior": para saber qué le
+// aplica a un cliente en 2026 se miran sus cifras de 2025, medidas con la UVT y
+// el SMMLV de ESE año. Por eso todo va por año y nunca con un valor "actual".
+
+const anioAnterior = (anio: number) => anio - 1;
+
+// GET /ficha/:empresaId/obligaciones?anio=YYYY
+// Qué le aplica al cliente según sus cifras, y en qué se aparta de cómo está
+// configurado hoy. No cambia nada: señala, no corrige.
+fichaRouter.get('/:empresaId/obligaciones', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const u = req.user;
+  const esCliente = !!u?.empresaCliente || !!u?.grupoCliente;
+  if (esCliente) {
+    if (!(await empresaPermitidaParaCliente(u, req.params.empresaId))) return res.status(403).json({ error: 'Sin acceso.' });
+  } else if (!puedeVerFicha(u)) {
+    return res.status(403).json({ error: 'Sin acceso a las fichas de clientes.' });
+  }
+
+  const anioEval = Number(req.query.anio) || new Date().getFullYear();
+  const anioCifras = anioAnterior(anioEval);
+
+  const empresa = await prisma.empresa.findFirst({
+    where: { id: req.params.empresaId, organizacionId: org.id },
+    select: {
+      id: true,
+      tipo: { select: { nombre: true } },
+      configuracionTributaria: { select: { ivaPeriodicidad: true, retencionFuente: true, rentaTipo: true, anticipoRstPeriodicidad: true } },
+      cifrasFiscales: { where: { anio: anioCifras } },
+    },
+  });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+  const params = await prisma.parametroAnual.findFirst({ where: { organizacionId: org.id, anio: anioCifras } });
+  const c = empresa.cifrasFiscales[0];
+
+  const obligaciones = obligacionesPorCifras(
+    c ? { anio: anioCifras, activosBrutos: c.activosBrutos ? Number(c.activosBrutos) : null, ingresosBrutos: c.ingresosBrutos ? Number(c.ingresosBrutos) : null } : null,
+    params ? { anio: params.anio, uvt: Number(params.uvt), smmlv: Number(params.smmlv) } : null,
+    naturalezaDe(empresa.tipo?.nombre),
+  );
+
+  // Contraste con lo configurado. Solo se compara lo que existe como campo; el
+  // resto queda como información. Nunca se cambia la configuración sola: si la
+  // norma y la parametrización difieren, lo decide una persona.
+  const cfg = empresa.configuracionTributaria;
+  const configuradoDe = (campo: string): string | null => {
+    if (!cfg) return null;
+    if (campo === 'ivaPeriodicidad') return cfg.ivaPeriodicidad ?? 'sin definir';
+    if (campo === 'retencionFuente') return cfg.retencionFuente ? 'sí' : 'no';
+    if (campo === 'rst') return cfg.rentaTipo === 'rst_consolidada' || cfg.anticipoRstPeriodicidad ? 'puede' : 'no puede';
+    return null;
+  };
+
+  const conContraste = obligaciones.map((o) => {
+    if (!o.contrastaCon || o.sugerido == null || o.aplica == null) return { ...o, configurado: null, discrepa: false };
+    const configurado = configuradoDe(o.contrastaCon);
+    return { ...o, configurado, discrepa: configurado != null && configurado !== o.sugerido };
+  });
+
+  res.json({
+    anioEvaluado: anioEval,
+    anioCifras,
+    cifras: c ? { anio: c.anio, activosBrutos: c.activosBrutos, ingresosBrutos: c.ingresosBrutos, fuente: c.fuente, notas: c.notas } : null,
+    parametros: params ? { anio: params.anio, uvt: params.uvt, smmlv: params.smmlv } : null,
+    obligaciones: conContraste,
+    editable: !esCliente && puedeEditarFicha(u),
+  });
+});
+
+// PUT /ficha/:empresaId/cifras — cifras de un año (crea o actualiza).
+fichaRouter.put('/:empresaId/cifras', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditarFicha(req.user)) return res.status(403).json({ error: 'Solo Administración o Coordinación puede registrar cifras.' });
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: org.id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+  const anio = Number(req.body?.anio);
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) return res.status(422).json({ error: 'Año inválido.' });
+  const num = (v: unknown): number | null => {
+    const s = String(v ?? '').replace(/[^\d.-]/g, '');
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  const datos = {
+    activosBrutos: num(req.body?.activosBrutos),
+    ingresosBrutos: num(req.body?.ingresosBrutos),
+    fuente: texto(req.body?.fuente),
+    notas: texto(req.body?.notas),
+  };
+
+  await prisma.cifrasFiscales.upsert({
+    where: { empresaId_anio: { empresaId: empresa.id, anio } },
+    create: { organizacionId: org.id, empresaId: empresa.id, anio, ...datos },
+    update: datos,
+  });
+  res.json({ ok: true });
+});

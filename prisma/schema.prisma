@@ -167,6 +167,7 @@ model Organizacion {
   vencimientosEmpresa        VencimientoEmpresa[]
 
   @@map("organizaciones")
+  parametrosAnuales ParametroAnual[]
 }
 
 // ---------- USUARIOS Y ROLES ----------
@@ -309,6 +310,7 @@ model Empresa {
   actividadesEconomicas   ActividadEconomica[]
   representantes          RepresentanteLegal[]
   registrosCamara         RegistroCamara[]
+  cifrasFiscales          CifrasFiscales[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -1166,4 +1168,46 @@ model RegistroCamara {
   @@index([organizacionId])
   @@index([empresaId])
   @@map("registros_camara")
+}
+
+/// Cifras del cliente por año gravable. De aquí salen las obligaciones que
+/// dependen de topes (firma de contador, revisor fiscal, periodicidad de IVA,
+/// conciliación fiscal, RST, retención en persona natural).
+///
+/// Las normas hablan del "año inmediatamente anterior", así que se guardan POR
+/// AÑO: para evaluar 2026 se usan las cifras de 2025.
+model CifrasFiscales {
+  id             String   @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  anio           Int
+  /// Activos brutos a 31 de diciembre (equivale al patrimonio bruto).
+  activosBrutos  Decimal? @db.Decimal(18, 2)
+  ingresosBrutos Decimal? @db.Decimal(18, 2)
+  fuente         String?  // de dónde salió el dato (declaración, EEFF, cliente…)
+  notas          String?
+  updatedAt      DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, anio])
+  @@index([organizacionId])
+  @@map("cifras_fiscales")
+}
+
+/// UVT y SMMLV POR AÑO. Los topes de las normas se expresan en estas unidades y
+/// se comparan contra el año anterior, así que un valor único no sirve: en
+/// enero todos los cálculos quedarían mal y nadie se enteraría.
+/// (ParametrosLiquidacion conserva los valores vigentes para mora y sanciones.)
+model ParametroAnual {
+  id             String  @id @default(uuid())
+  organizacionId String
+  anio           Int
+  uvt            Decimal @db.Decimal(12, 2)
+  smmlv          Decimal @db.Decimal(12, 2)
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+
+  @@unique([organizacionId, anio])
+  @@map("parametros_anuales")
 }
