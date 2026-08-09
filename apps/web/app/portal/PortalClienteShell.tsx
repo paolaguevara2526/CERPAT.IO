@@ -5,7 +5,7 @@
 
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/app/_components/LogoutButton';
-import TemaSelector from '@/app/planeador/TemaSelector';
+import TemaSelector from '@/app/(app)/planeador/TemaSelector';
 
 type Item = { label: string; icon: string; href: string; soon?: boolean; externo?: boolean };
 const SECCIONES: { titulo: string; items: Item[] }[] = [

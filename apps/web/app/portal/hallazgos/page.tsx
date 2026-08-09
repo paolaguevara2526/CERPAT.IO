@@ -2,7 +2,7 @@
 // portal de hallazgos en modo solo lectura). Acceso vía el layout del portal;
 // datos aislados por NIT/grupo desde el backend.
 
-import PortalHallazgos from '@/app/hallazgos/PortalHallazgos';
+import PortalHallazgos from '@/app/(app)/hallazgos/PortalHallazgos';
 
 
 export const metadata = { title: 'Hallazgos' };
