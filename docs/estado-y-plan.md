@@ -234,6 +234,47 @@ entra siempre; lo que crece ante fallos seguidos es el retraso de la respuesta.
 filas: el tope por defecto de Express (100 KB) devolvía 413. Ampliado a 30 MB,
 que también cubre la subida de documentos.
 
+## Auditoría de CSS y navegabilidad (ago 2026)
+
+Revisión completa de la interfaz. El diagnóstico de partida: el sistema de diseño
+existía pero **casi no se usaba** —1.778 estilos en línea contra 612 usos de
+clase— y eso se notaba en cinco frentes. Resueltos, en orden:
+
+1. **La pantalla se congelaba al navegar.** No había ni un `loading.tsx`: las
+   vistas se arman en el servidor y entre el clic y el contenido no pasaba nada.
+   Se agregó esqueleto de carga en las diez secciones, pantalla de error propia
+   (con reintentar y código del incidente) y de página no encontrada. Además,
+   **cada pantalla tiene su título** ("Pagos · CERPAT"): antes las 26 decían lo
+   mismo.
+2. **Buscador global `Ctrl+K`.** Con más de 30 destinos, bajar por el menú dejó
+   de ser viable. Busca sin tildes, por partes ("plan trab") y por sinónimos
+   ("impuestos" → Vencimientos), y solo muestra lo que el rol puede ver. El mapa
+   de navegación vive en `navegacion.ts` y alimenta menú **y** buscador.
+3. **Tablas.** Encabezado fijo en los nueve listados largos (`.dt-alta`) y orden
+   por columna con el mismo ciclo en toda la plataforma. Pagos ordena en el
+   servidor, con el orden en la URL (se puede compartir el enlace).
+4. **Colores por significado** — ver ADR-0008. Con eso el **modo oscuro** quedó
+   utilizable en toda la app, y el tema "Oscuro" de Apariencia ahora oscurece el
+   contenido, no solo la barra.
+5. **Filtros parejos.** El embudo por columna estaba copiado en seis vistas y
+   otras dos no tenían filtro. Se extrajo a `_components/TablaDatos` (encabezado
+   fijo + orden + embudo + contador) y lo estrenaron **Clientes** y la tabla de
+   **tareas**. Pagos conserva su filtro en la URL, pero aplica al instante.
+
+**Un marco para todos los roles.** El marco de la aplicación (barra única, menú
+en acordeón que se recoge y se asoma al pasar el mouse, íconos propios de trazo,
+temas, buscador) vive en `_components/MarcoApp` + `MenuLateral` y lo usan **el
+personal y el Portal del Cliente** con su propia navegación — antes el portal
+tenía un marco aparte que se fue quedando atrás. Ver ADR-0007.
+
+Dos duplicaciones cerradas de paso: las siete pantallas que dibujaban su propio
+marco sin barra lateral (ahora comparten el layout del grupo `(app)`), y
+`/mis-visitas`, que era el portal de visitas anterior al portal (ahora redirige).
+
+**Queda pendiente** migrar los estilos en línea a clases. No se hará como
+proyecto aparte —sería un cambio enorme sin nada visible y con riesgo de romper
+pantallas que funcionan—: se hace vista por vista, cuando haya que tocarlas.
+
 ## Roadmap
 
 ### Fase 1 — Infraestructura y datos ✅ (hecho)
