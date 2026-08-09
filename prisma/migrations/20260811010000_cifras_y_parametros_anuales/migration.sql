@@ -36,8 +36,17 @@ CREATE UNIQUE INDEX "parametros_anuales_organizacionId_anio_key" ON "parametros_
 ALTER TABLE "parametros_anuales" ADD CONSTRAINT "parametros_anuales_organizacionId_fkey"
     FOREIGN KEY ("organizacionId") REFERENCES "organizaciones"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- A PROPÓSITO no se siembran valores de UVT/SMMLV. Un valor equivocado aquí
--- produce obligaciones equivocadas en silencio —justo lo que hay que evitar—, y
--- los de años pasados no se pueden dar por supuestos. Los carga el equipo en
--- Administración → Parámetros por año, y las reglas se niegan a calcular
--- mientras falte el año que necesitan.
+-- Valores de UVT y SMMLV confirmados por la gerencia (ago-2026). Se siembran
+-- estos y solo estos: un año inventado produciría obligaciones equivocadas en
+-- silencio. Los años que falten los carga el equipo en Administración →
+-- Parámetros por año, y mientras falte el año que una regla necesita, la regla
+-- no calcula: informa que falta el dato.
+INSERT INTO "parametros_anuales" ("id", "organizacionId", "anio", "uvt", "smmlv")
+SELECT gen_random_uuid()::text, o."id", v.anio, v.uvt, v.smmlv
+FROM "organizaciones" o
+CROSS JOIN (VALUES
+    (2024, 47065.00, 1300000.00),
+    (2025, 49799.00, 1423500.00),
+    (2026, 52374.00, 1750905.00)
+) AS v(anio, uvt, smmlv)
+ON CONFLICT ("organizacionId", "anio") DO NOTHING;

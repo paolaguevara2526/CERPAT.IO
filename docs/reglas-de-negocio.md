@@ -172,6 +172,14 @@ el dato.** Nunca supone un valor.
 | Conciliación fiscal — Dto. 1998/2017 | ingresos **≥ 45.000** | UVT | exentos por debajo |
 | Puede estar en RST — Art. 905 E.T. | ingresos **< 100.000** | UVT | sin tope reducido por actividad |
 
+Valores vigentes (confirmados por la gerencia, ago-2026):
+
+| Año | UVT | SMMLV |
+|---|---|---|
+| 2024 | $47.065 | $1.300.000 |
+| 2025 | $49.799 | $1.423.500 |
+| 2026 | $52.374 | $1.750.905 |
+
 Notas de criterio, confirmadas con el equipo:
 - **Activos brutos = patrimonio bruto** para estos efectos.
 - El **tope del RST es 100.000 UVT parejo**; no se aplica tope reducido para
