@@ -125,7 +125,28 @@ function nthDiaHabil(anio: number, mes1a12: number, n: number): Date {
 // todos, NO dependen del NIT). Aplica a personas jurídicas: quienes declaran
 // Renta como Persona Jurídica, Gran Contribuyente o RST consolidada.
 const RUB_OBLIGACION = 'RUB (Registro Único de Beneficiarios)';
-const RUB_RENTA_PJ = new Set(['persona_juridica', 'gran_contribuyente', 'rst_consolidada']);
+
+// A quién le aplica el RUB: depende de la NATURALEZA JURÍDICA del cliente, no de
+// cómo declare renta. Antes se derivaba de `rentaTipo`, y eso tenía un efecto
+// silencioso y grave: una persona jurídica con la casilla de Renta en "No
+// aplica" —opción legítima— dejaba de tener RUB, y al regenerar sus
+// vencimientos de RUB se BORRABAN sin que nadie lo pidiera.
+//
+// Obligados: las personas jurídicas y las estructuras sin personería (consorcios
+// y uniones temporales). Las personas naturales NO.
+const RUB_TIPOS_OBLIGADOS = ['persona juridica', 'consorcio o union temporal', 'sucursal extranjera'];
+const RUB_TIPOS_EXENTOS = ['persona natural'];
+
+// Compara sin tildes ni mayúsculas: el catálogo de tipos lo escribe el equipo.
+const sinTildes = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+
+/** ¿Este tipo de empresa está obligado a actualizar el RUB? */
+export function aplicaRub(tipoEmpresa: string | null | undefined): boolean {
+  if (!tipoEmpresa) return false; // sin tipo definido no se inventa la obligación
+  const t = sinTildes(tipoEmpresa);
+  if (RUB_TIPOS_EXENTOS.some((x) => t.includes(x))) return false;
+  return RUB_TIPOS_OBLIGADOS.some((x) => t.includes(x));
+}
 const RUB_FECHAS: Record<number, { periodo: string; fecha: string }[]> = {
   2026: [
     { periodo: '1er trimestre', fecha: '2026-02-02' },
@@ -148,7 +169,7 @@ function diaHabilPila(dos: string): number {
 
 // Calcula los vencimientos nacionales que le corresponden a la empresa según su
 // config y NIT. Función pura: no toca la base de datos.
-export function vencimientosNacionales(cfg: ConfigNacional, nit: string): VencimientoNacional[] {
+export function vencimientosNacionales(cfg: ConfigNacional, nit: string, tipoEmpresa?: string | null): VencimientoNacional[] {
   const { uno, dos } = digitos(nit);
   const vs: VencimientoNacional[] = [];
   const push = (ob: string, per: string | null, items: { periodo?: string; subtipo?: string; fecha: string }[]) =>
@@ -194,8 +215,9 @@ export function vencimientosNacionales(cfg: ConfigNacional, nit: string): Vencim
     }
   }
 
-  // RUB: solo personas jurídicas. Fechas fijas del año (no dependen del NIT).
-  if (cfg.rentaTipo && RUB_RENTA_PJ.has(cfg.rentaTipo)) {
+  // RUB: por naturaleza jurídica (ver aplicaRub). Fechas fijas del año, no
+  // dependen del NIT.
+  if (aplicaRub(tipoEmpresa)) {
     for (const it of RUB_FECHAS[ANIO_CALENDARIO] ?? [])
       vs.push({ obligacion: RUB_OBLIGACION, periodicidad: 'Trimestral', periodo: it.periodo, fechaVencimiento: new Date(it.fecha) });
   }

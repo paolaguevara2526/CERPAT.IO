@@ -456,7 +456,15 @@ planRouter.get('/asignaciones', requireAuth, async (req: AuthedRequest, res) => 
   const acotado = esStaffAcotado(u);
   const uid = u!.sub;
   const asigs = await prisma.asignacionClienteArea.findMany({
-    where: { organizacionId: org.id, ...(acotado ? { OR: [{ asesorId: uid }, { auxiliarId: uid }] } : {}) },
+    // Solo clientes ACTIVOS: al inactivar una empresa su asignación queda en la
+    // base (para no perder el historial), pero el tablero es de operación —
+    // mostrar ahí un cliente que ya no se atiende infla la carga de cada persona
+    // y confunde a quien lo lee.
+    where: {
+      organizacionId: org.id,
+      empresa: { activo: true },
+      ...(acotado ? { OR: [{ asesorId: uid }, { auxiliarId: uid }] } : {}),
+    },
     select: {
       empresaId: true,
       empresa: { select: { nombre: true } },

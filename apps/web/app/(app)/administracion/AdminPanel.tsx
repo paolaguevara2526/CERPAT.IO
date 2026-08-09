@@ -6,6 +6,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ActividadesEditor from './ActividadesEditor';
 import VencimientosEditor from './VencimientosEditor';
+import ChecklistVencimientos from './ChecklistVencimientos';
 import EmpresasEditor from './EmpresasEditor';
 import PlanClienteEditor from './PlanClienteEditor';
 import ConfigTributariaEditor from './ConfigTributariaEditor';
@@ -20,6 +21,7 @@ const TABS: Tab[] = [
   { id: 'plan-cliente', label: 'Plan por cliente' },
   { id: 'actividades', label: 'Cat. Tareas' },
   { id: 'vencimientos', label: 'Vencimientos' },
+  { id: 'checklist-venc', label: 'Checklist vencimientos' },
   { id: 'areas', label: 'Áreas', tipo: 'areas' },
   { id: 'tipos-tarea', label: 'Tipos de tarea', tipo: 'tipos-tarea' },
   { id: 'tipos-obligacion', label: 'Tipos de obligación', tipo: 'tipos-obligacion' },
@@ -59,6 +61,7 @@ export default function AdminPanel({ esAdmin = true }: { esAdmin?: boolean }) {
         : activo.id === 'sancion-municipio' ? <SancionMunicipioEditor />
         : activo.id === 'plan-cliente' ? <PlanClienteEditor />
         : activo.id === 'vencimientos' ? <VencimientosEditor />
+        : activo.id === 'checklist-venc' ? <ChecklistVencimientos />
         : <ParametrosEditor />}
     </div>
   );
