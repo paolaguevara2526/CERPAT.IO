@@ -10,6 +10,10 @@ const admin = { esRoot: false, roles: ['Administrador'] };
 const root = { esRoot: true, roles: [] };
 
 // Rutas que cada rol DEBE ver y las que NO.
+//
+// Sobre /clientes (hoja de vida): la ven Administración, Coordinación y Asesores.
+// El Auxiliar NO — es deliberado: la ficha incluye datos de identificación y, más
+// adelante, cifras financieras del cliente.
 const CASOS: { rol: string; ve: string[]; noVe: string[] }[] = [
   {
     rol: 'Auxiliar',
@@ -18,13 +22,15 @@ const CASOS: { rol: string; ve: string[]; noVe: string[] }[] = [
   },
   {
     rol: 'Asesor',
-    ve: ['/planeador/visitas', '/planeador/pagos', '/planeador/tablero'],
-    noVe: ['/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion', '/clientes', '/usuarios', '/hallazgos'],
+    // /clientes: consulta la hoja de vida de sus clientes (la edición la
+    // restringe el backend a Administración y Coordinación).
+    ve: ['/planeador/visitas', '/planeador/pagos', '/planeador/tablero', '/clientes'],
+    noVe: ['/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion', '/usuarios', '/hallazgos'],
   },
   {
     rol: 'Coordinador',
-    ve: ['/planeador/visitas', '/planeador/pagos', '/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion', '/administracion'],
-    noVe: ['/clientes', '/usuarios', '/hallazgos'],
+    ve: ['/planeador/visitas', '/planeador/pagos', '/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion', '/administracion', '/clientes'],
+    noVe: ['/usuarios', '/hallazgos'],
   },
   {
     rol: 'Auditor',
