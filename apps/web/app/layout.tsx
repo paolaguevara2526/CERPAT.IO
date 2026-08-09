@@ -33,8 +33,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-// Aplica el tema guardado antes de pintar, para evitar parpadeo.
-const TEMA_INIT = `(function(){try{var t=localStorage.getItem('cerpat_tema')||'claro';document.documentElement.setAttribute('data-cerpat-theme',t);}catch(e){document.documentElement.setAttribute('data-cerpat-theme','claro');}})();`;
+// Aplica el tema guardado ANTES de pintar, para que no haya un destello del tema
+// anterior. Debe seguir la misma regla que `aplicarTema` en TemaSelector: solo
+// "oscuro" fija data-theme; los demás lo quitan para respetar la preferencia del
+// sistema operativo.
+const TEMA_INIT = `(function(){try{var r=document.documentElement;var t=localStorage.getItem('cerpat_tema')||'claro';r.setAttribute('data-cerpat-theme',t);if(t==='oscuro')r.setAttribute('data-theme','dark');else r.removeAttribute('data-theme');}catch(e){document.documentElement.setAttribute('data-cerpat-theme','claro');}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
