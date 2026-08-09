@@ -151,6 +151,28 @@ Fuente de verdad del esquema: [`../prisma/schema.prisma`](../prisma/schema.prism
   - Se involucra temprano el criterio legal/de cumplimiento de la firma.
   - Los módulos con PII exponen menos por defecto (principio de mínimo acceso).
 
+### ADR-0006 — Reglas de la PWA: caché y recargas automáticas
+
+- **Contexto:** al activar la PWA con actualización automática, la app quedó
+  recargándose sola al perder el foco de un campo (incluido el momento de pulsar
+  "Entrar" en el login, que cancelaba el ingreso) y el service worker guardaba
+  **todas** las respuestas GET del mismo origen, incluidas páginas HTML que el
+  servidor arma con los datos de la persona autenticada.
+- **Decisión:** dos reglas fijas para el service worker y su registro:
+  1. **Nunca se cachea HTML ni la API.** Solo se guardan archivos estáticos e
+     inmutables (`/_next/static/*`, íconos, imágenes, fuentes). Las páginas se
+     piden siempre en vivo — llevan datos personales y dependen del despliegue.
+  2. **La recarga automática solo ocurre si hay una versión nueva instalada**, y
+     nunca mientras haya un campo o formulario en uso. La primera instalación del
+     service worker no cuenta como actualización.
+- **Consecuencias:**
+  - Sin fuga de páginas de un usuario a otro por la caché del navegador (refuerza
+    ADR-0005) ni versiones viejas servidas tras un despliegue.
+  - Menos beneficio *offline* (solo la cáscara estática), a cambio de que la
+    sesión y los datos siempre sean los reales. Es el intercambio correcto aquí.
+  - Regla general: **toda recarga automática debe ir detrás de una condición
+    explícita**, nunca colgada de un evento de foco o de visibilidad.
+
 ## Otorgar el rol ROOT de plataforma
 
 El rol **root** (`Usuario.esRootPlataforma`) es el permiso más alto y, en el modelo

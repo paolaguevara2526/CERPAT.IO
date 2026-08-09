@@ -19,6 +19,10 @@ import { promoverRootSiSePide } from './bootstrap-root.js';
 
 const app = express();
 
+// En Railway la API vive detrás de un proxy: sin esto, req.ip sería siempre la
+// dirección interna del proxy y todos los usuarios parecerían el mismo.
+app.set('trust proxy', 1);
+
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') ?? '*' }));
 // Límite amplio: la importación masiva de asignaciones (miles de filas) y la
 // subida de documentos del cliente (archivos en base64) van en un solo POST y

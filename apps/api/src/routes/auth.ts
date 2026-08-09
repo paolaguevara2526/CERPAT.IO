@@ -10,12 +10,16 @@ import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 
 export const authRouter = Router();
 
-// ---------- Límite de intentos de login (anti fuerza bruta) ----------
-// Ventana deslizante en memoria por IP + correo: tras varios fallos seguidos se
-// bloquea un rato. Los intentos correctos limpian el contador. En memoria basta
-// para el tamaño actual; si algún día hay varias instancias, mover a la BD/Redis.
-const MAX_INTENTOS = 8;
-const VENTANA_MS = 15 * 60 * 1000; // 15 minutos
+// ---------- Freno a la fuerza bruta ----------
+// Se cuenta cuántos fallos seguidos lleva una combinación IP + correo y, pasado
+// el umbral, cada intento se responde con retraso creciente. NO se bloquea la
+// cuenta: quien escriba la contraseña correcta entra siempre, aunque se haya
+// equivocado antes. (Un bloqueo por tiempo deja fuera a la persona real y no
+// detiene de verdad a un atacante, que puede rotar de IP.)
+// En memoria basta para el tamaño actual; con varias instancias, mover a BD/Redis.
+const UMBRAL_RETRASO = 5;          // fallos seguidos antes de empezar a frenar
+const RETRASO_MAX_MS = 5000;       // tope del retraso por intento
+const VENTANA_MS = 15 * 60 * 1000; // los fallos caducan a los 15 minutos
 const intentos = new Map<string, { n: number; hasta: number }>();
 
 function claveIntento(req: { ip?: string; body?: any }): string {
@@ -23,12 +27,15 @@ function claveIntento(req: { ip?: string; body?: any }): string {
   const email = String(req.body?.email ?? '').trim().toLowerCase();
   return `${ip}|${email}`;
 }
-function bloqueado(clave: string): number {
+// Milisegundos de espera que le tocan al intento actual (0 si va limpio).
+function retrasoDe(clave: string): number {
   const reg = intentos.get(clave);
   if (!reg) return 0;
   if (Date.now() > reg.hasta) { intentos.delete(clave); return 0; }
-  return reg.n >= MAX_INTENTOS ? Math.ceil((reg.hasta - Date.now()) / 60000) : 0;
+  if (reg.n < UMBRAL_RETRASO) return 0;
+  return Math.min(RETRASO_MAX_MS, 500 * 2 ** (reg.n - UMBRAL_RETRASO));
 }
+const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 function registrarFallo(clave: string): void {
   const ahora = Date.now();
   const reg = intentos.get(clave);
@@ -54,12 +61,11 @@ authRouter.post('/login', async (req, res) => {
   const secret = process.env.JWT_SECRET;
   if (!secret) return res.status(500).json({ error: 'Autenticación no configurada (falta JWT_SECRET).' });
 
-  // Demasiados intentos fallidos seguidos: se frena un rato (fuerza bruta).
+  // Muchos fallos seguidos: se responde más lento (freno a la fuerza bruta).
+  // La verificación se hace igual, así que la contraseña correcta siempre entra.
   const clave = claveIntento(req);
-  const minutos = bloqueado(clave);
-  if (minutos > 0) {
-    return res.status(429).json({ error: `Demasiados intentos fallidos. Espera ${minutos} minuto(s) e intenta de nuevo.` });
-  }
+  const retraso = retrasoDe(clave);
+  if (retraso > 0) await esperar(retraso);
 
   const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
   const user = await prisma.usuario.findFirst({
