@@ -7,6 +7,8 @@ import { apiFetch } from '@/lib/session';
 import { exigirRuta } from '@/lib/acceso-server';
 import AsignacionesView, { type FilaAsignacion } from './AsignacionesView';
 
+
+export const metadata = { title: 'Asignaciones' };
 export const dynamic = 'force-dynamic';
 
 type Data = { esCoordinacion: boolean; yoId: string; filas: FilaAsignacion[] };

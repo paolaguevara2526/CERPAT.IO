@@ -6,6 +6,8 @@ import { getSessionUser } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
 import AdminPanel from './AdminPanel';
 
+
+export const metadata = { title: 'Administración' };
 export const dynamic = 'force-dynamic';
 
 export default async function AdministracionPage() {

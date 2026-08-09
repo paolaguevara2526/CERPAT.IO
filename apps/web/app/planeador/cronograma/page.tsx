@@ -6,6 +6,8 @@
 import { apiFetch } from '@/lib/session';
 import { exigirRuta } from '@/lib/acceso-server';
 
+
+export const metadata = { title: 'Plan de Trabajo' };
 export const dynamic = 'force-dynamic';
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];

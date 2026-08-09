@@ -3,6 +3,8 @@
 import { fetchTareas, AREAS, nombrePeriodo } from '../tareas';
 import Tablero from '../Tablero';
 
+
+export const metadata = { title: 'Tablero' };
 export const dynamic = 'force-dynamic';
 
 export default async function TableroPage({ searchParams }: { searchParams?: Record<string, string> }) {

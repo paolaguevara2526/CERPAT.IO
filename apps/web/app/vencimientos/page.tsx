@@ -5,6 +5,8 @@ import { exigirRuta } from '@/lib/acceso-server';
 import LogoutButton from '@/app/_components/LogoutButton';
 import VencimientosView from './VencimientosView';
 
+
+export const metadata = { title: 'Vencimientos' };
 export const dynamic = 'force-dynamic';
 
 export default async function VencimientosPage() {

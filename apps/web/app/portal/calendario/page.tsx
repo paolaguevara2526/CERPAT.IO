@@ -3,6 +3,8 @@
 
 import PortalCalendario from './PortalCalendario';
 
+
+export const metadata = { title: 'Calendario' };
 export const dynamic = 'force-dynamic';
 
 export default function PortalCalendarioPage() {

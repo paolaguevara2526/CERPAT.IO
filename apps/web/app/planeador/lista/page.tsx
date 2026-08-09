@@ -4,6 +4,8 @@ import { fetchTareas, TareasTabla, ESTADO_META, AREAS, nombrePeriodo } from '../
 import { getSessionUser, apiFetch } from '@/lib/session';
 import NuevaTareaBoton from '../TareaModal';
 
+
+export const metadata = { title: 'Lista' };
 export const dynamic = 'force-dynamic';
 
 const ESTADOS_PAGO: { k: string; label: string }[] = [

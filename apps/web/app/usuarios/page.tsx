@@ -7,6 +7,8 @@ import { getSessionUser } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
 import UsuariosPanel from './UsuariosPanel';
 
+
+export const metadata = { title: 'Usuarios' };
 export const dynamic = 'force-dynamic';
 
 export default async function UsuariosPage() {

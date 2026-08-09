@@ -5,6 +5,8 @@ import { getSessionUser } from '@/lib/session';
 import { fetchTareas, ESTADO_META, nombrePeriodo, type Tarea } from './tareas';
 import { fetchCumplimiento, colorPct } from './inicio';
 
+
+export const metadata = { title: 'Inicio' };
 export const dynamic = 'force-dynamic';
 
 const EJECUTADA = ['terminado', 'auditado'];

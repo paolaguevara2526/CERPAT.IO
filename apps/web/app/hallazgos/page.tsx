@@ -6,6 +6,8 @@ import { getSessionUser } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
 import PortalHallazgos from './PortalHallazgos';
 
+
+export const metadata = { title: 'Portal de Hallazgos' };
 export const dynamic = 'force-dynamic';
 
 export default async function HallazgosPage() {

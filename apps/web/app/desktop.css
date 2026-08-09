@@ -109,6 +109,17 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 
+/* Foco de teclado visible en toda la plataforma. Antes no existía: quien captura
+   datos con Tab no veía dónde estaba parado. Solo aparece al navegar con teclado
+   (:focus-visible), así que no ensucia el clic con el mouse. */
+:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Sobre el cromo oscuro, el verde no siempre contrasta: allí se usa el blanco. */
+.win-bar :focus-visible, aside :focus-visible { outline-color: currentColor; }
+
 /* ---------- Botones 3D (relieve sutil) ---------- */
 .dbtn {
   font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink);
@@ -245,6 +256,104 @@ body { margin: 0; }
 :root[data-pwa="1"] .app-bar .win-ctl,
 :root[data-pwa="1"] .app-bar .win-path { display: none; }
 :root[data-pwa="1"] .app-bar { height: 36px; }
+
+/* ---------- Pantallas de aviso (error / no encontrada) ---------- */
+.pantalla-aviso {
+  min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+  padding: 24px; font-family: var(--ui); color: var(--ink);
+  background: radial-gradient(1100px 500px at 72% -12%, rgba(72,213,151,0.10), transparent 60%), var(--desk-bg);
+}
+.aviso-caja { width: 100%; max-width: 460px; }
+.aviso-texto { margin: 0 0 18px; font-size: 14.5px; line-height: 1.6; color: var(--muted); }
+.aviso-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+.aviso-acciones .dbtn { text-decoration: none; display: inline-flex; align-items: center; }
+.aviso-nota { margin: 18px 0 0; font-size: 12px; color: var(--muted); }
+.aviso-nota code { font-family: var(--mono); background: var(--panel-2); padding: 2px 6px; border-radius: 4px; }
+
+/* ---------- Solo para lectores de pantalla ---------- */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- Esqueleto de carga ---------- */
+.esq {
+  background: linear-gradient(90deg, var(--panel-2) 25%, var(--line) 37%, var(--panel-2) 63%);
+  background-size: 400% 100%;
+  animation: esq-brillo 1.3s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes esq-brillo { from { background-position: 100% 50%; } to { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .esq { animation: none; } }
+.esq-titulo { height: 26px; width: min(280px, 60%); margin-bottom: 10px; }
+.esq-sub { height: 14px; width: min(440px, 85%); margin-bottom: 22px; }
+.esq-tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 22px; }
+.esq-tarjeta { height: 84px; }
+.esq-tabla { display: flex; flex-direction: column; gap: 8px; }
+.esq-fila { height: 40px; }
+
+/* ---------- Buscador global (Ctrl+K) ---------- */
+.buscador-abrir {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 26px; padding: 0 8px; margin-left: auto;
+  border: 1px solid rgba(128,128,128,0.35); border-radius: 6px;
+  background: rgba(128,128,128,0.14); color: inherit; opacity: 0.85;
+  font-family: var(--ui); font-size: 12.5px; cursor: pointer;
+}
+.buscador-abrir:hover { opacity: 1; background: rgba(128,128,128,0.24); }
+.buscador-abrir-texto { opacity: 0.9; }
+.buscador-abrir kbd, .buscador-caja kbd {
+  font-family: var(--ui); font-size: 10.5px; font-weight: 700; line-height: 1;
+  padding: 3px 5px; border-radius: 4px; border: 1px solid currentColor;
+  opacity: 0.55; white-space: nowrap;
+}
+
+.buscador-velo {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(10,18,34,0.45); backdrop-filter: blur(2px);
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: clamp(48px, 12vh, 140px) 16px 16px;
+}
+.buscador-caja {
+  width: 100%; max-width: 540px;
+  background: var(--panel); color: var(--ink);
+  border: 1px solid var(--edge-strong); border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(10,18,34,0.35);
+  overflow: hidden; font-family: var(--ui);
+}
+.buscador-campo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 14px; border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+.buscador-campo input {
+  flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+  font-family: var(--ui); font-size: 15px; color: var(--ink);
+}
+.buscador-lista { list-style: none; margin: 0; padding: 6px; max-height: 46vh; overflow-y: auto; }
+.buscador-lista button {
+  display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+  padding: 9px 10px; border: none; border-radius: 7px; background: transparent;
+  color: var(--ink); font-family: var(--ui); font-size: 13.5px; cursor: pointer;
+}
+.buscador-lista button.sel { background: var(--panel-2); }
+.buscador-lista button.sel .buscador-label { font-weight: 700; }
+.buscador-label { flex: 1; }
+.buscador-area {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+  color: var(--muted); border: 1px solid var(--edge); border-radius: 4px; padding: 2px 6px;
+}
+.buscador-vacio { padding: 22px 16px; color: var(--muted); font-size: 13.5px; text-align: center; }
+.buscador-pie {
+  display: flex; gap: 16px; padding: 9px 14px; border-top: 1px solid var(--line);
+  background: var(--panel-2); color: var(--muted); font-size: 11.5px;
+}
+.buscador-pie span { display: inline-flex; align-items: center; gap: 5px; }
+
+@media (max-width: 560px) {
+  .buscador-abrir-texto, .buscador-abrir kbd { display: none; }
+  .buscador-abrir { width: 28px; justify-content: center; padding: 0; }
+}
 
 /* ---------- Aviso de versión nueva ---------- */
 .upd-banner {

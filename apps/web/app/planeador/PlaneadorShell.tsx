@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import PlaneadorSidebar from './PlaneadorSidebar';
 import TemaSelector from './TemaSelector';
+import BuscadorGlobal from './BuscadorGlobal';
 
 const CLAVE = 'cerpat_sidebar_modo';
 type Modo = 'completo' | 'iconos' | 'oculto';
@@ -114,7 +115,7 @@ export default function PlaneadorShell({ roles, esRoot, children }: {
           {modo === 'oculto' ? '☰' : '‹'}
         </button>
         <span className="win-title">Planeador</span>
-        <span className="win-path">cerpat.io/planeador</span>
+        <BuscadorGlobal roles={roles} esRoot={esRoot} />
         <TemaSelector />
         <div className="win-ctl">
           <button aria-label="Minimizar"><svg viewBox="0 0 12 12"><rect x="1.5" y="6" width="9" height="1.4" fill="currentColor" /></svg></button>

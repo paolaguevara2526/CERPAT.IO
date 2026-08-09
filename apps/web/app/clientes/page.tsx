@@ -7,6 +7,8 @@
 import { exigirRuta } from '@/lib/acceso-server';
 import { apiFetch } from '@/lib/session';
 
+
+export const metadata = { title: 'Clientes' };
 export const dynamic = 'force-dynamic';
 
 const BRAND = '#48D597';

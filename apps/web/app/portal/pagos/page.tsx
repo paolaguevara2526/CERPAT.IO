@@ -3,6 +3,8 @@
 
 import PortalPagos from './PortalPagos';
 
+
+export const metadata = { title: 'Pagos' };
 export const dynamic = 'force-dynamic';
 
 export default function PortalPagosPage() {

@@ -6,6 +6,8 @@ import { getSessionUser } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
 import PortalVisitas from './PortalVisitas';
 
+
+export const metadata = { title: 'Mis visitas' };
 export const dynamic = 'force-dynamic';
 const STAFF = ['Administrador', 'Coordinador', 'Asesor', 'Auditor', 'Auxiliar'];
 

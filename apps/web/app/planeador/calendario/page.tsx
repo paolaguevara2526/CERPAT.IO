@@ -4,6 +4,8 @@
 
 import CalendarioUnificado from './CalendarioUnificado';
 
+
+export const metadata = { title: 'Calendario' };
 export const dynamic = 'force-dynamic';
 
 export default function CalendarioPage({ searchParams }: { searchParams?: Record<string, string> }) {

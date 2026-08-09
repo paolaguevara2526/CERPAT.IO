@@ -7,6 +7,8 @@ import { apiFetch } from '@/lib/session';
 import { exigirRuta } from '@/lib/acceso-server';
 import { nombrePeriodo } from '../tareas';
 
+
+export const metadata = { title: 'Flujo del cierre' };
 export const dynamic = 'force-dynamic';
 
 type EtapaConteo = { estado: string; total?: number; hechas?: number };

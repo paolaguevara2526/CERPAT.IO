@@ -13,6 +13,8 @@ import BorrarPendiente from '../BorrarPendiente';
 import PagosAcciones from '../PagosAcciones';
 import AbonosBoton from '../AbonosBoton';
 
+
+export const metadata = { title: 'Pagos' };
 export const dynamic = 'force-dynamic';
 
 type VencPago = {
