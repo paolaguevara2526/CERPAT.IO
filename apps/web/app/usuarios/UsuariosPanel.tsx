@@ -127,7 +127,7 @@ export default function UsuariosPanel() {
       </div>
 
       <div className="panel">
-        <div className="dt-wrap">
+        <div className="dt-wrap dt-alta">
           <table className="dt">
             <thead><tr>{th('nombre', 'Nombre', true)}{th('correo', 'Correo', true)}{th('cargo', 'Cargo', true)}{th('area', 'Área', true)}{th('roles', 'Roles')}{th('activo', 'Activo')}<th>Acciones</th></tr></thead>
             <tbody>

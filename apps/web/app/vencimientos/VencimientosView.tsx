@@ -7,6 +7,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import ImportarVencimientosModal from './ImportarVencimientosModal';
 import FiltroColumna from '../administracion/FiltroColumna';
+import { useOrden, ThOrden } from '@/app/_components/orden';
 
 const ANIO = 2026;
 type Venc = {
@@ -44,6 +45,12 @@ function valorDe(v: Venc, c: Col): string {
   }
 }
 
+// Valor por el que se ORDENA (distinto del que se muestra y se filtra): la fecha
+// va como ISO para que ordene cronológicamente y no alfabéticamente.
+function claveOrden(v: Venc, c: Col): string {
+  return c === 'vence' ? v.fechaVencimiento.slice(0, 10) : valorDe(v, c);
+}
+
 export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [items, setItems] = useState<Venc[]>([]);
@@ -51,6 +58,7 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [importar, setImportar] = useState(false);
   const [filtros, setFiltros] = useState<Record<Col, Set<string> | null>>(sinFiltros);
+  const { orden, alternar, ordenar } = useOrden<Col>();
   const [aEliminar, setAEliminar] = useState<Venc | null>(null);
   const [eliminando, setEliminando] = useState(false);
 
@@ -111,14 +119,20 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   }, [items]);
 
   const filtrados = useMemo(
-    () => items.filter((v) => COLS.every((c) => { const s = filtros[c]; return s == null || s.has(valorDe(v, c)); })),
-    [items, filtros],
+    () => ordenar(
+      items.filter((v) => COLS.every((c) => { const s = filtros[c]; return s == null || s.has(valorDe(v, c)); })),
+      claveOrden,
+    ),
+    [items, filtros, ordenar],
   );
   const hayFiltro = COLS.some((c) => filtros[c] != null);
   const setFiltro = (c: Col, s: Set<string> | null) => setFiltros((f) => ({ ...f, [c]: s }));
+  // Cada encabezado ordena (clic en el texto) y filtra (embudo), sin estorbarse.
   const th = (c: Col, texto: string, buscar = false, estilo?: React.CSSProperties) => (
-    <th style={estilo}><span style={{ display: 'inline-flex', alignItems: 'center' }}>{texto}
-      <FiltroColumna valores={valores[c]} seleccion={filtros[c]} onCambio={(s) => setFiltro(c, s)} buscar={buscar} /></span></th>
+    <ThOrden col={c} orden={orden} alternar={alternar} style={estilo}
+      extra={<FiltroColumna valores={valores[c]} seleccion={filtros[c]} onCambio={(s) => setFiltro(c, s)} buscar={buscar} />}>
+      {texto}
+    </ThOrden>
   );
 
   const k = resumen?.kpis;
@@ -147,10 +161,10 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{filtrados.length}{hayFiltro ? ` de ${items.length}` : ''} vencimiento(s)</span>
         {hayFiltro && <button className="dbtn" onClick={() => setFiltros(sinFiltros())} style={{ fontSize: 12 }}>Limpiar filtros</button>}
-        <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>Usa el embudo ▼ de cada columna para filtrar.</span>
+        <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>Clic en el título de la columna para ordenar · embudo ▼ para filtrar.</span>
       </div>
 
-      <div className="panel" style={{ overflowX: 'auto' }}>
+      <div className="panel dt-alta">
         <table className="dt" style={{ minWidth: 900 }}>
           <thead><tr>
             {th('compania', 'Compañía', true, { minWidth: 160 })}

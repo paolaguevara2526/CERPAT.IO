@@ -243,7 +243,7 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
 
           {vista === 'persona' && esCoordinacion && (
             <div className="panel">
-              <div className="dt-wrap">
+              <div className="dt-wrap dt-alta">
                 <table className="dt">
                   <thead><tr>
                     {thSort(ordPer, setOrdPer, 'nombre', 'Persona')}
@@ -316,7 +316,7 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
           )}
 
           {vista === 'cliente' && (
-            <div className="panel"><div className="dt-wrap">
+            <div className="panel"><div className="dt-wrap dt-alta">
               <table className="dt">
                 <thead><tr>
                   {thCli('empresa', 'Cliente')}

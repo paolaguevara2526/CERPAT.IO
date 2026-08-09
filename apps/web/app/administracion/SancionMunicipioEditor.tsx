@@ -69,7 +69,7 @@ export default function SancionMunicipioEditor() {
       ) : filtrados.length === 0 ? (
         <div className="panel" style={{ padding: 20, color: 'var(--muted)' }}>Sin municipios que coincidan.</div>
       ) : (
-        <div className="panel"><div className="dt-wrap">
+        <div className="panel"><div className="dt-wrap dt-alta">
           <table className="dt">
             <thead><tr><th>Municipio</th><th>Departamento</th><th style={{ whiteSpace: 'nowrap' }}>Sanción mín. (UVT)</th><th></th></tr></thead>
             <tbody>

@@ -184,7 +184,7 @@ export default function SeguimientoVisitas() {
 
       {/* Matriz */}
       <div className="panel">
-        <div className="dt-wrap">
+        <div className="dt-wrap dt-alta">
           <table className="dt">
             <thead><tr>
               {th('cliente', 'Cliente', true)}

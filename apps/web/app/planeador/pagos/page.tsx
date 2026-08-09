@@ -121,10 +121,29 @@ function enRiesgoPago(fechaLimite: string | null, consecuencia: string, pagado: 
   return Math.round((new Date(fechaLimite).setHours(0, 0, 0, 0) - hoy) / MS_DIA) <= UMBRAL_RIESGO;
 }
 
+// Columnas por las que se puede ordenar el listado "Por pagar".
+type ColOrden = 'obligacion' | 'empresa' | 'municipio' | 'vence' | 'limite' | 'total';
+
+function claveOrden(i: Item, c: ColOrden): string | number {
+  switch (c) {
+    case 'obligacion': return i.obligacion;
+    case 'empresa': return i.empresa ?? '';
+    case 'municipio': return i.municipio ?? '';
+    case 'vence': return i.fechaVencimiento.slice(0, 10);
+    case 'limite': return i.fechaLimitePago?.slice(0, 10) ?? '';
+    // Lo que de verdad se debe hoy: saldo + interés + sanción.
+    case 'total': return (i.saldo ?? i.valorPago ?? 0) + (i.interesMora ?? 0) + (i.sancion ?? 0);
+  }
+}
+
 export default async function PagosPage({ searchParams }: { searchParams?: Record<string, string> }) {
   await exigirRuta('/planeador/pagos'); // solo Asesor / Coordinador / Auditor (y Admin)
   const cliente = searchParams?.cliente || '';
   const estado = searchParams?.estado || '';
+  // Orden por columna. Se resuelve en el servidor (esta vista se arma allá) y
+  // viaja en la URL, así que el orden elegido se puede compartir o guardar.
+  const ordenCol = (searchParams?.orden || '') as ColOrden | '';
+  const ordenAsc = (searchParams?.dir || 'asc') !== 'desc';
   const anio = new Date().getFullYear();
 
   const [{ data: vencs, error }, pendientes, empresas, sesion] = await Promise.all([
@@ -165,9 +184,35 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const kSancion = scope.reduce((s, i) => s + (i.sancion ?? 0), 0);
   const kTotal = kPorPagar.v + kInteres + kSancion; // capital + interés + sanción a hoy
 
-  const filas = scope
-    .filter((i) => !estado || i.estado === estado)
-    .sort((a, b) => Number(pagadoDe(a.estado)) - Number(pagadoDe(b.estado)) || +new Date(a.fechaVencimiento) - +new Date(b.fechaVencimiento));
+  const porPagar = scope.filter((i) => !estado || i.estado === estado);
+  const filas = ordenCol
+    ? [...porPagar].sort((a, b) => {
+        const x = claveOrden(a, ordenCol); const y = claveOrden(b, ordenCol);
+        const cmp = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'es', { numeric: true });
+        return ordenAsc ? cmp : -cmp;
+      })
+    // Orden natural: primero lo que falta por pagar, y dentro de eso lo que vence antes.
+    : [...porPagar].sort((a, b) => Number(pagadoDe(a.estado)) - Number(pagadoDe(b.estado)) || +new Date(a.fechaVencimiento) - +new Date(b.fechaVencimiento));
+
+  // Encabezado ordenable: cada clic cicla ascendente → descendente → orden natural,
+  // conservando los filtros que ya estén puestos.
+  const thOrden = (c: ColOrden, texto: string, estilo?: React.CSSProperties) => {
+    const activa = ordenCol === c;
+    const params = new URLSearchParams();
+    if (cliente) params.set('cliente', cliente);
+    if (estado) params.set('estado', estado);
+    if (!activa) params.set('orden', c);
+    else if (ordenAsc) { params.set('orden', c); params.set('dir', 'desc'); }
+    const qs = params.toString();
+    return (
+      <th style={estilo} aria-sort={!activa ? 'none' : ordenAsc ? 'ascending' : 'descending'}>
+        <a className={activa ? 'th-orden activa' : 'th-orden'} href={`/planeador/pagos${qs ? `?${qs}` : ''}`}
+          title={!activa ? 'Ordenar' : ordenAsc ? 'Ordenar al revés' : 'Quitar el orden'}>
+          {texto}<span className="th-flecha" aria-hidden="true">{!activa ? '↕' : ordenAsc ? '↑' : '↓'}</span>
+        </a>
+      </th>
+    );
+  };
 
   const sel: React.CSSProperties = { padding: '8px 11px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
 
@@ -222,10 +267,18 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         </div>
       ) : (
         <div className="panel">
-          <div className="dt-wrap">
+          <div className="dt-wrap dt-alta">
             <table className="dt">
               <thead>
-                <tr><th>Obligación</th><th>Cliente</th><th>Municipio</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th style={{ whiteSpace: 'nowrap' }}>Límite de pago</th><th style={{ whiteSpace: 'nowrap' }}>Interés · sanción · total</th><th>Valor y estado de pago</th><th></th></tr>
+                <tr>
+                  {thOrden('obligacion', 'Obligación')}
+                  {thOrden('empresa', 'Cliente')}
+                  {thOrden('municipio', 'Municipio')}
+                  {thOrden('vence', 'Vence', { whiteSpace: 'nowrap' })}
+                  {thOrden('limite', 'Límite de pago', { whiteSpace: 'nowrap' })}
+                  {thOrden('total', 'Interés · sanción · total', { whiteSpace: 'nowrap' })}
+                  <th>Valor y estado de pago</th><th></th>
+                </tr>
               </thead>
               <tbody>
                 {filas.map((i) => (
