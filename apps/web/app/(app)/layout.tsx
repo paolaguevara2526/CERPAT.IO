@@ -1,15 +1,23 @@
-// apps/web/app/planeador/layout.tsx
-// Shell autenticado del planeador (React): marco de ventana + barra lateral de
-// tres secciones + barra de estado. Exige sesión.
+// apps/web/app/(app)/layout.tsx
+//
+// Marco autenticado de TODA la aplicación: ventana + barra superior + barra
+// lateral + barra de estado. Exige sesión.
+//
+// El paréntesis en "(app)" es un grupo de rutas de Next.js: agrupa pantallas
+// bajo un mismo layout SIN cambiarles la dirección (/vencimientos sigue siendo
+// /vencimientos). Antes solo /planeador tenía este marco, y las demás opciones
+// del menú —Vencimientos, Clientes, Coordinación, Usuarios, Administración,
+// Herramientas y Hallazgos— eran páginas sueltas que dibujaban su propio
+// marquito sin barra lateral: al entrar se sentía como salir de la aplicación.
 
 import { redirect } from 'next/navigation';
 import { getSessionUser } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
-import PlaneadorShell from './PlaneadorShell';
+import PlaneadorShell from './planeador/PlaneadorShell';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PlaneadorLayout({ children }: { children: React.ReactNode }) {
+export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const sesion = await getSessionUser();
   if (!sesion) redirect('/login');
   if (sesion.debeCambiarPassword) redirect('/cambiar-clave');

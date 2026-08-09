@@ -1,4 +1,4 @@
-// apps/web/app/herramientas/page.tsx
+// apps/web/app/(app)/herramientas/page.tsx
 //
 // Sección "Herramientas": calculadoras para el equipo y los clientes de CERPAT.
 // (Antes vivía en /servicios; esa URL ahora es el portafolio público de la firma.)
@@ -87,54 +87,32 @@ function WinControls() {
 export default function ServiciosPage() {
   const disponibles = TOOLS.filter((t) => t.href).length;
   return (
-    <main style={{ fontFamily: 'var(--ui)', background: 'radial-gradient(1100px 500px at 72% -12%, rgba(52,201,139,0.10), transparent 60%), var(--desk-bg)', minHeight: '100vh', color: 'var(--ink)', padding: '26px 18px 44px', display: 'flex', justifyContent: 'center' }}>
-      <div className="win" style={{ width: '100%', maxWidth: 1080 }}>
-        <div className="win-bar">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="win-logo" src="/logo-cerpat-blanco.svg" alt="CERPAT" />
-          <span className="win-title">Servicios</span>
-          <span className="win-path">cerpat.io/servicios</span>
-          <WinControls />
-        </div>
-
-        <div className="win-toolbar">
-          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Herramientas · <b style={{ color: 'var(--ink)' }}>{disponibles} disponibles</b> · {TOOLS.length - disponibles} en construcción</span>
-        </div>
-
-        <div className="win-body">
-          <p style={{ margin: '0 0 16px', color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.6 }}>
-            Calculadoras y utilidades para el equipo y los clientes de CERPAT. Las marcadas como <em>Próximamente</em> se irán habilitando.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            {TOOLS.map((t) => {
-              const disponible = Boolean(t.href);
-              const card = (
-                <div className="tile" style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', opacity: disponible ? 1 : 0.72 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ width: 46, height: 46, borderRadius: 9, display: 'grid', placeItems: 'center', color: disponible ? 'var(--navy)' : 'var(--muted)', background: disponible ? 'rgba(46,80,144,0.10)' : 'var(--panel-2)', border: '1px solid var(--edge)', flex: 'none' }}>{t.icon}</span>
-                    <span style={{ fontWeight: 750, fontSize: 14.5, lineHeight: 1.2 }}>{t.nombre}</span>
-                  </div>
-                  <p style={{ margin: 0, color: 'var(--muted)', fontSize: 12.8, lineHeight: 1.55, flex: 1 }}>{t.desc}</p>
-                  <div>
-                    {disponible
-                      ? <span className="dbtn primary" style={{ fontSize: 12.5, padding: '7px 14px' }}>Abrir →</span>
-                      : <span className="chip" style={{ color: 'var(--muted)', background: 'var(--panel-2)' }}>Próximamente</span>}
-                  </div>
-                </div>
-              );
-              return disponible
-                ? <a key={t.nombre} href={t.href!} style={{ textDecoration: 'none', color: 'inherit' }}>{card}</a>
-                : <div key={t.nombre}>{card}</div>;
-            })}
-          </div>
-        </div>
-
-        <div className="win-status">
-          <span className="led" /> CERPAT · guiamos a nuestros clientes a la cima
-          <span className="sp" />
-          <span>{disponibles} de {TOOLS.length} herramientas activas</span>
-        </div>
+    <>
+      <p style={{ margin: '0 0 16px', color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.6 }}>
+        Calculadoras y utilidades para el equipo y los clientes de CERPAT. Las marcadas como <em>Próximamente</em> se irán habilitando.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+        {TOOLS.map((t) => {
+          const disponible = Boolean(t.href);
+          const card = (
+            <div className="tile" style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', opacity: disponible ? 1 : 0.72 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ width: 46, height: 46, borderRadius: 9, display: 'grid', placeItems: 'center', color: disponible ? 'var(--navy)' : 'var(--muted)', background: disponible ? 'rgba(46,80,144,0.10)' : 'var(--panel-2)', border: '1px solid var(--edge)', flex: 'none' }}>{t.icon}</span>
+                <span style={{ fontWeight: 750, fontSize: 14.5, lineHeight: 1.2 }}>{t.nombre}</span>
+              </div>
+              <p style={{ margin: 0, color: 'var(--muted)', fontSize: 12.8, lineHeight: 1.55, flex: 1 }}>{t.desc}</p>
+              <div>
+                {disponible
+                  ? <span className="dbtn primary" style={{ fontSize: 12.5, padding: '7px 14px' }}>Abrir →</span>
+                  : <span className="chip" style={{ color: 'var(--muted)', background: 'var(--panel-2)' }}>Próximamente</span>}
+              </div>
+            </div>
+          );
+          return disponible
+            ? <a key={t.nombre} href={t.href!} style={{ textDecoration: 'none', color: 'inherit' }}>{card}</a>
+            : <div key={t.nombre}>{card}</div>;
+        })}
       </div>
-    </main>
+    </>
   );
 }
