@@ -175,7 +175,7 @@ export default function ActividadesEditor() {
               style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', borderBottom: '1px solid var(--line)', background: sel === a.id ? 'rgba(46,80,144,0.10)' : 'transparent', cursor: 'pointer', padding: '9px 12px', fontFamily: 'var(--ui)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--navy)' }}>{a.codigo}</span>
-                {!a.activo && <span style={{ fontSize: 9.5, color: '#cf4436', fontWeight: 700 }}>inactiva</span>}
+                {!a.activo && <span style={{ fontSize: 9.5, color: 'var(--peligro)', fontWeight: 700 }}>inactiva</span>}
                 {a.generaPago && <span title="Genera pago" style={{ marginLeft: 'auto', fontSize: 11 }}>💲</span>}
                 {a.requiereAuditoria && <span title="Requiere auditoría" style={{ fontSize: 11 }}>🛡</span>}
               </div>
@@ -188,7 +188,7 @@ export default function ActividadesEditor() {
 
       {/* Detalle */}
       <div>
-        {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+        {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
         {sel == null ? (
           <div className="panel" style={{ padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Selecciona una actividad o crea una nueva para editar sus datos y subtareas.</div>
         ) : (
@@ -241,7 +241,7 @@ export default function ActividadesEditor() {
 
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13 }}>{guardando ? 'Guardando…' : sel === 'nueva' ? 'Crear actividad' : 'Guardar cambios'}</button>
-              {sel !== 'nueva' && <button className="dbtn" onClick={eliminar} style={{ fontSize: 13, color: '#cf4436' }}>Eliminar</button>}
+              {sel !== 'nueva' && <button className="dbtn" onClick={eliminar} style={{ fontSize: 13, color: 'var(--peligro)' }}>Eliminar</button>}
             </div>
 
             {/* Subtareas plantilla */}
@@ -263,7 +263,7 @@ export default function ActividadesEditor() {
                         <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderBottom: i < subs.length - 1 ? '1px solid var(--line)' : 'none' }}>
                           <span style={{ fontSize: 11, color: 'var(--muted)', width: 18 }}>{i + 1}</span>
                           <input defaultValue={s.texto} onBlur={(e) => editSub(s, e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} style={{ ...input, flex: 1, padding: '5px 8px' }} />
-                          <button onClick={() => delSub(s)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 14 }}>🗑</button>
+                          <button onClick={() => delSub(s)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 14 }}>🗑</button>
                         </div>
                       ))}
                     </div>

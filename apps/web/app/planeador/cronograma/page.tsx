@@ -27,9 +27,9 @@ async function fetchMes(periodo: string): Promise<Cumpl | null> {
 }
 
 function colorPct(p: number): { fg: string; bg: string } {
-  if (p >= 85) return { fg: '#15934F', bg: 'rgba(34,166,112,0.16)' };
-  if (p >= 60) return { fg: '#C77A0A', bg: 'rgba(198,124,0,0.16)' };
-  return { fg: '#D23B32', bg: 'rgba(207,68,54,0.16)' };
+  if (p >= 85) return { fg: 'var(--exito)', bg: 'rgba(34,166,112,0.16)' };
+  if (p >= 60) return { fg: 'var(--alerta)', bg: 'rgba(198,124,0,0.16)' };
+  return { fg: 'var(--peligro)', bg: 'rgba(207,68,54,0.16)' };
 }
 
 export default async function CronogramaPage({ searchParams }: { searchParams?: Record<string, string> }) {
@@ -88,8 +88,8 @@ export default async function CronogramaPage({ searchParams }: { searchParams?: 
       {/* KPIs anuales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 16 }}>
         <div className="tile"><div className="k">Actividades</div><div className="v" style={{ color: 'var(--navy)' }}>{totAnual}</div><div className="s">del año</div></div>
-        <div className="tile"><div className="k">Ejecutadas</div><div className="v" style={{ color: '#15934F' }}>{ejecAnual}</div><div className="s">{pctAnual}% cumplimiento</div></div>
-        <div className="tile"><div className="k">Vencidas</div><div className="v" style={{ color: vencAnual ? '#D23B32' : '#8a94a6' }}>{vencAnual}</div><div className="s">atraso acumulado</div></div>
+        <div className="tile"><div className="k">Ejecutadas</div><div className="v" style={{ color: 'var(--exito)' }}>{ejecAnual}</div><div className="s">{pctAnual}% cumplimiento</div></div>
+        <div className="tile"><div className="k">Vencidas</div><div className="v" style={{ color: vencAnual ? 'var(--peligro)' : 'var(--neutro)' }}>{vencAnual}</div><div className="s">atraso acumulado</div></div>
         <div className="tile"><div className="k">{eje === 'area' ? 'Áreas' : 'Clientes'}</div><div className="v" style={{ color: 'var(--navy)' }}>{rows.length}</div><div className="s">en el plan</div></div>
       </div>
 

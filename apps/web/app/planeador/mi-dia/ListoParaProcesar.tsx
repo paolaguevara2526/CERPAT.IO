@@ -7,11 +7,11 @@
 import { useEffect, useState } from 'react';
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
-  por_iniciar: { label: 'Por iniciar', color: '#5b6a82' },
-  en_curso: { label: 'En curso', color: '#2f6fd0' },
-  en_revision: { label: 'En revisión', color: '#c67c00' },
-  terminado: { label: 'Terminado', color: '#22a670' },
-  no_realizado: { label: 'No realizado', color: '#cf4436' },
+  por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
+  en_curso: { label: 'En curso', color: 'var(--info)' },
+  en_revision: { label: 'En revisión', color: 'var(--alerta)' },
+  terminado: { label: 'Terminado', color: 'var(--exito)' },
+  no_realizado: { label: 'No realizado', color: 'var(--peligro)' },
 };
 const ESTADOS_EDIT = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'no_realizado'];
 
@@ -76,8 +76,8 @@ export default function ListoParaProcesar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
         <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>🟢 Listo para procesar</h2>
         <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>El insumo ya fue entregado — puedes arrancar.</span>
-        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'baseline', gap: 6, background: '#eafaf1', border: '1px solid #bfe8d2', borderRadius: 20, padding: '4px 12px' }}>
-          <b style={{ fontSize: 14, color: '#1c8a5e' }}>{data.total}</b>
+        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'var(--exito-suave)', border: '1px solid #bfe8d2', borderRadius: 20, padding: '4px 12px' }}>
+          <b style={{ fontSize: 14, color: 'var(--green-edge)' }}>{data.total}</b>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>por procesar</span>
         </span>
       </div>
@@ -103,14 +103,14 @@ export default function ListoParaProcesar() {
                   <td style={{ ...td, color: 'var(--muted)' }}>{t.titulo}</td>
                   <td style={{ ...td, color: 'var(--muted)' }}>{t.area ?? '—'}</td>
                   <td style={{ ...td, whiteSpace: 'nowrap' }}>
-                    <span title={fmtFecha(t.listoDesde)} style={{ fontSize: 11.5, fontWeight: 700, color: '#1c8a5e', background: '#eafaf1', border: '1px solid #bfe8d2', borderRadius: 20, padding: '2px 8px' }}>✓ {listoRel(t.listoDesde)}</span>
+                    <span title={fmtFecha(t.listoDesde)} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--green-edge)', background: 'var(--exito-suave)', border: '1px solid #bfe8d2', borderRadius: 20, padding: '2px 8px' }}>✓ {listoRel(t.listoDesde)}</span>
                   </td>
                   <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtFecha(t.fechaVencimiento)}</td>
                   <td style={td}>
                     <select value={t.estado} onChange={(e) => cambiarEstado(t.id, e.target.value)} style={{ ...inp, fontWeight: 700, color: em.color, cursor: 'pointer' }}>
                       {ESTADOS_EDIT.map((e) => <option key={e} value={e}>{ESTADOS[e].label}</option>)}
                     </select>
-                    {msg && msg.id === t.id && <div style={{ marginTop: 4, fontSize: 11.5, color: '#b42318', fontWeight: 600 }}>{msg.texto}</div>}
+                    {msg && msg.id === t.id && <div style={{ marginTop: 4, fontSize: 11.5, color: 'var(--peligro-fuerte)', fontWeight: 600 }}>{msg.texto}</div>}
                   </td>
                 </tr>
               );

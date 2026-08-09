@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { tinte } from '@/app/_components/color';
 type Pago = {
   id: string; obligacion: string; periodo: string | null; anio?: number; fechaVencimiento: string; estado: string;
   valorPago: number | null; fechaLimitePago: string | null; consecuencia: string;
@@ -14,12 +15,12 @@ type Pago = {
 const ANIO = 2026;
 const cop = (n: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Math.round(n || 0));
 const EST: Record<string, { label: string; color: string }> = {
-  presentado_sin_pago: { label: 'Por pagar', color: '#c67c00' },
-  presentado_pagado: { label: 'Pagado', color: '#22a670' },
-  pendiente: { label: 'Pendiente', color: '#5b6a82' },
-  no_presentado: { label: 'No presentado', color: '#cf4436' },
-  presentado_cero: { label: 'Presentado en $0', color: '#14a8a0' },
-  no_obligado: { label: 'No obligado', color: '#9aa3b2' },
+  presentado_sin_pago: { label: 'Por pagar', color: 'var(--alerta)' },
+  presentado_pagado: { label: 'Pagado', color: 'var(--exito)' },
+  pendiente: { label: 'Pendiente', color: 'var(--muted)' },
+  no_presentado: { label: 'No presentado', color: 'var(--peligro)' },
+  presentado_cero: { label: 'Presentado en $0', color: 'var(--cero)' },
+  no_obligado: { label: 'No obligado', color: 'var(--neutro)' },
 };
 function fFecha(iso: string | null) { if (!iso) return '—'; try { const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
 const totalPagar = (p: Pago) => (p.estado === 'presentado_pagado' ? 0 : (p.valorPago ?? 0) + (p.interesMora ?? 0) + (p.sancion ?? 0));
@@ -54,12 +55,12 @@ export default function PortalPagos() {
       <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Pagos</h1>
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>Tus obligaciones por pagar, con la fecha límite, el interés de mora y la sanción calculados a hoy. Solo consulta.</p>
 
-      {error && <div className="panel" style={{ padding: '12px 14px', color: '#b42318', fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+      {error && <div className="panel" style={{ padding: '12px 14px', color: 'var(--peligro-fuerte)', fontWeight: 600, marginBottom: 12 }}>{error}</div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 16 }}>
         <div className="panel" style={{ padding: '13px 15px' }}><div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' }}>Por pagar</div><div style={{ fontSize: 24, fontWeight: 800 }}>{kpis.count}</div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>obligaciones</div></div>
         <div className="panel" style={{ padding: '13px 15px' }}><div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' }}>Valor a pagar</div><div style={{ fontSize: 20, fontWeight: 800, color: 'var(--navy)' }}>{cop(kpis.valor)}</div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>incluye mora y sanción</div></div>
-        <div className="panel" style={{ padding: '13px 15px' }}><div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' }}>En mora</div><div style={{ fontSize: 24, fontWeight: 800, color: kpis.enMora ? '#cf4436' : undefined }}>{kpis.enMora}</div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{cop(kpis.mora)} en intereses/sanción</div></div>
+        <div className="panel" style={{ padding: '13px 15px' }}><div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' }}>En mora</div><div style={{ fontSize: 24, fontWeight: 800, color: kpis.enMora ? 'var(--peligro)' : undefined }}>{kpis.enMora}</div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{cop(kpis.mora)} en intereses/sanción</div></div>
       </div>
 
       <div className="panel" style={{ overflowX: 'auto' }}>
@@ -74,19 +75,19 @@ export default function PortalPagos() {
             ) : items.length === 0 ? (
               <tr><td colSpan={9} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>No tienes obligaciones de pago registradas. 🎉</td></tr>
             ) : items.map((p) => {
-              const em = EST[p.estado] ?? { label: p.estado, color: '#5b6a82' };
+              const em = EST[p.estado] ?? { label: p.estado, color: 'var(--muted)' };
               const mora = (p.diasMora ?? 0) > 0;
               return (
                 <tr key={p.id}>
                   <td>{p.obligacion}{p.empresa && <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{p.empresa}</div>}{p.municipio && <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{p.municipio}</div>}</td>
                   <td style={{ color: 'var(--muted)' }}>{p.periodo ?? '—'}{p.anio ? ` ${p.anio}` : ''}</td>
                   <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fFecha(p.fechaVencimiento)}</td>
-                  <td style={{ whiteSpace: 'nowrap', color: mora ? '#cf4436' : 'var(--muted)', fontWeight: mora ? 800 : 500 }}>{fFecha(p.fechaLimitePago)}{mora ? <div style={{ fontSize: 10 }}>{p.diasMora} días</div> : null}</td>
+                  <td style={{ whiteSpace: 'nowrap', color: mora ? 'var(--peligro)' : 'var(--muted)', fontWeight: mora ? 800 : 500 }}>{fFecha(p.fechaLimitePago)}{mora ? <div style={{ fontSize: 10 }}>{p.diasMora} días</div> : null}</td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{p.valorPago != null ? cop(p.valorPago) : '—'}</td>
-                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap', color: p.interesMora ? '#cf4436' : 'var(--muted)' }}>{p.interesMora ? cop(p.interesMora) : '—'}</td>
-                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap', color: p.sancion ? '#cf4436' : 'var(--muted)' }}>{p.sancion ? cop(p.sancion) : '—'}</td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap', color: p.interesMora ? 'var(--peligro)' : 'var(--muted)' }}>{p.interesMora ? cop(p.interesMora) : '—'}</td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap', color: p.sancion ? 'var(--peligro)' : 'var(--muted)' }}>{p.sancion ? cop(p.sancion) : '—'}</td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 800 }}>{p.estado === 'presentado_pagado' ? '—' : cop(totalPagar(p))}</td>
-                  <td><span style={{ fontSize: 11, fontWeight: 800, color: em.color, background: `${em.color}18`, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{em.label}</span></td>
+                  <td><span style={{ fontSize: 11, fontWeight: 800, color: em.color, background: `${tinte(em.color, 12)}`, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{em.label}</span></td>
                 </tr>
               );
             })}

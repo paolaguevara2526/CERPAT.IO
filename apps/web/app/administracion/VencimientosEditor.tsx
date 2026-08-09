@@ -67,7 +67,7 @@ export default function VencimientosEditor() {
           Período <input style={{ ...input, width: 110 }} value={periodo} onChange={(e) => setPeriodo(e.target.value)} placeholder="YYYY-MM" />
         </label>
       </div>
-      {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, margin: '8px 0' }}>{error}</div>}
+      {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, margin: '8px 0' }}>{error}</div>}
 
       <div className="panel" style={{ marginTop: 10, overflowX: 'auto' }}>
         <table className="dt" style={{ minWidth: 720 }}>
@@ -105,7 +105,7 @@ export default function VencimientosEditor() {
                 <td><input style={input} defaultValue={v.periodo ?? ''} onBlur={(e) => patch(v.id, 'periodo', e.target.value)} /></td>
                 <td><input type="date" style={input} defaultValue={iso(v.fechaVencimiento)} onChange={(e) => patch(v.id, 'fechaVencimiento', e.target.value)} /></td>
                 <td><input style={input} defaultValue={v.nitRango ?? ''} onBlur={(e) => patch(v.id, 'nitRango', e.target.value)} /></td>
-                <td><button onClick={() => eliminar(v)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 14 }}>🗑</button></td>
+                <td><button onClick={() => eliminar(v)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 14 }}>🗑</button></td>
               </tr>
             ))}
           </tbody>

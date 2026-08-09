@@ -61,7 +61,7 @@ export default function CambiarClavePage() {
             <label style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--muted)' }}>Confirmar nueva contraseña
               <input style={input} type="password" autoComplete="new-password" required value={confirmar} onChange={(e) => setConfirmar(e.target.value)} placeholder="repite la nueva" />
             </label>
-            {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{error}</div>}
+            {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{error}</div>}
             <button type="submit" className="dbtn primary" disabled={cargando} style={{ justifyContent: 'center', padding: '11px', fontSize: 14, opacity: cargando ? 0.7 : 1 }}>
               {cargando ? 'Guardando…' : 'Guardar y continuar'}
             </button>

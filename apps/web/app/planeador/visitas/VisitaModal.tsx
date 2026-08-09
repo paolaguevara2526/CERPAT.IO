@@ -9,14 +9,14 @@ import { useEffect, useState, useCallback } from 'react';
 
 type Opcion = { id: string; nombre: string };
 export const VISITA_ESTADOS: { k: string; label: string; color: string }[] = [
-  { k: 'programada', label: 'Programada', color: '#2f6fd0' },
-  { k: 'realizada', label: 'Realizada', color: '#22a670' },
-  { k: 'cancelada', label: 'Cancelada', color: '#9aa3b2' },
+  { k: 'programada', label: 'Programada', color: 'var(--info)' },
+  { k: 'realizada', label: 'Realizada', color: 'var(--exito)' },
+  { k: 'cancelada', label: 'Cancelada', color: 'var(--neutro)' },
 ];
 export const COMPROMISO_ESTADOS: { k: string; label: string; color: string }[] = [
-  { k: 'pendiente', label: 'Pendiente', color: '#c67c00' },
-  { k: 'cumplido', label: 'Cumplido', color: '#22a670' },
-  { k: 'cancelado', label: 'Cancelado', color: '#9aa3b2' },
+  { k: 'pendiente', label: 'Pendiente', color: 'var(--alerta)' },
+  { k: 'cumplido', label: 'Cumplido', color: 'var(--exito)' },
+  { k: 'cancelado', label: 'Cancelado', color: 'var(--neutro)' },
 ];
 
 type Compromiso = { id?: string; descripcion: string; fechaLimite: string; responsableTipo: 'firma' | 'cliente'; responsableId: string; responsableExterno: string; area: string; estado: string };
@@ -43,7 +43,7 @@ function ListaEnumerada({ titulo, hint, icono, items, onChange, placeholder }: {
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ flex: '0 0 auto', width: 22, height: 22, borderRadius: 6, background: 'var(--panel-2)', color: 'var(--muted)', fontWeight: 800, fontSize: 11.5, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
             <input style={input} value={it} onChange={(e) => set(i, e.target.value)} placeholder={placeholder} />
-            <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 15 }}>🗑</button>
+            <button type="button" onClick={() => onChange(items.filter((_, j) => j !== i))} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 15 }}>🗑</button>
           </div>
         ))}
       </div>
@@ -233,7 +233,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
           <div className="win-ctl"><button className="close" onClick={onClose} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
         </div>
         <div className="win-body" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
+          {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
           {cargando ? <div style={{ color: 'var(--muted)', fontSize: 13, padding: 8 }}>Cargando…</div> : (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -284,13 +284,13 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
                       <div key={c.id ?? `n${i}`} style={{ border: '1px solid var(--line)', borderRadius: 6, padding: '9px 10px', display: 'flex', flexDirection: 'column', gap: 7, background: 'var(--panel-2)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <input style={input} value={c.descripcion} onChange={(e) => setCompromiso(i, 'descripcion', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} placeholder="Compromiso acordado…" />
-                          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, whiteSpace: 'nowrap', color: esCliente ? '#7a5bd0' : '#2E5090', background: esCliente ? '#efeafb' : '#e7edf8', borderRadius: 20, padding: '3px 8px' }}>{esCliente ? 'del cliente' : 'de la firma'}</span>
+                          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, whiteSpace: 'nowrap', color: esCliente ? '#7a5bd0' : 'var(--navy)', background: esCliente ? '#efeafb' : 'var(--info-suave)', borderRadius: 20, padding: '3px 8px' }}>{esCliente ? 'del cliente' : 'de la firma'}</span>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 7, alignItems: 'center' }}>
                           <div style={{ display: 'inline-flex', border: '1px solid var(--edge-strong)', borderRadius: 6, overflow: 'hidden' }}>
                             {(['firma', 'cliente'] as const).map((t) => (
                               <button key={t} type="button" onClick={() => { setCompromiso(i, 'responsableTipo', t); }} onBlur={() => guardarCompromisoExistente(i)}
-                                style={{ border: 'none', cursor: 'pointer', fontSize: 11.5, fontWeight: 700, padding: '6px 10px', fontFamily: 'var(--ui)', background: c.responsableTipo === t ? '#2E5090' : 'var(--panel)', color: c.responsableTipo === t ? '#fff' : 'var(--muted)' }}>
+                                style={{ border: 'none', cursor: 'pointer', fontSize: 11.5, fontWeight: 700, padding: '6px 10px', fontFamily: 'var(--ui)', background: c.responsableTipo === t ? 'var(--navy)' : 'var(--panel)', color: c.responsableTipo === t ? '#fff' : 'var(--muted)' }}>
                                 {t === 'firma' ? 'Firma' : 'Cliente'}
                               </button>
                             ))}
@@ -310,7 +310,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
                           <select style={inputMini} value={c.estado} onChange={(e) => setCompromiso(i, 'estado', e.target.value)} onBlur={() => guardarCompromisoExistente(i)} title="Estado">
                             {COMPROMISO_ESTADOS.map((s) => <option key={s.k} value={s.k}>{s.label}</option>)}
                           </select>
-                          <button type="button" onClick={() => eliminarCompromiso(i)} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 15 }}>🗑</button>
+                          <button type="button" onClick={() => eliminarCompromiso(i)} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 15 }}>🗑</button>
                         </div>
                       </div>
                     );
@@ -322,7 +322,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
               <ListaEnumerada titulo="Observaciones" hint="enumeradas" icono="📝" items={observaciones} onChange={setObservaciones} placeholder="Observación…" />
 
               <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                {editar ? <button className="dbtn" onClick={eliminarVisita} disabled={guardando} style={{ fontSize: 13, color: '#cf4436', borderColor: '#f3d4d0' }}>Eliminar</button> : <span />}
+                {editar ? <button className="dbtn" onClick={eliminarVisita} disabled={guardando} style={{ fontSize: 13, color: 'var(--peligro)', borderColor: 'var(--peligro-suave)' }}>Eliminar</button> : <span />}
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="dbtn" onClick={onClose} style={{ fontSize: 13 }}>Cancelar</button>
                   <button className="dbtn" onClick={imprimirActa} style={{ fontSize: 13 }}>🖨 Imprimir acta</button>

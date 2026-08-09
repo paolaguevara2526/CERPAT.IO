@@ -6,6 +6,7 @@ import { fetchTareas, ESTADO_META, nombrePeriodo, type Tarea } from './tareas';
 import { fetchCumplimiento, colorPct } from './inicio';
 
 
+import { tinte } from '@/app/_components/color';
 export const metadata = { title: 'Inicio' };
 export const dynamic = 'force-dynamic';
 
@@ -19,8 +20,8 @@ function primerNombre(nombre: string): string {
 }
 
 function EstadoChip({ estado }: { estado: string }) {
-  const em = ESTADO_META[estado] ?? { label: estado, color: '#5b6a82' };
-  return <span className="chip" style={{ color: em.color, background: `${em.color}18`, borderColor: `${em.color}44`, fontSize: 10.5 }}>{em.label}</span>;
+  const em = ESTADO_META[estado] ?? { label: estado, color: 'var(--muted)' };
+  return <span className="chip" style={{ color: em.color, background: `${tinte(em.color, 12)}`, borderColor: `${tinte(em.color, 30)}`, fontSize: 10.5 }}>{em.label}</span>;
 }
 
 export default async function InicioPage() {
@@ -39,9 +40,9 @@ export default async function InicioPage() {
 
   const tiles = [
     { k: 'Mis tareas', v: misTareas.length, color: 'var(--navy)', s: 'del período' },
-    { k: 'Pendientes', v: pendientes.length, color: '#2f6fd0', s: 'sin ejecutar' },
-    { k: 'Vencidas', v: vencidas.length, color: vencidas.length > 0 ? '#d64b3f' : '#8a94a6', s: 'requieren atención' },
-    { k: 'Ejecutadas', v: ejecutadasMias, color: '#22a670', s: 'terminadas/auditadas' },
+    { k: 'Pendientes', v: pendientes.length, color: 'var(--info)', s: 'sin ejecutar' },
+    { k: 'Vencidas', v: vencidas.length, color: vencidas.length > 0 ? 'var(--peligro)' : 'var(--neutro)', s: 'requieren atención' },
+    { k: 'Ejecutadas', v: ejecutadasMias, color: 'var(--exito)', s: 'terminadas/auditadas' },
   ];
 
   const accesos = [
@@ -76,7 +77,7 @@ export default async function InicioPage() {
                 <thead><tr><th>Actividad</th><th>Cliente</th><th style={{ whiteSpace: 'nowrap' }}>Vence</th><th>Estado</th></tr></thead>
                 <tbody>
                   {mias.error ? (
-                    <tr><td colSpan={4} style={{ padding: 22, textAlign: 'center', color: '#b42318' }}>No se pudieron cargar tus tareas: {mias.error}.</td></tr>
+                    <tr><td colSpan={4} style={{ padding: 22, textAlign: 'center', color: 'var(--peligro-fuerte)' }}>No se pudieron cargar tus tareas: {mias.error}.</td></tr>
                   ) : proximas.length === 0 ? (
                     <tr><td colSpan={4} style={{ padding: 26, textAlign: 'center', color: 'var(--muted)' }}>No tienes tareas pendientes este período. 🎉</td></tr>
                   ) : proximas.map((t) => {
@@ -85,7 +86,7 @@ export default async function InicioPage() {
                       <tr key={t.id}>
                         <td style={{ fontWeight: 600 }}>{t.titulo}</td>
                         <td style={{ color: 'var(--muted)' }}>{t.empresa ?? '—'}</td>
-                        <td style={{ whiteSpace: 'nowrap', fontWeight: venc ? 800 : 500, color: venc ? '#d64b3f' : 'var(--muted)' }}>{fmtFecha(t.fechaVencimiento)}</td>
+                        <td style={{ whiteSpace: 'nowrap', fontWeight: venc ? 800 : 500, color: venc ? 'var(--peligro)' : 'var(--muted)' }}>{fmtFecha(t.fechaVencimiento)}</td>
                         <td><EstadoChip estado={t.estado} /></td>
                       </tr>
                     );
@@ -118,8 +119,8 @@ export default async function InicioPage() {
                     <div style={{ width: `${kpisGlob.cumplimiento}%`, height: '100%', background: colorPct(kpisGlob.cumplimiento) }} />
                   </div>
                   <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: 12.5 }}>
-                    <span style={{ color: 'var(--muted)' }}>Vencidas: <strong style={{ color: kpisGlob.vencidas > 0 ? '#d64b3f' : 'var(--ink)' }}>{kpisGlob.vencidas}</strong></span>
-                    <span style={{ color: 'var(--muted)' }}>Por auditar: <strong style={{ color: kpisGlob.porAuditar > 0 ? '#d98a00' : 'var(--ink)' }}>{kpisGlob.porAuditar}</strong></span>
+                    <span style={{ color: 'var(--muted)' }}>Vencidas: <strong style={{ color: kpisGlob.vencidas > 0 ? 'var(--peligro)' : 'var(--ink)' }}>{kpisGlob.vencidas}</strong></span>
+                    <span style={{ color: 'var(--muted)' }}>Por auditar: <strong style={{ color: kpisGlob.porAuditar > 0 ? 'var(--alerta)' : 'var(--ink)' }}>{kpisGlob.porAuditar}</strong></span>
                   </div>
                 </>
               )}

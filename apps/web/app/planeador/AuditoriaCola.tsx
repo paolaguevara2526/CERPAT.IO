@@ -48,8 +48,8 @@ function Tarjeta({ t }: { t: TareaAuditoria }) {
     <article className="panel" style={{ padding: '13px 15px', display: 'flex', flexDirection: 'column', gap: 9, opacity: hecho ? 0.55 : 1 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 700, fontSize: 14 }}>{t.titulo}</span>
-        {t.requiereRevisionTecnica && <span className="chip" style={{ fontSize: 10, color: '#2f6fd0', background: '#2f6fd018', borderColor: '#2f6fd044' }}>Revisión técnica</span>}
-        <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: vencida ? 800 : 500, color: vencida ? '#d64b3f' : 'var(--muted)', whiteSpace: 'nowrap' }}>Vence {fmtFecha(t.fechaVencimiento)}</span>
+        {t.requiereRevisionTecnica && <span className="chip" style={{ fontSize: 10, color: 'var(--info)', background: '#2f6fd018', borderColor: '#2f6fd044' }}>Revisión técnica</span>}
+        <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: vencida ? 800 : 500, color: vencida ? 'var(--peligro)' : 'var(--muted)', whiteSpace: 'nowrap' }}>Vence {fmtFecha(t.fechaVencimiento)}</span>
       </div>
       <div style={{ fontSize: 12.5, color: 'var(--muted)', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
         <span><strong style={{ color: 'var(--ink)' }}>{t.empresa ?? '—'}</strong></span>
@@ -63,10 +63,10 @@ function Tarjeta({ t }: { t: TareaAuditoria }) {
         </div>
       )}
 
-      {error && <div style={{ fontSize: 12, color: '#b42318', fontWeight: 600 }}>{error}</div>}
+      {error && <div style={{ fontSize: 12, color: 'var(--peligro-fuerte)', fontWeight: 600 }}>{error}</div>}
 
       {hecho ? (
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#22a670' }}>{hecho}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--exito)' }}>{hecho}</div>
       ) : modo === 'devolver' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <textarea

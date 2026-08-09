@@ -11,7 +11,7 @@ import { apiFetch } from '@/lib/session';
 export const metadata = { title: 'Clientes' };
 export const dynamic = 'force-dynamic';
 
-const BRAND = '#48D597';
+const BRAND = 'var(--green)';
 
 type Empresa = {
   id: string;
@@ -56,9 +56,9 @@ export default async function ClientesPage() {
 
       <section style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 32px 60px' }}>
         {error ? (
-          <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 12, padding: '18px 20px', fontSize: 14, fontWeight: 600 }}>
+          <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 12, padding: '18px 20px', fontSize: 14, fontWeight: 600 }}>
             No se pudieron cargar los clientes: {error}.
-            <div style={{ fontWeight: 400, marginTop: 6, color: '#7a271d' }}>
+            <div style={{ fontWeight: 400, marginTop: 6, color: 'var(--peligro-fuerte)' }}>
               Verifica que la API esté en línea y responda en <code>/empresas</code>.
             </div>
           </div>
@@ -66,7 +66,7 @@ export default async function ClientesPage() {
           <>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
               <span style={{ fontSize: 34, fontWeight: 800, color: BRAND }}>{empresas.length}</span>
-              <span style={{ fontSize: 14, color: '#667085', fontWeight: 600 }}>empresas cliente cargadas en Postgres</span>
+              <span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 600 }}>empresas cliente cargadas en Postgres</span>
             </div>
             <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 2px rgba(16,24,40,0.05),0 4px 14px rgba(16,24,40,0.06)', overflow: 'hidden' }}>
               <div style={{ overflowX: 'auto' }}>
@@ -74,22 +74,22 @@ export default async function ClientesPage() {
                   <thead>
                     <tr>
                       {['Razón social', 'NIT', 'Tipo', 'Servicio', 'Asesor', 'Régimen'].map((h) => (
-                        <th key={h} style={{ textAlign: 'left', textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.4, color: '#667085', fontWeight: 800, padding: '12px 14px', borderBottom: '1px solid #E4E7EC', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h} style={{ textAlign: 'left', textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '12px 14px', borderBottom: '1px solid #E4E7EC', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {empresas.length === 0 ? (
-                      <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#667085' }}>No hay empresas cargadas todavía.</td></tr>
+                      <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>No hay empresas cargadas todavía.</td></tr>
                     ) : (
                       empresas.map((e) => (
                         <tr key={e.id}>
                           <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', fontWeight: 600 }}>{e.nombre}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467', fontFamily: 'ui-monospace, monospace' }}>{e.nit ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467' }}>{e.tipo ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467' }}>{e.servicio ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467' }}>{e.asesorNombre ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: '#475467' }}>{e.regimen ?? '—'}</td>
+                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)', fontFamily: 'ui-monospace, monospace' }}>{e.nit ?? '—'}</td>
+                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)' }}>{e.tipo ?? '—'}</td>
+                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)' }}>{e.servicio ?? '—'}</td>
+                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)' }}>{e.asesorNombre ?? '—'}</td>
+                          <td style={{ padding: '11px 14px', borderBottom: '1px solid #F0F1F3', color: 'var(--muted)' }}>{e.regimen ?? '—'}</td>
                         </tr>
                       ))
                     )}
@@ -97,7 +97,7 @@ export default async function ClientesPage() {
                 </table>
               </div>
             </div>
-            <p style={{ fontSize: 12.5, color: '#667085', marginTop: 14 }}>
+            <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 14 }}>
               Los correos de contacto no se muestran en esta vista pública por privacidad; se servirán con autenticación.
             </p>
           </>

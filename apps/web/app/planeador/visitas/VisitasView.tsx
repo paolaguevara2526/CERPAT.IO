@@ -7,6 +7,7 @@ import VisitaModal, { VISITA_ESTADOS } from './VisitaModal';
 import FiltroColumna from '../../administracion/FiltroColumna';
 import SeguimientoVisitas from './SeguimientoVisitas';
 
+import { tinte } from '@/app/_components/color';
 type Visita = {
   id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null;
   objetivo: string | null; estado: string; compromisosTotal: number; compromisosPendientes: number; compromisosCumplidos: number;
@@ -17,7 +18,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 function mesActual() { const n = new Date(); return `${n.getFullYear()}-${pad(n.getMonth() + 1)}`; }
 function desplazar(mes: string, delta: number) { const [y, m] = mes.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + delta, 1)); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`; }
 function fFecha(iso: string) { try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return iso.slice(0, 10); } }
-const estadoMeta = (k: string) => VISITA_ESTADOS.find((s) => s.k === k) ?? { label: k, color: '#5b6a82' };
+const estadoMeta = (k: string) => VISITA_ESTADOS.find((s) => s.k === k) ?? { label: k, color: 'var(--muted)' };
 
 // Columnas filtrables y el valor por el que se filtra cada una.
 const COLS = ['fecha', 'cliente', 'responsable', 'objetivo', 'estado', 'compromisos'] as const;
@@ -105,7 +106,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
         </div>
       </div>
 
-      {error && <div className="panel" style={{ padding: '12px 14px', color: '#b42318', fontWeight: 600, marginBottom: 10 }}>{error}</div>}
+      {error && <div className="panel" style={{ padding: '12px 14px', color: 'var(--peligro-fuerte)', fontWeight: 600, marginBottom: 10 }}>{error}</div>}
 
       {tab === 'seguimiento' ? <SeguimientoVisitas /> : (
       <>
@@ -150,7 +151,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
                     <td style={{ fontWeight: 600 }}>{v.empresa ?? '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{v.responsable ?? '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{v.objetivo ?? '—'}</td>
-                    <td><span style={{ fontSize: 11.5, fontWeight: 800, color: em.color, background: `${em.color}18`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span></td>
+                    <td><span style={{ fontSize: 11.5, fontWeight: 800, color: em.color, background: `${tinte(em.color, 12)}`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span></td>
                     <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{v.compromisosTotal === 0 ? '—' : `${v.compromisosCumplidos}/${v.compromisosTotal} cumplidos`}</td>
                   </tr>
                 );

@@ -5,13 +5,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { tinte } from '@/app/_components/color';
 const META: Record<string, { label: string; color: string }> = {
-  por_iniciar: { label: 'Por iniciar', color: '#5b6a82' },
-  en_curso: { label: 'En curso', color: '#2f6fd0' },
-  en_revision: { label: 'En revisión', color: '#c67c00' },
-  terminado: { label: 'Terminado', color: '#22a670' },
-  auditado: { label: 'Auditado', color: '#1c8a5e' },
-  no_realizado: { label: 'No realizado', color: '#cf4436' },
+  por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
+  en_curso: { label: 'En curso', color: 'var(--info)' },
+  en_revision: { label: 'En revisión', color: 'var(--alerta)' },
+  terminado: { label: 'Terminado', color: 'var(--exito)' },
+  auditado: { label: 'Auditado', color: 'var(--green-edge)' },
+  no_realizado: { label: 'No realizado', color: 'var(--peligro)' },
 };
 
 export default function EstadoSelect({ id, estado }: { id: string; estado: string }) {
@@ -46,13 +47,13 @@ export default function EstadoSelect({ id, estado }: { id: string; estado: strin
         value={valor} disabled={guardando} onChange={(e) => cambiar(e.target.value)}
         title="Cambiar estado"
         style={{
-          fontSize: 11.5, fontWeight: 800, color, background: `${color}18`, border: `1px solid ${color}44`,
+          fontSize: 11.5, fontWeight: 800, color, background: `${tinte(color, 12)}`, border: `1px solid ${tinte(color, 30)}`,
           borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontFamily: 'var(--ui)', opacity: guardando ? 0.6 : 1,
         }}
       >
         {Object.entries(META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
       </select>
-      {error && <span style={{ fontSize: 10.5, color: '#cf4436', maxWidth: 160 }}>{error}</span>}
+      {error && <span style={{ fontSize: 10.5, color: 'var(--peligro)', maxWidth: 160 }}>{error}</span>}
     </span>
   );
 }

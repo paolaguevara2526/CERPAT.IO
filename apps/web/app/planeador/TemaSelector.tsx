@@ -9,11 +9,11 @@ type Tema = { id: string; nombre: string; sw: [string, string, string] };
 // Las muestras reflejan el CROMO (barra superior + menú, que van del mismo color)
 // y el acento: los tres tonos que realmente cambian al elegir un tema.
 const TEMAS: Tema[] = [
-  { id: 'claro', nombre: 'Claro (navy)', sw: ['#35589b', '#16294a', '#48D597'] },
+  { id: 'claro', nombre: 'Claro (navy)', sw: ['#35589b', 'var(--navy-2)', 'var(--green)'] },
   { id: 'escritorio', nombre: 'Escritorio (clara)', sw: ['#ffffff', '#e4eaf4', '#22a670'] },
-  { id: 'navy', nombre: 'Azul profundo', sw: ['#1b3663', '#060d18', '#48D597'] },
-  { id: 'oscuro', nombre: 'Oscuro', sw: ['#2f3648', '#12141c', '#48D597'] },
-  { id: 'verde', nombre: 'Verde CERPAT', sw: ['#1ea56e', '#0c3f2e', '#0f1d33'] },
+  { id: 'navy', nombre: 'Azul profundo', sw: ['#1b3663', '#060d18', 'var(--green)'] },
+  { id: 'oscuro', nombre: 'Oscuro', sw: ['#2f3648', '#12141c', 'var(--green)'] },
+  { id: 'verde', nombre: 'Verde CERPAT', sw: ['#1ea56e', '#0c3f2e', 'var(--navy-2)'] },
 ];
 
 export default function TemaSelector() {
@@ -55,7 +55,7 @@ export default function TemaSelector() {
                 {t.sw.map((c, i) => <span key={i} style={{ width: 14, height: 18, background: c }} />)}
               </span>
               <span style={{ fontSize: 13, fontWeight: t.id === tema ? 800 : 600, flex: 1 }}>{t.nombre}</span>
-              {t.id === tema && <span style={{ color: '#22a670', fontWeight: 800 }}>✓</span>}
+              {t.id === tema && <span style={{ color: 'var(--exito)', fontWeight: 800 }}>✓</span>}
             </button>
           ))}
         </div>

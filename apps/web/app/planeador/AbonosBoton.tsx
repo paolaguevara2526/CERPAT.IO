@@ -72,7 +72,7 @@ export default function AbonosBoton({ id, editable }: { id: string; editable: bo
               <div className="win-ctl"><button className="close" onClick={cerrar} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
             </div>
             <div className="win-body" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
+              {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
 
               {cargando ? (
                 <div style={{ color: 'var(--muted)', fontSize: 13 }}>Cargando…</div>
@@ -80,7 +80,7 @@ export default function AbonosBoton({ id, editable }: { id: string; editable: bo
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
                     <div className="tile"><div className="k">Valor</div><div className="v" style={{ fontSize: 18 }}>${fmtCOP(data.valorPago ?? 0)}</div></div>
-                    <div className="tile"><div className="k">Abonado</div><div className="v" style={{ fontSize: 18, color: '#16794c' }}>${fmtCOP(data.abonado)}</div></div>
+                    <div className="tile"><div className="k">Abonado</div><div className="v" style={{ fontSize: 18, color: 'var(--exito-fuerte)' }}>${fmtCOP(data.abonado)}</div></div>
                     <div className="tile" style={{ borderColor: 'var(--navy)' }}><div className="k">Saldo</div><div className="v" style={{ fontSize: 18, color: 'var(--navy)' }}>${fmtCOP(data.saldo ?? 0)}</div></div>
                   </div>
 
@@ -92,7 +92,7 @@ export default function AbonosBoton({ id, editable }: { id: string; editable: bo
                             <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12.5 }}>{fmtFecha(a.fecha)}</td>
                             <td style={{ fontWeight: 700 }}>${fmtCOP(a.monto)}</td>
                             <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{a.notas ?? ''}</td>
-                            {editable && <td style={{ textAlign: 'right' }}><button className="dbtn" onClick={() => eliminar(a.id)} style={{ fontSize: 11, color: '#cf4436', padding: '2px 7px' }}>Eliminar</button></td>}
+                            {editable && <td style={{ textAlign: 'right' }}><button className="dbtn" onClick={() => eliminar(a.id)} style={{ fontSize: 11, color: 'var(--peligro)', padding: '2px 7px' }}>Eliminar</button></td>}
                           </tr>
                         ))}
                       </tbody></table>

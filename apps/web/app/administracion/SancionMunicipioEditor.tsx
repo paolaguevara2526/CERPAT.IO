@@ -60,7 +60,7 @@ export default function SancionMunicipioEditor() {
         Déjalo <b>vacío</b> para usar la sanción mínima general de la firma (pestaña <b>Parámetros</b>). {conValor > 0 && <span>· {conValor} municipio(s) con valor propio.</span>}
       </p>
 
-      {error && <div className="panel" style={{ padding: '9px 12px', color: '#b42318', fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+      {error && <div className="panel" style={{ padding: '9px 12px', color: 'var(--peligro-fuerte)', fontWeight: 600, marginBottom: 12 }}>{error}</div>}
 
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar municipio…" style={{ ...inp, width: 260, textAlign: 'left', marginBottom: 12 }} />
 
@@ -85,7 +85,7 @@ export default function SancionMunicipioEditor() {
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {sucio(m) && <button className="dbtn primary" onClick={() => guardar(m.id)} disabled={guardando === m.id} style={{ fontSize: 12 }}>{guardando === m.id ? '…' : 'Guardar'}</button>}
-                    {okId === m.id && <span style={{ color: '#16794c', fontSize: 12, fontWeight: 700, marginLeft: 6 }}>✓</span>}
+                    {okId === m.id && <span style={{ color: 'var(--exito-fuerte)', fontSize: 12, fontWeight: 700, marginLeft: 6 }}>✓</span>}
                   </td>
                 </tr>
               ))}

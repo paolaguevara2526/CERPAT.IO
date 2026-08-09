@@ -80,7 +80,7 @@ export default function DocumentosCliente({ empresaId, onCambio }: { empresaId: 
 
   return (
     <div>
-      {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>{error}</div>}
+      {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '7px 10px', fontSize: 12, fontWeight: 600, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
         <div className="tile" style={{ flex: '0 0 auto', minWidth: 150 }}>
@@ -125,7 +125,7 @@ export default function DocumentosCliente({ empresaId, onCambio }: { empresaId: 
                   <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12.5 }}>{fmtFecha(d.createdAt)}</td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button className="dbtn" onClick={() => descargar(d)} style={{ fontSize: 11, padding: '2px 7px' }}>Descargar</button>
-                    <button className="dbtn" onClick={() => eliminar(d)} style={{ fontSize: 11, padding: '2px 7px', color: '#cf4436', marginLeft: 4 }}>Eliminar</button>
+                    <button className="dbtn" onClick={() => eliminar(d)} style={{ fontSize: 11, padding: '2px 7px', color: 'var(--peligro)', marginLeft: 4 }}>Eliminar</button>
                   </td>
                 </tr>
               ))}

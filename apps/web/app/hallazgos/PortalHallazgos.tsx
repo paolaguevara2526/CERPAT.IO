@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import HallazgoModal from './HallazgoModal';
 import { toCSV, parseCSV, descargar, normRiesgo, normPrioridad, normEstado, normFecha } from './csv';
 
+import { tinte } from '@/app/_components/color';
 export type Empresa = { id: string; nombre: string; grupo: string | null };
 export type Hallazgo = {
   id: string; empresaId: string; empresa: string | null; area: string | null; titulo: string; descripcion: string | null;
@@ -16,12 +17,12 @@ export type Hallazgo = {
 type Resumen = { kpis: { total: number; resueltos: number; enGestion: number; vencidos: number; pct: number } | null; porEmpresa: { empresaId: string; empresa: string; total: number; resueltos: number; enGestion: number; vencidos: number; pct: number }[] };
 
 export const ESTADO_META: Record<string, { label: string; color: string }> = {
-  pendiente: { label: 'Pendiente', color: '#5b6a82' },
-  en_gestion: { label: 'En gestión', color: '#2f6fd0' },
-  resuelto: { label: 'Resuelto', color: '#22a670' },
+  pendiente: { label: 'Pendiente', color: 'var(--muted)' },
+  en_gestion: { label: 'En gestión', color: 'var(--info)' },
+  resuelto: { label: 'Resuelto', color: 'var(--exito)' },
 };
 export const RIESGO_META: Record<string, { label: string; color: string }> = {
-  alto: { label: 'Alto', color: '#cf4436' }, medio: { label: 'Medio', color: '#c67c00' }, bajo: { label: 'Bajo', color: '#22a670' },
+  alto: { label: 'Alto', color: 'var(--peligro)' }, medio: { label: 'Medio', color: 'var(--alerta)' }, bajo: { label: 'Bajo', color: 'var(--exito)' },
 };
 const PRIORIDAD_LABEL: Record<string, string> = { alta: 'Alta', media: 'Media', baja: 'Baja' };
 const PROGRAMA_KEY = 'cerpat:hallazgos:programa'; // compañías con gestión de hallazgos (localStorage)
@@ -29,7 +30,7 @@ const PROGRAMA_KEY = 'cerpat:hallazgos:programa'; // compañías con gestión de
 // color e interlineado para que la matriz se vea uniforme.
 const textoCelda: React.CSSProperties = { color: 'var(--muted)', fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' };
 
-function colorPct(p: number) { return p >= 85 ? '#22a670' : p >= 60 ? '#c67c00' : '#cf4436'; }
+function colorPct(p: number) { return p >= 85 ? 'var(--exito)' : p >= 60 ? 'var(--alerta)' : 'var(--peligro)'; }
 function fmtFecha(iso: string | null) { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
 
 export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
@@ -218,7 +219,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   }
 
   if (cargando) return <div style={{ color: 'var(--muted)', padding: 16 }}>Cargando…</div>;
-  if (error) return <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>{error}</div>;
+  if (error) return <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>{error}</div>;
 
   const empresaSel = empresas.find((e) => e.id === sel);
   const multi = empresas.length > 1;
@@ -244,9 +245,9 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
         {delPrograma.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 20 }}>
             <div className="tile"><div className="k">Hallazgos</div><div className="v" style={{ color: 'var(--navy)' }}>{total}</div><div className="s">en total</div></div>
-            <div className="tile"><div className="k">Resueltos</div><div className="v" style={{ color: '#22a670' }}>{resueltos}<small>/{total}</small></div><div className="s">{pct}% cerrado</div></div>
-            <div className="tile"><div className="k">En gestión</div><div className="v" style={{ color: '#2f6fd0' }}>{enGestion}</div><div className="s">en curso</div></div>
-            <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: vencidos ? '#cf4436' : '#8a94a6' }}>{vencidos}</div><div className="s">requieren atención</div></div>
+            <div className="tile"><div className="k">Resueltos</div><div className="v" style={{ color: 'var(--exito)' }}>{resueltos}<small>/{total}</small></div><div className="s">{pct}% cerrado</div></div>
+            <div className="tile"><div className="k">En gestión</div><div className="v" style={{ color: 'var(--info)' }}>{enGestion}</div><div className="s">en curso</div></div>
+            <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: vencidos ? 'var(--peligro)' : 'var(--neutro)' }}>{vencidos}</div><div className="s">requieren atención</div></div>
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -266,14 +267,14 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: total ? 6 : 0 }}>
                     <span style={{ fontWeight: 700, fontSize: 13.5 }}>{e.nombre} <span style={{ marginLeft: 6, color: 'var(--navy)', fontSize: 11 }}>{esGestor ? 'abrir matriz →' : 'ver matriz →'}</span></span>
                     {total > 0
-                      ? <span style={{ fontSize: 12.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r!.resueltos}/{total} · <strong style={{ color: colorPct(r!.pct) }}>{r!.pct}%</strong>{r!.vencidos > 0 && <span style={{ color: '#cf4436', marginLeft: 8 }}>{r!.vencidos} vencido(s)</span>}</span>
+                      ? <span style={{ fontSize: 12.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{r!.resueltos}/{total} · <strong style={{ color: colorPct(r!.pct) }}>{r!.pct}%</strong>{r!.vencidos > 0 && <span style={{ color: 'var(--peligro)', marginLeft: 8 }}>{r!.vencidos} vencido(s)</span>}</span>
                       : <span style={{ fontSize: 11.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>sin hallazgos</span>}
                   </div>
                   {total > 0 && (
                     <div style={{ height: 9, borderRadius: 3, background: 'var(--panel-2)', border: '1px solid var(--line)', overflow: 'hidden', display: 'flex' }}>
-                      <span style={{ width: `${(r!.resueltos / total) * 100}%`, background: '#22a670' }} />
-                      <span style={{ width: `${(r!.enGestion / total) * 100}%`, background: '#2f6fd0' }} />
-                      <span style={{ width: `${(r!.vencidos / total) * 100}%`, background: '#cf4436' }} />
+                      <span style={{ width: `${(r!.resueltos / total) * 100}%`, background: 'var(--exito-solido)' }} />
+                      <span style={{ width: `${(r!.enGestion / total) * 100}%`, background: 'var(--info-solido)' }} />
+                      <span style={{ width: `${(r!.vencidos / total) * 100}%`, background: 'var(--peligro-solido)' }} />
                     </div>
                   )}
                 </button>
@@ -342,16 +343,16 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
           <button className="dbtn" onClick={() => setPegar('')} disabled={importando} style={{ fontSize: 13 }}>⎘ Pegar de Excel</button>
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); }} />
           <button className="dbtn" onClick={() => fileRef.current?.click()} disabled={importando} style={{ fontSize: 13 }}>{importando ? 'Importando…' : '⭱ Importar'}</button>
-          {hallazgos.length > 0 && <button className="dbtn" onClick={vaciar} disabled={importando} style={{ fontSize: 13, color: '#cf4436' }}>🗑 Vaciar</button>}
+          {hallazgos.length > 0 && <button className="dbtn" onClick={vaciar} disabled={importando} style={{ fontSize: 13, color: 'var(--peligro)' }}>🗑 Vaciar</button>}
           <button className="dbtn primary" onClick={() => setModal('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo hallazgo</button>
         </>}
       </div>
       {k && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 16 }}>
           <div className="tile"><div className="k">Hallazgos</div><div className="v" style={{ color: 'var(--navy)' }}>{k.total}</div><div className="s">de la empresa</div></div>
-          <div className="tile"><div className="k">Resueltos</div><div className="v" style={{ color: '#22a670' }}>{k.resueltos}</div><div className="s">{k.pct}% cerrado</div></div>
-          <div className="tile"><div className="k">En gestión</div><div className="v" style={{ color: '#2f6fd0' }}>{k.enGestion}</div><div className="s">en curso</div></div>
-          <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: k.vencidos ? '#cf4436' : '#8a94a6' }}>{k.vencidos}</div><div className="s">requieren atención</div></div>
+          <div className="tile"><div className="k">Resueltos</div><div className="v" style={{ color: 'var(--exito)' }}>{k.resueltos}</div><div className="s">{k.pct}% cerrado</div></div>
+          <div className="tile"><div className="k">En gestión</div><div className="v" style={{ color: 'var(--info)' }}>{k.enGestion}</div><div className="s">en curso</div></div>
+          <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: k.vencidos ? 'var(--peligro)' : 'var(--neutro)' }}>{k.vencidos}</div><div className="s">requieren atención</div></div>
         </div>
       )}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -394,26 +395,26 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
                   <td style={{ ...textoCelda, minWidth: 200 }}>{h.descripcion ?? '—'}</td>
                   <td style={{ ...textoCelda, minWidth: 150 }}>{h.normatividad ?? '—'}</td>
                   <td style={{ minWidth: 200 }}>
-                    <span className="chip" style={{ color: rm.color, background: `${rm.color}18`, borderColor: `${rm.color}44` }}>{rm.label}</span>
+                    <span className="chip" style={{ color: rm.color, background: `${tinte(rm.color, 12)}`, borderColor: `${tinte(rm.color, 30)}` }}>{rm.label}</span>
                     {h.riesgoDescripcion && <div style={{ ...textoCelda, marginTop: 5 }}>{h.riesgoDescripcion}</div>}
                   </td>
                   <td style={textoCelda}>{PRIORIDAD_LABEL[h.prioridad] ?? h.prioridad}</td>
                   <td style={textoCelda}>{h.responsable ?? '—'}</td>
                   <td style={{ ...textoCelda, minWidth: 200 }}>{h.planAccion ?? '—'}</td>
-                  <td style={{ whiteSpace: 'nowrap', fontWeight: h.vencido ? 800 : 500, color: h.vencido ? '#cf4436' : 'var(--muted)' }}>{fmtFecha(h.plazo)}</td>
+                  <td style={{ whiteSpace: 'nowrap', fontWeight: h.vencido ? 800 : 500, color: h.vencido ? 'var(--peligro)' : 'var(--muted)' }}>{fmtFecha(h.plazo)}</td>
                   <td>
                     {esGestor ? (
-                      <select value={h.estado} onChange={(e) => cambiarEstado(h, e.target.value)} style={{ fontSize: 11.5, fontWeight: 700, color: em.color, background: `${em.color}18`, border: `1px solid ${em.color}44`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }}>
+                      <select value={h.estado} onChange={(e) => cambiarEstado(h, e.target.value)} style={{ fontSize: 11.5, fontWeight: 700, color: em.color, background: `${tinte(em.color, 12)}`, border: `1px solid ${tinte(em.color, 30)}`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }}>
                         {Object.entries(ESTADO_META).map(([kk, v]) => <option key={kk} value={kk} style={{ color: '#111' }}>{v.label}</option>)}
                       </select>
                     ) : (
-                      <span className="chip" style={{ color: h.vencido ? '#cf4436' : em.color, background: `${(h.vencido ? '#cf4436' : em.color)}18`, borderColor: `${(h.vencido ? '#cf4436' : em.color)}44` }}>{h.vencido ? 'Vencido' : em.label}</span>
+                      <span className="chip" style={{ color: h.vencido ? 'var(--peligro)' : em.color, background: `${tinte((h.vencido ? 'var(--peligro)' : em.color), 12)}`, borderColor: `${tinte((h.vencido ? 'var(--peligro)' : em.color), 30)}` }}>{h.vencido ? 'Vencido' : em.label}</span>
                     )}
                   </td>
                   <td style={{ ...textoCelda, minWidth: 160 }}>{h.observaciones ?? '—'}</td>
                   {esGestor && <td style={{ whiteSpace: 'nowrap' }}>
                     <button onClick={() => setModal(h)} title="Editar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--navy)', fontSize: 14, padding: '2px 4px' }}>✎</button>
-                    <button onClick={() => eliminar(h)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 13, padding: '2px 4px' }}>🗑</button>
+                    <button onClick={() => eliminar(h)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 13, padding: '2px 4px' }}>🗑</button>
                   </td>}
                 </tr>
               );

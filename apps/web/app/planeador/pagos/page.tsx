@@ -75,11 +75,11 @@ function semaforo(iso: string, pagado: boolean): { txt: string; color: string; d
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const f = new Date(iso); f.setHours(0, 0, 0, 0);
   const dias = Math.round((f.getTime() - hoy.getTime()) / MS_DIA);
-  if (pagado) return { txt: 'Pagado', color: '#16794c', dias };
-  if (dias < 0) return { txt: `Vencido hace ${Math.abs(dias)} d · intereses`, color: '#d64b3f', dias };
-  if (dias === 0) return { txt: 'Vence hoy', color: '#d64b3f', dias };
-  if (dias === 1) return { txt: 'Vence mañana', color: '#c67c00', dias };
-  if (dias <= 7) return { txt: `Vence en ${dias} d`, color: '#c67c00', dias };
+  if (pagado) return { txt: 'Pagado', color: 'var(--exito-fuerte)', dias };
+  if (dias < 0) return { txt: `Vencido hace ${Math.abs(dias)} d · intereses`, color: 'var(--peligro)', dias };
+  if (dias === 0) return { txt: 'Vence hoy', color: 'var(--peligro)', dias };
+  if (dias === 1) return { txt: 'Vence mañana', color: 'var(--alerta)', dias };
+  if (dias <= 7) return { txt: `Vence en ${dias} d`, color: 'var(--alerta)', dias };
   return { txt: `Vence en ${dias} d`, color: 'var(--muted)', dias };
 }
 function Semaforo({ iso, pagado }: { iso: string; pagado: boolean }) {
@@ -102,9 +102,9 @@ function LimitePago({ fechaLimite, consecuencia, pagado }: { fechaLimite: string
   const etq = consecCorta(consecuencia);
   let color = 'var(--muted)';
   let txt = `Límite ${fmtFecha(fechaLimite)}`;
-  if (dias < 0) { color = '#b3261e'; txt = `${etq} — venció hace ${Math.abs(dias)} d`; }
-  else if (dias === 0) { color = '#b3261e'; txt = `Paga hoy o ${etq}`; }
-  else if (dias <= UMBRAL_RIESGO) { color = '#d64b3f'; txt = `Paga en ${dias} d o ${etq}`; }
+  if (dias < 0) { color = 'var(--peligro-fuerte)'; txt = `${etq} — venció hace ${Math.abs(dias)} d`; }
+  else if (dias === 0) { color = 'var(--peligro-fuerte)'; txt = `Paga hoy o ${etq}`; }
+  else if (dias <= UMBRAL_RIESGO) { color = 'var(--peligro)'; txt = `Paga en ${dias} d o ${etq}`; }
   return (
     <span style={{ display: 'flex', flexDirection: 'column', gap: 2, whiteSpace: 'nowrap' }}>
       <span style={{ fontWeight: 600 }}>{fmtFecha(fechaLimite)}</span>
@@ -225,12 +225,12 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
       {!error && scope.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 16 }}>
-          <div className="tile"><div className="k">Pagado</div><div className="v" style={{ color: '#16794c', fontSize: 21 }}>${fmtCOP(kPagado.v)}</div><div className="s">{kPagado.n} presentadas y pagadas</div></div>
+          <div className="tile"><div className="k">Pagado</div><div className="v" style={{ color: 'var(--exito-fuerte)', fontSize: 21 }}>${fmtCOP(kPagado.v)}</div><div className="s">{kPagado.n} presentadas y pagadas</div></div>
           <div className="tile"><div className="k">Por pagar</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kPorPagar.v)}</div><div className="s">{kPorPagar.n} sin pagar</div></div>
-          <div className="tile" style={{ borderColor: kVencido.n > 0 ? '#e0a3a0' : undefined }}><div className="k">Vencido sin pagar</div><div className="v" style={{ color: kVencido.n > 0 ? '#d64b3f' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kVencido.v)}</div><div className="s">{kVencido.n} con intereses corriendo</div></div>
-          <div className="tile" style={{ borderColor: kRiesgo.n > 0 ? '#b3261e' : undefined }}><div className="k">Riesgo ineficacia / RST</div><div className="v" style={{ color: kRiesgo.n > 0 ? '#b3261e' : '#8a94a6', fontSize: 21 }}>{kRiesgo.n}</div><div className="s">límite de pago ≤ {UMBRAL_RIESGO} d o vencido</div></div>
-          <div className="tile"><div className="k">Interés de mora</div><div className="v" style={{ color: kInteres > 0 ? '#c67c00' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kInteres)}</div><div className="s">estimado a hoy (DIAN)</div></div>
-          <div className="tile"><div className="k">Sanción (est.)</div><div className="v" style={{ color: kSancion > 0 ? '#b3261e' : '#8a94a6', fontSize: 21 }}>${fmtCOP(kSancion)}</div><div className="s">extemporaneidad / ineficacia</div></div>
+          <div className="tile" style={{ borderColor: kVencido.n > 0 ? 'var(--peligro-borde)' : undefined }}><div className="k">Vencido sin pagar</div><div className="v" style={{ color: kVencido.n > 0 ? 'var(--peligro)' : 'var(--neutro)', fontSize: 21 }}>${fmtCOP(kVencido.v)}</div><div className="s">{kVencido.n} con intereses corriendo</div></div>
+          <div className="tile" style={{ borderColor: kRiesgo.n > 0 ? 'var(--peligro-fuerte)' : undefined }}><div className="k">Riesgo ineficacia / RST</div><div className="v" style={{ color: kRiesgo.n > 0 ? 'var(--peligro-fuerte)' : 'var(--neutro)', fontSize: 21 }}>{kRiesgo.n}</div><div className="s">límite de pago ≤ {UMBRAL_RIESGO} d o vencido</div></div>
+          <div className="tile"><div className="k">Interés de mora</div><div className="v" style={{ color: kInteres > 0 ? 'var(--alerta)' : 'var(--neutro)', fontSize: 21 }}>${fmtCOP(kInteres)}</div><div className="s">estimado a hoy (DIAN)</div></div>
+          <div className="tile"><div className="k">Sanción (est.)</div><div className="v" style={{ color: kSancion > 0 ? 'var(--peligro-fuerte)' : 'var(--neutro)', fontSize: 21 }}>${fmtCOP(kSancion)}</div><div className="s">extemporaneidad / ineficacia</div></div>
           <div className="tile" style={{ borderColor: kTotal > 0 ? 'var(--navy)' : undefined }}><div className="k">Total a pagar (hoy)</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kTotal)}</div><div className="s">capital + interés + sanción</div></div>
         </div>
       )}
@@ -259,7 +259,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
       </div>
 
       {error ? (
-        <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudieron cargar los pagos: {error}.</div>
+        <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar los pagos: {error}.</div>
       ) : filas.length === 0 ? (
         <div className="panel" style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>
           No hay obligaciones por pagar con estos filtros.
@@ -295,8 +295,8 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {(i.interesMora > 0 || i.sancion > 0)
                         ? <>
-                            {i.interesMora > 0 && <div><span style={{ fontWeight: 600, color: '#c67c00' }}>Int. ${fmtCOP(i.interesMora)}</span> <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>({i.diasMora} d)</span></div>}
-                            {i.sancion > 0 && <div style={{ fontSize: 11.5, color: '#b3261e', fontWeight: 600 }}>Sanción ${fmtCOP(i.sancion)}</div>}
+                            {i.interesMora > 0 && <div><span style={{ fontWeight: 600, color: 'var(--alerta)' }}>Int. ${fmtCOP(i.interesMora)}</span> <span style={{ fontSize: 10.5, color: 'var(--muted)' }}>({i.diasMora} d)</span></div>}
+                            {i.sancion > 0 && <div style={{ fontSize: 11.5, color: 'var(--peligro-fuerte)', fontWeight: 600 }}>Sanción ${fmtCOP(i.sancion)}</div>}
                             {!pagadoDe(i.estado) && <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--navy)' }}>Total ${fmtCOP((i.saldo ?? i.valorPago ?? 0) + i.interesMora + i.sancion)}</div>}
                           </>
                         : <span style={{ color: 'var(--muted)' }}>—</span>}
@@ -305,7 +305,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
                         <VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} editable={esEditor} />
                         {i.abonado > 0 && (
-                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>Abonado <b style={{ color: '#16794c' }}>${fmtCOP(i.abonado)}</b> · Saldo <b style={{ color: 'var(--navy)' }}>${fmtCOP(i.saldo ?? 0)}</b></div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>Abonado <b style={{ color: 'var(--exito-fuerte)' }}>${fmtCOP(i.abonado)}</b> · Saldo <b style={{ color: 'var(--navy)' }}>${fmtCOP(i.saldo ?? 0)}</b></div>
                         )}
                         <AbonosBoton id={i.id} editable={esEditor} />
                       </div>

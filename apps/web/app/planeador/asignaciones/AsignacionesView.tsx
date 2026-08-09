@@ -9,6 +9,7 @@ import { Fragment, useMemo, useState } from 'react';
 import SyncResponsablesBoton from './SyncResponsablesBoton';
 import FiltroColumna from '../../administracion/FiltroColumna';
 
+import { tinte } from '@/app/_components/color';
 export type FilaAsignacion = {
   empresaId: string; empresa: string;
   areaId: string | null; area: string; areaOrden: number;
@@ -24,15 +25,15 @@ type ColKey = 'empresa' | 'area' | 'asesor' | 'auxiliar';
 type ColFiltros = Record<ColKey, Set<string> | null>;
 const SIN_COL: ColFiltros = { empresa: null, area: null, asesor: null, auxiliar: null };
 
-const C_ASESOR = '#2f6fd0';
-const C_AUX = '#14a8a0';
-const C_ALERTA = '#cf4436';
+const C_ASESOR = 'var(--info)';
+const C_AUX = 'var(--cero)';
+const C_ALERTA = 'var(--peligro)';
 
 const sel: React.CSSProperties = { padding: '8px 10px', borderRadius: 6, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
 const lbl: React.CSSProperties = { fontSize: 10, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4, display: 'block' };
 
 function SinChip({ texto }: { texto: string }) {
-  return <span className="chip" style={{ color: C_ALERTA, borderColor: `${C_ALERTA}55`, background: `${C_ALERTA}12`, fontSize: 10.5, fontWeight: 700 }}>{texto}</span>;
+  return <span className="chip" style={{ color: C_ALERTA, borderColor: `${tinte(C_ALERTA, 35)}`, background: `${tinte(C_ALERTA, 8)}`, fontSize: 10.5, fontWeight: 700 }}>{texto}</span>;
 }
 function Barra({ valor, max, color }: { valor: number; max: number; color: string }) {
   const pct = max > 0 ? Math.round((valor / max) * 100) : 0;
@@ -174,7 +175,7 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
   );
 
   const Tile = ({ k, v, s, color, alerta }: { k: string; v: number; s: string; color?: string; alerta?: boolean }) => (
-    <div className="tile" style={alerta && v > 0 ? { borderColor: `${C_ALERTA}66` } : undefined}>
+    <div className="tile" style={alerta && v > 0 ? { borderColor: `${tinte(C_ALERTA, 40)}` } : undefined}>
       <div className="k">{k}</div>
       <div className="v" style={{ color: color ?? 'var(--navy)' }}>{v}</div>
       <div className="s">{s}</div>
@@ -204,8 +205,8 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
             <Tile k="Áreas" v={met.areas} s="con trabajo" />
             <Tile k="Asesores" v={met.asesores} s="activos" color={C_ASESOR} />
             <Tile k="Auxiliares" v={met.auxiliares} s="activos" color={C_AUX} />
-            {esCoordinacion && <Tile k="Sin asesor" v={met.sinAsesor} s="cliente·área a cubrir" color={met.sinAsesor ? C_ALERTA : '#8a94a6'} alerta />}
-            {esCoordinacion && <Tile k="Sin auxiliar" v={met.sinAux} s="cliente·área a cubrir" color={met.sinAux ? C_ALERTA : '#8a94a6'} alerta />}
+            {esCoordinacion && <Tile k="Sin asesor" v={met.sinAsesor} s="cliente·área a cubrir" color={met.sinAsesor ? C_ALERTA : 'var(--neutro)'} alerta />}
+            {esCoordinacion && <Tile k="Sin auxiliar" v={met.sinAux} s="cliente·área a cubrir" color={met.sinAux ? C_ALERTA : 'var(--neutro)'} alerta />}
           </div>
 
           <div className="panel" style={{ padding: '12px 14px', marginBottom: 14 }}>

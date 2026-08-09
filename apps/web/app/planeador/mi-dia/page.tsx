@@ -31,7 +31,7 @@ export default async function MiDiaPage() {
 
       <h2 style={{ fontSize: 14, fontWeight: 800, margin: '0 0 8px' }}>Mis tareas del período</h2>
       {error ? (
-        <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>
+        <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>
       ) : tareas.length === 0 ? (
         <div className="panel" style={{ padding: 26, color: 'var(--muted)' }}>No tienes tareas asignadas este período. Cuando se te asignen actividades por área, aparecerán aquí.</div>
       ) : (

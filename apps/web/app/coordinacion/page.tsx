@@ -40,9 +40,9 @@ function nombrePeriodo(periodo: string | null): string {
   return `${meses[(m - 1) % 12]} ${y}`;
 }
 function colorPct(pct: number): string {
-  if (pct >= 85) return '#22a670';
-  if (pct >= 60) return '#d98a00';
-  return '#d64b3f';
+  if (pct >= 85) return 'var(--exito)';
+  if (pct >= 60) return 'var(--alerta)';
+  return 'var(--peligro)';
 }
 
 function TablaPersonas({ titulo, sub, filas }: { titulo: string; sub: string; filas: PorPersona[] }) {
@@ -61,7 +61,7 @@ function TablaPersonas({ titulo, sub, filas }: { titulo: string; sub: string; fi
                 <tr key={p.nombre}>
                   <td style={{ fontWeight: 600 }}>{p.nombre}</td>
                   <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{p.total}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700, color: p.vencidas > 0 ? '#d64b3f' : 'var(--muted)' }}>{p.vencidas}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 700, color: p.vencidas > 0 ? 'var(--peligro)' : 'var(--muted)' }}>{p.vencidas}</td>
                   <td style={{ textAlign: 'right', fontWeight: 800, color: colorPct(p.cumplimiento) }}>{p.cumplimiento}%</td>
                 </tr>
               ))}
@@ -88,9 +88,9 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
 
   const kpiCards = kpis ? [
     { k: 'Actividades', v: kpis.total, color: 'var(--navy)', s: 'del período' },
-    { k: 'Ejecutadas', v: kpis.ejecutadas, color: '#22a670', s: 'terminadas/auditadas' },
-    { k: 'Vencidas', v: kpis.vencidas, color: '#d64b3f', s: 'sin ejecutar' },
-    { k: 'Por auditar', v: kpis.porAuditar, color: '#d98a00', s: 'falta auditoría' },
+    { k: 'Ejecutadas', v: kpis.ejecutadas, color: 'var(--exito)', s: 'terminadas/auditadas' },
+    { k: 'Vencidas', v: kpis.vencidas, color: 'var(--peligro)', s: 'sin ejecutar' },
+    { k: 'Por auditar', v: kpis.porAuditar, color: 'var(--alerta)', s: 'falta auditoría' },
   ] : [];
 
   return (
@@ -121,7 +121,7 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
 
         <div className="win-body">
           {error ? (
-            <div className="panel" style={{ padding: '18px 20px', color: '#b42318', fontWeight: 600 }}>
+            <div className="panel" style={{ padding: '18px 20px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>
               No se pudo cargar el panel: {error}.
               <div style={{ fontWeight: 400, marginTop: 6, color: 'var(--muted)' }}>Verifica que la API responda en <code>/plan/cumplimiento</code>.</div>
             </div>
@@ -188,7 +188,7 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
                             <td style={{ fontWeight: 600 }}>{c.empresa}</td>
                             <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{c.total}</td>
                             <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{c.ejecutadas}</td>
-                            <td style={{ textAlign: 'right', fontWeight: 700, color: c.vencidas > 0 ? '#d64b3f' : 'var(--muted)' }}>{c.vencidas}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 700, color: c.vencidas > 0 ? 'var(--peligro)' : 'var(--muted)' }}>{c.vencidas}</td>
                             <td style={{ textAlign: 'right', fontWeight: 800, color: colorPct(c.cumplimiento) }}>{c.cumplimiento}%</td>
                           </tr>
                         ))}

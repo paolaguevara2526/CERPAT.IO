@@ -59,8 +59,8 @@ export default function SyncResponsablesBoton() {
                 Actualiza el asesor y auxiliar de las tareas ya generadas para que coincidan con la asignación actual (cliente × área). Útil tras importar o editar asignaciones.
               </p>
 
-              {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
-              {hecho && <div style={{ background: '#E4F5EC', color: '#1c8a5e', borderRadius: 6, padding: '8px 11px', fontSize: 13, fontWeight: 700 }}>✓ {hecho}</div>}
+              {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
+              {hecho && <div style={{ background: 'var(--exito-suave)', color: 'var(--green-edge)', borderRadius: 6, padding: '8px 11px', fontSize: 13, fontWeight: 700 }}>✓ {hecho}</div>}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {ALCANCES.map((a) => (
@@ -76,7 +76,7 @@ export default function SyncResponsablesBoton() {
 
               {previo && (
                 <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px', fontSize: 13 }}>
-                  <b style={{ color: previo.aCambiar ? '#1c8a5e' : 'var(--muted)' }}>{previo.aCambiar}</b> tarea(s) por reasignar
+                  <b style={{ color: previo.aCambiar ? 'var(--green-edge)' : 'var(--muted)' }}>{previo.aCambiar}</b> tarea(s) por reasignar
                   <span style={{ color: 'var(--muted)' }}> · de {previo.revisadas} revisada(s)</span>
                   {previo.sinAsignacion > 0 && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>{previo.sinAsignacion} tarea(s) sin asignación en su área (se dejan igual).</div>}
                   {previo.aCambiar === 0 && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>Ya están todas al día para este alcance.</div>}

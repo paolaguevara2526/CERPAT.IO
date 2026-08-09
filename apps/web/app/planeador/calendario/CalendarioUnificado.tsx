@@ -8,25 +8,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import VisitaModal from '../visitas/VisitaModal';
 
+import { tinte } from '@/app/_components/color';
 // Estados de un VENCIMIENTO tributario (enum EstadoPago).
 const VENC_META: Record<string, { label: string; color: string }> = {
-  pendiente: { label: 'Pendiente', color: '#5b6a82' },
-  presentado_sin_pago: { label: 'Presentado (sin pago)', color: '#2f6fd0' },
-  presentado_pagado: { label: 'Presentado y pagado', color: '#22a670' },
-  presentado_cero: { label: 'Presentado en $0', color: '#14a8a0' },
-  no_presentado: { label: 'No presentado', color: '#cf4436' },
-  no_obligado: { label: 'No obligado', color: '#9aa3b2' },
+  pendiente: { label: 'Pendiente', color: 'var(--muted)' },
+  presentado_sin_pago: { label: 'Presentado (sin pago)', color: 'var(--info)' },
+  presentado_pagado: { label: 'Presentado y pagado', color: 'var(--exito)' },
+  presentado_cero: { label: 'Presentado en $0', color: 'var(--cero)' },
+  no_presentado: { label: 'No presentado', color: 'var(--peligro)' },
+  no_obligado: { label: 'No obligado', color: 'var(--neutro)' },
 };
 // Estados de una VISITA (asesor/auditor al cliente).
 const VISITA_META: Record<string, { label: string; color: string }> = {
-  programada: { label: 'Programada', color: '#2f6fd0' },
-  realizada: { label: 'Realizada', color: '#22a670' },
-  cancelada: { label: 'Cancelada', color: '#9aa3b2' },
+  programada: { label: 'Programada', color: 'var(--info)' },
+  realizada: { label: 'Realizada', color: 'var(--exito)' },
+  cancelada: { label: 'Cancelada', color: 'var(--neutro)' },
 };
 // Color de cada etiqueta (para el punto/tag que distingue la fuente en "Todas").
 const ETIQUETA_COLOR: Record<string, string> = {
   Vencimientos: '#7a5bd0',
-  Visitas: '#e11900',
+  Visitas: 'var(--peligro)',
 };
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -121,7 +122,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       if (mine !== reqId.current) return; // llegó una carga más nueva
       const evs: Evento[] = [];
       for (const v of (dv.vencimientos ?? [])) {
-        const em = VENC_META[v.estado] ?? { label: v.estado, color: '#5b6a82' };
+        const em = VENC_META[v.estado] ?? { label: v.estado, color: 'var(--muted)' };
         evs.push({
           key: `v-${v.id}`, tipo: 'vencimiento', id: v.id, fecha: (v.fechaVencimiento || '').slice(0, 10),
           titulo: v.obligacion, empresa: v.empresa ?? null, etiqueta: 'Vencimientos',
@@ -130,7 +131,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         });
       }
       for (const v of (dvi.visitas ?? [])) {
-        const em = VISITA_META[v.estado] ?? { label: v.estado, color: '#5b6a82' };
+        const em = VISITA_META[v.estado] ?? { label: v.estado, color: 'var(--muted)' };
         const f = (v.fecha || '').slice(0, 10);
         const objetivo = v.objetivo && String(v.objetivo).trim() ? v.objetivo : 'Visita';
         evs.push({
@@ -271,10 +272,10 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           <button onClick={() => setMes(desplazarMes(mes, 1))} className="dbtn" style={{ fontSize: 13 }}>›</button>
           <button onClick={() => setMes(mesActual())} className="dbtn" style={{ fontSize: 12.5 }}>Hoy</button>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }} title="Mostrar u ocultar los estados en las tarjetas">
-            <input type="checkbox" checked={mostrarEstados} onChange={(e) => setMostrarEstados(e.target.checked)} style={{ accentColor: '#2E5090' }} /> Estados
+            <input type="checkbox" checked={mostrarEstados} onChange={(e) => setMostrarEstados(e.target.checked)} style={{ accentColor: 'var(--navy)' }} /> Estados
           </label>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: 'var(--muted)', cursor: 'pointer', userSelect: 'none' }} title="Mostrar u ocultar las columnas de sábado y domingo">
-            <input type="checkbox" checked={mostrarFinde} onChange={(e) => setMostrarFinde(e.target.checked)} style={{ accentColor: '#2E5090' }} /> Sáb/Dom
+            <input type="checkbox" checked={mostrarFinde} onChange={(e) => setMostrarFinde(e.target.checked)} style={{ accentColor: 'var(--navy)' }} /> Sáb/Dom
           </label>
           <button onClick={imprimir} className="dbtn" style={{ fontSize: 12.5 }}>🖨 Imprimir</button>
         </div>
@@ -294,7 +295,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11, color: 'var(--muted)' }}>
           {(etiquetas.length ? etiquetas : ['Vencimientos', 'Visitas']).map((et) => (
             <span key={et} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 9, height: 9, borderRadius: 3, background: ETIQUETA_COLOR[et] ?? '#9aa3b2' }} /> {et}
+              <span style={{ width: 9, height: 9, borderRadius: 3, background: ETIQUETA_COLOR[et] ?? 'var(--neutro)' }} /> {et}
             </span>
           ))}
         </div>
@@ -304,18 +305,18 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       </div>
 
       {aviso && (
-        <div className="panel" style={{ padding: '9px 12px', marginBottom: 10, color: '#b42318', fontWeight: 600, fontSize: 12.5, display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+        <div className="panel" style={{ padding: '9px 12px', marginBottom: 10, color: 'var(--peligro-fuerte)', fontWeight: 600, fontSize: 12.5, display: 'flex', justifyContent: 'space-between', gap: 10 }}>
           <span>{aviso}</span><button onClick={() => setAviso(null)} className="dbtn" style={{ fontSize: 11 }}>Cerrar</button>
         </div>
       )}
 
       {error ? (
-        <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>{error}</div>
+        <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>{error}</div>
       ) : (
         <div className="panel" style={{ padding: 0, overflow: 'hidden', opacity: cargando ? 0.6 : 1, transition: 'opacity .15s' }}>
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols},1fr)` }}>
             {DIAS.slice(0, cols).map((d, idx) => (
-              <div key={d} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', color: idx >= 5 ? '#8a94a6' : 'var(--muted)', borderBottom: '1px solid var(--line)', background: idx >= 5 ? 'rgba(91,106,130,0.12)' : 'var(--panel-2)' }}>{d}</div>
+              <div key={d} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', color: idx >= 5 ? 'var(--neutro)' : 'var(--muted)', borderBottom: '1px solid var(--line)', background: idx >= 5 ? 'rgba(91,106,130,0.12)' : 'var(--panel-2)' }}>{d}</div>
             ))}
             {celdasVis.map((dia, i) => {
               const diaISO = dia ? `${mes}-${pad(dia)}` : '';
@@ -349,27 +350,27 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                   }}>
                   {dia && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                      <span style={{ fontSize: 11.5, fontWeight: esHoy ? 800 : 600, color: esHoy ? '#1c8a5e' : festivo ? '#cf4436' : finde ? '#8a94a6' : 'var(--muted)' }}>{dia}</span>
-                      {festivo && <span title="Día festivo — no se labora" style={{ fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#cf4436', background: '#cf443618', borderRadius: 10, padding: '0 5px' }}>Festivo</span>}
+                      <span style={{ fontSize: 11.5, fontWeight: esHoy ? 800 : 600, color: esHoy ? 'var(--green-edge)' : festivo ? 'var(--peligro)' : finde ? 'var(--neutro)' : 'var(--muted)' }}>{dia}</span>
+                      {festivo && <span title="Día festivo — no se labora" style={{ fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: 'var(--peligro)', background: '#cf443618', borderRadius: 10, padding: '0 5px' }}>Festivo</span>}
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3, overflowY: 'auto', maxHeight: 200 }}>
                     {items.map((ev) => {
-                      const col = ev.vencido ? '#cf4436' : ev.color;
+                      const col = ev.vencido ? 'var(--peligro)' : ev.color;
                       return (
                         <div key={ev.key} draggable
                           onDragStart={(e) => { setArrastrando(ev.key); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.key); }}
                           onDragEnd={() => { setArrastrando(null); setSobreDia(null); }}
                           onClick={() => (ev.tipo === 'visita' ? setVisitaId(ev.id) : setDetalle(ev))}
                           title={`${ev.titulo}${ev.empresa ? ' · ' + ev.empresa : ''} · ${ev.estadoLabel}`}
-                          style={{ borderLeft: `3px solid ${col}`, background: `${col}12`, borderRadius: 4, padding: '3px 6px', cursor: 'grab' }}>
+                          style={{ borderLeft: `3px solid ${col}`, background: `${tinte(col, 8)}`, borderRadius: 4, padding: '3px 6px', cursor: 'grab' }}>
                           {ev.tipo === 'visita' && (
-                            <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#fff', background: '#e11900', borderRadius: 20, padding: '0 6px', marginBottom: 2, marginRight: 3 }}>
+                            <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#fff', background: 'var(--peligro-solido)', borderRadius: 20, padding: '0 6px', marginBottom: 2, marginRight: 3 }}>
                               🤝 Visita
                             </span>
                           )}
                           {mostrarEstados && (
-                            <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: col, background: `${col}22`, borderRadius: 20, padding: '0 6px', marginBottom: 2 }}>
+                            <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: col, background: `${tinte(col, 14)}`, borderRadius: 20, padding: '0 6px', marginBottom: 2 }}>
                               {ev.vencido ? 'Vencido' : ev.estadoLabel}
                             </span>
                           )}
@@ -453,7 +454,7 @@ function MultiSelect({ label, opciones, sel, onChange, etiquetar, color, anchoMe
             const col = color?.(o);
             return (
               <label key={o} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12.5, background: activo ? 'var(--panel-2)' : 'transparent' }}>
-                <input type="checkbox" checked={activo} onChange={() => toggle(o)} style={{ accentColor: '#2E5090' }} />
+                <input type="checkbox" checked={activo} onChange={() => toggle(o)} style={{ accentColor: 'var(--navy)' }} />
                 {col && <span style={{ width: 9, height: 9, borderRadius: 3, background: col, flex: '0 0 auto' }} />}
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{etiquetar ? etiquetar(o) : o}</span>
               </label>
@@ -534,9 +535,9 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
   }
   const fFecha = (iso?: string | null) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch { return '—'; } };
 
-  const em = VENC_META[estado] ?? { label: estado, color: '#5b6a82' };
+  const em = VENC_META[estado] ?? { label: estado, color: 'var(--muted)' };
   const vencido = ev.vencido && estado === 'pendiente';
-  const col = vencido ? '#cf4436' : em.color;
+  const col = vencido ? 'var(--peligro)' : em.color;
   const ec = ETIQUETA_COLOR['Vencimientos'];
   const lbl2: React.CSSProperties = { fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' };
 
@@ -544,7 +545,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} className="panel" style={{ maxWidth: 430, width: '100%', maxHeight: '92vh', overflow: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: ec, background: `${ec}18`, borderRadius: 20, padding: '3px 10px' }}>🧾 Vencimiento</span>
+          <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: ec, background: `${tinte(ec, 12)}`, borderRadius: 20, padding: '3px 10px' }}>🧾 Vencimiento</span>
           <button onClick={onClose} className="dbtn" style={{ fontSize: 12 }}>✕</button>
         </div>
         <div>
@@ -556,7 +557,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
         <div>
           <div style={{ ...lbl2, marginBottom: 4 }}>Estado</div>
           <select value={estado} onChange={(e) => cambiarEstado(e.target.value)}
-            style={{ fontSize: 12.5, fontWeight: 800, color: col, background: `${col}18`, border: `1px solid ${col}55`, borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'var(--ui)' }}>
+            style={{ fontSize: 12.5, fontWeight: 800, color: col, background: `${tinte(col, 12)}`, border: `1px solid ${tinte(col, 35)}`, borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'var(--ui)' }}>
             {Object.entries(VENC_META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
           </select>
         </div>
@@ -577,7 +578,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
                 return (
                   <button key={s.id} onClick={() => toggleSub(s)} title="Marcar / desmarcar"
                     style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 4px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--ui)', width: '100%' }}>
-                    <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${done ? '#22a670' : 'var(--edge-strong)'}`, background: done ? '#22a670' : 'transparent', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, flexShrink: 0 }}>{done ? '✓' : ''}</span>
+                    <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${done ? 'var(--exito)' : 'var(--edge-strong)'}`, background: done ? 'var(--exito)' : 'transparent', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, flexShrink: 0 }}>{done ? '✓' : ''}</span>
                     <span style={{ fontSize: 12.5, color: done ? 'var(--muted)' : 'var(--ink)', textDecoration: done ? 'line-through' : 'none' }}>{s.texto}</span>
                   </button>
                 );
@@ -599,7 +600,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
           <p style={{ fontSize: 11, color: 'var(--muted)', margin: '8px 0 0', lineHeight: 1.4 }}>Si el estado es <b>Presentado (sin pago)</b>, esta obligación aparece en <b>Pagos</b> con este valor.</p>
         </div>
 
-        {aviso && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{aviso}</div>}
+        {aviso && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{aviso}</div>}
 
         <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div><div style={lbl2}>Creación</div><div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{fFecha(ev.createdAt)}</div></div>

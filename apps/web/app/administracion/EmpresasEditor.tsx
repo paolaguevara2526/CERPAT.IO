@@ -76,7 +76,7 @@ export default function EmpresasEditor() {
 
   return (
     <div>
-      {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+      {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
         <input style={{ ...input, maxWidth: 280 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente, NIT o asesor…" />
         <label style={{ fontSize: 12.5, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>
@@ -107,7 +107,7 @@ export default function EmpresasEditor() {
                   <td><button onClick={() => toggleActivo(e)} title={e.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>{e.activo ? '🟢' : '⚪'}</button></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button onClick={() => setEditar(e)} title="Editar" style={ic('var(--navy)')}>✎</button>
-                    <button onClick={() => eliminar(e)} title="Eliminar" style={ic('#cf4436')}>🗑</button>
+                    <button onClick={() => eliminar(e)} title="Eliminar" style={ic('var(--peligro)')}>🗑</button>
                   </td>
                 </tr>
               ))}

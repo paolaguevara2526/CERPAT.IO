@@ -7,13 +7,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Tarea } from './tareas';
 
+import { tinte } from '@/app/_components/color';
 const COLUMNAS: { estado: string; label: string; color: string }[] = [
-  { estado: 'por_iniciar', label: 'Por iniciar', color: '#5b6a82' },
-  { estado: 'en_curso', label: 'En curso', color: '#2f6fd0' },
-  { estado: 'en_revision', label: 'En revisión', color: '#c67c00' },
-  { estado: 'terminado', label: 'Terminado', color: '#22a670' },
-  { estado: 'auditado', label: 'Auditado', color: '#1c8a5e' },
-  { estado: 'no_realizado', label: 'No realizado', color: '#cf4436' },
+  { estado: 'por_iniciar', label: 'Por iniciar', color: 'var(--muted)' },
+  { estado: 'en_curso', label: 'En curso', color: 'var(--info)' },
+  { estado: 'en_revision', label: 'En revisión', color: 'var(--alerta)' },
+  { estado: 'terminado', label: 'Terminado', color: 'var(--exito)' },
+  { estado: 'auditado', label: 'Auditado', color: 'var(--green-edge)' },
+  { estado: 'no_realizado', label: 'No realizado', color: 'var(--peligro)' },
 ];
 
 function fmtFecha(iso: string): string {
@@ -63,7 +64,7 @@ export default function Tablero({ tareas: iniciales }: { tareas: Tarea[] }) {
   return (
     <>
       {error && (
-        <div className="panel" style={{ padding: '10px 14px', marginBottom: 12, color: '#b42318', fontWeight: 600, fontSize: 13, borderColor: '#f0b4ad' }}>
+        <div className="panel" style={{ padding: '10px 14px', marginBottom: 12, color: 'var(--peligro-fuerte)', fontWeight: 600, fontSize: 13, borderColor: 'var(--peligro-borde)' }}>
           {error}
         </div>
       )}
@@ -85,9 +86,9 @@ export default function Tablero({ tareas: iniciales }: { tareas: Tarea[] }) {
               }}
             >
               <header style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderBottom: '1px solid var(--edge)' }}>
-                <span style={{ width: 9, height: 9, borderRadius: 2, background: col.color, boxShadow: `0 0 0 3px ${col.color}22` }} />
+                <span style={{ width: 9, height: 9, borderRadius: 2, background: col.color, boxShadow: `0 0 0 3px ${tinte(col.color, 14)}` }} />
                 <span style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: 0.2 }}>{col.label}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: col.color, background: `${col.color}18`, borderRadius: 10, padding: '2px 8px' }}>{items.length}</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: col.color, background: `${tinte(col.color, 12)}`, borderRadius: 10, padding: '2px 8px' }}>{items.length}</span>
               </header>
               <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
                 {items.length === 0 ? (

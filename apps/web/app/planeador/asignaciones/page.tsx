@@ -31,7 +31,7 @@ export default async function AsignacionesPage() {
     return (
       <>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 12px' }}>Asignaciones</h1>
-        <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudieron cargar las asignaciones: {error}.</div>
+        <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar las asignaciones: {error}.</div>
       </>
     );
   }

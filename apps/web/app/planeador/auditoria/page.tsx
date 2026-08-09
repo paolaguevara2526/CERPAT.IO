@@ -37,7 +37,7 @@ export default async function AuditoriaPage() {
       </p>
 
       {error ? (
-        <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudo cargar la cola de auditoría: {error}.</div>
+        <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudo cargar la cola de auditoría: {error}.</div>
       ) : tareas.length === 0 ? (
         <div className="panel" style={{ padding: 28, textAlign: 'center', color: 'var(--muted)' }}>
           No hay tareas pendientes de auditoría este período. 🎉

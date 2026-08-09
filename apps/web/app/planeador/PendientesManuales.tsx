@@ -191,7 +191,7 @@ export default function PendientesManuales({ empresas, pendientes, mostrarTabla 
                 placeholder="Escribe 2+ letras…"
                 style={inp}
               />
-              {munNombre && munId && <span style={{ fontSize: 11, color: '#16794c', marginTop: 2 }}>✓ {munNombre}</span>}
+              {munNombre && munId && <span style={{ fontSize: 11, color: 'var(--exito-fuerte)', marginTop: 2 }}>✓ {munNombre}</span>}
               {munRes.length > 0 && (
                 <div className="panel" style={{ position: 'absolute', zIndex: 20, top: '100%', left: 0, right: 0, maxHeight: 200, overflow: 'auto', padding: 4, boxShadow: '0 8px 24px rgba(10,18,34,.18)' }}>
                   {munRes.map((m) => (
@@ -212,7 +212,7 @@ export default function PendientesManuales({ empresas, pendientes, mostrarTabla 
               {guardando ? 'Guardando…' : 'Guardar pago pendiente'}
             </button>
             <button className="dbtn" onClick={() => { setAbierto(false); limpiar(); }} style={{ fontSize: 13 }}>Cancelar</button>
-            {error && <span style={{ fontSize: 12, color: '#cf4436' }}>{error}</span>}
+            {error && <span style={{ fontSize: 12, color: 'var(--peligro)' }}>{error}</span>}
           </div>
         </div>
       )}
@@ -243,10 +243,10 @@ export default function PendientesManuales({ empresas, pendientes, mostrarTabla 
                       </td>
                       <td style={{ color: 'var(--muted)' }}>{p.empresa ?? '—'}</td>
                       <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)' }}>{p.anio}{p.periodo ? ` · ${p.periodo}` : ''}</td>
-                      <td style={{ whiteSpace: 'nowrap', fontWeight: vencido ? 800 : 500, color: vencido ? '#d64b3f' : 'var(--muted)' }} title={meta.label}>{fmtFecha(p.fechaVencimiento)}</td>
+                      <td style={{ whiteSpace: 'nowrap', fontWeight: vencido ? 800 : 500, color: vencido ? 'var(--peligro)' : 'var(--muted)' }} title={meta.label}>{fmtFecha(p.fechaVencimiento)}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {p.interesMora > 0
-                          ? <><span style={{ fontWeight: 600, color: '#c67c00' }}>${fmtCOP(p.interesMora)}</span><div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{p.diasMora} d de mora</div></>
+                          ? <><span style={{ fontWeight: 600, color: 'var(--alerta)' }}>${fmtCOP(p.interesMora)}</span><div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{p.diasMora} d de mora</div></>
                           : <span style={{ color: 'var(--muted)' }}>—</span>}
                       </td>
                       <td><VencimientoPagoEditor id={p.id} valorPago={p.valorPago} estado={p.estado} editable={editable} /></td>
@@ -255,7 +255,7 @@ export default function PendientesManuales({ empresas, pendientes, mostrarTabla 
                           <button
                             className="dbtn" onClick={() => eliminar(p.id)} disabled={borrando === p.id}
                             title="Eliminar pago pendiente"
-                            style={{ fontSize: 12, color: '#cf4436', opacity: borrando === p.id ? 0.5 : 1 }}
+                            style={{ fontSize: 12, color: 'var(--peligro)', opacity: borrando === p.id ? 0.5 : 1 }}
                           >
                             {borrando === p.id ? '…' : 'Eliminar'}
                           </button>
