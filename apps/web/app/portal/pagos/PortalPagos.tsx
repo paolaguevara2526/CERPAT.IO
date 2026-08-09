@@ -63,7 +63,7 @@ export default function PortalPagos() {
         <div className="panel" style={{ padding: '13px 15px' }}><div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' }}>En mora</div><div style={{ fontSize: 24, fontWeight: 800, color: kpis.enMora ? 'var(--peligro)' : undefined }}>{kpis.enMora}</div><div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{cop(kpis.mora)} en intereses/sanción</div></div>
       </div>
 
-      <div className="panel" style={{ overflowX: 'auto' }}>
+      <div className="panel dt-alta">
         <table className="dt" style={{ minWidth: 880 }}>
           <thead><tr>
             <th>Obligación</th><th>Período</th><th>Vence</th><th>Límite de pago</th>

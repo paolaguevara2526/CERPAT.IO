@@ -1,17 +1,13 @@
-// apps/web/app/planeador/tareas.tsx
-// Utilidades compartidas de las vistas de tareas del planeador.
+// Utilidades de servidor de las vistas de tareas (Lista, Mi Día, Tablero).
+// Los tipos y catálogos viven en ./tareas-datos, que no depende del servidor y
+// por eso lo pueden importar también los componentes de cliente.
 
 import { apiFetch } from '@/lib/session';
-import EstadoSelect from './EstadoSelect';
-import { EditarTareaBoton } from './TareaModal';
+import TareasTablaCliente from './TareasTablaCliente';
+import type { Tarea, TareasResp } from './tareas-datos';
 
-export type Tarea = {
-  id: string; titulo: string; estado: string; prioridad: string; auditoria: string;
-  fechaVencimiento: string; periodo: string | null;
-  empresa: string | null; area: string | null; asesor: string | null; auxiliar: string | null;
-  fase?: string | null; bloqueada?: boolean;
-};
-export type TareasResp = { periodo: string | null; total: number; page?: number; pageSize?: number; totalPaginas?: number; tareas: Tarea[] };
+export { ESTADO_META, AREAS, nombrePeriodo } from './tareas-datos';
+export type { Tarea, TareasResp } from './tareas-datos';
 
 export async function fetchTareas(qs: string): Promise<{ data: TareasResp | null; error: string | null }> {
   try {
@@ -23,62 +19,8 @@ export async function fetchTareas(qs: string): Promise<{ data: TareasResp | null
   }
 }
 
-export const ESTADO_META: Record<string, { label: string; color: string }> = {
-  por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
-  en_curso: { label: 'En curso', color: 'var(--info)' },
-  en_revision: { label: 'En revisión', color: 'var(--alerta)' },
-  terminado: { label: 'Terminado', color: 'var(--exito)' },
-  auditado: { label: 'Auditado', color: 'var(--green-edge)' },
-  no_realizado: { label: 'No realizado', color: 'var(--peligro)' },
-};
-
-export const AREAS = ['Impuestos', 'Informes', 'Cumplimiento', 'Nómina', 'Tesorería'];
-
-export function nombrePeriodo(periodo: string | null): string {
-  if (!periodo) return '';
-  const [y, m] = periodo.split('-').map(Number);
-  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-  return `${meses[(m - 1) % 12]} ${y}`;
-}
-
-function fmtFecha(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return ''; }
-}
-
-export function TareasTabla({ tareas, mostrarAsesor = true, gestionable = false }: { tareas: Tarea[]; mostrarAsesor?: boolean; gestionable?: boolean }) {
-  const cols = 6 + (mostrarAsesor ? 1 : 0) + (gestionable ? 1 : 0);
-  return (
-    <div className="panel">
-      <div className="dt-wrap dt-alta">
-        <table className="dt">
-          <thead>
-            <tr>
-              <th>Actividad</th><th>Cliente</th><th>Área</th>
-              {mostrarAsesor && <th>Asesor</th>}<th>Auxiliar</th><th>Vence</th><th>Estado</th>
-              {gestionable && <th></th>}
-            </tr>
-          </thead>
-          <tbody>
-            {tareas.length === 0 ? (
-              <tr><td colSpan={cols} style={{ padding: 34, textAlign: 'center', color: 'var(--muted)' }}>No hay tareas con estos filtros.</td></tr>
-            ) : tareas.map((t) => (
-              <tr key={t.id}>
-                <td style={{ fontWeight: 600 }}>
-                  {t.titulo}
-                  {t.bloqueada && <span title="Esperando la entrega del insumo del cliente" style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: 'var(--alerta)', background: 'var(--alerta-suave)', border: '1px solid #edd9a8', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>🔒 Bloqueada</span>}
-                </td>
-                <td style={{ color: 'var(--muted)' }}>{t.empresa ?? '—'}</td>
-                <td style={{ color: 'var(--muted)' }}>{t.area ?? '—'}</td>
-                {mostrarAsesor && <td style={{ color: 'var(--muted)' }}>{t.asesor ?? '—'}</td>}
-                <td style={{ color: 'var(--muted)' }}>{t.auxiliar ?? '—'}</td>
-                <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtFecha(t.fechaVencimiento)}</td>
-                <td><EstadoSelect id={t.id} estado={t.estado} /></td>
-                {gestionable && <td><EditarTareaBoton id={t.id} /></td>}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+export function TareasTabla({ tareas, mostrarAsesor = true, gestionable = false }: {
+  tareas: Tarea[]; mostrarAsesor?: boolean; gestionable?: boolean;
+}) {
+  return <TareasTablaCliente tareas={tareas} mostrarAsesor={mostrarAsesor} gestionable={gestionable} />;
 }

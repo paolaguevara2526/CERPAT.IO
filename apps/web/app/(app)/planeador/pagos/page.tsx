@@ -12,6 +12,7 @@ import PendientesManuales from '../PendientesManuales';
 import BorrarPendiente from '../BorrarPendiente';
 import PagosAcciones from '../PagosAcciones';
 import AbonosBoton from '../AbonosBoton';
+import FormFiltros from './FormFiltros';
 
 
 export const metadata = { title: 'Pagos' };
@@ -241,7 +242,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
       </p>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', margin: 0 }}>
+        <FormFiltros>
           <select name="cliente" defaultValue={cliente} style={{ ...sel, maxWidth: 240 }}>
             <option value="">Todos los clientes</option>
             {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -254,7 +255,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           </select>
           <button type="submit" className="dbtn primary" style={{ fontSize: 13 }}>Filtrar</button>
           {(cliente || estado) && <a href="/planeador/pagos" className="dbtn" style={{ fontSize: 13, textDecoration: 'none' }}>Limpiar</a>}
-        </form>
+        </FormFiltros>
         {filas.length > 0 && <PagosAcciones filas={filas} cliente={cliente} />}
       </div>
 

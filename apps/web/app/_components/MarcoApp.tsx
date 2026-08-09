@@ -1,5 +1,9 @@
 'use client';
-// Contenedor del planeador: barra de la app + barra lateral + contenido.
+// Marco de la aplicación: barra superior + menú lateral + contenido.
+// Lo usan por igual el personal (Planeador) y el Portal del Cliente, con su
+// propia navegación: así una mejora del marco le llega a todos los roles a la
+// vez —cliente, auxiliar, asesor, coordinador— y no hay dos marcos que mantener.
+//
 // La barra lateral tiene tres modos: completo (210px) · solo íconos (56px) ·
 // oculto (0). Arranca RECOGIDA a íconos para dejarle la pantalla al trabajo y,
 // estando recogida, se despliega sola al pasar el mouse por encima —flotando
@@ -9,9 +13,9 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import PlaneadorSidebar from './PlaneadorSidebar';
+import MenuLateral from './MenuLateral';
 import TemaSelector from './TemaSelector';
-import BuscadorGlobal from './BuscadorGlobal';
+import type { Destino, Seccion } from '@/app/(app)/planeador/navegacion';
 
 const CLAVE = 'cerpat_sidebar_modo';
 type Modo = 'completo' | 'iconos' | 'oculto';
@@ -26,8 +30,20 @@ function modoPorAncho(w: number): Modo {
   return 'iconos';
 }
 
-export default function PlaneadorShell({ roles, esRoot, children }: {
-  roles: string[]; esRoot: boolean; children: React.ReactNode;
+export default function MarcoApp({ titulo, secciones, inicio, roles, esRoot = false, claveMenu, buscador, aviso, children }: {
+  /** Nombre que se muestra en la barra ("Planeador", "Portal del Cliente"). */
+  titulo: string;
+  secciones: Seccion[];
+  inicio?: Destino;
+  /** Si se pasan, filtran el menú por permisos (personal). El portal no los pasa. */
+  roles?: string[];
+  esRoot?: boolean;
+  claveMenu?: string;
+  /** Buscador global, si la sección lo tiene. */
+  buscador?: React.ReactNode;
+  /** Nota corta en la barra (p. ej. "Acceso del cliente · solo consulta"). */
+  aviso?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   const [modo, setModo] = useState<Modo>('completo');
   const [movil, setMovil] = useState(false);
@@ -114,8 +130,9 @@ export default function PlaneadorShell({ roles, esRoot, children }: {
         >
           {modo === 'oculto' ? '☰' : '‹'}
         </button>
-        <span className="win-title">Planeador</span>
-        <BuscadorGlobal roles={roles} esRoot={esRoot} />
+        <span className="win-title">{titulo}</span>
+        {aviso && <span className="app-bar-aviso">{aviso}</span>}
+        {buscador ?? <span style={{ flex: 1 }} />}
         <TemaSelector />
         <div className="win-ctl">
           <button aria-label="Minimizar"><svg viewBox="0 0 12 12"><rect x="1.5" y="6" width="9" height="1.4" fill="currentColor" /></svg></button>
@@ -144,7 +161,8 @@ export default function PlaneadorShell({ roles, esRoot, children }: {
           }}
         >
           <div style={{ width: compacto && !asomado ? 56 : 210, height: '100%', display: 'flex' }}>
-            <PlaneadorSidebar roles={roles} esRoot={esRoot} soloIconos={compacto && !asomado} />
+            <MenuLateral secciones={secciones} inicio={inicio} roles={roles} esRoot={esRoot}
+              soloIconos={compacto && !asomado} clave={claveMenu} />
           </div>
         </div>
 

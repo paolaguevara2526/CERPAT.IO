@@ -1,28 +1,40 @@
 'use client';
-// Barra lateral del planeador (React), estilo escritorio. Acordeón por área: cada
-// área se despliega y muestra sus funciones al abrirla. "Inicio" queda fijo arriba.
-// El área con la ruta activa se abre sola; el resto de aperturas se recuerda en el
-// navegador. Los permisos filtran qué áreas y funciones ve cada quien (misma fuente
-// que los guardas de ruta). Nombres alineados a la visión (ver docs/vision-plataforma.md).
+// Menú lateral en acordeón por área: cada área se despliega y muestra sus
+// funciones al abrirla. "Inicio" queda fijo arriba. El área con la ruta activa se
+// abre sola; el resto de aperturas se recuerda en el navegador.
+//
+// La navegación llega por props, así que lo usan tanto el personal como el portal
+// del cliente: un solo menú, un solo comportamiento. Los permisos filtran qué ve
+// cada quien —misma fuente que los guardas de ruta— y el portal simplemente no
+// los pasa, porque su lista ya es la que corresponde al cliente.
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { puedeVerRuta } from '@/lib/acceso';
 import Ico from './iconos';
-import { INICIO, SECCIONES, type Destino } from './navegacion';
+import type { Destino, Seccion } from '@/app/(app)/planeador/navegacion';
 
-const LS_KEY = 'cerpat.sidebar.areas';
 
-export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = false }: { roles: string[]; esRoot?: boolean; soloIconos?: boolean }) {
+export default function MenuLateral({ secciones: entrada, inicio, roles, esRoot = false, soloIconos = false, clave = 'cerpat.sidebar.areas' }: {
+  secciones: Seccion[];
+  inicio?: Destino;
+  /** Si se pasan, filtran qué se ve. El portal no los pasa: su lista ya es la suya. */
+  roles?: string[];
+  esRoot?: boolean;
+  soloIconos?: boolean;
+  /** Dónde recordar qué áreas quedaron abiertas (una por menú). */
+  clave?: string;
+}) {
   const path = usePathname();
-  const usuario = { roles, esRoot };
+  const usuario = { roles: roles ?? [], esRoot };
 
   const esActiva = (href: string) => href === path || (href !== '/planeador' && path.startsWith(href + '/'));
 
   // Cada ítem/área se muestra según el rol (misma fuente que los guardas de ruta).
-  const secciones = SECCIONES
-    .map((sec) => ({ ...sec, items: sec.items.filter((it) => puedeVerRuta(usuario, it.href)) }))
-    .filter((sec) => sec.items.length > 0);
+  const secciones = roles
+    ? entrada.map((sec) => ({ ...sec, items: sec.items.filter((it) => puedeVerRuta(usuario, it.href)) }))
+        .filter((sec) => sec.items.length > 0)
+    : entrada;
 
   const areaActiva = secciones.find((s) => s.items.some((it) => esActiva(it.href)))?.titulo ?? null;
 
@@ -35,7 +47,7 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
   // Tras montar, aplica la preferencia guardada del usuario.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(LS_KEY);
+      const raw = localStorage.getItem(clave);
       if (raw) setAbiertas(new Set(JSON.parse(raw) as string[]));
     } catch { /* sin persistencia */ }
   }, []);
@@ -48,7 +60,7 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
   const alternar = (titulo: string) => setAbiertas((prev) => {
     const n = new Set(prev);
     if (n.has(titulo)) n.delete(titulo); else n.add(titulo);
-    try { localStorage.setItem(LS_KEY, JSON.stringify([...n])); } catch { /* sin persistencia */ }
+    try { localStorage.setItem(clave, JSON.stringify([...n])); } catch { /* sin persistencia */ }
     return n;
   });
 
@@ -70,14 +82,14 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
     );
   };
 
-  const inicioVisible = puedeVerRuta(usuario, INICIO.href);
+  const inicioVisible = !!inicio && (!roles || puedeVerRuta(usuario, inicio.href));
 
   // Modo compacto (solo íconos): sin acordeón —no hay texto que colapsar—, se
   // listan todos los ítems con un separador sutil entre áreas.
   if (soloIconos) {
     return (
       <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 2, width: 56, minWidth: 56, overflowY: 'auto' }}>
-        {inicioVisible && item(INICIO)}
+        {inicioVisible && item(inicio!)}
         {secciones.map((sec) => (
           <div key={sec.titulo} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <div title={sec.titulo} style={{ height: 1, background: 'currentColor', opacity: 0.18, margin: '8px 8px 6px' }} />
@@ -90,7 +102,7 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
 
   return (
     <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210, overflowY: 'auto' }}>
-      {inicioVisible && item(INICIO)}
+      {inicioVisible && item(inicio!)}
 
       {secciones.map((sec) => {
         const abierta = abiertas.has(sec.titulo);

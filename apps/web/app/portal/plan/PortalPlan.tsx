@@ -87,7 +87,7 @@ export default function PortalPlan() {
       </div>
 
       <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', margin: '4px 2px 8px' }}>Actividades ({actividades.length})</div>
-      <div className="panel" style={{ overflowX: 'auto' }}>
+      <div className="panel dt-alta">
         <table className="dt" style={{ minWidth: 640 }}>
           <thead><tr><th>Actividad</th><th style={{ width: 130 }}>Área</th><th style={{ width: 80 }}>Período</th><th style={{ width: 70 }}>Vence</th><th style={{ width: 120 }}>Estado</th></tr></thead>
           <tbody>

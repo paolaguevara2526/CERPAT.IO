@@ -10,20 +10,11 @@
 
 import { exigirRuta } from '@/lib/acceso-server';
 import { apiFetch } from '@/lib/session';
+import TablaClientes, { type Empresa } from './TablaClientes';
 
 
 export const metadata = { title: 'Clientes' };
 export const dynamic = 'force-dynamic';
-
-type Empresa = {
-  id: string;
-  nombre: string;
-  nit: string | null;
-  tipo: string | null;
-  servicio: string | null;
-  asesorNombre: string | null;
-  regimen: string | null;
-};
 
 type Respuesta = {
   organizacion: { nombre: string; slug: string } | null;
@@ -70,31 +61,7 @@ export default async function ClientesPage() {
         <span style={{ fontSize: 13.5, color: 'var(--muted)', fontWeight: 600 }}>empresas cliente</span>
       </div>
 
-      <div className="panel">
-        <div className="dt-wrap dt-alta">
-          <table className="dt">
-            <thead>
-              <tr>{['Razón social', 'NIT', 'Tipo', 'Servicio', 'Asesor', 'Régimen'].map((h) => <th key={h}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {empresas.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>No hay empresas cargadas todavía.</td></tr>
-              ) : (
-                empresas.map((e) => (
-                  <tr key={e.id}>
-                    <td style={{ fontWeight: 600 }}>{e.nombre}</td>
-                    <td style={{ color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{e.nit ?? '—'}</td>
-                    <td style={{ color: 'var(--muted)' }}>{e.tipo ?? '—'}</td>
-                    <td style={{ color: 'var(--muted)' }}>{e.servicio ?? '—'}</td>
-                    <td style={{ color: 'var(--muted)' }}>{e.asesorNombre ?? '—'}</td>
-                    <td style={{ color: 'var(--muted)' }}>{e.regimen ?? '—'}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TablaClientes empresas={empresas} />
     </>
   )}
     </>
