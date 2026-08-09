@@ -11,10 +11,20 @@ const VERSION = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12)
   ?? 'dev';
 
 const SW = `/* Service worker de CERPAT (PWA) — versión ${VERSION}.
-   Conservador: nunca cachea la API ni peticiones que no sean GET. Network-first
-   para el contenido propio, con caché de respaldo cuando no hay conexión. */
+   Conservador a propósito: solo guarda archivos estáticos e inmutables
+   (/_next/static, íconos, imágenes). NUNCA guarda páginas HTML ni la API, porque
+   las páginas se arman en el servidor con los datos de la persona que entró:
+   guardarlas filtraría información entre usuarios y podría mostrar una versión
+   vieja (o el login) después de iniciar sesión. */
 const VERSION = '${VERSION}';
 const CACHE = 'cerpat-' + VERSION;
+
+// Solo esto se guarda: archivos con nombre versionado o recursos de marca.
+function sePuedeGuardar(url, request) {
+  if (request.mode === 'navigate') return false;          // páginas: siempre en vivo
+  if (url.pathname.startsWith('/_next/static/')) return true;
+  return /\\.(css|js|woff2?|png|jpg|jpeg|webp|svg|ico)$/i.test(url.pathname);
+}
 
 self.addEventListener('install', () => {
   // La versión nueva toma el control sin esperar a que se cierren las pestañas.
@@ -36,11 +46,13 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api')) return;
   if (url.pathname === '/sw.js') return;
+  // Páginas y todo lo que no sea estático: se dejan pasar al navegador tal cual.
+  if (!sePuedeGuardar(url, request)) return;
 
   event.respondWith(
     fetch(request)
       .then((res) => {
-        if (res && res.ok && res.type === 'basic') {
+        if (res && res.ok && res.type === 'basic' && !res.redirected) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(request, copy)).catch(() => {});
         }
