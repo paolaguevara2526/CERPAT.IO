@@ -43,6 +43,8 @@ export default function ConfigTributariaEditor() {
   const [regenerando, setRegenerando] = useState(false);
   const [regResumen, setRegResumen] = useState<string | null>(null);
   const [regAviso, setRegAviso] = useState<SinCalendario[]>([]);
+  // Qué obligaciones se dieron de baja en la última regeneración.
+  const [regBajas, setRegBajas] = useState<string[]>([]);
   // búsqueda de municipio para agregar
   const [munQ, setMunQ] = useState('');
   const [munRes, setMunRes] = useState<{ id: string; nombre: string; departamento: string | null }[]>([]);
@@ -79,8 +81,32 @@ export default function ConfigTributariaEditor() {
 
   async function regenerar() {
     if (!sel) return;
-    if (!confirm(`¿Regenerar los vencimientos de ${sel.nombre} (nacionales + ICA municipal) según su configuración actual?\n\nNo se tocan los pagos ya registrados ni las entradas manuales. Guarda primero los cambios de la config.`)) return;
-    setRegenerando(true); setError(null); setRegResumen(null); setRegAviso([]);
+    setRegenerando(true); setError(null); setRegResumen(null); setRegAviso([]); setRegBajas([]);
+
+    // Primero se SIMULA. Regenerar da de baja las obligaciones que la config
+    // actual ya no contempla, y eso puede llevarse por delante vencimientos
+    // reales por una casilla mal puesta —pasó con el RUB—. Ahora se ve qué se va
+    // a eliminar ANTES de confirmar.
+    try {
+      const rp = await fetch(`/api/vencimientos/regenerar/${sel.id}?dryRun=1`, { method: 'POST' });
+      const p = await rp.json().catch(() => ({}));
+      if (!rp.ok) { setError(p.error || 'No se pudo simular.'); setRegenerando(false); return; }
+
+      const bajas: { obligacion: string; n: number }[] = Array.isArray(p.seEliminaria) ? p.seEliminaria : [];
+      const detalle = bajas.length
+        ? `\n\n⚠ SE VAN A ELIMINAR ${p.resumen?.eliminados ?? 0} vencimiento(s):\n`
+          + bajas.map((b) => `   · ${b.obligacion} (${b.n})`).join('\n')
+          + `\n\nSi alguna de estas obligaciones SÍ le aplica al cliente, cancela y revisa la configuración antes de continuar.`
+        : '\n\nNo se eliminará ningún vencimiento.';
+
+      if (!confirm(
+        `Regenerar los vencimientos de ${sel.nombre} según su configuración actual.`
+        + `\n\nSe crearían ${p.resumen?.creados ?? 0} vencimiento(s) nuevo(s).`
+        + detalle
+        + `\n\nNunca se tocan los pagos ya registrados ni las entradas manuales.`
+      )) { setRegenerando(false); return; }
+    } catch { setError('Error de red.'); setRegenerando(false); return; }
+
     try {
       const r = await fetch(`/api/vencimientos/regenerar/${sel.id}`, { method: 'POST' });
       const d = await r.json().catch(() => ({}));
@@ -90,6 +116,9 @@ export default function ConfigTributariaEditor() {
         `Vencimientos ${d.anio} regenerados: ${s.creados ?? 0} nuevos · ${s.actualizados ?? 0} con fecha ajustada · ${s.sinCambios ?? 0} sin cambios · ${s.eliminados ?? 0} eliminados`
         + (s.conservadosConPago ? ` · ${s.conservadosConPago} conservados por tener pago registrado` : '') + '.'
       );
+      const bajas: { obligacion: string; n: number }[] = Array.isArray(d.seEliminaria) ? d.seEliminaria : [];
+      if (bajas.length) setRegBajas(bajas.map((b) => `${b.obligacion} (${b.n})`));
+      else setRegBajas([]);
       setRegAviso(Array.isArray(d.sinCalendario) ? d.sinCalendario : []);
     } catch { setError('Error de red.'); } finally { setRegenerando(false); }
   }
@@ -209,6 +238,12 @@ export default function ConfigTributariaEditor() {
               </div>
               {regResumen && (
                 <div style={{ marginTop: 12, background: 'var(--exito-suave)', color: 'var(--exito-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 12.5, fontWeight: 600 }}>{regResumen}</div>
+              )}
+              {regBajas.length > 0 && (
+                <div style={{ marginTop: 10, background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 12.5 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Se dieron de baja estas obligaciones:</div>
+                  {regBajas.map((b) => <div key={b}>· {b}</div>)}
+                </div>
               )}
               {regAviso.length > 0 && (
                 <div style={{ marginTop: 10, background: 'var(--alerta-suave)', color: 'var(--alerta-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 12.5 }}>

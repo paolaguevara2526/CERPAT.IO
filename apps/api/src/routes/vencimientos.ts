@@ -12,7 +12,7 @@ import { esStaffAcotado } from '../auth/alcance.js';
 import { vencimientosNacionales, vencimientosIca, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
-import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
+import { vinculoDeObligacion, VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
 
 // ¿La obligación causa sanción por extemporaneidad? Aplica a las NO presentadas
 // y a las que quedaron INEFICACES (retención/autorretención/ReteICA que pasaron
@@ -480,7 +480,8 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
 
   const empresa = await prisma.empresa.findFirst({
     where: { id: req.params.empresaId, organizacionId: org.id },
-    select: { id: true, nombre: true, nit: true, configuracionTributaria: true },
+    // El tipo de empresa define quién está obligado al RUB (ver aplicaRub).
+    select: { id: true, nombre: true, nit: true, configuracionTributaria: true, tipo: { select: { nombre: true } } },
   });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
   if (!empresa.nit) return res.status(422).json({ error: 'El cliente no tiene NIT; no se pueden calcular las fechas de vencimiento.' });
@@ -488,7 +489,7 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
   if (!cfg) return res.status(422).json({ error: 'El cliente no tiene configuración tributaria. Configúrala antes de regenerar.' });
 
   const anio = ANIO_CALENDARIO;
-  const objetivoNac = vencimientosNacionales(cfg as ConfigNacional, empresa.nit);
+  const objetivoNac = vencimientosNacionales(cfg as ConfigNacional, empresa.nit, empresa.tipo?.nombre ?? null);
 
   // ICA municipal: cruza lo marcado por municipio con el calendario municipal.
   const icaCfg = await prisma.empresaMunicipioIca.findMany({
@@ -561,6 +562,30 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
     return Object.keys(data).length ? data : null;
   };
 
+  // Qué se daría de baja con la configuración actual. Se calcula ANTES de tocar
+  // nada porque regenerar borra los vencimientos que la config ya no contempla:
+  // así una casilla mal puesta se lleva por delante obligaciones reales sin que
+  // nadie se entere. Con ?dryRun=1 se devuelve esto y no se modifica nada.
+  const bajas = [
+    ...existNac.filter((e) => OBLIGACIONES_NACIONALES.has(e.obligacion)
+      && !objetivoNacKeys.has(key(e.obligacion, e.periodicidad, e.periodo)) && !tienePago(e)),
+    ...existIca.filter((e) => OBLIGACIONES_ICA.has(e.obligacion)
+      && !objetivoIcaKeys.has(keyIca(e.obligacion, e.periodicidad, e.periodo, e.municipioId)) && !tienePago(e)),
+  ];
+  const bajasPorObligacion = [...bajas.reduce((m, e) => m.set(e.obligacion, (m.get(e.obligacion) ?? 0) + 1), new Map<string, number>())]
+    .map(([obligacion, n]) => ({ obligacion, n }))
+    .sort((a, b) => b.n - a.n);
+
+  if (req.query.dryRun === '1' || req.query.dryRun === 'true') {
+    const altas = objetivoNac.filter((v) => !existNacByKey.has(key(v.obligacion, v.periodicidad, v.periodo))).length
+      + objetivoIca.filter((v) => !existIcaByKey.has(keyIca(v.obligacion, v.periodicidad, v.periodo, v.municipioId))).length;
+    return res.json({
+      ok: true, dryRun: true, empresa: empresa.nombre, anio,
+      resumen: { creados: altas, eliminados: bajas.length, conservadosConPago: 0 },
+      seEliminaria: bajasPorObligacion, sinCalendario,
+    });
+  }
+
   let creados = 0, actualizados = 0, sinCambios = 0, eliminados = 0, conservadosConPago = 0, enriquecidos = 0;
 
   await prisma.$transaction(async (tx) => {
@@ -628,7 +653,122 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
     }
   });
 
-  res.json({ ok: true, empresa: empresa.nombre, anio, resumen: { creados, actualizados, sinCambios, eliminados, conservadosConPago, enriquecidos }, sinCalendario });
+  res.json({
+    ok: true, empresa: empresa.nombre, anio,
+    resumen: { creados, actualizados, sinCambios, eliminados, conservadosConPago, enriquecidos },
+    seEliminaria: bajasPorObligacion, // qué se dio de baja, por obligación
+    sinCalendario,
+  });
+});
+
+// ---------- Checklist de los vencimientos ----------
+//
+// El checklist de un vencimiento NO se escribe ahí: se hereda de la actividad
+// del plan que quedó vinculada a esa obligación (Administración → Actividades),
+// copiando sus subtareas plantilla. Por eso puede faltar por tres razones
+// distintas, y sin verlas no se sabe cuál corregir:
+//   1. ninguna actividad quedó vinculada a esa obligación;
+//   2. la actividad existe y está vinculada, pero no tiene subtareas plantilla;
+//   3. está todo bien, pero el vencimiento se creó ANTES de configurarlo.
+// Solo el caso 3 se arregla desde el sistema; los otros dos son parametrización.
+
+// GET /vencimientos/checklist/diagnostico?anio=YYYY
+// Qué obligaciones tienen checklist configurado y cuántos vencimientos se
+// quedaron sin él. No modifica nada.
+vencimientosRouter.get('/checklist/diagnostico', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede ver el diagnóstico.' });
+  const org = await orgActual(req);
+  if (!org) return res.json({ anio: ANIO_CALENDARIO, filas: [] });
+  const anio = Number(req.query.anio) || ANIO_CALENDARIO;
+
+  const actividades = await prisma.actividadPlan.findMany({
+    where: { organizacionId: org.id, activo: true, obligacionVencimiento: { not: null } },
+    select: { nombre: true, obligacionVencimiento: true, areaId: true, _count: { select: { subtareas: true } } },
+  });
+  const porKey = new Map(actividades.map((a) => [a.obligacionVencimiento!, a]));
+
+  const vencs = await prisma.vencimientoEmpresa.findMany({
+    where: { organizacionId: org.id, anio },
+    select: { obligacion: true, _count: { select: { subtareas: true } } },
+  });
+
+  const filas = VINCULOS_VENCIMIENTO.map((v) => {
+    const act = porKey.get(v.key);
+    const propios = vencs.filter((x) => vinculoDeObligacion(x.obligacion) === v.key);
+    const sinChecklist = propios.filter((x) => x._count.subtareas === 0).length;
+    return {
+      key: v.key,
+      obligacion: v.label,
+      actividad: act?.nombre ?? null,
+      subtareasPlantilla: act?._count.subtareas ?? 0,
+      vencimientos: propios.length,
+      sinChecklist,
+      // Qué hay que hacer, en el idioma del equipo.
+      diagnostico: !act ? 'sin_actividad_vinculada'
+        : (act._count.subtareas === 0 ? 'actividad_sin_checklist'
+        : (sinChecklist > 0 ? 'pendiente_de_rellenar' : 'ok')),
+    };
+  });
+
+  res.json({ anio, filas });
+});
+
+// POST /vencimientos/checklist/rellenar { anio?, dryRun? }
+// Copia el checklist (y el responsable del área) a los vencimientos que ya
+// existen y no lo tienen. SOLO AGREGA: no borra ni sobrescribe nada, a
+// diferencia de "Regenerar vencimientos". Es la herramienta segura para
+// aplicar una parametrización nueva sobre lo que ya está cargado.
+vencimientosRouter.post('/checklist/rellenar', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede rellenar los checklist.' });
+  const org = await orgActual(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const anio = Number(req.body?.anio) || ANIO_CALENDARIO;
+  const dryRun = req.body?.dryRun === true || req.body?.dryRun === 'true';
+
+  const actividades = await prisma.actividadPlan.findMany({
+    where: { organizacionId: org.id, activo: true, obligacionVencimiento: { not: null } },
+    select: { obligacionVencimiento: true, areaId: true, subtareas: { orderBy: { orden: 'asc' }, select: { texto: true, orden: true } } },
+  });
+  const vincPorKey = new Map(actividades.map((a) => [a.obligacionVencimiento!, a]));
+
+  const asigs = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: org.id }, select: { empresaId: true, areaId: true, asesorId: true, auxiliarId: true },
+  });
+  const respPorEmpresaArea = new Map(asigs.map((a) => [`${a.empresaId}|${a.areaId}`, a]));
+
+  const vencs = await prisma.vencimientoEmpresa.findMany({
+    where: { organizacionId: org.id, anio },
+    select: { id: true, empresaId: true, obligacion: true, asesorId: true, auxiliarId: true, _count: { select: { subtareas: true } } },
+  });
+
+  let conChecklist = 0, conResponsable = 0;
+  const detalle = new Map<string, number>();
+
+  for (const v of vencs) {
+    const k = vinculoDeObligacion(v.obligacion);
+    const vinc = k ? vincPorKey.get(k) : undefined;
+    if (!vinc) continue;
+    const resp = vinc.areaId ? respPorEmpresaArea.get(`${v.empresaId}|${vinc.areaId}`) : undefined;
+
+    const data: Record<string, unknown> = {};
+    if (v._count.subtareas === 0 && vinc.subtareas.length) {
+      data.subtareas = { create: vinc.subtareas.map((s) => ({ texto: s.texto, orden: s.orden })) };
+      conChecklist++;
+      detalle.set(v.obligacion, (detalle.get(v.obligacion) ?? 0) + 1);
+    }
+    if (v.asesorId == null && resp?.asesorId) { data.asesorId = resp.asesorId; conResponsable++; }
+    if (v.auxiliarId == null && resp?.auxiliarId) data.auxiliarId = resp.auxiliarId;
+
+    if (Object.keys(data).length && !dryRun) {
+      await prisma.vencimientoEmpresa.update({ where: { id: v.id }, data });
+    }
+  }
+
+  res.json({
+    ok: true, dryRun, anio,
+    resumen: { revisados: vencs.length, conChecklist, conResponsable },
+    porObligacion: [...detalle.entries()].map(([obligacion, n]) => ({ obligacion, n })).sort((a, b) => b.n - a.n),
+  });
 });
 
 // DELETE /vencimientos/:id — elimina un vencimiento (Administrador / root).

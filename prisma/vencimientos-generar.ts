@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
+import { aplicaRub } from '../apps/api/src/vencimientos/generador.js';
 
 const prisma = new PrismaClient();
 const ORG_ID = 'seed-org-cerpat';
@@ -18,10 +19,12 @@ const ANIO = 2026;
 
 // RUB (Registro Único de Beneficiarios): actualización trimestral de solo
 // presentación (no genera pago). Fechas fijas nacionales (no dependen del NIT).
-// Aplica a personas jurídicas (Renta PJ / Gran Contribuyente / RST consolidada).
-// ⚠ Replica apps/api/src/vencimientos/generador.ts — mantener ambos en sync.
+//
+// La condición se IMPORTA de la API en vez de copiarse. Este archivo decía
+// "replica generador.ts — mantener ambos en sync", y esa sincronización a mano
+// fue justo lo que falló: al corregir la regla en la API, aquí quedó la vieja.
+// Una regla de negocio no puede vivir en dos sitios.
 const RUB_OBLIGACION = 'RUB (Registro Único de Beneficiarios)';
-const RUB_RENTA_PJ = new Set(['persona_juridica', 'gran_contribuyente', 'rst_consolidada']);
 const RUB_FECHAS: Record<number, { periodo: string; fecha: string }[]> = {
   2026: [
     { periodo: '1er trimestre', fecha: '2026-02-02' },
@@ -132,7 +135,8 @@ async function main() {
   // ---- Empresas con configuración ----
   const empresas = await prisma.empresa.findMany({
     where: { organizacionId: ORG_ID, configuracionTributaria: { isNot: null } },
-    select: { id: true, nombre: true, nit: true, configuracionTributaria: true },
+    // El tipo define quién está obligado al RUB (naturaleza jurídica, no renta).
+    select: { id: true, nombre: true, nit: true, configuracionTributaria: true, tipo: { select: { nombre: true } } },
   });
 
   let creados = 0;
@@ -182,8 +186,8 @@ async function main() {
       }
     }
 
-    // RUB: solo personas jurídicas. Fechas fijas del año (no dependen del NIT).
-    if (cfg.rentaTipo && RUB_RENTA_PJ.has(cfg.rentaTipo)) {
+    // RUB: por naturaleza jurídica (ver aplicaRub en la API).
+    if (aplicaRub(e.tipo?.nombre ?? null)) {
       for (const it of RUB_FECHAS[ANIO] ?? [])
         vs.push({ obligacion: RUB_OBLIGACION, periodicidad: 'Trimestral', periodo: it.periodo, fecha: it.fecha });
     }
@@ -207,6 +211,27 @@ async function main() {
 // (municipioId≠null) se gestiona por cliente desde la API y no se toca aquí,
 // para no borrar lo generado con el botón "Regenerar vencimientos".
 async function reset() {
+  // SEGURO: este script fue pensado para la carga inicial, cuando la base estaba
+  // vacía. Hoy hay operación real encima —estados, valores, notas, soportes— y
+  // borrar y recrear se llevaría por delante ese trabajo sin forma de deshacerlo.
+  // Si hay algo trabajado, se detiene. Para el mantenimiento del día a día está
+  // el botón "Regenerar vencimientos", que preserva lo que tiene pago.
+  const trabajados = await prisma.vencimientoEmpresa.count({
+    where: {
+      organizacionId: ORG_ID, anio: ANIO, generado: true, municipioId: null,
+      OR: [{ estado: { not: 'pendiente' } }, { valorPago: { not: null } }, { NOT: { notas: null } }, { NOT: { soporteLink: null } }],
+    },
+  });
+  if (trabajados > 0 && !process.argv.includes('--forzar')) {
+    console.error(
+      `\n⛔ Hay ${trabajados} vencimiento(s) del ${ANIO} con trabajo registrado (estado, valor, notas o soporte).\n` +
+      `   Este script BORRA y vuelve a crear los vencimientos nacionales: perderías ese trabajo.\n\n` +
+      `   Para el día a día usa Administración → Config. tributaria → "Regenerar vencimientos",\n` +
+      `   que conserva lo que ya tiene pago.\n\n` +
+      `   Si de verdad quieres rehacerlo todo, corre el script con --forzar (y saca un respaldo antes).\n`,
+    );
+    process.exit(1);
+  }
   const r = await prisma.vencimientoEmpresa.deleteMany({ where: { organizacionId: ORG_ID, anio: ANIO, generado: true, municipioId: null } });
   if (r.count) console.log(`  (borrados ${r.count} vencimientos nacionales generados previos del ${ANIO})`);
 }
