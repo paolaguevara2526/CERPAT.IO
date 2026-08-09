@@ -1,5 +1,11 @@
 'use client';
-// Por qué un cliente tiene o no tiene RUB.
+// Repaso del RUB sobre todos los clientes: en cuáles hay que actuar.
+//
+// El estado de UN cliente se ve en su hoja de vida (Clientes → el cliente →
+// Situación tributaria), que es donde se revisa a alguien en concreto. Esta
+// pantalla responde la otra pregunta, la que no cabe en una ficha: «¿a cuáles de
+// mis clientes les falta?». Recorrer 90 fichas de una en una no es viable, y así
+// fue como se encontró el problema. Cada fila lleva a su hoja de vida.
 //
 // La obligación se deriva del TIPO DE EMPRESA (naturaleza jurídica). Cuando no
 // aparece siempre es una de dos cosas —el cliente no tiene tipo asignado, o su
@@ -49,7 +55,12 @@ export default function DiagnosticoRub() {
   const faltan = filas.filter((f) => f.estado === 'falta_regenerar').length;
 
   const columnas: Columna<Fila>[] = [
-    { clave: 'empresa', label: 'Cliente', valor: (f) => f.empresa, buscar: true, estiloCelda: { fontWeight: 600 } },
+    {
+      clave: 'empresa', label: 'Cliente', valor: (f) => f.empresa, buscar: true, estiloCelda: { fontWeight: 600 },
+      // El detalle de cada cliente vive en su hoja de vida; desde aquí se llega
+      // en un clic en vez de volver a buscarlo en el listado de Clientes.
+      render: (f) => <a href={`/clientes/${f.empresaId}`} style={{ color: 'var(--navy)', textDecoration: 'none', fontWeight: 700 }}>{f.empresa}</a>,
+    },
     { clave: 'tipo', label: 'Tipo de empresa', valor: (f) => f.tipo ?? '(sin tipo)', estiloCelda: { color: 'var(--muted)' } },
     { clave: 'aplica', label: '¿Le aplica?', valor: (f) => (f.aplica ? 'Sí' : 'No') },
     { clave: 'rub', label: 'RUB cargados', valor: (f) => String(f.vencimientosRub), orden: (f) => f.vencimientosRub, estilo: { textAlign: 'right' }, estiloCelda: { textAlign: 'right', color: 'var(--muted)' } },
@@ -64,8 +75,9 @@ export default function DiagnosticoRub() {
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>Diagnóstico del RUB</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 14px', maxWidth: 780, lineHeight: 1.6 }}>
         El RUB se genera según la <strong>naturaleza jurídica</strong> del cliente, o sea su <strong>tipo de empresa</strong>:
-        personas jurídicas, consorcios y uniones temporales sí; personas naturales no. Aquí ves, cliente por
-        cliente, si le aplica y si lo tiene cargado.
+        personas jurídicas, consorcios y uniones temporales sí; personas naturales no. Esta pantalla es el
+        repaso <strong>sobre todos los clientes a la vez</strong>, para ver en cuáles hay que actuar. El estado de
+        uno solo está en su <strong>hoja de vida</strong> — pincha su nombre para abrirla.
       </p>
 
       {error && <div className="panel" style={{ padding: '10px 14px', color: 'var(--peligro-fuerte)', background: 'var(--peligro-suave)', borderColor: 'var(--peligro-borde)', fontWeight: 600, marginBottom: 14 }}>{error}</div>}

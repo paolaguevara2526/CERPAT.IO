@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import ObligacionesCliente from './ObligacionesCliente';
+import SituacionTributaria from './SituacionTributaria';
 
 type Actividad = { id: string; codigo: string; descripcion: string | null; principal: boolean; orden: number };
 type Representante = { id: string; nombre: string; documento: string | null; cargo: string | null; principal: boolean; desde: string | null; hasta: string | null; email: string | null; telefono: string | null };
@@ -120,6 +121,8 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
           </div>
         )}
       </div>
+
+      <SituacionTributaria empresaId={empresaId} />
 
       <ObligacionesCliente empresaId={empresaId} />
 

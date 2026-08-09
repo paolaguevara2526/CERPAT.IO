@@ -18,6 +18,7 @@ import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { orgDeSesion } from '../auth/tenant.js';
 import { obligacionesPorCifras, naturalezaDe } from '../fiscal/reglas.js';
+import { aplicaRub, RUB_OBLIGACION, ANIO_CALENDARIO } from '../vencimientos/generador.js';
 
 export const fichaRouter = Router();
 
@@ -252,6 +253,94 @@ fichaRouter.get('/:empresaId/obligaciones', requireAuth, async (req: AuthedReque
     parametros: params ? { anio: params.anio, uvt: params.uvt, smmlv: params.smmlv } : null,
     obligaciones: conContraste,
     editable: !esCliente && puedeEditarFicha(u),
+  });
+});
+
+// ---------- Situación tributaria del cliente ----------
+//
+// Qué responsabilidades tiene configuradas y qué vencimientos le salieron de
+// ellas, para ESTE cliente. Antes había que salir a Administración a mirarlo:
+// una pestaña para la configuración y otra para el diagnóstico del RUB. Revisar
+// un cliente obligaba a abrir tres pantallas y recordar de memoria lo visto en
+// las otras dos, que es justo como se cuela un error.
+//
+// Es de solo lectura a propósito: la edición sigue viviendo en Config.
+// tributaria, que es un editor pesado (config nacional + ICA municipio por
+// municipio). Aquí se ve el estado y se llega a él por un enlace.
+
+// GET /ficha/:empresaId/tributaria?anio=YYYY
+fichaRouter.get('/:empresaId/tributaria', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const u = req.user;
+  const esCliente = !!u?.empresaCliente || !!u?.grupoCliente;
+  if (esCliente) {
+    if (!(await empresaPermitidaParaCliente(u, req.params.empresaId))) return res.status(403).json({ error: 'Sin acceso.' });
+  } else if (!puedeVerFicha(u)) {
+    return res.status(403).json({ error: 'Sin acceso a las fichas de clientes.' });
+  }
+
+  const anio = Number(req.query.anio) || ANIO_CALENDARIO;
+
+  const empresa = await prisma.empresa.findFirst({
+    where: { id: req.params.empresaId, organizacionId: org.id },
+    select: {
+      id: true,
+      tipo: { select: { nombre: true } },
+      configuracionTributaria: {
+        select: {
+          ivaPeriodicidad: true, consumoPeriodicidad: true, rentaTipo: true,
+          anticipoRstPeriodicidad: true, retencionFuente: true, fopat: true,
+          nominaElectronica: true, seguridadSocial: true,
+        },
+      },
+      municipiosIca: {
+        select: {
+          id: true, icaPeriodicidad: true, reteica: true, reteicaPeriodicidad: true,
+          autoica: true, autoicaPeriodicidad: true,
+          municipio: { select: { nombre: true, departamento: true } },
+        },
+      },
+    },
+  });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+
+  // Qué vencimientos tiene realmente cargados este año, por obligación. Es el
+  // contraste que faltaba: la configuración dice qué DEBERÍA tener, esto dice
+  // qué tiene. Cuando no cuadran, se ve aquí y no tres pantallas más allá.
+  const porObligacion = await prisma.vencimientoEmpresa.groupBy({
+    by: ['obligacion'],
+    where: { organizacionId: org.id, empresaId: empresa.id, anio },
+    _count: { _all: true },
+  });
+  const vencimientos = porObligacion
+    .map((v) => ({ obligacion: v.obligacion, n: v._count._all }))
+    .sort((a, b) => a.obligacion.localeCompare(b.obligacion, 'es'));
+
+  const tipo = empresa.tipo?.nombre ?? null;
+  const rubAplica = aplicaRub(tipo);
+  const rubCargados = vencimientos.find((v) => v.obligacion === RUB_OBLIGACION)?.n ?? 0;
+
+  res.json({
+    anio,
+    tipo,
+    config: empresa.configuracionTributaria,
+    ica: empresa.municipiosIca.map((m) => ({
+      id: m.id,
+      municipio: m.municipio?.nombre ?? null,
+      departamento: m.municipio?.departamento ?? null,
+      icaPeriodicidad: m.icaPeriodicidad,
+      reteica: m.reteica, reteicaPeriodicidad: m.reteicaPeriodicidad,
+      autoica: m.autoica, autoicaPeriodicidad: m.autoicaPeriodicidad,
+    })),
+    rub: {
+      aplica: rubAplica,
+      cargados: rubCargados,
+      estado: !tipo ? 'sin_tipo' : (!rubAplica ? 'tipo_no_obligado' : (rubCargados === 0 ? 'falta_regenerar' : 'ok')),
+    },
+    vencimientos,
+    // Regenerar y editar la config son de Administración; el resto solo mira.
+    puedeAdministrar: !esCliente && !!u && (u.esRoot || u.roles.includes('Administrador')),
   });
 });
 

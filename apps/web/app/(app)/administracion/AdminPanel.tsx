@@ -40,6 +40,16 @@ const TABS_COORD = ['empresas', 'config-tributaria', 'sancion-municipio', 'plan-
 export default function AdminPanel({ esAdmin = true }: { esAdmin?: boolean }) {
   const tabs = esAdmin ? TABS : TABS.filter((t) => TABS_COORD.includes(t.id));
   const [tab, setTab] = useState(tabs[0].id);
+
+  // Permite enlazar una pestaña concreta (?tab=config-tributaria) desde otras
+  // pantallas — p. ej. la hoja de vida del cliente, que manda aquí a editar la
+  // configuración. Solo al montar: a partir de ahí manda el clic del usuario.
+  useEffect(() => {
+    const pedida = new URLSearchParams(window.location.search).get('tab');
+    if (pedida && tabs.some((t) => t.id === pedida)) setTab(pedida);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const activo = tabs.find((t) => t.id === tab) ?? tabs[0];
   return (
     <div>
