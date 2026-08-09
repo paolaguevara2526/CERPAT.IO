@@ -9,6 +9,7 @@ import ImportarVencimientosModal from './ImportarVencimientosModal';
 import FiltroColumna from '../administracion/FiltroColumna';
 import { useOrden, ThOrden } from '@/app/_components/orden';
 
+import { tinte } from '@/app/_components/color';
 const ANIO = 2026;
 type Venc = {
   id: string; empresaId: string; empresa: string | null; obligacion: string; periodicidad: string | null;
@@ -17,12 +18,12 @@ type Venc = {
 type Resumen = { kpis: { total: number; presentados: number; pendientes: number; vencidos: number } | null; porMes: number[] };
 
 const ESTADO_META: Record<string, { label: string; color: string }> = {
-  pendiente: { label: 'Pendiente', color: '#5b6a82' },
-  presentado_sin_pago: { label: 'Presentado (sin pago)', color: '#2f6fd0' },
-  presentado_pagado: { label: 'Presentado y pagado', color: '#22a670' },
-  presentado_cero: { label: 'Presentado en $0', color: '#14a8a0' },
-  no_presentado: { label: 'No presentado', color: '#cf4436' },
-  no_obligado: { label: 'No obligado', color: '#9aa3b2' },
+  pendiente: { label: 'Pendiente', color: 'var(--muted)' },
+  presentado_sin_pago: { label: 'Presentado (sin pago)', color: 'var(--info)' },
+  presentado_pagado: { label: 'Presentado y pagado', color: 'var(--exito)' },
+  presentado_cero: { label: 'Presentado en $0', color: 'var(--cero)' },
+  no_presentado: { label: 'No presentado', color: 'var(--peligro)' },
+  no_obligado: { label: 'No obligado', color: 'var(--neutro)' },
 };
 // La fecha se guarda como día calendario (medianoche UTC). Se arma desde las
 // partes año-mes-día para mostrar el día exacto, sin corrimiento por zona horaria.
@@ -147,14 +148,14 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
 
       {importar && <ImportarVencimientosModal onClose={() => setImportar(false)} onImported={() => { cargarBase(); cargarLista(); }} />}
 
-      {error && <div className="panel" style={{ padding: '10px 14px', color: '#b42318', fontWeight: 600, marginBottom: 14 }}>{error}</div>}
+      {error && <div className="panel" style={{ padding: '10px 14px', color: 'var(--peligro-fuerte)', fontWeight: 600, marginBottom: 14 }}>{error}</div>}
 
       {k && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 18 }}>
           <div className="tile"><div className="k">Vencimientos</div><div className="v" style={{ color: 'var(--navy)' }}>{k.total}</div><div className="s">en el año</div></div>
-          <div className="tile"><div className="k">Presentados</div><div className="v" style={{ color: '#22a670' }}>{k.presentados}</div><div className="s">cumplidos</div></div>
-          <div className="tile"><div className="k">Pendientes</div><div className="v" style={{ color: '#2f6fd0' }}>{k.pendientes}</div><div className="s">por vencer</div></div>
-          <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: k.vencidos ? '#cf4436' : '#8a94a6' }}>{k.vencidos}</div><div className="s">requieren atención</div></div>
+          <div className="tile"><div className="k">Presentados</div><div className="v" style={{ color: 'var(--exito)' }}>{k.presentados}</div><div className="s">cumplidos</div></div>
+          <div className="tile"><div className="k">Pendientes</div><div className="v" style={{ color: 'var(--info)' }}>{k.pendientes}</div><div className="s">por vencer</div></div>
+          <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: k.vencidos ? 'var(--peligro)' : 'var(--neutro)' }}>{k.vencidos}</div><div className="s">requieren atención</div></div>
         </div>
       )}
 
@@ -193,18 +194,18 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
                     {esEditor ? (
                       <input type="date" defaultValue={v.fechaVencimiento.slice(0, 10)} key={v.fechaVencimiento}
                         onChange={(e) => { if (e.target.value && e.target.value !== v.fechaVencimiento.slice(0, 10)) editar(v, 'fechaVencimiento', e.target.value); }}
-                        style={{ fontSize: 12, fontWeight: v.vencido ? 800 : 600, color: v.vencido ? '#cf4436' : 'var(--ink)', background: 'var(--panel)', border: `1px solid ${v.vencido ? '#cf443666' : 'var(--edge-strong)'}`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }} />
+                        style={{ fontSize: 12, fontWeight: v.vencido ? 800 : 600, color: v.vencido ? 'var(--peligro)' : 'var(--ink)', background: 'var(--panel)', border: `1px solid ${v.vencido ? '#cf443666' : 'var(--edge-strong)'}`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }} />
                     ) : (
-                      <span style={{ fontWeight: v.vencido ? 800 : 500, color: v.vencido ? '#cf4436' : 'var(--muted)' }}>{fmtFecha(v.fechaVencimiento)}</span>
+                      <span style={{ fontWeight: v.vencido ? 800 : 500, color: v.vencido ? 'var(--peligro)' : 'var(--muted)' }}>{fmtFecha(v.fechaVencimiento)}</span>
                     )}
                   </td>
                   <td>
                     {esEditor ? (
-                      <select value={v.estado} onChange={(e) => editar(v, 'estado', e.target.value)} style={{ fontSize: 11.5, fontWeight: 700, color: v.vencido ? '#cf4436' : em.color, background: `${(v.vencido ? '#cf4436' : em.color)}18`, border: `1px solid ${(v.vencido ? '#cf4436' : em.color)}44`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }}>
+                      <select value={v.estado} onChange={(e) => editar(v, 'estado', e.target.value)} style={{ fontSize: 11.5, fontWeight: 700, color: v.vencido ? 'var(--peligro)' : em.color, background: `${tinte((v.vencido ? 'var(--peligro)' : em.color), 12)}`, border: `1px solid ${tinte((v.vencido ? 'var(--peligro)' : em.color), 30)}`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }}>
                         {Object.entries(ESTADO_META).map(([id, m]) => <option key={id} value={id} style={{ color: '#111' }}>{m.label}</option>)}
                       </select>
                     ) : (
-                      <span className="chip" style={{ color: v.vencido ? '#cf4436' : em.color, background: `${(v.vencido ? '#cf4436' : em.color)}18`, borderColor: `${(v.vencido ? '#cf4436' : em.color)}44` }}>{v.vencido ? 'Vencido' : em.label}</span>
+                      <span className="chip" style={{ color: v.vencido ? 'var(--peligro)' : em.color, background: `${tinte((v.vencido ? 'var(--peligro)' : em.color), 12)}`, borderColor: `${tinte((v.vencido ? 'var(--peligro)' : em.color), 30)}` }}>{v.vencido ? 'Vencido' : em.label}</span>
                     )}
                   </td>
                   <td style={{ minWidth: 160 }}>
@@ -216,7 +217,7 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
                   {esEditor && (
                     <td style={{ textAlign: 'center' }}>
                       <button onClick={() => setAEliminar(v)} title="Eliminar vencimiento" aria-label="Eliminar vencimiento"
-                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: '#cf4436', cursor: 'pointer' }}>
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--peligro)', cursor: 'pointer' }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H6a1 1 0 01-1-1V6M10 11v6M14 11v6" /></svg>
                       </button>
                     </td>
@@ -242,7 +243,7 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 2 }}>
                 <button className="dbtn" onClick={() => setAEliminar(null)} disabled={eliminando} style={{ fontSize: 13 }}>Cancelar</button>
-                <button className="dbtn" onClick={() => eliminar(aEliminar)} disabled={eliminando} style={{ fontSize: 13, background: '#cf4436', borderColor: '#cf4436', color: '#fff' }}>
+                <button className="dbtn" onClick={() => eliminar(aEliminar)} disabled={eliminando} style={{ fontSize: 13, background: 'var(--peligro-solido)', borderColor: 'var(--peligro-solido)', color: '#fff' }}>
                   {eliminando ? 'Eliminando…' : 'Sí, eliminar'}
                 </button>
               </div>

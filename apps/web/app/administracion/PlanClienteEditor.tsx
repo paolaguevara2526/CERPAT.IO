@@ -195,8 +195,8 @@ export default function PlanClienteEditor() {
 
       {importar && <ImportarAsignacionesModal onClose={() => setImportar(false)} onImported={() => { setAviso('Asignaciones importadas correctamente.'); if (empresaId) cargarPlan(empresaId); }} />}
 
-      {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
-      {aviso && <div style={{ background: '#E7F6EC', color: '#027a48', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{aviso}</div>}
+      {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+      {aviso && <div style={{ background: 'var(--exito-suave)', color: 'var(--exito-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{aviso}</div>}
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
         <select style={{ ...input, minWidth: 280 }} value={empresaId} onChange={(e) => setEmpresaId(e.target.value)}>
@@ -295,14 +295,14 @@ export default function PlanClienteEditor() {
 function EntregaChip({ label, e, onLiberar, onRevertir }: { label: string; e?: { entregado: boolean; por?: string | null; origen?: string }; onLiberar: () => void; onRevertir: () => void }) {
   const entregado = !!e?.entregado;
   const esAuto = e?.origen === 'auto';
-  const verde = '#22a670';
+  const verde = 'var(--exito)';
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: `1px solid ${entregado ? verde + '66' : 'var(--edge-strong)'}`, background: entregado ? verde + '14' : 'var(--panel)', borderRadius: 8, padding: '6px 10px' }}>
       <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>{label}</span>
       {entregado ? (
         <>
           <span style={{ fontSize: 11.5, color: verde, fontWeight: 700 }}>✓ Entregado{e?.por ? ` · ${e.por}` : ''}</span>
-          {esAuto && <span title="Liberado automáticamente al terminar la captura" style={{ fontSize: 9.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: '#2f6fd0', background: '#eaf1fb', border: '1px solid #cfe0f7', borderRadius: 20, padding: '1px 6px' }}>auto</span>}
+          {esAuto && <span title="Liberado automáticamente al terminar la captura" style={{ fontSize: 9.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--info)', background: 'var(--info-suave)', border: '1px solid #cfe0f7', borderRadius: 20, padding: '1px 6px' }}>auto</span>}
           <button className="dbtn" onClick={onRevertir} title="Revertir la entrega" style={{ fontSize: 11, padding: '3px 7px' }}>↺</button>
         </>
       ) : (

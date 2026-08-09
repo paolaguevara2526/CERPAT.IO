@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { tinte } from '@/app/_components/color';
 type Compromiso = { descripcion: string; responsableTipo: 'firma' | 'cliente'; responsable: string; area: string | null; fechaLimite: string | null; estado: string };
 type Visita = {
   id: string; empresa: string | null; fecha: string; hora: string | null; lugar: string | null; area: string | null;
@@ -14,13 +15,13 @@ type Visita = {
 
 const HOY = new Date().toISOString().slice(0, 10);
 const V_EST: Record<string, { label: string; color: string }> = {
-  programada: { label: 'Programada', color: '#2f6fd0' }, realizada: { label: 'Realizada', color: '#22a670' }, cancelada: { label: 'Cancelada', color: '#9aa3b2' },
+  programada: { label: 'Programada', color: 'var(--info)' }, realizada: { label: 'Realizada', color: 'var(--exito)' }, cancelada: { label: 'Cancelada', color: 'var(--neutro)' },
 };
 function cEstado(c: Compromiso): { label: string; color: string } {
-  if (c.estado === 'cumplido') return { label: 'Cumplido', color: '#22a670' };
-  if (c.estado === 'cancelado') return { label: 'Cancelado', color: '#9aa3b2' };
-  if (c.fechaLimite && c.fechaLimite < HOY) return { label: 'Vencido', color: '#cf4436' };
-  return { label: 'Pendiente', color: '#c67c00' };
+  if (c.estado === 'cumplido') return { label: 'Cumplido', color: 'var(--exito)' };
+  if (c.estado === 'cancelado') return { label: 'Cancelado', color: 'var(--neutro)' };
+  if (c.fechaLimite && c.fechaLimite < HOY) return { label: 'Vencido', color: 'var(--peligro)' };
+  return { label: 'Pendiente', color: 'var(--alerta)' };
 }
 function fFecha(iso: string | null) { if (!iso) return '—'; try { return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' }); } catch { return iso; } }
 
@@ -53,14 +54,14 @@ export default function PortalVisitas() {
       <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Mis visitas</h1>
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>Consulta las visitas de tu equipo asesor y los compromisos acordados en cada una. {esFirma ? '(Vista de la firma: ves todas las empresas.)' : 'Solo consulta.'}</p>
 
-      {error && <div className="panel" style={{ padding: '12px 14px', color: '#b42318', fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+      {error && <div className="panel" style={{ padding: '12px 14px', color: 'var(--peligro-fuerte)', fontWeight: 600, marginBottom: 12 }}>{error}</div>}
 
       {cargando ? <p style={{ color: 'var(--muted)', fontSize: 13 }}>Cargando…</p> : visitas.length === 0 ? (
         <div className="panel" style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Aún no hay visitas registradas.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {visitas.map((v) => {
-            const em = V_EST[v.estado] ?? { label: v.estado, color: '#5b6a82' };
+            const em = V_EST[v.estado] ?? { label: v.estado, color: 'var(--muted)' };
             const open = abierta === v.id;
             const pend = v.compromisos.filter((c) => cEstado(c).label === 'Pendiente' || cEstado(c).label === 'Vencido').length;
             return (
@@ -69,11 +70,11 @@ export default function PortalVisitas() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <b style={{ fontSize: 14 }}>{v.objetivo || 'Visita'}</b>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: em.color, background: `${em.color}18`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: em.color, background: `${tinte(em.color, 12)}`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span>
                     </div>
                     <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{fFecha(v.fecha)}{v.hora ? ` · ${v.hora}` : ''}{esFirma && v.empresa ? ` · ${v.empresa}` : ''}{v.asesor ? ` · ${v.asesor}` : ''}</div>
                   </div>
-                  {v.compromisos.length > 0 && <span style={{ fontSize: 12, color: pend ? '#c67c00' : '#22a670', fontWeight: 700, whiteSpace: 'nowrap' }}>{pend ? `${pend} pendiente(s)` : 'Al día'}</span>}
+                  {v.compromisos.length > 0 && <span style={{ fontSize: 12, color: pend ? 'var(--alerta)' : 'var(--exito)', fontWeight: 700, whiteSpace: 'nowrap' }}>{pend ? `${pend} pendiente(s)` : 'Al día'}</span>}
                   <span style={{ color: 'var(--muted)', fontSize: 12 }}>{open ? '▲' : '▼'}</span>
                 </button>
                 {open && (
@@ -94,9 +95,9 @@ export default function PortalVisitas() {
                           <tr key={i}>
                             <td>{c.descripcion}</td>
                             <td style={{ color: 'var(--muted)' }}>{c.responsable}</td>
-                            <td><span style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', color: esCli ? '#7a5bd0' : '#2E5090' }}>{esCli ? 'Cliente' : 'Firma'}</span></td>
+                            <td><span style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', color: esCli ? '#7a5bd0' : 'var(--navy)' }}>{esCli ? 'Cliente' : 'Firma'}</span></td>
                             <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)' }}>{c.fechaLimite ? new Date(`${c.fechaLimite}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) : '—'}</td>
-                            <td><span style={{ fontSize: 11, fontWeight: 800, color: ce.color, background: `${ce.color}18`, borderRadius: 20, padding: '2px 9px' }}>{ce.label}</span></td>
+                            <td><span style={{ fontSize: 11, fontWeight: 800, color: ce.color, background: `${tinte(ce.color, 12)}`, borderRadius: 20, padding: '2px 9px' }}>{ce.label}</span></td>
                           </tr>
                         ); })}</tbody>
                       </table></div>

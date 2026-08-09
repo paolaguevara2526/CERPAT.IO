@@ -17,7 +17,7 @@ export default function BorrarPendiente({ id }: { id: string }) {
     } catch { setBorrando(false); }
   }
   return (
-    <button className="dbtn" onClick={eliminar} disabled={borrando} title="Eliminar pago pendiente" style={{ fontSize: 12, color: '#cf4436', opacity: borrando ? 0.5 : 1 }}>
+    <button className="dbtn" onClick={eliminar} disabled={borrando} title="Eliminar pago pendiente" style={{ fontSize: 12, color: 'var(--peligro)', opacity: borrando ? 0.5 : 1 }}>
       {borrando ? '…' : 'Eliminar'}
     </button>
   );

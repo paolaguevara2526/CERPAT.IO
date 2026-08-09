@@ -8,12 +8,12 @@ import { Fragment, useEffect, useState } from 'react';
 const TIPOS_DOC = ['Egresos', 'Facturas de compra', 'Facturas de venta', 'Documento equivalente', 'Notas contables', 'Nómina', 'Ingresos'];
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
-  por_iniciar: { label: 'Por iniciar', color: '#5b6a82' },
-  en_curso: { label: 'En curso', color: '#2f6fd0' },
-  en_revision: { label: 'En revisión', color: '#c67c00' },
-  terminado: { label: 'Terminado', color: '#22a670' },
-  auditado: { label: 'Auditado', color: '#1c8a5e' },
-  no_realizado: { label: 'No realizado', color: '#cf4436' },
+  por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
+  en_curso: { label: 'En curso', color: 'var(--info)' },
+  en_revision: { label: 'En revisión', color: 'var(--alerta)' },
+  terminado: { label: 'Terminado', color: 'var(--exito)' },
+  auditado: { label: 'Auditado', color: 'var(--green-edge)' },
+  no_realizado: { label: 'No realizado', color: 'var(--peligro)' },
 };
 // Estados que el ejecutor puede fijar desde aquí (auditado lo pone Auditoría).
 const ESTADOS_EDIT = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'no_realizado'];
@@ -86,7 +86,7 @@ export default function CapturaDelDia() {
   }
 
   if (cargando) return null; // silencioso mientras carga
-  if (error) return <div className="panel" style={{ padding: 16, color: '#b42318', fontWeight: 600 }}>No se pudo cargar la captura: {error}.</div>;
+  if (error) return <div className="panel" style={{ padding: 16, color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudo cargar la captura: {error}.</div>;
   // Sin captura asignada (p. ej. un asesor): se oculta para no meter ruido.
   if (!data || data.total === 0) return null;
 
@@ -129,7 +129,7 @@ export default function CapturaDelDia() {
                     </td>
                     <td style={{ ...td, textAlign: 'center' }}>
                       {t.lotesHoy > 0
-                        ? <span style={{ fontWeight: 800, color: '#22a670' }}>{t.lotesHoy}</span>
+                        ? <span style={{ fontWeight: 800, color: 'var(--exito)' }}>{t.lotesHoy}</span>
                         : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
                     <td style={{ ...td, textAlign: 'center', color: 'var(--muted)' }}>{t.totalLotes}</td>
@@ -164,7 +164,7 @@ export default function CapturaDelDia() {
                           <button onClick={() => agregarLote(t.id)} disabled={guardando} className="dbtn primary" style={{ fontSize: 12.5, fontWeight: 700, opacity: guardando ? 0.6 : 1 }}>＋ Agregar</button>
                         </div>
                         {msg && msg.id === t.id && (
-                          <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 600, color: msg.ok ? '#1c8a5e' : '#b42318' }}>{msg.texto}</div>
+                          <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 600, color: msg.ok ? 'var(--green-edge)' : 'var(--peligro-fuerte)' }}>{msg.texto}</div>
                         )}
                       </td>
                     </tr>

@@ -129,7 +129,7 @@ function CatalogoEditor({ tipo, label }: { tipo: string; label: string }) {
         <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>{label}</h2>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{items.length} elemento(s)</span>
       </div>
-      {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, marginBottom: 10 }}>{error}</div>}
+      {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, marginBottom: 10 }}>{error}</div>}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
         <input style={{ ...input, flex: 1 }} value={nuevo} onChange={(e) => setNuevo(e.target.value)}
@@ -150,7 +150,7 @@ function CatalogoEditor({ tipo, label }: { tipo: string; label: string }) {
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                 style={{ ...input, flex: 1, padding: '5px 9px' }} />
               <button onClick={() => eliminar(it)} title="Eliminar" aria-label="Eliminar"
-                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 15, padding: '2px 6px' }}>🗑</button>
+                style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 15, padding: '2px 6px' }}>🗑</button>
             </div>
           ))}
         </div>
@@ -212,7 +212,7 @@ function ParametrosEditor() {
     <div style={{ maxWidth: 460 }}>
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>Parámetros de liquidación</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 16px' }}>Valores que usan las liquidaciones de Pagos (interés de mora y sanción) y las calculadoras. Actualiza la <strong>tasa de mora cada mes</strong> y la <strong>UVT cada año</strong>.</p>
-      {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+      {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
         {CAMPOS.map((c) => (
           <label key={c.k} style={{ display: 'grid', gridTemplateColumns: '1fr 170px', alignItems: 'center', gap: 12 }}>
@@ -225,7 +225,7 @@ function ParametrosEditor() {
       </div>
       <div style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 12 }}>
         <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13.5 }}>{guardando ? 'Guardando…' : 'Guardar parámetros'}</button>
-        {ok && <span style={{ color: '#22a670', fontWeight: 700, fontSize: 13 }}>✓ Guardado</span>}
+        {ok && <span style={{ color: 'var(--exito)', fontWeight: 700, fontSize: 13 }}>✓ Guardado</span>}
       </div>
     </div>
   );

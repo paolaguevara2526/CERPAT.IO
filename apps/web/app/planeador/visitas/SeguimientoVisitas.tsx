@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import FiltroColumna from '../../administracion/FiltroColumna';
 import { descargarXlsx, hoyISO } from '../../administracion/exportar';
 
+import { tinte } from '@/app/_components/color';
 type Comp = {
   id: string; descripcion: string; estado: string; fechaLimite: string | null; area: string | null;
   responsableTipo: 'firma' | 'cliente'; responsable: string; empresa: string | null;
@@ -22,10 +23,10 @@ function estadoEf(c: Comp): 'cumplido' | 'cancelado' | 'vencido' | 'pendiente' {
   return 'pendiente';
 }
 const EST_META: Record<string, { label: string; color: string }> = {
-  cumplido: { label: 'Cumplido', color: '#22a670' },
-  pendiente: { label: 'Pendiente', color: '#c67c00' },
-  vencido: { label: 'Vencido', color: '#cf4436' },
-  cancelado: { label: 'Cancelado', color: '#9aa3b2' },
+  cumplido: { label: 'Cumplido', color: 'var(--exito)' },
+  pendiente: { label: 'Pendiente', color: 'var(--alerta)' },
+  vencido: { label: 'Vencido', color: 'var(--peligro)' },
+  cancelado: { label: 'Cancelado', color: 'var(--neutro)' },
 };
 const dirLabel = (c: Comp) => (c.responsableTipo === 'cliente' ? 'Del cliente' : 'De la firma');
 function fFecha(iso: string | null) { if (!iso) return '—'; try { return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return iso; } }
@@ -156,14 +157,14 @@ export default function SeguimientoVisitas() {
         <button className="dbtn" onClick={exportar} style={{ fontSize: 12.5 }}>⭳ Exportar Excel</button>
       </div>
 
-      {error && <div className="panel" style={{ padding: '12px 14px', color: '#b42318', fontWeight: 600, marginBottom: 10 }}>{error}</div>}
+      {error && <div className="panel" style={{ padding: '12px 14px', color: 'var(--peligro-fuerte)', fontWeight: 600, marginBottom: 10 }}>{error}</div>}
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 14 }}>
         {tile('Compromisos', kpis.total, 'en el período')}
-        {tile('Cumplimiento', `${kpis.pct}%`, `${kpis.cumplido} cumplidos`, '#22a670')}
-        {tile('Pendientes', kpis.pendiente, 'por vencer', '#c67c00')}
-        {tile('Vencidos', kpis.vencido, 'requieren gestión', kpis.vencido ? '#cf4436' : undefined)}
+        {tile('Cumplimiento', `${kpis.pct}%`, `${kpis.cumplido} cumplidos`, 'var(--exito)')}
+        {tile('Pendientes', kpis.pendiente, 'por vencer', 'var(--alerta)')}
+        {tile('Vencidos', kpis.vencido, 'requieren gestión', kpis.vencido ? 'var(--peligro)' : undefined)}
       </div>
 
       {/* Tablero */}
@@ -212,10 +213,10 @@ export default function SeguimientoVisitas() {
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fFecha(c.visitaFecha)}</td>
                     <td>{c.descripcion}</td>
                     <td style={{ color: 'var(--muted)' }}>{c.responsable}</td>
-                    <td><span style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: esCli ? '#7a5bd0' : '#2E5090', background: esCli ? '#efeafb' : '#e7edf8', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>{esCli ? 'Cliente' : 'Firma'}</span></td>
+                    <td><span style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: esCli ? '#7a5bd0' : 'var(--navy)', background: esCli ? '#efeafb' : 'var(--info-suave)', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>{esCli ? 'Cliente' : 'Firma'}</span></td>
                     <td style={{ color: 'var(--muted)' }}>{c.area ?? '—'}</td>
                     <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fFecha(c.fechaLimite)}</td>
-                    <td><span style={{ fontSize: 11, fontWeight: 800, color: em.color, background: `${em.color}18`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span></td>
+                    <td><span style={{ fontSize: 11, fontWeight: 800, color: em.color, background: `${tinte(em.color, 12)}`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span></td>
                   </tr>
                 );
               })}

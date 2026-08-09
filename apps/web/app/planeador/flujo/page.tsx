@@ -35,18 +35,18 @@ const ETAPA_LABEL: Record<string, string> = { captura: 'Captura', entrega: 'Entr
 
 // Colores por estado de etapa (funcionan sobre los temas del planeador).
 const CHIP: Record<string, { bg: string; fg: string; br: string }> = {
-  listo: { bg: '#e3f3ec', fg: '#12855f', br: '#bfe3d1' },
-  entregado: { bg: '#e3f3ec', fg: '#12855f', br: '#bfe3d1' },
-  en_curso: { bg: '#e7f0f9', fg: '#2c6bae', br: '#c9def2' },
-  pendiente: { bg: '#faf0d9', fg: '#a9741a', br: '#ecdcb0' },
+  listo: { bg: 'var(--exito-suave)', fg: 'var(--exito)', br: 'var(--exito-borde)' },
+  entregado: { bg: 'var(--exito-suave)', fg: 'var(--exito)', br: 'var(--exito-borde)' },
+  en_curso: { bg: 'var(--info-suave)', fg: 'var(--info)', br: 'var(--info-borde)' },
+  pendiente: { bg: 'var(--alerta-suave)', fg: 'var(--alerta)', br: 'var(--alerta-borde)' },
   na: { bg: 'transparent', fg: 'var(--muted)', br: 'transparent' },
 };
 const ETIQUETA_ESTADO: Record<string, string> = { listo: 'Listo', entregado: 'Entregado', en_curso: 'En curso', pendiente: 'Pendiente', na: '—' };
 
 function colorPct(pct: number): string {
-  if (pct >= 85) return '#22a670';
-  if (pct >= 60) return '#d98a00';
-  return '#d64b3f';
+  if (pct >= 85) return 'var(--exito)';
+  if (pct >= 60) return 'var(--alerta)';
+  return 'var(--peligro)';
 }
 
 function EtapaCelda({ estado, total, hechas, actual }: { estado: string; total?: number; hechas?: number; actual: boolean }) {
@@ -94,7 +94,7 @@ export default async function FlujoPage({ searchParams }: { searchParams?: Recor
       </form>
 
       {error ? (
-        <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudo cargar el flujo: {error}.</div>
+        <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudo cargar el flujo: {error}.</div>
       ) : clientes.length === 0 ? (
         <div className="panel" style={{ padding: 26, color: 'var(--muted)' }}>No hay tareas del plan generadas en este período. Genera el plan por cliente para ver el flujo.</div>
       ) : (
@@ -129,9 +129,9 @@ export default async function FlujoPage({ searchParams }: { searchParams?: Recor
                     <td style={{ ...td }}>
                       <div style={{ fontWeight: 600 }}>{c.empresa}</div>
                       {c.enRiesgo
-                        ? <span style={{ display: 'inline-block', marginTop: 3, fontSize: 10.5, fontWeight: 800, color: '#d64b3f', background: '#fbe9e7', border: '1px solid #f3c6bf', borderRadius: 20, padding: '1px 7px' }}>⚠ {c.vencidas} vencida{c.vencidas === 1 ? '' : 's'}</span>
+                        ? <span style={{ display: 'inline-block', marginTop: 3, fontSize: 10.5, fontWeight: 800, color: 'var(--peligro)', background: 'var(--peligro-suave)', border: '1px solid #f3c6bf', borderRadius: 20, padding: '1px 7px' }}>⚠ {c.vencidas} vencida{c.vencidas === 1 ? '' : 's'}</span>
                         : c.etapaActual === 'cierre'
-                          ? <span style={{ display: 'inline-block', marginTop: 3, fontSize: 10.5, fontWeight: 800, color: '#12855f', background: '#e3f3ec', border: '1px solid #bfe3d1', borderRadius: 20, padding: '1px 7px' }}>✓ Cerrado</span>
+                          ? <span style={{ display: 'inline-block', marginTop: 3, fontSize: 10.5, fontWeight: 800, color: 'var(--exito)', background: 'var(--exito-suave)', border: '1px solid #bfe3d1', borderRadius: 20, padding: '1px 7px' }}>✓ Cerrado</span>
                           : <span style={{ display: 'inline-block', marginTop: 3, fontSize: 10.5, color: 'var(--muted)' }}>en {ETAPA_LABEL[c.etapaActual]?.toLowerCase()}</span>}
                     </td>
                     <td style={{ ...td, textAlign: 'center' }}><EtapaCelda estado={c.etapas.captura.estado} total={c.etapas.captura.total} hechas={c.etapas.captura.hechas} actual={c.etapaActual === 'captura'} /></td>
@@ -172,7 +172,7 @@ function ResumenCard({ titulo, valor, sub, tono }: { titulo: string; valor: stri
 
 function DistribucionEtapas({ porEtapa, total }: { porEtapa?: Record<string, number>; total: number }) {
   const orden = ['captura', 'entrega', 'procesamiento', 'revision', 'cierre'] as const;
-  const tono: Record<string, string> = { captura: '#a9741a', entrega: '#a9741a', procesamiento: '#2c6bae', revision: '#6b4a86', cierre: '#12855f' };
+  const tono: Record<string, string> = { captura: 'var(--alerta)', entrega: 'var(--alerta)', procesamiento: 'var(--info)', revision: '#6b4a86', cierre: 'var(--exito)' };
   return (
     <div className="panel" style={{ padding: '12px 15px', flex: '2 1 260px', minWidth: 240 }}>
       <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, marginBottom: 8 }}>Dónde está cada cliente</div>

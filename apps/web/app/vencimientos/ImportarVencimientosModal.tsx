@@ -94,8 +94,8 @@ export default function ImportarVencimientosModal({ onClose, onImported }: { onC
           <div className="win-ctl"><button className="close" onClick={onClose} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
         </div>
         <div className="win-body" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
-          {hecho && <div style={{ background: '#E4F5EC', color: '#1c8a5e', borderRadius: 6, padding: '8px 11px', fontSize: 13, fontWeight: 700 }}>✓ {hecho}</div>}
+          {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
+          {hecho && <div style={{ background: 'var(--exito-suave)', color: 'var(--green-edge)', borderRadius: 6, padding: '8px 11px', fontSize: 13, fontWeight: 700 }}>✓ {hecho}</div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 10 }}>
             <label><span style={lbl}>Obligación (igual para todas las filas)</span><input style={input} value={obligacion} onChange={(e) => setObligacion(e.target.value)} /></label>
@@ -113,12 +113,12 @@ export default function ImportarVencimientosModal({ onClose, onImported }: { onC
           {previo && (
             <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 13 }}>
-                <b style={{ color: '#1c8a5e' }}>{previo.crear}</b> por crear ·{' '}
-                <b style={{ color: '#8a6d00' }}>{previo.duplicados}</b> ya existían ·{' '}
-                <b style={{ color: previo.problemas.length ? '#cf4436' : 'var(--muted)' }}>{previo.problemas.length}</b> con problema
+                <b style={{ color: 'var(--green-edge)' }}>{previo.crear}</b> por crear ·{' '}
+                <b style={{ color: 'var(--alerta)' }}>{previo.duplicados}</b> ya existían ·{' '}
+                <b style={{ color: previo.problemas.length ? 'var(--peligro)' : 'var(--muted)' }}>{previo.problemas.length}</b> con problema
               </div>
               {previo.problemas.length > 0 && (
-                <div style={{ maxHeight: 120, overflow: 'auto', background: '#FBE4E1', borderRadius: 6, padding: '6px 9px', fontSize: 11.5, color: '#B42318' }}>
+                <div style={{ maxHeight: 120, overflow: 'auto', background: 'var(--peligro-suave)', borderRadius: 6, padding: '6px 9px', fontSize: 11.5, color: 'var(--peligro-fuerte)' }}>
                   {previo.problemas.map((p, i) => <div key={i}>• {p}</div>)}
                 </div>
               )}

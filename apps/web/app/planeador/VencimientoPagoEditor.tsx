@@ -5,13 +5,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { tinte } from '@/app/_components/color';
 export const VENC_PAGO_META: Record<string, { label: string; color: string }> = {
-  pendiente: { label: 'Pendiente', color: '#5b6a82' },
-  presentado_sin_pago: { label: 'Presentado (sin pago)', color: '#2f6fd0' },
-  presentado_pagado: { label: 'Presentado y pagado', color: '#22a670' },
-  presentado_cero: { label: 'Presentado en $0', color: '#14a8a0' },
-  no_presentado: { label: 'No presentado', color: '#cf4436' },
-  no_obligado: { label: 'No obligado', color: '#9aa3b2' },
+  pendiente: { label: 'Pendiente', color: 'var(--muted)' },
+  presentado_sin_pago: { label: 'Presentado (sin pago)', color: 'var(--info)' },
+  presentado_pagado: { label: 'Presentado y pagado', color: 'var(--exito)' },
+  presentado_cero: { label: 'Presentado en $0', color: 'var(--cero)' },
+  no_presentado: { label: 'No presentado', color: 'var(--peligro)' },
+  no_obligado: { label: 'No obligado', color: 'var(--neutro)' },
 };
 
 export default function VencimientoPagoEditor({ id, valorPago, estado, editable = true }: { id: string; valorPago: number | null; estado: string; editable?: boolean }) {
@@ -32,7 +33,7 @@ export default function VencimientoPagoEditor({ id, valorPago, estado, editable 
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{valorPago != null ? `$${valorPago.toLocaleString('es-CO', { maximumFractionDigits: 0 })}` : '—'}</span>
-        <span className="chip" style={{ color: meta.color, background: `${meta.color}18`, borderColor: `${meta.color}44` }}>{meta.label}</span>
+        <span className="chip" style={{ color: meta.color, background: `${tinte(meta.color, 12)}`, borderColor: `${tinte(meta.color, 30)}` }}>{meta.label}</span>
       </div>
     );
   }
@@ -62,13 +63,13 @@ export default function VencimientoPagoEditor({ id, valorPago, estado, editable 
           style={{ width: 120, padding: '6px 8px 6px 18px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 12.5, fontFamily: 'var(--ui)', textAlign: 'right' }} />
       </div>
       <select value={est} onChange={(e) => setEst(e.target.value)}
-        style={{ fontSize: 11.5, fontWeight: 700, color, background: `${color}18`, border: `1px solid ${color}44`, borderRadius: 4, padding: '5px 8px', cursor: 'pointer', fontFamily: 'var(--ui)' }}>
+        style={{ fontSize: 11.5, fontWeight: 700, color, background: `${tinte(color, 12)}`, border: `1px solid ${tinte(color, 30)}`, borderRadius: 4, padding: '5px 8px', cursor: 'pointer', fontFamily: 'var(--ui)' }}>
         {Object.entries(VENC_PAGO_META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
       </select>
       <button className="dbtn primary" onClick={guardar} disabled={!sucio || guardando} style={{ fontSize: 12, opacity: !sucio || guardando ? 0.5 : 1 }}>
         {guardando ? '…' : ok ? '✓' : 'Guardar'}
       </button>
-      {error && <span style={{ fontSize: 10.5, color: '#cf4436' }}>{error}</span>}
+      {error && <span style={{ fontSize: 10.5, color: 'var(--peligro)' }}>{error}</span>}
     </div>
   );
 }

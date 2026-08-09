@@ -40,7 +40,7 @@ export default async function TableroPage({ searchParams }: { searchParams?: Rec
       </form>
 
       {error ? (
-        <div className="panel" style={{ padding: '16px 18px', color: '#b42318', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>
+        <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>
       ) : (
         <>
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>Arrastra una tarjeta a otra columna para cambiar su estado. Las reglas (permiso, auditoría, subtareas) se validan en el servidor.</p>

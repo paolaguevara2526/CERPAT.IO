@@ -18,7 +18,7 @@ export async function fetchCumplimiento(periodo?: string): Promise<{ data: Cumpl
 }
 
 export function colorPct(pct: number): string {
-  if (pct >= 85) return '#22a670';
-  if (pct >= 60) return '#d98a00';
-  return '#d64b3f';
+  if (pct >= 85) return 'var(--exito)';
+  if (pct >= 60) return 'var(--alerta)';
+  return 'var(--peligro)';
 }

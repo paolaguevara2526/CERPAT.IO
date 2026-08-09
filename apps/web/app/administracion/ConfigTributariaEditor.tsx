@@ -165,7 +165,7 @@ export default function ConfigTributariaEditor() {
               <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{sel.nombre}</h2>
               {sel.nit && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>NIT {sel.nit}</span>}
             </div>
-            {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{error}</div>}
+            {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{error}</div>}
 
             {/* Config nacional */}
             <div className="panel" style={{ padding: 16 }}>
@@ -177,25 +177,25 @@ export default function ConfigTributariaEditor() {
                 <div><span style={lbl}>Anticipo RST</span><Sel value={config?.anticipoRstPeriodicidad ?? ''} onChange={(v) => setC('anticipoRstPeriodicidad', v || null)} opciones={ANTICIPO} /></div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={!!config?.retencionFuente} onChange={(e) => setC('retencionFuente', e.target.checked)} style={{ accentColor: '#2E5090' }} />
+                    <input type="checkbox" checked={!!config?.retencionFuente} onChange={(e) => setC('retencionFuente', e.target.checked)} style={{ accentColor: 'var(--navy)' }} />
                     Agente de retención en la fuente
                   </label>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }} title="Retención FOPAT (mensual), aplica a empresas de transporte">
-                    <input type="checkbox" checked={!!config?.fopat} onChange={(e) => setC('fopat', e.target.checked)} style={{ accentColor: '#2E5090' }} />
+                    <input type="checkbox" checked={!!config?.fopat} onChange={(e) => setC('fopat', e.target.checked)} style={{ accentColor: 'var(--navy)' }} />
                     Agente de retención FOPAT (transporte)
                   </label>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }} title="Envío de nómina electrónica (mensual, 10º día hábil). Solo presentación, no genera pago.">
-                    <input type="checkbox" checked={!!config?.nominaElectronica} onChange={(e) => setC('nominaElectronica', e.target.checked)} style={{ accentColor: '#2E5090' }} />
+                    <input type="checkbox" checked={!!config?.nominaElectronica} onChange={(e) => setC('nominaElectronica', e.target.checked)} style={{ accentColor: 'var(--navy)' }} />
                     Nómina electrónica <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(sin pago)</span>
                   </label>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }} title="Pago de seguridad social / PILA (mensual, día hábil según los 2 últimos dígitos del NIT). Solo presentación, no genera pago.">
-                    <input type="checkbox" checked={!!config?.seguridadSocial} onChange={(e) => setC('seguridadSocial', e.target.checked)} style={{ accentColor: '#2E5090' }} />
+                    <input type="checkbox" checked={!!config?.seguridadSocial} onChange={(e) => setC('seguridadSocial', e.target.checked)} style={{ accentColor: 'var(--navy)' }} />
                     Seguridad social · PILA <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(sin pago)</span>
                   </label>
                 </div>
@@ -208,10 +208,10 @@ export default function ConfigTributariaEditor() {
                 <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Guarda los cambios y luego regenera para que los vencimientos reflejen la config nueva.</span>
               </div>
               {regResumen && (
-                <div style={{ marginTop: 12, background: '#E7F4EC', color: '#1B7A47', borderRadius: 6, padding: '9px 12px', fontSize: 12.5, fontWeight: 600 }}>{regResumen}</div>
+                <div style={{ marginTop: 12, background: 'var(--exito-suave)', color: 'var(--exito-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 12.5, fontWeight: 600 }}>{regResumen}</div>
               )}
               {regAviso.length > 0 && (
-                <div style={{ marginTop: 10, background: '#FEF3E2', color: '#9A5B12', borderRadius: 6, padding: '9px 12px', fontSize: 12.5 }}>
+                <div style={{ marginTop: 10, background: 'var(--alerta-suave)', color: 'var(--alerta-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 12.5 }}>
                   <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠ Sin calendario de ICA para:</div>
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
                     {regAviso.map((a, i) => (
@@ -278,7 +278,7 @@ export default function ConfigTributariaEditor() {
                           </td>
                           <td style={{ whiteSpace: 'nowrap' }}>
                             <button className="dbtn" onClick={() => guardarIca(row)} style={{ fontSize: 11.5, marginRight: 6 }}>Guardar</button>
-                            <button onClick={() => quitarIca(row)} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 13 }}>🗑</button>
+                            <button onClick={() => quitarIca(row)} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 13 }}>🗑</button>
                           </td>
                         </tr>
                       ))}

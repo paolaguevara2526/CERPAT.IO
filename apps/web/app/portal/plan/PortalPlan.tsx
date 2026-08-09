@@ -5,16 +5,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { tinte } from '@/app/_components/color';
 type Matriz = { area: string; meses: (number | null)[]; total: number };
 type Actividad = { titulo: string; area: string | null; periodo: string | null; fechaVencimiento: string; estado: string; estadoLabel: string; vencido: boolean };
 type Resp = { anio: number; kpis: { total: number; ejecutadas: number; cumplimiento: number } | null; matriz: Matriz[]; actividades: Actividad[] };
 
 const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-const EST_COLOR: Record<string, string> = { por_iniciar: '#5b6a82', en_curso: '#2f6fd0', en_revision: '#c67c00', terminado: '#22a670', auditado: '#1c8a5e', no_realizado: '#cf4436' };
+const EST_COLOR: Record<string, string> = { por_iniciar: 'var(--muted)', en_curso: 'var(--info)', en_revision: 'var(--alerta)', terminado: 'var(--exito)', auditado: 'var(--green-edge)', no_realizado: 'var(--peligro)' };
 function colorPct(p: number): { fg: string; bg: string } {
-  if (p >= 85) return { fg: '#15934F', bg: 'rgba(34,166,112,0.16)' };
-  if (p >= 60) return { fg: '#C77A0A', bg: 'rgba(198,124,0,0.16)' };
-  return { fg: '#D23B32', bg: 'rgba(207,68,54,0.16)' };
+  if (p >= 85) return { fg: 'var(--exito)', bg: 'rgba(34,166,112,0.16)' };
+  if (p >= 60) return { fg: 'var(--alerta)', bg: 'rgba(198,124,0,0.16)' };
+  return { fg: 'var(--peligro)', bg: 'rgba(207,68,54,0.16)' };
 }
 function fFecha(iso: string) { try { const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return '—'; } }
 
@@ -48,7 +49,7 @@ export default function PortalPlan() {
       </div>
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 16px' }}>El cumplimiento de las actividades contables de tu empresa. Solo consulta.</p>
 
-      {error && <div className="panel" style={{ padding: '12px 14px', color: '#b42318', fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+      {error && <div className="panel" style={{ padding: '12px 14px', color: 'var(--peligro-fuerte)', fontWeight: 600, marginBottom: 12 }}>{error}</div>}
 
       {k && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 16 }}>
@@ -95,7 +96,7 @@ export default function PortalPlan() {
             ) : actividades.length === 0 ? (
               <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin actividades registradas.</td></tr>
             ) : actividades.map((a, i) => {
-              const color = a.vencido ? '#cf4436' : (EST_COLOR[a.estado] ?? '#5b6a82');
+              const color = a.vencido ? 'var(--peligro)' : (EST_COLOR[a.estado] ?? 'var(--muted)');
               const label = a.vencido ? 'Vencida' : a.estadoLabel;
               return (
                 <tr key={i}>
@@ -103,7 +104,7 @@ export default function PortalPlan() {
                   <td style={{ color: 'var(--muted)' }}>{a.area ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{a.periodo ?? '—'}</td>
                   <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fFecha(a.fechaVencimiento)}</td>
-                  <td><span style={{ fontSize: 11, fontWeight: 800, color, background: `${color}18`, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{label}</span></td>
+                  <td><span style={{ fontSize: 11, fontWeight: 800, color, background: `${tinte(color, 12)}`, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{label}</span></td>
                 </tr>
               );
             })}

@@ -80,7 +80,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main style={{ fontFamily: 'var(--ui)', minHeight: '100vh', position: 'relative', overflow: 'hidden', backgroundColor: '#0f1d33' }}>
+    <main style={{ fontFamily: 'var(--ui)', minHeight: '100vh', position: 'relative', overflow: 'hidden', backgroundColor: 'var(--navy-2)' }}>
       <style>{`
         @keyframes cerpat-caer { 0%{transform:translate(0,-8vh);opacity:0} 12%{opacity:1} 100%{transform:translate(var(--dx),104vh);opacity:.15} }
         @keyframes cerpat-derivar { from{transform:translateX(-4%)} to{transform:translateX(4%)} }
@@ -91,7 +91,7 @@ export default function LoginPage() {
       <div ref={bgRef} aria-hidden style={{
         position: 'absolute', inset: 0, transform: 'scale(1.07)', transformOrigin: 'center',
         transition: 'transform .18s ease-out', willChange: 'transform',
-        backgroundColor: '#0f1d33', backgroundImage: "url('/login-cumbre.jpg')",
+        backgroundColor: 'var(--navy-2)', backgroundImage: "url('/login-cumbre.jpg')",
         backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
       }} />
 
@@ -170,7 +170,7 @@ export default function LoginPage() {
                 <input style={{ ...input, marginTop: 5 }} type="password" autoComplete="current-password" required
                   value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
               </label>
-              {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{error}</div>}
+              {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600 }}>{error}</div>}
               <button type="submit" className="dbtn primary" disabled={cargando} style={{ justifyContent: 'center', padding: '11px', fontSize: 14, opacity: cargando ? 0.7 : 1 }}>
                 {cargando ? 'Ingresando…' : 'Iniciar sesión'}
               </button>

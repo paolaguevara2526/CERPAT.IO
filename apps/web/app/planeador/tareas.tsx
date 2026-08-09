@@ -24,12 +24,12 @@ export async function fetchTareas(qs: string): Promise<{ data: TareasResp | null
 }
 
 export const ESTADO_META: Record<string, { label: string; color: string }> = {
-  por_iniciar: { label: 'Por iniciar', color: '#5b6a82' },
-  en_curso: { label: 'En curso', color: '#2f6fd0' },
-  en_revision: { label: 'En revisión', color: '#c67c00' },
-  terminado: { label: 'Terminado', color: '#22a670' },
-  auditado: { label: 'Auditado', color: '#1c8a5e' },
-  no_realizado: { label: 'No realizado', color: '#cf4436' },
+  por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
+  en_curso: { label: 'En curso', color: 'var(--info)' },
+  en_revision: { label: 'En revisión', color: 'var(--alerta)' },
+  terminado: { label: 'Terminado', color: 'var(--exito)' },
+  auditado: { label: 'Auditado', color: 'var(--green-edge)' },
+  no_realizado: { label: 'No realizado', color: 'var(--peligro)' },
 };
 
 export const AREAS = ['Impuestos', 'Informes', 'Cumplimiento', 'Nómina', 'Tesorería'];
@@ -65,7 +65,7 @@ export function TareasTabla({ tareas, mostrarAsesor = true, gestionable = false 
               <tr key={t.id}>
                 <td style={{ fontWeight: 600 }}>
                   {t.titulo}
-                  {t.bloqueada && <span title="Esperando la entrega del insumo del cliente" style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#b47814', background: '#fbf0d9', border: '1px solid #edd9a8', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>🔒 Bloqueada</span>}
+                  {t.bloqueada && <span title="Esperando la entrega del insumo del cliente" style={{ marginLeft: 8, fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: 'var(--alerta)', background: 'var(--alerta-suave)', border: '1px solid #edd9a8', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>🔒 Bloqueada</span>}
                 </td>
                 <td style={{ color: 'var(--muted)' }}>{t.empresa ?? '—'}</td>
                 <td style={{ color: 'var(--muted)' }}>{t.area ?? '—'}</td>

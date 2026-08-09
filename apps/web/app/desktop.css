@@ -28,6 +28,31 @@
   --btn-face: linear-gradient(180deg, #ffffff, #eef1f7);
   --shadow-win: 0 12px 34px rgba(17,21,79,0.16), 0 2px 7px rgba(17,21,79,0.10);
 
+  /* ---- Colores de ESTADO (semánticos) ----
+     Se nombran por lo que significan, no por el tono. Antes cada pantalla elegía
+     su propio rojo —el de "vencido" estaba escrito a mano 81 veces, en cuatro
+     tonos distintos— y por eso nada de esto seguía al tema: en modo oscuro
+     quedaban textos ilegibles. Regla: ningún estado se escribe con un hex.
+       peligro → vencido, no presentado, error, sanción
+       alerta  → por vencer, interés de mora, en revisión
+       exito   → pagado, al día, activo
+       info    → presentado sin pago, programado, informativo
+       cero    → presentado en $0
+       neutro  → no obligado, sin dato
+     Las variantes: base = texto sobre fondo claro · fuerte = énfasis ·
+     suave = fondo de la franja · borde = su contorno ·
+     solido = fondo saturado que lleva texto blanco encima (no se aclara en oscuro). */
+  --peligro: #cf4436;        --peligro-fuerte: #b42318;
+  --peligro-suave: #fbe4e1;  --peligro-borde: #f0b4ad;  --peligro-solido: #cf4436;
+  --alerta: #c67c00;         --alerta-fuerte: #9a5b12;
+  --alerta-suave: #fbf0d9;   --alerta-borde: #edd9a8;   --alerta-solido: #c67c00;
+  --exito: #22a670;          --exito-fuerte: #16794c;
+  --exito-suave: #e4f5ec;    --exito-borde: #bfe3d1;    --exito-solido: #16794c;
+  --info: #2f6fd0;           --info-fuerte: #24406f;
+  --info-suave: #e7edf8;     --info-borde: #c9def2;     --info-solido: #2f6fd0;
+  --cero: #14a8a0;
+  --neutro: #8a94a6;
+
   /* Cromo de la aplicación (temas · Apariencia): la barra superior del marco y la
      barra lateral son UNA sola pieza. Por eso el degradado va encadenado — la
      barra superior termina en el mismo tono con el que arranca el menú
@@ -46,17 +71,52 @@
     --line: #2c313f; --edge: #363c4c; --edge-strong: #434a5d; --hi: rgba(255,255,255,0.07); --lo: rgba(0,0,0,0.45);
     --btn-face: linear-gradient(180deg, #333a4d, #262b39);
     --shadow-win: 0 12px 34px rgba(0,0,0,0.55), 0 2px 7px rgba(0,0,0,0.45);
+
+  /* Estados en modo oscuro: texto más claro y fondos como tinte translúcido. */
+  --peligro:#f38b7f; --peligro-fuerte:#ff9c90;
+  --peligro-suave:rgba(207,68,54,0.18); --peligro-borde:rgba(207,68,54,0.45); --peligro-solido:#b93a2e;
+  --alerta:#e8ab3c; --alerta-fuerte:#f4c368;
+  --alerta-suave:rgba(198,124,0,0.20); --alerta-borde:rgba(198,124,0,0.45); --alerta-solido:#a56800;
+  --exito:#4fd39c; --exito-fuerte:#6fe0b0;
+  --exito-suave:rgba(34,166,112,0.18); --exito-borde:rgba(34,166,112,0.45); --exito-solido:#14805a;
+  --info:#7fb0f5; --info-fuerte:#a3c8fb;
+  --info-suave:rgba(47,111,208,0.20); --info-borde:rgba(47,111,208,0.45); --info-solido:#2a5fb0;
+  --cero:#3fc9c1;
+  --neutro:#9aa3ba;
   }
 }
 :root[data-theme="light"] {
   --desk-bg:#e7ebf2; --panel:#fff; --panel-2:#f3f6fb; --ink:#191d2c; --muted:#5b6478;
   --line:#dce1ea; --edge:#cfd6e2; --edge-strong:#bcc4d4; --hi:rgba(255,255,255,0.9); --lo:rgba(20,24,45,0.10);
   --btn-face:linear-gradient(180deg,#fff,#eef1f7); --shadow-win:0 12px 34px rgba(17,21,79,0.16),0 2px 7px rgba(17,21,79,0.10);
+
+  --peligro:#cf4436; --peligro-fuerte:#b42318;
+  --peligro-suave:#fbe4e1; --peligro-borde:#f0b4ad; --peligro-solido:#cf4436;
+  --alerta:#c67c00; --alerta-fuerte:#9a5b12;
+  --alerta-suave:#fbf0d9; --alerta-borde:#edd9a8; --alerta-solido:#c67c00;
+  --exito:#22a670; --exito-fuerte:#16794c;
+  --exito-suave:#e4f5ec; --exito-borde:#bfe3d1; --exito-solido:#16794c;
+  --info:#2f6fd0; --info-fuerte:#24406f;
+  --info-suave:#e7edf8; --info-borde:#c9def2; --info-solido:#2f6fd0;
+  --cero:#14a8a0;
+  --neutro:#8a94a6;
 }
 :root[data-theme="dark"] {
   --desk-bg:#10121a; --panel:#20242f; --panel-2:#191c26; --ink:#eaecf6; --muted:#9aa3ba;
   --line:#2c313f; --edge:#363c4c; --edge-strong:#434a5d; --hi:rgba(255,255,255,0.07); --lo:rgba(0,0,0,0.45);
   --btn-face:linear-gradient(180deg,#333a4d,#262b39); --shadow-win:0 12px 34px rgba(0,0,0,0.55),0 2px 7px rgba(0,0,0,0.45);
+
+  /* Estados en modo oscuro: texto más claro y fondos como tinte translúcido. */
+  --peligro:#f38b7f; --peligro-fuerte:#ff9c90;
+  --peligro-suave:rgba(207,68,54,0.18); --peligro-borde:rgba(207,68,54,0.45); --peligro-solido:#b93a2e;
+  --alerta:#e8ab3c; --alerta-fuerte:#f4c368;
+  --alerta-suave:rgba(198,124,0,0.20); --alerta-borde:rgba(198,124,0,0.45); --alerta-solido:#a56800;
+  --exito:#4fd39c; --exito-fuerte:#6fe0b0;
+  --exito-suave:rgba(34,166,112,0.18); --exito-borde:rgba(34,166,112,0.45); --exito-solido:#14805a;
+  --info:#7fb0f5; --info-fuerte:#a3c8fb;
+  --info-suave:rgba(47,111,208,0.20); --info-borde:rgba(47,111,208,0.45); --info-solido:#2a5fb0;
+  --cero:#3fc9c1;
+  --neutro:#9aa3ba;
 }
 
 /* ===== TEMAS DE COLOR (Apariencia) — recolorean el CROMO de la app. =====

@@ -202,6 +202,30 @@ Fuente de verdad del esquema: [`../prisma/schema.prisma`](../prisma/schema.prism
   - Regla: **un tema recolorea todo el cromo, no una parte** — cualquier barra
     nueva debe tomar su color de las variables, nunca escribirlo a mano.
 
+### ADR-0008 — Colores por significado, no por tono
+
+- **Contexto:** el color de cada estado se escribía a mano en cada pantalla. El
+  rojo de "vencido" aparecía **81 veces** en cuatro tonos distintos, `#b42318`
+  convivía con `#B42318`, y `#2e5090` se repetía 23 veces existiendo ya `--navy`.
+  Dos consecuencias: la misma información se veía distinta según la pantalla, y
+  **el modo oscuro quedaba ilegible** —un fondo `#fbe4e1` casi blanco sobre un
+  panel oscuro— porque un color fijo no puede seguir al tema.
+- **Decisión:** los estados se nombran por lo que **significan**:
+  `peligro` (vencido, no presentado, sanción) · `alerta` (por vencer, mora) ·
+  `exito` (pagado, al día) · `info` (presentado sin pago, programado) ·
+  `cero` (presentado en $0) · `neutro` (no obligado, sin dato). Cada uno con sus
+  variantes `base` (texto), `fuerte` (énfasis), `suave` (fondo de franja),
+  `borde` y `solido` (fondo saturado que lleva texto blanco encima y por eso
+  **no** se aclara en oscuro). Definidos en los tres bloques de tema.
+  **Regla: ningún estado se escribe con un hex en una pantalla.**
+- **Consecuencias:**
+  - El modo oscuro funciona en toda la plataforma sin tocar pantalla por pantalla:
+    en oscuro el texto se aclara y los fondos pasan a ser un tinte translúcido.
+  - Las transparencias de los chips ya no se hacen concatenando el alfa al hex
+    (`${color}18`), que solo funciona con hex: se usa `tinte()` con `color-mix`,
+    que acepta variables (`apps/web/app/_components/color.ts`).
+  - Cambiar el rojo de la firma pasa a ser una línea, no 81.
+
 ## Otorgar el rol ROOT de plataforma
 
 El rol **root** (`Usuario.esRootPlataforma`) es el permiso más alto y, en el modelo

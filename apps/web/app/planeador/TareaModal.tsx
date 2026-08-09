@@ -130,7 +130,7 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
         <div className="win-body" style={{ padding: 18 }}>
           {cargando ? <div style={{ color: 'var(--muted)', fontSize: 13, padding: 12 }}>Cargando…</div> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
+              {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
               <label><span style={lbl}>Título *</span><input style={input} value={form.titulo} onChange={(e) => set('titulo', e.target.value)} placeholder="Actividad" /></label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <label><span style={lbl}>Cliente *</span>
@@ -182,7 +182,7 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
                         <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderBottom: i < subs.length - 1 ? '1px solid var(--line)' : 'none' }}>
                           <input type="checkbox" checked={s.estado === 'realizada'} onChange={() => toggleSub(s)} />
                           <span style={{ flex: 1, fontSize: 12.5, textDecoration: s.estado === 'realizada' ? 'line-through' : 'none', color: s.estado === 'realizada' ? 'var(--muted)' : 'var(--ink)' }}>{s.texto}</span>
-                          <button onClick={() => delSub(s)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 13 }}>🗑</button>
+                          <button onClick={() => delSub(s)} title="Eliminar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 13 }}>🗑</button>
                         </div>
                       ))}
                     </div>
@@ -192,7 +192,7 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
                     {subsCrear.map((t, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderBottom: i < subsCrear.length - 1 ? '1px solid var(--line)' : 'none' }}>
                         <span style={{ flex: 1, fontSize: 12.5 }}>{t}</span>
-                        <button onClick={() => setSubsCrear((p) => p.filter((_, j) => j !== i))} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#cf4436', fontSize: 13 }}>🗑</button>
+                        <button onClick={() => setSubsCrear((p) => p.filter((_, j) => j !== i))} title="Quitar" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 13 }}>🗑</button>
                       </div>
                     ))}
                   </div>

@@ -5,6 +5,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import FiltroColumna from '../administracion/FiltroColumna';
 
+import { tinte } from '@/app/_components/color';
 type Rol = { id: string; nombre: string };
 type Opcion = { id: string; nombre: string };
 type Usuario = {
@@ -15,7 +16,7 @@ type Usuario = {
 type Form = { nombre: string; email: string; cargo: string; area: string; roles: string[]; activo: boolean; passwordTemporal: string; empresaClienteId: string; grupoClienteId: string };
 const VACIO: Form = { nombre: '', email: '', cargo: '', area: '', roles: [], activo: true, passwordTemporal: '', empresaClienteId: '', grupoClienteId: '' };
 
-const ROL_COLOR: Record<string, string> = { Administrador: '#20259c', Coordinador: '#7a5af8', Asesor: '#0e9f6e', Auxiliar: '#3f83f8', Auditor: '#d98a00' };
+const ROL_COLOR: Record<string, string> = { Administrador: '#20259c', Coordinador: '#7a5af8', Asesor: 'var(--exito)', Auxiliar: 'var(--info)', Auditor: 'var(--alerta)' };
 
 // Filtros tipo Excel (embudo por columna).
 const COLS = ['nombre', 'correo', 'cargo', 'area', 'roles', 'activo'] as const;
@@ -115,8 +116,8 @@ export default function UsuariosPanel() {
 
   return (
     <div>
-      {error && <div style={{ background: '#FBE4E1', color: '#B42318', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
-      {aviso && <div style={{ background: '#E7F6EC', color: '#027a48', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', justifyContent: 'space-between', gap: 12 }}>{aviso}<button onClick={() => setAviso(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#027a48', fontWeight: 800 }}>✕</button></div>}
+      {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+      {aviso && <div style={{ background: 'var(--exito-suave)', color: 'var(--exito-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', justifyContent: 'space-between', gap: 12 }}>{aviso}<button onClick={() => setAviso(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--exito-fuerte)', fontWeight: 800 }}>✕</button></div>}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -143,12 +144,12 @@ export default function UsuariosPanel() {
                   <td style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 12.5 }}>{u.email}</td>
                   <td style={{ color: 'var(--muted)' }}>{u.cargo ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{u.area ?? '—'}</td>
-                  <td>{u.roles.length === 0 ? <span style={{ color: 'var(--muted)' }}>—</span> : u.roles.map((r) => { const c = ROL_COLOR[r.nombre] ?? '#5b6478'; return <span key={r.id} className="chip" style={{ color: c, background: `${c}18`, borderColor: `${c}44`, marginRight: 4 }}>{r.nombre}</span>; })}</td>
-                  <td><button onClick={() => toggleActivo(u)} disabled={u.esRoot} title={u.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: u.esRoot ? 'default' : 'pointer', fontSize: 20, lineHeight: 1, color: u.activo ? '#22a670' : '#9aa4b2', opacity: u.esRoot ? 0.5 : 1 }}>{u.activo ? '🟢' : '⚪'}</button></td>
+                  <td>{u.roles.length === 0 ? <span style={{ color: 'var(--muted)' }}>—</span> : u.roles.map((r) => { const c = ROL_COLOR[r.nombre] ?? 'var(--muted)'; return <span key={r.id} className="chip" style={{ color: c, background: `${tinte(c, 12)}`, borderColor: `${tinte(c, 30)}`, marginRight: 4 }}>{r.nombre}</span>; })}</td>
+                  <td><button onClick={() => toggleActivo(u)} disabled={u.esRoot} title={u.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: u.esRoot ? 'default' : 'pointer', fontSize: 20, lineHeight: 1, color: u.activo ? 'var(--exito)' : 'var(--neutro)', opacity: u.esRoot ? 0.5 : 1 }}>{u.activo ? '🟢' : '⚪'}</button></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button onClick={() => setEditar(u)} title="Editar" style={ic('var(--navy)')}>✎</button>
-                    <button onClick={() => reset(u)} title="Restablecer contraseña" style={ic('#c67c00')}>🔑</button>
-                    {!u.esRoot && <button onClick={() => eliminar(u)} title="Eliminar" style={ic('#cf4436')}>🗑</button>}
+                    <button onClick={() => reset(u)} title="Restablecer contraseña" style={ic('var(--alerta)')}>🔑</button>
+                    {!u.esRoot && <button onClick={() => eliminar(u)} title="Eliminar" style={ic('var(--peligro)')}>🗑</button>}
                   </td>
                 </tr>
               ))}

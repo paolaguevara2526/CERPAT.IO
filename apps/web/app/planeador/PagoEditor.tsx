@@ -5,11 +5,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { tinte } from '@/app/_components/color';
 export const ESTADO_PAGO_META: Record<string, { label: string; color: string }> = {
-  pendiente: { label: 'Pendiente', color: '#c67c00' },
-  presentado_sin_pago: { label: 'Presentado sin pago', color: '#2f6fd0' },
-  presentado_pagado: { label: 'Presentado y pagado', color: '#22a670' },
-  no_presentado: { label: 'No presentado', color: '#cf4436' },
+  pendiente: { label: 'Pendiente', color: 'var(--alerta)' },
+  presentado_sin_pago: { label: 'Presentado sin pago', color: 'var(--info)' },
+  presentado_pagado: { label: 'Presentado y pagado', color: 'var(--exito)' },
+  no_presentado: { label: 'No presentado', color: 'var(--peligro)' },
 };
 
 function fmtCOP(v: number | null): string {
@@ -58,14 +59,14 @@ export default function PagoEditor({ id, valorPago, estadoPago }: { id: string; 
       </div>
       <select
         value={estado} onChange={(e) => setEstado(e.target.value)}
-        style={{ fontSize: 11.5, fontWeight: 700, color, background: `${color}18`, border: `1px solid ${color}44`, borderRadius: 4, padding: '5px 8px', cursor: 'pointer', fontFamily: 'var(--ui)' }}
+        style={{ fontSize: 11.5, fontWeight: 700, color, background: `${tinte(color, 12)}`, border: `1px solid ${tinte(color, 30)}`, borderRadius: 4, padding: '5px 8px', cursor: 'pointer', fontFamily: 'var(--ui)' }}
       >
         {Object.entries(ESTADO_PAGO_META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
       </select>
       <button className="dbtn primary" onClick={guardar} disabled={!sucio || guardando} style={{ fontSize: 12, opacity: !sucio || guardando ? 0.5 : 1 }}>
         {guardando ? '…' : ok ? '✓' : 'Guardar'}
       </button>
-      {error && <span style={{ fontSize: 10.5, color: '#cf4436' }}>{error}</span>}
+      {error && <span style={{ fontSize: 10.5, color: 'var(--peligro)' }}>{error}</span>}
     </div>
   );
 }
