@@ -6,7 +6,7 @@ Para el **modelo de operación** (flujo, roles, entregas y medición) ver
 plataforma** (de planeador a producto SaaS multi-módulo, modalidades, módulos,
 fundaciones y nomenclatura) ver [`vision-plataforma.md`](./vision-plataforma.md).
 
-_Última actualización: 2026-08-08._
+_Última actualización: 2026-08-09._
 
 ## En producción hoy
 
@@ -16,21 +16,26 @@ _Última actualización: 2026-08-08._
 | Dominio | `cerpat.io` (+ `www`) en Hostinger → Vercel | ✅ activo (HTTPS) |
 | Backend | Railway — `apps/api` (Express) | ✅ Online |
 | Base de datos | Railway — PostgreSQL (Prisma) | ✅ conectada |
-| Esquema | multi-tenant + rol root aplicado (`db push`) | ✅ |
+| Esquema | multi-tenant + rol root, **migraciones versionadas** (`migrate deploy` en cada despliegue) | ✅ |
 | Datos | organización **CERPAT** + **90 clientes reales** cargados | ✅ |
+| Autenticación | login propio (JWT + scrypt, cookie httpOnly) y guardas por rol | ✅ |
+| Sitio institucional | `cerpat.io` público (reemplaza el WordPress de `cerpat.com`) | ✅ |
+| PWA | instalable (Android/iOS) con actualización automática | ✅ |
 
 ### Vistas publicadas
-- **`cerpat.io/`** — **home institucional** de la firma (reemplaza el sitio WordPress
-  que vivía en `cerpat.com`): hero, servicios por área, «Sobre CERPAT», contacto
-  (tel. 312 432 4791, Villavicencio) y acceso al planeador. Página estática propia.
-- **`cerpat.io/app`** — planeador (prototipo `localStorage`) con el **tema
-  escritorio**: sidebar en azul rey y tres secciones (Planeador / Gestión /
-  Servicios), icono sherpa (🧗) en Usuarios.
-- **`cerpat.io/servicios`** — **Herramientas** para equipo y clientes. Disponibles:
-  **Calculadora de retenciones** (`/servicios/retenciones`) y **Punto de
-  equilibrio** (`/servicios/punto-equilibrio`). En construcción: liquidador de
-  intereses, prestaciones sociales, calendario tributario, portal de documentos.
-- **`cerpat.io/usuarios`** — vista cableada del personal (26 usuarios) desde la BD.
+- **`cerpat.io/`** — **sitio institucional** de la firma, migrado desde el
+  WordPress de `cerpat.com` conservando su identidad visual (Poppins, índigo
+  `#392B87`, verde `#48D597`, lavanda). Páginas: Inicio, **Nosotros**,
+  **Servicios**, **Trabaja con nosotros** y **Contacto**, más `sitemap.xml` /
+  `robots.txt`. Es un lenguaje visual **distinto** al del planeador, a propósito.
+- **`cerpat.io/planeador`** — la aplicación de la firma, con el **tema escritorio**
+  y la barra lateral en **acordeón por área** (ver ADR-0004).
+- **`cerpat.io/herramientas`** — **Herramientas** para equipo y clientes.
+  Disponibles: **Calculadora de retenciones** y **Punto de equilibrio** (sirven
+  desde `/servicios/*.html`, estáticas). En construcción: liquidador de intereses,
+  prestaciones sociales, calendario tributario, portal de documentos.
+  *(La URL `/servicios` es ahora el portafolio público de la firma.)*
+- **`cerpat.io/usuarios`** — vista cableada del personal desde la BD.
 - **`cerpat.io/clientes`** — vista **cableada**: web → API `GET /empresas` → Postgres, 90 clientes reales (sin correos, por privacidad).
 - **`cerpat.io/vencimientos`** — vista **cableada** de obligaciones tributarias por
   cliente (API `GET /vencimientos`). **ICA municipal 2026 cargado** (338 vencimientos:
@@ -47,15 +52,20 @@ _Última actualización: 2026-08-08._
 - **Plataforma multi-módulo (visión):** de planeador a sistema operativo de la firma **y** producto que se le vende a los clientes. Cinco frentes (Outsourcing/asesoría, Auditoría/RF, SARLAFT, Talento Humano, "Cómo trabajamos") sobre una base compartida; navegación en acordeón por área ("Mi Ruta" el día a día). Ver [`vision-plataforma.md`](./vision-plataforma.md) y ADR-0002 (cliente-como-tenant + licenciamiento), ADR-0003 (permisos en 3 niveles), ADR-0004 (navegación/nombres) y ADR-0005 (datos sensibles).
 - **Regla de aislamiento:** el backend filtra por `organizacionId` de la sesión en cada consulta; nunca confiar en el cliente.
 - Stack: Next.js (Vercel) · Express/TS (Railway) · PostgreSQL/Prisma · auth Auth.js/Clerk (pendiente) · n8n (pendiente) · Microsoft 365 correo (pendiente) · Sentry (pendiente).
-- **Sistema de diseño "software de escritorio":** paleta **azul rey apagado**
-  (`#2E5090` / `#16294A`) como color primario + **verde CERPAT** (`#34C98B`) como
-  acento/positivo; marco de ventana con controles estilo Windows, botones rectos
-  con relieve 3D sutil y paneles biselados (`apps/web/app/desktop.css`). Lema de
-  marca: *"guiamos a nuestros clientes a la cima"* (motivo del sherpa y de las
-  tendencias ▲ en los KPIs). Logo oficial en `/public`.
+- **Dos lenguajes visuales, a propósito.** El **planeador** usa el sistema
+  "software de escritorio": **azul rey apagado** (`#2E5090` / `#16294A`) + **verde
+  CERPAT oficial** (`#48D597`) como acento/positivo, marco de ventana con controles
+  estilo Windows, botones rectos con relieve sutil y paneles biselados
+  (`apps/web/app/desktop.css`). El **sitio institucional** conserva la identidad
+  del sitio anterior: Poppins, índigo `#392B87`, lavanda `#F2F0FE` y el mismo verde
+  (`apps/web/app/_sitio/Sitio.tsx`). Lema de marca: *"guiamos a nuestros clientes a
+  la cima"* (motivo del sherpa y de las tendencias ▲ en los KPIs). Logos oficiales
+  en SVG en `/public`.
 - **Identidad de dominio: todo en `cerpat.io`.** La firma perdió el manejo de
   `cerpat.com`, así que se consolida la identidad (web **y correo**) en
-  `cerpat.io`, dominio que el equipo sí controla (Hostinger → Vercel). En el repo
+  `cerpat.io`, dominio que el equipo sí controla (Hostinger → Vercel). El **sitio
+  público ya vive en `cerpat.io`** (ago 2026); falta la redirección 301 y apagar el
+  WordPress anterior, que además está comprometido. En el repo
   ya se cambiaron los correos `@cerpat.com` → `@cerpat.io` (usuarios/personal,
   seed y casillas de la firma usadas como contacto de clientes). **Pendiente
   operativo del equipo:** migrar las casillas reales (Microsoft 365) a
@@ -162,6 +172,68 @@ Prisma** (fin del SQL manual y del *drift*) y **CI en cada PR** (valida esquema 
 compila API y web). Curaduría estructural completa en
 [`revision-tecnica.md`](./revision-tecnica.md).
 
+## Construido el 8–9 de agosto 2026
+
+**Asignaciones y tablero por área.** Tras la carga masiva de asignaciones, las
+tareas ya generadas conservaban el responsable viejo: se agregó
+**Administración → Sincronizar responsables** (`POST /admin/asignaciones/sincronizar-tareas`,
+con alcance *período actual / abiertas / todas* y **simulación** antes de aplicar).
+Nueva vista **`/planeador/asignaciones`**: coordinación ve el tablero completo por
+área con **métricas y filtros de embudo** (por área y por cliente); cada asesor y
+auxiliar ve **sus** empresas (`GET /plan/asignaciones`).
+
+**Rol Asesor, ajustes pedidos por el equipo.** En **Pagos** solo consulta e
+impresión (no edita valores); **Mi Día** muestra únicamente lo suyo; **Lista**
+muestra lo suyo **y** lo de sus auxiliares.
+
+**Vencimientos — eliminar.** El Administrador puede **eliminar** un vencimiento
+(con confirmación), no solo los cargados a mano. Nació de un caso real: el **RUB**
+aparecía en clientes **persona natural**, a quienes no les aplica.
+
+**Pagos — abonos y sanción por municipio.** Se pueden registrar **abonos
+parciales** a un impuesto (`AbonoVencimiento`); el saldo, la mora y el semáforo se
+recalculan sobre lo que falta, y al llegar a cero el vencimiento pasa a
+*Presentado y pagado*. La **sanción mínima** deja de ser un valor único:
+`Municipio.sancionMinimaUvt` permite fijarla por municipio (editable en
+Administración).
+
+**Documentos y almacenamiento por cliente.** Cada cliente tiene su **repositorio
+de documentos** (actas, informes, soportes) en `DocumentoCliente`, y su ficha
+muestra **cuánto almacenamiento consume** (MB y número de archivos). Máximo 20 MB
+por archivo. → *Pendiente operativo: ampliar el volumen de la base y activar
+respaldos en Railway.*
+
+**Navegación en acordeón ("Mi Ruta").** La barra lateral se reorganizó por área,
+desplegable, con tres secciones (**Mi Ruta** / Gestión / Servicios) y memoria de
+la última abierta. Se colapsa **sola** a íconos en pantallas medianas y a cajón
+lateral en móvil. Ver ADR-0004.
+
+**Marca y PWA.** Logo oficial en SVG (verde `#48D597`, azul `#171C8F`) aplicado en
+toda la plataforma y el color de marca unificado. La app es **instalable**
+(Android e **iOS/Safari**: `apple-touch-icon` PNG, área segura, aviso de
+instalación) y **se actualiza sola** en cada despliegue. Auditoría de CSS y
+**responsive móvil** completa.
+
+**Seguridad.** Una auditoría encontró **cuatro endpoints abiertos sin sesión** en
+producción: `GET /usuarios` (datos personales del equipo), `GET /empresas`
+(cartera con NIT), `GET`/**`PATCH`** `/tareas` (lectura **y modificación**) y
+`GET /plan/cumplimiento`. Se cerraron todos y se agregó un **test de blindaje**
+que recorre los routers y falla si alguna ruta queda sin `requireAuth` (hoy cubre
+78 rutas). Se documentó cómo otorgar el rol **root** sin acceso a la base
+(`PROMOVER_ROOT_EMAIL`, ver `arquitectura.md`).
+
+**Corrección posterior (ADR-0006).** El auto-refresco de la PWA recargaba la
+página al perder el foco de un campo, sin comprobar si había versión nueva: al
+pulsar *Entrar* en el login, el envío se cancelaba y **no se podía iniciar
+sesión**. Se corrigió (recarga solo con versión nueva y nunca con un formulario en
+uso), el service worker **dejó de cachear HTML** (páginas personalizadas) y el
+límite de intentos de login **ya no bloquea la cuenta**: la contraseña correcta
+entra siempre; lo que crece ante fallos seguidos es el retraso de la respuesta.
+
+**Importación masiva.** La carga de asignaciones por Excel fallaba con miles de
+filas: el tope por defecto de Express (100 KB) devolvía 413. Ampliado a 30 MB,
+que también cubre la subida de documentos.
+
 ## Roadmap
 
 ### Fase 1 — Infraestructura y datos ✅ (hecho)
@@ -174,11 +246,21 @@ compila API y web). Curaduría estructural completa en
 - [x] Sistema de temas (Actual / Sereno / Enfoque) en Apariencia.
 - [x] Matrices Excel para cargar clientes y usuarios (entregadas al equipo).
 
-### Fase 2 — Autenticación y aislamiento (siguiente)
-- [ ] Auth (Auth.js/Clerk): login, sesión, hash de contraseñas (bcrypt/argon2).
-- [ ] Bootstrap de credenciales para root y admin de CERPAT (hoy `passwordHash` vacío).
-- [ ] Middleware de tenant en `apps/api`: resolver `organizacionId` desde la sesión y filtrar cada endpoint.
-- [ ] Permisos por rol (Administrador/Asesor/Auditor/Auxiliar) por endpoint.
+### Fase 2 — Autenticación y aislamiento 🟡 (casi completa)
+- [x] Auth propia: login con **JWT (HS256)** y contraseñas con **scrypt**; sesión en
+  cookie `cerpat_token` **httpOnly + secure + sameSite**, 12 h. Se descartó
+  Auth.js/Clerk: el caso es un login por correo/contraseña dentro de un tenant, y
+  una dependencia externa habría costado más de lo que aportaba.
+- [x] Bootstrap de credenciales: el Administrador crea usuarios y el sistema genera
+  contraseña temporal (`debeCambiarPassword`); rol **root** vía `PROMOVER_ROOT_EMAIL`
+  o `prisma/set-root.ts` (ver `arquitectura.md`).
+- [x] Permisos por rol en el backend (`requireAuth` / `requireRol`) y guardas de
+  ruta en el frontend (`lib/acceso.ts` + `exigirRuta`).
+- [x] Todos los endpoints exigen sesión, con **test de blindaje** que lo verifica.
+- [x] Freno a la fuerza bruta en el login (retraso creciente, sin bloquear la cuenta).
+- [ ] **Middleware de tenant**: resolver `organizacionId` desde la sesión en vez del
+  slug fijo `'cerpat'`. **Bloqueante antes de vender la plataforma a clientes**
+  (ADR-0002).
 - [ ] Servir correos de clientes solo autenticado.
 
 ### Fase 3 — App real por vistas (reemplazar prototipo)
@@ -371,6 +453,25 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
 mockup con el equipo y luego el modelo de datos + generación.
 
 ## Deuda técnica / notas
-- El endpoint `/empresas` resuelve la **organización demo fija** (`slug: cerpat`) hasta que exista auth.
-- La BD usa `db push` (sin migraciones versionadas todavía); migrar a `prisma migrate` antes de datos productivos críticos.
+- **`organizacionId` por slug fijo.** Los endpoints resuelven la organización con
+  `slug: 'cerpat'` en vez de tomarla de la sesión. Funciona con un solo tenant,
+  pero **hay que cambiarlo antes de abrir la plataforma a clientes** (ADR-0002) —
+  es la deuda más importante del backend hoy.
 - `prisma/data/clientes-cerpat.csv` contiene PII de clientes reales; vive en el repo privado por decisión del equipo.
+- Los documentos de clientes se guardan **dentro de Postgres** (no en un
+  almacenamiento de objetos). Sirve para el volumen actual; si crece, mover a
+  Cloudflare R2 / S3 y dejar solo la referencia en la base.
+
+### Pendientes operativos (fuera del código)
+Cosas que **no** se resuelven con un despliegue; las hace el equipo en los paneles:
+- [ ] Railway → API: **quitar `PROMOVER_ROOT_EMAIL`** (el root ya quedó otorgado).
+- [ ] Railway → Postgres: **ampliar el volumen** y **activar respaldos** (ahora se
+  guardan documentos de clientes en la base).
+- [ ] Railway → API: verificar que **`CORS_ORIGIN`** esté definido; si falta, la API
+  acepta peticiones desde cualquier origen.
+- [ ] **Redirección 301** de `cerpat.com` → `cerpat.io` y **apagar el WordPress**
+  (previo respaldo). ⚠️ El sitio anterior está **comprometido**: tenía publicaciones
+  de spam de casinos y corría sobre PHP 7.4. Cambiar también las contraseñas de
+  hosting/WordPress.
+- [ ] Microsoft 365: migrar las casillas reales a `@cerpat.io`.
+- [ ] `api.cerpat.io` como dominio propio de la API (hoy responde el host de Railway).
