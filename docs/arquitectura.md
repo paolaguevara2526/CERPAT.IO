@@ -158,20 +158,49 @@ Fuente de verdad del esquema: [`../prisma/schema.prisma`](../prisma/schema.prism
   "Entrar" en el login, que cancelaba el ingreso) y el service worker guardaba
   **todas** las respuestas GET del mismo origen, incluidas páginas HTML que el
   servidor arma con los datos de la persona autenticada.
-- **Decisión:** dos reglas fijas para el service worker y su registro:
+- **Decisión:** tres reglas fijas para el service worker y su registro:
   1. **Nunca se cachea HTML ni la API.** Solo se guardan archivos estáticos e
      inmutables (`/_next/static/*`, íconos, imágenes, fuentes). Las páginas se
      piden siempre en vivo — llevan datos personales y dependen del despliegue.
-  2. **La recarga automática solo ocurre si hay una versión nueva instalada**, y
-     nunca mientras haya un campo o formulario en uso. La primera instalación del
-     service worker no cuenta como actualización.
+  2. **La app nunca se recarga sola.** Cuando hay una versión nueva instalada, el
+     service worker se queda *esperando* (no se llama a `skipWaiting()` al
+     instalar) y la página muestra un **banner**: "Hay una versión nueva".
+     La recarga ocurre únicamente cuando la persona pulsa *Actualizar*.
+  3. La primera instalación del service worker **no** cuenta como actualización
+     (no hay nada que avisar).
 - **Consecuencias:**
   - Sin fuga de páginas de un usuario a otro por la caché del navegador (refuerza
     ADR-0005) ni versiones viejas servidas tras un despliegue.
   - Menos beneficio *offline* (solo la cáscara estática), a cambio de que la
     sesión y los datos siempre sean los reales. Es el intercambio correcto aquí.
-  - Regla general: **toda recarga automática debe ir detrás de una condición
-    explícita**, nunca colgada de un evento de foco o de visibilidad.
+  - Alguien puede quedarse un rato en una versión vieja si ignora el banner. Se
+    acepta: es preferible a interrumpirle el trabajo, y el aviso reaparece en
+    cada versión posterior.
+  - Regla general: **la aplicación no cambia de estado por su cuenta durante el
+    trabajo de una persona**; si necesita hacerlo, lo pide.
+
+### ADR-0007 — Un solo cromo: marco, menú y app instalada
+
+- **Contexto:** el planeador imita una "ventana de escritorio" (marco redondeado,
+  barra de título con botones simulados). Instalada como **PWA**, el sistema
+  operativo pone *su* barra de ventana encima: dos marcos superpuestos y un
+  cinturón de espacio desperdiciado. Además, la barra del marco era navy fija
+  mientras el menú lateral seguía el tema elegido en *Apariencia*: al escoger, por
+  ejemplo, el tema verde, quedaban dos colores peleando en la misma esquina.
+- **Decisión:** **el cromo es una sola pieza**. La barra superior y la barra
+  lateral comparten familia de color por tema (`--chrome-bar` → `--nav-bg`,
+  encadenados: la barra termina en el tono con el que arranca el menú) y **todos
+  los controles viven en esa única barra** (marca, botón del menú, apariencia,
+  controles de ventana) — antes había una segunda banda debajo solo para el botón
+  del menú y el tema. **Instalada**, el marco se abre a pantalla completa (sin
+  relleno, esquinas ni sombra), se retiran los adornos que el sistema ya provee
+  (botones simulados y la ruta) y el menú **arranca colapsado a íconos**.
+- **Consecuencias:**
+  - La metáfora de escritorio se conserva **en el navegador**, donde sí aporta, y
+    se cede ante el sistema operativo cuando la app está instalada.
+  - Se recuperan ~90 px de alto útil (una banda + el relleno del marco).
+  - Regla: **un tema recolorea todo el cromo, no una parte** — cualquier barra
+    nueva debe tomar su color de las variables, nunca escribirlo a mano.
 
 ## Otorgar el rol ROOT de plataforma
 

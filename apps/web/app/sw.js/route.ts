@@ -27,8 +27,10 @@ function sePuedeGuardar(url, request) {
 }
 
 self.addEventListener('install', () => {
-  // La versión nueva toma el control sin esperar a que se cierren las pestañas.
-  self.skipWaiting();
+  // A propósito NO se llama a skipWaiting() aquí: la versión nueva se queda
+  // "esperando" y la página muestra el banner de actualización. Toma el control
+  // solo cuando la persona pulsa Actualizar (mensaje 'saltar-espera'), nunca en
+  // medio de su trabajo.
 });
 
 self.addEventListener('activate', (event) => {
@@ -62,7 +64,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Permite que la página fuerce la activación inmediata de una versión nueva.
+// La página pide activar la versión nueva (botón "Actualizar" del banner).
 self.addEventListener('message', (e) => {
   if (e.data === 'saltar-espera') self.skipWaiting();
 });
