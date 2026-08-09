@@ -4,6 +4,8 @@
 
 import PortalVisitas from '@/app/mis-visitas/PortalVisitas';
 
+
+export const metadata = { title: 'Visitas' };
 export const dynamic = 'force-dynamic';
 
 export default function PortalVisitasPage() {

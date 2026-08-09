@@ -5,6 +5,8 @@ import { exigirRuta } from '@/lib/acceso-server';
 import { nombrePeriodo } from '../tareas';
 import AuditoriaCola, { type TareaAuditoria } from '../AuditoriaCola';
 
+
+export const metadata = { title: 'Auditoría' };
 export const dynamic = 'force-dynamic';
 
 type Resp = { periodo: string | null; total: number; tareas: TareaAuditoria[] };

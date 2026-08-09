@@ -4,6 +4,8 @@
 
 import PortalHallazgos from '@/app/hallazgos/PortalHallazgos';
 
+
+export const metadata = { title: 'Hallazgos' };
 export const dynamic = 'force-dynamic';
 
 export default function PortalHallazgosPage() {

@@ -5,6 +5,8 @@
 import { exigirRuta } from '@/lib/acceso-server';
 import VisitasView from './VisitasView';
 
+
+export const metadata = { title: 'Visitas' };
 export const dynamic = 'force-dynamic';
 
 export default async function VisitasPage() {

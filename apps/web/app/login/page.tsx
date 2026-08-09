@@ -7,7 +7,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-
 const VERDE = '#34C98B';
 
 const ico = (d: string, extra?: React.ReactNode) => (

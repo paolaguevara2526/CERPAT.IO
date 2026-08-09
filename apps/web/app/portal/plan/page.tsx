@@ -3,6 +3,8 @@
 
 import PortalPlan from './PortalPlan';
 
+
+export const metadata = { title: 'Plan de Trabajo' };
 export const dynamic = 'force-dynamic';
 
 export default function PortalPlanPage() {

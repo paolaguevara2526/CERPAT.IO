@@ -6,6 +6,8 @@ import { fetchTareas, TareasTabla, nombrePeriodo } from '../tareas';
 import CapturaDelDia from './CapturaDelDia';
 import ListoParaProcesar from './ListoParaProcesar';
 
+
+export const metadata = { title: 'Mi Día' };
 export const dynamic = 'force-dynamic';
 
 export default async function MiDiaPage() {

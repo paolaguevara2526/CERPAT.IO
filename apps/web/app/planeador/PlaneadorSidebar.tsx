@@ -9,48 +9,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { puedeVerRuta } from '@/lib/acceso';
 import Ico from './iconos';
-
-type Item = { label: string; icon: string; href: string };
-
-// "Inicio" no vive dentro de un área: es un acceso fijo arriba del acordeón.
-const INICIO: Item = { label: 'Inicio', icon: 'inicio', href: '/planeador' };
-
-const SECTIONS: { titulo: string; items: Item[] }[] = [
-  {
-    titulo: 'Mi Ruta',
-    items: [
-      { label: 'Mi Día', icon: 'dia', href: '/planeador/mi-dia' },
-      { label: 'Calendario', icon: 'calendario', href: '/planeador/calendario' },
-      { label: 'Visitas', icon: 'visitas', href: '/planeador/visitas' },
-      { label: 'Plan de Trabajo', icon: 'plan', href: '/planeador/cronograma' },
-      { label: 'Tablero', icon: 'tablero', href: '/planeador/tablero' },
-      { label: 'Flujo del cierre', icon: 'flujo', href: '/planeador/flujo' },
-      { label: 'Lista', icon: 'lista', href: '/planeador/lista' },
-      { label: 'Asignaciones', icon: 'asignaciones', href: '/planeador/asignaciones' },
-      { label: 'Pagos', icon: 'pagos', href: '/planeador/pagos' },
-      { label: 'Vencimientos', icon: 'vencimientos', href: '/vencimientos' },
-      { label: 'Auditoría', icon: 'auditoria', href: '/planeador/auditoria' },
-    ],
-  },
-  {
-    titulo: 'Gestión',
-    items: [
-      { label: 'Clientes', icon: 'clientes', href: '/clientes' },
-      { label: 'Coordinación', icon: 'coordinacion', href: '/coordinacion' },
-      { label: 'Usuarios', icon: 'usuarios', href: '/usuarios' },
-      { label: 'Administración', icon: 'administracion', href: '/administracion' },
-    ],
-  },
-  {
-    titulo: 'Servicios',
-    items: [
-      { label: 'Calculadora de retenciones', icon: 'calculadora', href: '/servicios/retenciones' },
-      { label: 'Punto de equilibrio', icon: 'equilibrio', href: '/servicios/punto-equilibrio' },
-      { label: 'Portal de Hallazgos', icon: 'hallazgos', href: '/hallazgos' },
-      { label: 'Más herramientas', icon: 'herramientas', href: '/herramientas' },
-    ],
-  },
-];
+import { INICIO, SECCIONES, type Destino } from './navegacion';
 
 const LS_KEY = 'cerpat.sidebar.areas';
 
@@ -61,7 +20,7 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
   const esActiva = (href: string) => href === path || (href !== '/planeador' && path.startsWith(href + '/'));
 
   // Cada ítem/área se muestra según el rol (misma fuente que los guardas de ruta).
-  const secciones = SECTIONS
+  const secciones = SECCIONES
     .map((sec) => ({ ...sec, items: sec.items.filter((it) => puedeVerRuta(usuario, it.href)) }))
     .filter((sec) => sec.items.length > 0);
 
@@ -93,7 +52,7 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
     return n;
   });
 
-  const item = (it: Item) => {
+  const item = (it: Destino) => {
     const active = esActiva(it.href);
     const base: React.CSSProperties = {
       display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderRadius: 6,

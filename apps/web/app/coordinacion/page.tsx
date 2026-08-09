@@ -9,6 +9,8 @@ import { exigirRuta } from '@/lib/acceso-server';
 import { apiFetch } from '@/lib/session';
 import LogoutButton from '@/app/_components/LogoutButton';
 
+
+export const metadata = { title: 'Coordinación' };
 export const dynamic = 'force-dynamic';
 
 type Kpis = { total: number; ejecutadas: number; vencidas: number; porAuditar: number; cumplimiento: number };

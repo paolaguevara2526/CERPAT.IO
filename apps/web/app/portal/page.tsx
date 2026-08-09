@@ -1,3 +1,5 @@
+
+export const metadata = { title: 'Portal del cliente' };
 // apps/web/app/portal/page.tsx — Inicio del Portal del Cliente. Presenta las
 // secciones disponibles. Contenido aislado por NIT/grupo (validado en el backend).
 

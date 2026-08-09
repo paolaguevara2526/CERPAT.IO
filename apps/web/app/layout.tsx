@@ -4,7 +4,10 @@ import PwaRegister from './PwaRegister';
 import InstalarIOS from './InstalarIOS';
 
 export const metadata: Metadata = {
-  title: 'Planeador CERPAT',
+  // Plantilla: cada pantalla pone su nombre y aquí se le añade la marca. Así la
+  // pestaña dice "Pagos · CERPAT" en vez de "Planeador CERPAT" en las 14 vistas
+  // —que además hacía que la app instalada mostrara el nombre tres veces.
+  title: { default: 'Planeador CERPAT', template: '%s · CERPAT' },
   description: 'Sistema de Gestión y Planificación',
   applicationName: 'CERPAT',
   manifest: '/manifest.webmanifest',
