@@ -8,45 +8,46 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { puedeVerRuta } from '@/lib/acceso';
+import Ico from './iconos';
 
 type Item = { label: string; icon: string; href: string };
 
 // "Inicio" no vive dentro de un área: es un acceso fijo arriba del acordeón.
-const INICIO: Item = { label: 'Inicio', icon: '🏠', href: '/planeador' };
+const INICIO: Item = { label: 'Inicio', icon: 'inicio', href: '/planeador' };
 
 const SECTIONS: { titulo: string; items: Item[] }[] = [
   {
     titulo: 'Mi Ruta',
     items: [
-      { label: 'Mi Día', icon: '☆', href: '/planeador/mi-dia' },
-      { label: 'Calendario', icon: '📅', href: '/planeador/calendario' },
-      { label: 'Visitas', icon: '🤝', href: '/planeador/visitas' },
-      { label: 'Plan de Trabajo', icon: '📊', href: '/planeador/cronograma' },
-      { label: 'Tablero', icon: '▦', href: '/planeador/tablero' },
-      { label: 'Flujo del cierre', icon: '🔀', href: '/planeador/flujo' },
-      { label: 'Lista', icon: '☰', href: '/planeador/lista' },
-      { label: 'Asignaciones', icon: '🧑‍🤝‍🧑', href: '/planeador/asignaciones' },
-      { label: 'Pagos', icon: '💲', href: '/planeador/pagos' },
-      { label: 'Vencimientos', icon: '🗓', href: '/vencimientos' },
-      { label: 'Auditoría', icon: '🛡', href: '/planeador/auditoria' },
+      { label: 'Mi Día', icon: 'dia', href: '/planeador/mi-dia' },
+      { label: 'Calendario', icon: 'calendario', href: '/planeador/calendario' },
+      { label: 'Visitas', icon: 'visitas', href: '/planeador/visitas' },
+      { label: 'Plan de Trabajo', icon: 'plan', href: '/planeador/cronograma' },
+      { label: 'Tablero', icon: 'tablero', href: '/planeador/tablero' },
+      { label: 'Flujo del cierre', icon: 'flujo', href: '/planeador/flujo' },
+      { label: 'Lista', icon: 'lista', href: '/planeador/lista' },
+      { label: 'Asignaciones', icon: 'asignaciones', href: '/planeador/asignaciones' },
+      { label: 'Pagos', icon: 'pagos', href: '/planeador/pagos' },
+      { label: 'Vencimientos', icon: 'vencimientos', href: '/vencimientos' },
+      { label: 'Auditoría', icon: 'auditoria', href: '/planeador/auditoria' },
     ],
   },
   {
     titulo: 'Gestión',
     items: [
-      { label: 'Clientes', icon: '🏢', href: '/clientes' },
-      { label: 'Coordinación', icon: '📊', href: '/coordinacion' },
-      { label: 'Usuarios', icon: '🧗', href: '/usuarios' },
-      { label: 'Administración', icon: '⚙️', href: '/administracion' },
+      { label: 'Clientes', icon: 'clientes', href: '/clientes' },
+      { label: 'Coordinación', icon: 'coordinacion', href: '/coordinacion' },
+      { label: 'Usuarios', icon: 'usuarios', href: '/usuarios' },
+      { label: 'Administración', icon: 'administracion', href: '/administracion' },
     ],
   },
   {
     titulo: 'Servicios',
     items: [
-      { label: 'Calculadora de retenciones', icon: '🧮', href: '/servicios/retenciones' },
-      { label: 'Punto de equilibrio', icon: '📈', href: '/servicios/punto-equilibrio' },
-      { label: 'Portal de Hallazgos', icon: '🔎', href: '/hallazgos' },
-      { label: 'Más herramientas', icon: '🧰', href: '/herramientas' },
+      { label: 'Calculadora de retenciones', icon: 'calculadora', href: '/servicios/retenciones' },
+      { label: 'Punto de equilibrio', icon: 'equilibrio', href: '/servicios/punto-equilibrio' },
+      { label: 'Portal de Hallazgos', icon: 'hallazgos', href: '/hallazgos' },
+      { label: 'Más herramientas', icon: 'herramientas', href: '/herramientas' },
     ],
   },
 ];
@@ -103,7 +104,7 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
     const compacto: React.CSSProperties = soloIconos ? { justifyContent: 'center', padding: '9px 0' } : {};
     return (
       <a key={it.label} href={it.href} title={it.label} aria-label={it.label} style={{ ...base, ...activeStyle, ...compacto }}>
-        <span style={{ width: 18, textAlign: 'center' }}>{it.icon}</span>
+        <Ico name={it.icon} />
         {!soloIconos && <span>{it.label}</span>}
         {active && <span style={{ position: 'absolute', left: -6, top: 7, bottom: 7, width: 3, borderRadius: 3, background: 'var(--nav-accent)' }} />}
       </a>
@@ -116,7 +117,7 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
   // listan todos los ítems con un separador sutil entre áreas.
   if (soloIconos) {
     return (
-      <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 2, width: 56, minWidth: 56 }}>
+      <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 2, width: 56, minWidth: 56, overflowY: 'auto' }}>
         {inicioVisible && item(INICIO)}
         {secciones.map((sec) => (
           <div key={sec.titulo} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -129,7 +130,7 @@ export default function PlaneadorSidebar({ roles, esRoot = false, soloIconos = f
   }
 
   return (
-    <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210 }}>
+    <aside style={{ background: 'var(--nav-bg)', color: 'var(--nav-ink)', padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 3, minWidth: 210, overflowY: 'auto' }}>
       {inicioVisible && item(INICIO)}
 
       {secciones.map((sec) => {

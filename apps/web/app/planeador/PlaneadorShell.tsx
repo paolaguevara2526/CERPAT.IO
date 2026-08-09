@@ -1,9 +1,11 @@
 'use client';
-// Contenedor del planeador: barra lateral + contenido. La barra tiene tres modos:
-//   completo (210px) · solo íconos (56px) · oculto (0)
-// Se adapta sola al ancho de la pantalla: en escritorio arranca completa, en
-// tablet pasa a solo íconos y en móvil queda oculta (se abre como cajón sobre el
-// contenido). La preferencia manual del usuario se recuerda por tamaño.
+// Contenedor del planeador: barra de la app + barra lateral + contenido.
+// La barra lateral tiene tres modos: completo (210px) · solo íconos (56px) ·
+// oculto (0). Arranca RECOGIDA a íconos para dejarle la pantalla al trabajo y,
+// estando recogida, se despliega sola al pasar el mouse por encima —flotando
+// sobre el contenido, sin moverlo— para no perder navegabilidad. En móvil queda
+// oculta y se abre como cajón, que se cierra solo al elegir una opción.
+// La elección manual del usuario se recuerda en el navegador.
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -13,23 +15,14 @@ import TemaSelector from './TemaSelector';
 const CLAVE = 'cerpat_sidebar_modo';
 type Modo = 'completo' | 'iconos' | 'oculto';
 
-// ¿La app corre instalada (PWA) y no en una pestaña del navegador?
-function esAppInstalada(): boolean {
-  try {
-    return (window.navigator as Navigator & { standalone?: boolean }).standalone === true
-      || window.matchMedia('(display-mode: standalone)').matches
-      || window.matchMedia('(display-mode: fullscreen)').matches
-      || window.matchMedia('(display-mode: minimal-ui)').matches;
-  } catch { return false; }
-}
-
-// Modo sugerido según el ancho de la ventana. Instalada, la app es más ahorrativa
-// con el espacio: el menú arranca en solo íconos y se despliega cuando hace falta.
-function modoPorAncho(w: number, instalada: boolean): Modo {
-  if (w < 760) return 'oculto';                    // móvil: cajón
-  if (instalada) return w < 1500 ? 'iconos' : 'completo';
-  if (w < 1180) return 'iconos';                   // tablet / pantalla angosta
-  return 'completo';
+// Modo sugerido según el ancho de la ventana.
+// El menú arranca SIEMPRE recogido a íconos: la pantalla es para el trabajo, no
+// para la navegación. No se pierde nada porque basta pasar el mouse por encima
+// para que se despliegue sobre el contenido (ver `asomado` más abajo). Quien
+// prefiera tenerlo fijo lo abre con el botón y se le recuerda.
+function modoPorAncho(w: number): Modo {
+  if (w < 760) return 'oculto';   // móvil: cajón
+  return 'iconos';
 }
 
 export default function PlaneadorShell({ roles, esRoot, children }: {
@@ -38,21 +31,24 @@ export default function PlaneadorShell({ roles, esRoot, children }: {
   const [modo, setModo] = useState<Modo>('completo');
   const [movil, setMovil] = useState(false);
   const [listo, setListo] = useState(false);
+  const [asomo, setAsomo] = useState(false);
   const ruta = usePathname();
 
   // Al montar y al cambiar el tamaño, ajusta el modo automáticamente. Si el
   // usuario eligió uno a mano, se respeta mientras el ancho lo permita.
   useEffect(() => {
-    let manual = false;
-    try { manual = localStorage.getItem(CLAVE) === 'manual'; } catch { /* ignore */ }
+    let guardado: Modo | null = null;
+    try {
+      const v = localStorage.getItem(CLAVE);
+      if (v === 'completo' || v === 'iconos' || v === 'oculto') guardado = v;
+    } catch { /* ignore */ }
     const aplicar = () => {
       const w = window.innerWidth;
       const esMovil = w < 760;
       setMovil(esMovil);
-      const auto = modoPorAncho(w, esAppInstalada());
-      // En móvil siempre se oculta; en el resto, el automático manda salvo que el
-      // usuario haya tocado el botón en esta sesión.
-      setModo((prev) => (esMovil ? 'oculto' : manual && prev !== 'oculto' ? prev : auto));
+      // En móvil siempre se oculta; en el resto manda la preferencia guardada y,
+      // si no hay, el recogido por defecto.
+      setModo(esMovil ? 'oculto' : guardado ?? modoPorAncho(w));
     };
     aplicar();
     setListo(true);
@@ -64,6 +60,7 @@ export default function PlaneadorShell({ roles, esRoot, children }: {
   // elegir una opción: ya cumplió su función y taparía lo que se va a leer. El
   // menú fijo de escritorio no se toca.
   useEffect(() => {
+    setAsomo(false);
     if (movil) setModo('oculto');
   // Debe reaccionar al cambio de ruta, no a cada render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,13 +68,26 @@ export default function PlaneadorShell({ roles, esRoot, children }: {
 
   // Botón: en móvil abre/cierra el cajón; en escritorio cicla completo → íconos → oculto.
   function toggle() {
-    try { localStorage.setItem(CLAVE, 'manual'); } catch { /* ignore */ }
-    setModo((m) => (movil ? (m === 'oculto' ? 'completo' : 'oculto')
-      : m === 'completo' ? 'iconos' : m === 'iconos' ? 'oculto' : 'completo'));
+    setModo((m) => {
+      const n: Modo = movil ? (m === 'oculto' ? 'completo' : 'oculto')
+        : m === 'completo' ? 'iconos' : m === 'iconos' ? 'oculto' : 'completo';
+      // Se recuerda la elección concreta, no solo "el usuario tocó el botón":
+      // así la preferencia sobrevive al recargar.
+      if (!movil) { try { localStorage.setItem(CLAVE, n); } catch { /* ignore */ } }
+      return n;
+    });
   }
 
   const ancho = modo === 'completo' ? 210 : modo === 'iconos' ? 56 : 0;
   const abiertoEnMovil = movil && modo !== 'oculto';
+  // Recogido a íconos, el menú se "asoma" al pasar el mouse (o al llegar con el
+  // teclado): se despliega ENCIMA del contenido, sin moverlo, y se recoge al
+  // salir. Es lo que hace que tener el menú recogido no cueste navegabilidad.
+  const compacto = modo === 'iconos' && !movil;
+  const asomado = compacto && asomo;
+  // Ancho que ocupa la columna en el flujo (el asomo no empuja el contenido).
+  const anchoFlujo = abiertoEnMovil ? 210 : ancho;
+  const flotante = abiertoEnMovil || asomado;
 
   return (
     <div style={{ display: 'flex', flex: 1, minHeight: 0, flexDirection: 'column' }}>
@@ -114,19 +124,26 @@ export default function PlaneadorShell({ roles, esRoot, children }: {
       </div>
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0, position: 'relative' }}>
-        {/* Barra lateral. En móvil flota sobre el contenido (cajón). */}
+        {/* Hueco fijo que reserva la columna: mantiene el contenido quieto
+            cuando el menú se asoma por encima. */}
+        <div style={{ width: anchoFlujo, flexShrink: 0, transition: listo ? 'width .2s ease' : 'none' }} />
+
+        {/* Barra lateral. Se sale del flujo cuando flota (cajón móvil o asomo). */}
         <div
+          onMouseEnter={() => { if (compacto) setAsomo(true); }}
+          onMouseLeave={() => setAsomo(false)}
+          onFocus={() => { if (compacto) setAsomo(true); }}
+          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAsomo(false); }}
           style={{
-            width: abiertoEnMovil ? 210 : ancho,
-            transition: listo ? 'width .2s ease' : 'none',
-            overflow: 'hidden', flexShrink: 0,
-            ...(abiertoEnMovil
-              ? { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 40, boxShadow: '0 10px 30px rgba(10,18,34,.35)' }
-              : {}),
+            position: 'absolute', top: 0, bottom: 0, left: 0,
+            width: flotante ? 210 : ancho,
+            transition: listo ? 'width .18s ease' : 'none',
+            overflow: 'hidden', zIndex: 40,
+            boxShadow: flotante ? '0 10px 30px rgba(10,18,34,.35)' : 'none',
           }}
         >
-          <div style={{ width: modo === 'iconos' && !abiertoEnMovil ? 56 : 210, height: '100%', display: 'flex' }}>
-            <PlaneadorSidebar roles={roles} esRoot={esRoot} soloIconos={modo === 'iconos' && !abiertoEnMovil} />
+          <div style={{ width: compacto && !asomado ? 56 : 210, height: '100%', display: 'flex' }}>
+            <PlaneadorSidebar roles={roles} esRoot={esRoot} soloIconos={compacto && !asomado} />
           </div>
         </div>
 
