@@ -9,7 +9,7 @@ import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { orgDeSesion } from '../auth/tenant.js';
 import { alcancePortal, empresasAsignadas } from '../auth/alcance-db.js';
 import { esStaffAcotado } from '../auth/alcance.js';
-import { vencimientosNacionales, vencimientosIca, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
+import { vencimientosNacionales, vencimientosIca, aplicaRub, RUB_OBLIGACION, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
 import { vinculoDeObligacion, VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
@@ -659,6 +659,48 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
     seEliminaria: bajasPorObligacion, // qué se dio de baja, por obligación
     sinCalendario,
   });
+});
+
+// GET /vencimientos/rub/diagnostico?anio=YYYY
+// Por qué un cliente tiene o no tiene RUB. La obligación se deriva del TIPO DE
+// EMPRESA (naturaleza jurídica), así que cuando no aparece siempre es una de dos
+// cosas: el cliente no tiene tipo asignado, o su tipo no se reconoce como
+// obligado. Sin verlo, la única salida es adivinar. No modifica nada.
+vencimientosRouter.get('/rub/diagnostico', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede ver el diagnóstico.' });
+  const org = await orgActual(req);
+  if (!org) return res.json({ anio: ANIO_CALENDARIO, filas: [] });
+  const anio = Number(req.query.anio) || ANIO_CALENDARIO;
+
+  const empresas = await prisma.empresa.findMany({
+    where: { organizacionId: org.id, activo: true },
+    select: { id: true, nombre: true, tipo: { select: { nombre: true } } },
+    orderBy: { nombre: 'asc' },
+  });
+  const rubs = await prisma.vencimientoEmpresa.groupBy({
+    by: ['empresaId'],
+    where: { organizacionId: org.id, anio, obligacion: RUB_OBLIGACION },
+    _count: { _all: true },
+  });
+  const porEmpresa = new Map(rubs.map((r) => [r.empresaId, r._count._all]));
+
+  const filas = empresas.map((e) => {
+    const tipo = e.tipo?.nombre ?? null;
+    const aplica = aplicaRub(tipo);
+    const tiene = porEmpresa.get(e.id) ?? 0;
+    return {
+      empresaId: e.id, empresa: e.nombre, tipo, aplica, vencimientosRub: tiene,
+      estado: !tipo ? 'sin_tipo'
+        : (!aplica ? 'tipo_no_obligado'
+        : (tiene === 0 ? 'falta_regenerar' : 'ok')),
+    };
+  });
+
+  // Primero lo que necesita atención.
+  const orden: Record<string, number> = { sin_tipo: 0, falta_regenerar: 1, tipo_no_obligado: 2, ok: 3 };
+  filas.sort((a, b) => orden[a.estado] - orden[b.estado] || a.empresa.localeCompare(b.empresa, 'es'));
+
+  res.json({ anio, filas });
 });
 
 // ---------- Checklist de los vencimientos ----------

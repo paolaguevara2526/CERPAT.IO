@@ -7,6 +7,8 @@ import { useEffect, useState, useCallback } from 'react';
 import ActividadesEditor from './ActividadesEditor';
 import VencimientosEditor from './VencimientosEditor';
 import ChecklistVencimientos from './ChecklistVencimientos';
+import DiagnosticoRub from './DiagnosticoRub';
+import ParametrosAnuales from './ParametrosAnuales';
 import EmpresasEditor from './EmpresasEditor';
 import PlanClienteEditor from './PlanClienteEditor';
 import ConfigTributariaEditor from './ConfigTributariaEditor';
@@ -22,6 +24,8 @@ const TABS: Tab[] = [
   { id: 'actividades', label: 'Cat. Tareas' },
   { id: 'vencimientos', label: 'Vencimientos' },
   { id: 'checklist-venc', label: 'Checklist vencimientos' },
+  { id: 'diag-rub', label: 'Diagnóstico RUB' },
+  { id: 'param-anuales', label: 'Parámetros por año' },
   { id: 'areas', label: 'Áreas', tipo: 'areas' },
   { id: 'tipos-tarea', label: 'Tipos de tarea', tipo: 'tipos-tarea' },
   { id: 'tipos-obligacion', label: 'Tipos de obligación', tipo: 'tipos-obligacion' },
@@ -36,6 +40,16 @@ const TABS_COORD = ['empresas', 'config-tributaria', 'sancion-municipio', 'plan-
 export default function AdminPanel({ esAdmin = true }: { esAdmin?: boolean }) {
   const tabs = esAdmin ? TABS : TABS.filter((t) => TABS_COORD.includes(t.id));
   const [tab, setTab] = useState(tabs[0].id);
+
+  // Permite enlazar una pestaña concreta (?tab=config-tributaria) desde otras
+  // pantallas — p. ej. la hoja de vida del cliente, que manda aquí a editar la
+  // configuración. Solo al montar: a partir de ahí manda el clic del usuario.
+  useEffect(() => {
+    const pedida = new URLSearchParams(window.location.search).get('tab');
+    if (pedida && tabs.some((t) => t.id === pedida)) setTab(pedida);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const activo = tabs.find((t) => t.id === tab) ?? tabs[0];
   return (
     <div>
@@ -62,6 +76,8 @@ export default function AdminPanel({ esAdmin = true }: { esAdmin?: boolean }) {
         : activo.id === 'plan-cliente' ? <PlanClienteEditor />
         : activo.id === 'vencimientos' ? <VencimientosEditor />
         : activo.id === 'checklist-venc' ? <ChecklistVencimientos />
+        : activo.id === 'diag-rub' ? <DiagnosticoRub />
+        : activo.id === 'param-anuales' ? <ParametrosAnuales />
         : <ParametrosEditor />}
     </div>
   );

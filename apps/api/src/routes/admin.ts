@@ -1081,3 +1081,42 @@ adminRouter.delete('/entregas/:empresaId', requireAuth, soloCoordinacion, async 
   await prisma.entregaInsumo.deleteMany({ where: { organizacionId: id, empresaId: empresa.id, periodo, areaId } });
   res.json({ ok: true });
 });
+
+// ---------- Parámetros por año (UVT y SMMLV) ----------
+//
+// Los topes de las normas se expresan en UVT o SMMLV y se comparan contra el
+// "año inmediatamente anterior". Con un solo valor vigente, en enero todos esos
+// cálculos quedarían mal sin que nadie se entere: por eso van por año, y las
+// reglas se niegan a calcular mientras falte el año que necesitan.
+
+adminRouter.get('/parametros-anuales', requireAuth, soloCoordinacion, async (req: AuthedRequest, res) => {
+  const id = await orgId(req);
+  if (!id) return res.json({ anios: [] });
+  const anios = await prisma.parametroAnual.findMany({ where: { organizacionId: id }, orderBy: { anio: 'desc' } });
+  res.json({ anios });
+});
+
+adminRouter.put('/parametros-anuales/:anio', requireAuth, soloAdmin, async (req: AuthedRequest, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const anio = Number(req.params.anio);
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) return res.status(422).json({ error: 'Año inválido.' });
+  const uvt = Number(String(req.body?.uvt ?? '').replace(/[^\d.]/g, ''));
+  const smmlv = Number(String(req.body?.smmlv ?? '').replace(/[^\d.]/g, ''));
+  if (!(uvt > 0) || !(smmlv > 0)) return res.status(422).json({ error: 'La UVT y el SMMLV deben ser mayores que cero.' });
+
+  await prisma.parametroAnual.upsert({
+    where: { organizacionId_anio: { organizacionId: id, anio } },
+    create: { organizacionId: id, anio, uvt, smmlv },
+    update: { uvt, smmlv },
+  });
+  res.json({ ok: true });
+});
+
+adminRouter.delete('/parametros-anuales/:anio', requireAuth, soloAdmin, async (req: AuthedRequest, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const r = await prisma.parametroAnual.deleteMany({ where: { organizacionId: id, anio: Number(req.params.anio) } });
+  if (r.count === 0) return res.status(404).json({ error: 'Año no encontrado.' });
+  res.json({ ok: true });
+});

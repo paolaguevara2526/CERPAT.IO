@@ -15,6 +15,7 @@ import { adminRouter } from './routes/admin.js';
 import { hallazgosRouter } from './routes/hallazgos.js';
 import { vencimientosRouter } from './routes/vencimientos.js';
 import { visitasRouter } from './routes/visitas.js';
+import { fichaRouter } from './routes/ficha.js';
 import { promoverRootSiSePide } from './bootstrap-root.js';
 
 const app = express();
@@ -39,6 +40,7 @@ app.use('/admin', adminRouter);
 app.use('/hallazgos', hallazgosRouter);
 app.use('/vencimientos', vencimientosRouter);
 app.use('/visitas', visitasRouter);
+app.use('/ficha', fichaRouter);
 
 // TODO (Claude Code): agregar aquí, en el mismo patrón, los routers de:
 // /auth, /usuarios, /empresas, /pagos, /catalogos, /vencimientos, /parametros, /auditoria

@@ -13,7 +13,11 @@ export type Empresa = {
 const guion = (v: string | null) => (v && v.trim() ? v : '—');
 
 const COLUMNAS: Columna<Empresa>[] = [
-  { clave: 'nombre', label: 'Razón social', valor: (e) => e.nombre, buscar: true, estiloCelda: { fontWeight: 600 } },
+  {
+    clave: 'nombre', label: 'Razón social', valor: (e) => e.nombre, buscar: true, estiloCelda: { fontWeight: 600 },
+    // El nombre lleva a la hoja de vida del cliente.
+    render: (e) => <a href={`/clientes/${e.id}`} style={{ color: 'var(--navy)', textDecoration: 'none' }}>{e.nombre}</a>,
+  },
   { clave: 'nit', label: 'NIT', valor: (e) => guion(e.nit), buscar: true, estiloCelda: { color: 'var(--muted)', fontFamily: 'var(--mono)' } },
   { clave: 'tipo', label: 'Tipo', valor: (e) => guion(e.tipo), estiloCelda: { color: 'var(--muted)' } },
   { clave: 'servicio', label: 'Servicio', valor: (e) => guion(e.servicio), estiloCelda: { color: 'var(--muted)' } },

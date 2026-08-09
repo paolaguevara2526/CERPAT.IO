@@ -151,6 +151,58 @@ no contempla — por eso una casilla mal puesta puede llevarse obligaciones real
 - Para **solo agregar** sin riesgo de baja —p. ej. aplicar un checklist nuevo a lo
   ya cargado— está *Administración → Checklist vencimientos*, que nunca borra.
 
+## Obligaciones que se derivan de las cifras del cliente
+
+Seis obligaciones no se marcan a mano: **se calculan** con los activos brutos y
+los ingresos brutos del cliente. Todas las normas comparan contra el **"año
+inmediatamente anterior"**, así que para evaluar 2026 se usan las cifras de 2025
+medidas con la **UVT y el SMMLV de 2025** — no con los del año en curso.
+
+Por eso `ParametroAnual` guarda UVT y SMMLV **por año**. Con un solo valor
+vigente, cada enero todos estos cálculos quedarían mal sin que nadie se entere.
+**Si falta el año que una regla necesita, la regla no calcula: informa que falta
+el dato.** Nunca supone un valor.
+
+| Obligación | Umbral | Unidad | A quién |
+|---|---|---|---|
+| Firma de contador — Art. 606 E.T. | activos **o** ingresos **> 100.000** | UVT | obligados a llevar contabilidad |
+| Revisor fiscal — Ley 43/1990 art. 13 §2 | activos **≥ 5.000** y/o ingresos **≥ 3.000** | SMMLV | solo sociedades comerciales |
+| PN agente de retención — Art. 368-2 E.T. | patrimonio **o** ingresos **> 30.000** | UVT | solo personas naturales comerciantes |
+| IVA bimestral — Art. 600 E.T. | ingresos **≥ 92.000** | UVT | todos (además, grandes contribuyentes y arts. 477/481 son bimestrales sin importar el monto) |
+| Conciliación fiscal — Dto. 1998/2017 | ingresos **≥ 45.000** | UVT | exentos por debajo |
+| Puede estar en RST — Art. 905 E.T. | ingresos **< 100.000** | UVT | sin tope reducido por actividad |
+
+Valores vigentes (confirmados por la gerencia, ago-2026, y contrastados con la
+norma que los fija):
+
+| Año | UVT | SMMLV | Norma |
+|---|---|---|---|
+| 2024 | $47.065 | $1.300.000 | Res. DIAN 187/2023 · Dto. 2292/2023 |
+| 2025 | $49.799 | $1.423.500 | Res. DIAN 193/2024 · Dto. 1572/2024 |
+| 2026 | $52.374 | $1.750.905 | Res. DIAN 238/2025 · Dto. 1469/2025 |
+
+El **SMMLV 2026 subió 23%** ($327.405 sobre 2025). Es un salto atípico y conviene
+tenerlo presente: mueve los topes de revisor fiscal (5.000 y 3.000 SMMLV) mucho
+más que el ajuste de la UVT (5,18%), así que clientes que en 2025 estaban
+obligados pueden dejar de estarlo al medirse contra cifras de 2026.
+
+Notas de criterio, confirmadas con el equipo:
+- **Activos brutos = patrimonio bruto** para estos efectos.
+- El **tope del RST es 100.000 UVT parejo**; no se aplica tope reducido para
+  actividades profesionales.
+- El tope del RST es condición **necesaria, no suficiente**: quedan los demás
+  requisitos del art. 906.
+
+**El sistema señala, no corrige.** Cuando lo calculado difiere de la
+configuración tributaria del cliente (periodicidad de IVA, retención en la
+fuente, RST), se marca la diferencia y la decide una persona. Cambiar la
+parametrización sola sería peor que el error que intenta evitar.
+
+Regla en `apps/api/src/fiscal/reglas.ts` — módulo puro, con un test por norma que
+fija el comportamiento **justo por encima y por debajo** de cada tope (las normas
+alternan entre "superiores a" e "iguales o superiores a", y esa diferencia decide
+casos reales).
+
 ## Acceso por rol al Planeador (menú y URL)
 
 Cada ítem del menú se muestra según el rol, y el acceso se bloquea también por URL

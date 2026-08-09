@@ -275,6 +275,43 @@ marco sin barra lateral (ahora comparten el layout del grupo `(app)`), y
 proyecto aparte —sería un cambio enorme sin nada visible y con riesgo de romper
 pantallas que funcionan—: se hace vista por vista, cuando haya que tocarlas.
 
+## Hoja de vida del cliente (ago 2026)
+
+Nació de un problema concreto: al **RUB** se llegaba por el campo *Renta*, así que
+una persona jurídica con Renta en *"No aplica"* perdía la obligación al regenerar
+—en silencio—. La regla pasó a derivarse del **tipo de empresa** (naturaleza
+jurídica), que es lo que dice la norma, y la regeneración ahora **simula primero**
+y muestra qué se va a crear y qué se va a eliminar antes de confirmar.
+
+Arreglado el RUB quedaba la pregunta de fondo: los datos que deciden qué le aplica
+a cada cliente vivían en carpetas y correos, no en el sistema. De ahí la **hoja de
+vida** (`/clientes/[id]`), que reúne por cliente:
+
+- **Identificación y notificación** — dirección, fecha de constitución, y los
+  correos y teléfonos **registrados ante la DIAN y la cámara**, que rara vez
+  coinciden con los del contacto diario.
+- **Actividades económicas (CIIU)**, **representantes legales** y **cámaras de
+  comercio**.
+- **Situación tributaria** — responsabilidades configuradas, ICA por municipio,
+  estado del RUB y los vencimientos que realmente se generaron.
+- **Cifras y obligaciones derivadas** — activos e ingresos del año anterior, y las
+  seis obligaciones que se calculan a partir de ellos (ver `reglas-de-negocio.md`).
+
+**Sin credenciales, a propósito.** Guardar usuario y contraseña de los clientes
+convertiría una filtración de la base en una filtración de **sus** cuentas, bajo
+custodia de la firma (Ley 1581). Se registra **quién** tiene el acceso y **dónde**
+está la clave; nunca la clave. La decisión quedó escrita en el modelo de datos
+para que nadie agregue el campo por descuido.
+
+**La ficha es la vista por cliente; Administración conserva las transversales.**
+Revisar un cliente no debe obligar a abrir tres pantallas y recordar lo visto en
+las otras dos — así se cuela un error. Pero la pregunta *"¿a cuáles de los 90 les
+falta?"* no cabe en una ficha, y fue justo la que destapó el problema del RUB:
+recorrer 90 fichas de una en una no es viable. Así que conviven, con papeles
+distintos y enlazadas: cada fila del listado transversal abre la hoja de vida del
+cliente. Editar la configuración tributaria sigue en Administración (es un editor
+pesado, con ICA municipio por municipio); la ficha la muestra y enlaza.
+
 ## Roadmap
 
 ### Fase 1 — Infraestructura y datos ✅ (hecho)

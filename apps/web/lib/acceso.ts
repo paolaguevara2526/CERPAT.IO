@@ -32,7 +32,9 @@ export const ACCESO_RUTA: Record<string, string[]> = {
   '/vencimientos': ['Coordinador', 'Auditor'],
   '/planeador/auditoria': ['Coordinador', 'Auditor'],
   // Gestión
-  '/clientes': [], // solo Administrador/root
+  // Coordinación y asesores consultan la ficha de sus clientes; la edición la
+  // restringe el backend a Administración y Coordinación. Auxiliares no entran.
+  '/clientes': ['Coordinador', 'Asesor'],
   '/coordinacion': ['Coordinador', 'Auditor'],
   '/usuarios': [], // solo Administrador/root
   '/administracion': ['Coordinador'], // Coordinador: solo Empresas, Config. tributaria y Plan por cliente

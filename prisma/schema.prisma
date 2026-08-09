@@ -155,59 +155,61 @@ model Organizacion {
   lotesCaptura     LoteCaptura[]
 
   // Visitas a clientes (asesor/auditor) y sus compromisos
-  visitas          Visita[]
+  visitas           Visita[]
   compromisosVisita CompromisoVisita[]
-  itemsActa        ItemActa[]
+  itemsActa         ItemActa[]
 
   // Revisoría Fiscal
-  grupos    GrupoEmpresarial[]
-  hallazgos Hallazgo[]
+  grupos                     GrupoEmpresarial[]
+  hallazgos                  Hallazgo[]
   configuracionesTributarias ConfiguracionTributaria[]
   municipiosIca              EmpresaMunicipioIca[]
   vencimientosEmpresa        VencimientoEmpresa[]
 
   @@map("organizaciones")
+  parametrosAnuales ParametroAnual[]
 }
 
 // ---------- USUARIOS Y ROLES ----------
 
 model Usuario {
-  id              String   @id @default(uuid())
-  organizacionId  String? // null = usuario root de plataforma (fuera de toda firma)
-  nombre          String
-  email           String
-  passwordHash    String
-  cargo           String? // cargo en la firma (texto libre: "Asesor Junior", "Lider Tesoreria"...)
-  area            String? // área organizativa del empleado (Impuestos, Informes, Nómina...)
-  activo          Boolean  @default(true)
-  esRootPlataforma Boolean @default(false)
-  debeCambiarPassword Boolean @default(false) // fuerza cambio de clave en el próximo ingreso
-  ultimoLogin      DateTime?
+  id                  String    @id @default(uuid())
+  organizacionId      String? // null = usuario root de plataforma (fuera de toda firma)
+  nombre              String
+  email               String
+  passwordHash        String
+  cargo               String? // cargo en la firma (texto libre: "Asesor Junior", "Lider Tesoreria"...)
+  area                String? // área organizativa del empleado (Impuestos, Informes, Nómina...)
+  activo              Boolean   @default(true)
+  esRootPlataforma    Boolean   @default(false)
+  debeCambiarPassword Boolean   @default(false) // fuerza cambio de clave en el próximo ingreso
+  ultimoLogin         DateTime?
   // Cliente externo (Revisoría Fiscal): ligado a su empresa o a un grupo empresarial.
-  empresaClienteId String?
-  grupoClienteId   String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  empresaClienteId    String?
+  grupoClienteId      String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  organizacion  Organizacion?   @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
-  roles         UsuarioRol[]
-  tareasCreadas Tarea[]         @relation("TareasCreadas")
-  hallazgosCreados Hallazgo[]   @relation("HallazgosCreados")
-  empresaClienteRel Empresa?         @relation("UsuarioEmpresaCliente", fields: [empresaClienteId], references: [id])
-  grupoClienteRel   GrupoEmpresarial? @relation("UsuarioGrupoCliente", fields: [grupoClienteId], references: [id])
-  asignaciones  TareaAsignado[]
-  asesor        Asesor?
-  tareasComoAsesor   Tarea[]                 @relation("TareaAsesor")
-  tareasComoAuxiliar Tarea[]                 @relation("TareaAuxiliar")
-  vencimientosComoAsesor   VencimientoEmpresa[] @relation("VencAsesor")
-  vencimientosComoAuxiliar VencimientoEmpresa[] @relation("VencAuxiliar")
-  areasComoAsesor    AsignacionClienteArea[] @relation("AsesorArea")
-  areasComoAuxiliar  AsignacionClienteArea[] @relation("AuxiliarArea")
-  entregasRealizadas EntregaInsumo[]
-  eventosTarea       EventoTarea[]
-  visitasComoResponsable Visita[]           @relation("VisitaResponsable")
-  visitasCreadas         Visita[]           @relation("VisitasCreadas")
-  compromisosComoResponsable CompromisoVisita[] @relation("CompromisoResponsable")
+  organizacion               Organizacion?           @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  roles                      UsuarioRol[]
+  tareasCreadas              Tarea[]                 @relation("TareasCreadas")
+  hallazgosCreados           Hallazgo[]              @relation("HallazgosCreados")
+  empresaClienteRel          Empresa?                @relation("UsuarioEmpresaCliente", fields: [empresaClienteId], references: [id])
+  grupoClienteRel            GrupoEmpresarial?       @relation("UsuarioGrupoCliente", fields: [grupoClienteId], references: [id])
+  asignaciones               TareaAsignado[]
+  asesor                     Asesor?
+  tareasComoAsesor           Tarea[]                 @relation("TareaAsesor")
+  tareasComoAuxiliar         Tarea[]                 @relation("TareaAuxiliar")
+  vencimientosComoAsesor     VencimientoEmpresa[]    @relation("VencAsesor")
+  vencimientosComoAuxiliar   VencimientoEmpresa[]    @relation("VencAuxiliar")
+  areasComoAsesor            AsignacionClienteArea[] @relation("AsesorArea")
+  areasComoAuxiliar          AsignacionClienteArea[] @relation("AuxiliarArea")
+  entregasRealizadas         EntregaInsumo[]
+  eventosTarea               EventoTarea[]
+  visitasComoResponsable     Visita[]                @relation("VisitaResponsable")
+  visitasCreadas             Visita[]                @relation("VisitasCreadas")
+  compromisosComoResponsable CompromisoVisita[]      @relation("CompromisoResponsable")
+  camarasACargo              RegistroCamara[]        @relation("RegistroCamaraResponsable")
 
   // Email único por organización (dos firmas distintas pueden repetir email).
   @@unique([organizacionId, email])
@@ -253,26 +255,37 @@ model Asesor {
 // ---------- EMPRESAS (CLIENTES) ----------
 
 model Empresa {
-  id                String   @id @default(uuid())
-  organizacionId    String
-  nombre            String
-  nit               String?
-  tipoId            String?
-  sectorId          String?
-  regimenId         String?
-  periodicidadIvaId String?
-  municipioId       String?
-  grupoId           String? // grupo empresarial (Revisoría Fiscal)
+  id                  String    @id @default(uuid())
+  organizacionId      String
+  nombre              String
+  nit                 String?
+  tipoId              String?
+  sectorId            String?
+  regimenId           String?
+  periodicidadIvaId   String?
+  municipioId         String?
+  grupoId             String? // grupo empresarial (Revisoría Fiscal)
   // Datos operativos y de contacto (base de clientes CERPAT)
   servicio            String? // Asesoría Contable | Outsourcing | Revisoría Contable
   asesorNombre        String? // asesor responsable (texto; puede quedar vinculado a Asesor luego)
-  activo              Boolean @default(true) // false = cliente inactivo (no se lista)
+  activo              Boolean   @default(true) // false = cliente inactivo (no se lista)
   emailRepresentante  String?
   emailAdministracion String?
   emailContabilidad   String?
   emailTalentoHumano  String?
   emailTesoreria      String?
-  createdAt         DateTime @default(now())
+  // ---- Hoja de vida del cliente (identificación y notificación) ----
+  // Datos que la firma necesita a la mano para trámites y para saber a dónde
+  // notifica cada entidad. Los correos de notificación NO son los mismos que los
+  // de contacto de arriba: son los que están registrados ante la DIAN y ante la
+  // cámara de comercio, y suelen diferir.
+  direccion           String? // dirección física registrada
+  emailDian           String? // correo de notificación en la DIAN
+  telefonoDian        String?
+  emailCamara         String? // correo de notificación en la cámara de comercio
+  telefonoCamara      String?
+  fechaConstitucion   DateTime?
+  createdAt           DateTime  @default(now())
 
   organizacion    Organizacion       @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   tipo            TipoEmpresa?       @relation(fields: [tipoId], references: [id])
@@ -282,18 +295,22 @@ model Empresa {
   municipio       Municipio?         @relation(fields: [municipioId], references: [id])
   grupo           GrupoEmpresarial?  @relation(fields: [grupoId], references: [id])
 
-  tareas Tarea[]
-  pagos  Pago[]
-  hallazgos        Hallazgo[]
-  usuariosCliente  Usuario[]              @relation("UsuarioEmpresaCliente")
-  planActividades  PlanClienteActividad[]
-  asignacionesArea AsignacionClienteArea[]
+  tareas                  Tarea[]
+  pagos                   Pago[]
+  hallazgos               Hallazgo[]
+  usuariosCliente         Usuario[]                @relation("UsuarioEmpresaCliente")
+  planActividades         PlanClienteActividad[]
+  asignacionesArea        AsignacionClienteArea[]
   configuracionTributaria ConfiguracionTributaria?
   municipiosIca           EmpresaMunicipioIca[]
   vencimientosEmpresa     VencimientoEmpresa[]
   entregasInsumo          EntregaInsumo[]
   visitas                 Visita[]
   documentos              DocumentoCliente[]
+  actividadesEconomicas   ActividadEconomica[]
+  representantes          RepresentanteLegal[]
+  registrosCamara         RegistroCamara[]
+  cifrasFiscales          CifrasFiscales[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -334,7 +351,7 @@ model DocumentoCliente {
 // (asamblea/junta). Un usuario cliente puede estar ligado a un grupo (ve todas
 // sus empresas) o a una sola empresa.
 model GrupoEmpresarial {
-  id             String  @id @default(uuid())
+  id             String @id @default(uuid())
   organizacionId String
   nombre         String
 
@@ -351,24 +368,24 @@ model GrupoEmpresarial {
 // alimenta; el cliente lo ve en solo lectura. "Vencido" se deriva (plazo < hoy
 // y estado != resuelto), no se almacena.
 model Hallazgo {
-  id             String         @id @default(uuid())
-  organizacionId String
-  empresaId      String
-  area           String? // área/proceso auditado
-  titulo         String // hallazgo (título corto)
-  descripcion    String? // descripción de la situación
-  normatividad   String?
-  riesgo         RiesgoNivel    @default(medio)
-  riesgoDescripcion String?     // narrativa del riesgo/impacto (texto libre de la matriz)
-  prioridad      Prioridad      @default(media) // prioridad sugerida
-  responsable    String?
-  planAccion     String? // acción o plan de remediación
-  plazo          DateTime?
-  estado         EstadoHallazgo @default(pendiente)
-  observaciones  String? // observaciones de seguimiento
-  creadoPorId    String? // revisor que lo registró
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                String         @id @default(uuid())
+  organizacionId    String
+  empresaId         String
+  area              String? // área/proceso auditado
+  titulo            String // hallazgo (título corto)
+  descripcion       String? // descripción de la situación
+  normatividad      String?
+  riesgo            RiesgoNivel    @default(medio)
+  riesgoDescripcion String? // narrativa del riesgo/impacto (texto libre de la matriz)
+  prioridad         Prioridad      @default(media) // prioridad sugerida
+  responsable       String?
+  planAccion        String? // acción o plan de remediación
+  plazo             DateTime?
+  estado            EstadoHallazgo @default(pendiente)
+  observaciones     String? // observaciones de seguimiento
+  creadoPorId       String? // revisor que lo registró
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa      Empresa      @relation(fields: [empresaId], references: [id])
@@ -442,18 +459,18 @@ model TipoServicio {
 }
 
 model Municipio {
-  id             String       @id @default(uuid())
-  organizacionId String
-  nombre         String
-  departamento   String
-  orden          Int          @default(0)
+  id               String                @id @default(uuid())
+  organizacionId   String
+  nombre           String
+  departamento     String
+  orden            Int                   @default(0)
   // Sanción mínima propia del municipio (en UVT), para las obligaciones municipales
   // (ICA/ReteICA/AutoICA/exógena municipal). Si es null, se usa la de la firma.
-  sancionMinimaUvt Decimal?   @db.Decimal(6, 2)
-  organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
-  empresas       Empresa[]
-  icaEmpresas    EmpresaMunicipioIca[]
-  vencimientos   VencimientoEmpresa[]
+  sancionMinimaUvt Decimal?              @db.Decimal(6, 2)
+  organizacion     Organizacion          @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresas         Empresa[]
+  icaEmpresas      EmpresaMunicipioIca[]
+  vencimientos     VencimientoEmpresa[]
 
   @@index([organizacionId])
   @@map("cat_municipios")
@@ -537,14 +554,14 @@ model Tarea {
   observaciones           String?
   creadoPorId             String?
   // Vínculo al Plan de Trabajo (las tareas generadas por el plan lo llevan)
-  actividadPlanId   String?
-  areaId            String?
-  periodo           String? // "YYYY-MM" del período del plan
-  asesorId          String? // responsable (heredado de la asignación cliente×área)
-  auxiliarId        String? // ejecutor
-  comprobanteDesde  String? // registro en software: comprobante inicial
-  comprobanteHasta  String? // comprobante final
-  cantidadRegistros Int? //    # de registros realizados
+  actividadPlanId         String?
+  areaId                  String?
+  periodo                 String? // "YYYY-MM" del período del plan
+  asesorId                String? // responsable (heredado de la asignación cliente×área)
+  auxiliarId              String? // ejecutor
+  comprobanteDesde        String? // registro en software: comprobante inicial
+  comprobanteHasta        String? // comprobante final
+  cantidadRegistros       Int? //    # de registros realizados
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 
@@ -559,10 +576,10 @@ model Tarea {
   asesor         Usuario?        @relation("TareaAsesor", fields: [asesorId], references: [id])
   auxiliar       Usuario?        @relation("TareaAuxiliar", fields: [auxiliarId], references: [id])
 
-  asignados TareaAsignado[]
-  etiquetas TareaEtiqueta[]
-  subtareas Subtarea[]
-  eventos   EventoTarea[]
+  asignados    TareaAsignado[]
+  etiquetas    TareaEtiqueta[]
+  subtareas    Subtarea[]
+  eventos      EventoTarea[]
   lotesCaptura LoteCaptura[]
 
   @@index([organizacionId])
@@ -692,10 +709,10 @@ model Area {
   nombre         String
   orden          Int    @default(0)
 
-  organizacion Organizacion            @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
-  actividades  ActividadPlan[]
-  asignaciones AsignacionClienteArea[]
-  tareas       Tarea[]
+  organizacion   Organizacion            @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  actividades    ActividadPlan[]
+  asignaciones   AsignacionClienteArea[]
+  tareas         Tarea[]
   entregasInsumo EntregaInsumo[]
 
   @@unique([organizacionId, nombre])
@@ -705,18 +722,18 @@ model Area {
 
 // Catálogo base de actividades del plan (plantilla maestra)
 model ActividadPlan {
-  id                 String  @id @default(uuid())
-  organizacionId     String
-  areaId             String?
-  grupo              String? // grupo contable (Estados Financieros, Impuestos DIAN, ...)
-  codigo             String
-  nombre             String
-  descripcion        String?
-  documentoFormato   String?
-  periodicidad       String? // periodicidad sugerida (texto del catálogo)
-  esRegistroSoftware Boolean @default(false)
-  requiereAuditoria  Boolean @default(false)
-  generaPago         Boolean @default(false) // la actividad implica un pago (obligación DIAN/entidades)
+  id                    String         @id @default(uuid())
+  organizacionId        String
+  areaId                String?
+  grupo                 String? // grupo contable (Estados Financieros, Impuestos DIAN, ...)
+  codigo                String
+  nombre                String
+  descripcion           String?
+  documentoFormato      String?
+  periodicidad          String? // periodicidad sugerida (texto del catálogo)
+  esRegistroSoftware    Boolean        @default(false)
+  requiereAuditoria     Boolean        @default(false)
+  generaPago            Boolean        @default(false) // la actividad implica un pago (obligación DIAN/entidades)
   // Vincula el checklist (subtareas) de esta actividad a un vencimiento tributario.
   // Guarda una clave estable de VINCULOS_VENCIMIENTO (p. ej. "retencion_fuente",
   // "renta", "rub"); al generar el vencimiento se copia el checklist de la
@@ -725,12 +742,12 @@ model ActividadPlan {
   // Fase en la cadena del cierre (captura / procesamiento / revisión). Define el
   // flujo: la captura (auxiliar) habilita el procesamiento (asesor). Ver F1 en
   // docs/metodologia-operacion.md. Null = sin clasificar (no participa del bloqueo).
-  fase               FaseActividad?
+  fase                  FaseActividad?
   // Actividad especial "Captura de documentos": su tarea muestra el detalle de
   // lotes (tipo de documento · consecutivo desde–hasta · cantidad · fecha).
-  esCapturaDocumentos Boolean @default(false)
-  orden              Int     @default(0)
-  activo             Boolean @default(true)
+  esCapturaDocumentos   Boolean        @default(false)
+  orden                 Int            @default(0)
+  activo                Boolean        @default(true)
 
   organizacion Organizacion           @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   area         Area?                  @relation(fields: [areaId], references: [id])
@@ -877,20 +894,20 @@ model LoteCaptura {
 // Configuración tributaria nacional de cada empresa (1:1). Alimenta la
 // generación de vencimientos de Retención, IVA, Consumo, Anticipo RST y Renta.
 model ConfiguracionTributaria {
-  id             String @id @default(uuid())
-  organizacionId String
-  empresaId      String @unique
+  id                      String   @id @default(uuid())
+  organizacionId          String
+  empresaId               String   @unique
   ivaPeriodicidad         String? // bimestral | cuatrimestral | anual_rst | no_responsable
-  retencionFuente         Boolean @default(false) // agente retenedor (declara mensual)
-  fopat                   Boolean @default(false) // agente de retención FOPAT (transporte; mensual)
+  retencionFuente         Boolean  @default(false) // agente retenedor (declara mensual)
+  fopat                   Boolean  @default(false) // agente de retención FOPAT (transporte; mensual)
   // Obligaciones de solo presentación (mensuales, NO generan pago):
-  nominaElectronica       Boolean @default(false) // envío de nómina electrónica (10º día hábil)
-  seguridadSocial         Boolean @default(false) // pago de seguridad social/PILA (día hábil por 2 últimos dígitos del NIT)
+  nominaElectronica       Boolean  @default(false) // envío de nómina electrónica (10º día hábil)
+  seguridadSocial         Boolean  @default(false) // pago de seguridad social/PILA (día hábil por 2 últimos dígitos del NIT)
   consumoPeriodicidad     String? // bimestral | anual_rst | null (no responsable)
   rentaTipo               String? // persona_juridica | persona_natural | gran_contribuyente | rst_consolidada | na
   anticipoRstPeriodicidad String? // bimestral | null (no aplica)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -902,14 +919,14 @@ model ConfiguracionTributaria {
 // Responsabilidad de ICA por empresa × municipio (una empresa declara ICA en
 // muchos municipios). Incluye RETEICA y AUTOICA con su periodicidad.
 model EmpresaMunicipioIca {
-  id             String @id @default(uuid())
-  organizacionId String
-  empresaId      String
-  municipioId    String
+  id                  String    @id @default(uuid())
+  organizacionId      String
+  empresaId           String
+  municipioId         String
   icaPeriodicidad     String? // anual | bimestral | mensual
-  reteica             Boolean @default(false)
+  reteica             Boolean   @default(false)
   reteicaPeriodicidad String?
-  autoica             Boolean @default(false)
+  autoica             Boolean   @default(false)
   autoicaPeriodicidad String?
   // Fecha de inscripción del cliente en el ICA de ese municipio. Si está, al
   // generar vencimientos solo se crean los de fecha en/después de esta (no
@@ -928,31 +945,31 @@ model EmpresaMunicipioIca {
 // Vencimiento generado para una empresa (salida del generador: config × calendario
 // × último dígito del NIT). Editable solo por Administrador/root por ahora.
 model VencimientoEmpresa {
-  id             String     @id @default(uuid())
-  organizacionId String
-  empresaId      String
-  anio           Int
-  obligacion     String // Retención en la fuente, IVA, Impuesto al consumo, Anticipo RST, Renta PJ/GC/PN, RST consolidada Renta, IVA consolidado RST
-  periodicidad   String?
-  periodo        String? // 2026-01, ene-feb, 1a cuota, anual...
-  municipioId    String? // ICA (a futuro)
+  id               String     @id @default(uuid())
+  organizacionId   String
+  empresaId        String
+  anio             Int
+  obligacion       String // Retención en la fuente, IVA, Impuesto al consumo, Anticipo RST, Renta PJ/GC/PN, RST consolidada Renta, IVA consolidado RST
+  periodicidad     String?
+  periodo          String? // 2026-01, ene-feb, 1a cuota, anual...
+  municipioId      String? // ICA (a futuro)
   fechaVencimiento DateTime
-  estado         EstadoPago @default(pendiente)
-  generado       Boolean    @default(true) // creado por el generador (vs. agregado a mano)
-  notas          String?
-  soporteLink    String? // link (Drive/OneDrive) donde va quedando el trabajo de la obligación
-  valorPago      Decimal?   @db.Decimal(14, 2) // valor a pagar de la obligación (cuando da valor)
+  estado           EstadoPago @default(pendiente)
+  generado         Boolean    @default(true) // creado por el generador (vs. agregado a mano)
+  notas            String?
+  soporteLink      String? // link (Drive/OneDrive) donde va quedando el trabajo de la obligación
+  valorPago        Decimal?   @db.Decimal(14, 2) // valor a pagar de la obligación (cuando da valor)
   // Responsable heredado del área de la actividad vinculada (asignación cliente×área).
-  asesorId       String?
-  auxiliarId     String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  asesorId         String?
+  auxiliarId       String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
-  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
-  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  municipio    Municipio?   @relation(fields: [municipioId], references: [id])
-  asesor       Usuario?     @relation("VencAsesor", fields: [asesorId], references: [id])
-  auxiliar     Usuario?     @relation("VencAuxiliar", fields: [auxiliarId], references: [id])
+  organizacion Organizacion          @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  municipio    Municipio?            @relation(fields: [municipioId], references: [id])
+  asesor       Usuario?              @relation("VencAsesor", fields: [asesorId], references: [id])
+  auxiliar     Usuario?              @relation("VencAuxiliar", fields: [auxiliarId], references: [id])
   subtareas    SubtareaVencimiento[]
   abonos       AbonoVencimiento[]
 
@@ -988,11 +1005,11 @@ model AbonoVencimiento {
 // vencimiento. El asesor le da "chulo" desde el calendario. El texto se congela
 // (no se re-sincroniza si luego cambia la plantilla), como Subtarea de Tarea.
 model SubtareaVencimiento {
-  id           String         @id @default(uuid())
+  id            String         @id @default(uuid())
   vencimientoId String
-  texto        String
-  estado       EstadoSubtarea @default(pendiente)
-  orden        Int            @default(0)
+  texto         String
+  estado        EstadoSubtarea @default(pendiente)
+  orden         Int            @default(0)
 
   vencimiento VencimientoEmpresa @relation(fields: [vencimientoId], references: [id], onDelete: Cascade)
 
@@ -1042,20 +1059,20 @@ model Visita {
 
 // Compromiso acordado en una visita: qué se hará, para cuándo y quién responde.
 model CompromisoVisita {
-  id             String           @id @default(uuid())
-  organizacionId String
-  visitaId       String
-  descripcion    String
-  fechaLimite    DateTime?
+  id                 String                @id @default(uuid())
+  organizacionId     String
+  visitaId           String
+  descripcion        String
+  fechaLimite        DateTime?
   // Dirección del compromiso: 'firma' (responde un usuario interno) o 'cliente'
   // (responde una persona externa, cuyo nombre/cargo va en responsableExterno).
-  responsableTipo   ResponsableCompromiso @default(firma)
-  responsableId     String? // usuario de la firma (cuando responsableTipo = firma)
+  responsableTipo    ResponsableCompromiso @default(firma)
+  responsableId      String? // usuario de la firma (cuando responsableTipo = firma)
   responsableExterno String? // nombre y cargo del externo (cuando = cliente)
-  area           String? // área/proceso del compromiso (para seguimiento por área)
-  estado         EstadoCompromiso @default(pendiente)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  area               String? // área/proceso del compromiso (para seguimiento por área)
+  estado             EstadoCompromiso      @default(pendiente)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   visita       Visita       @relation(fields: [visitaId], references: [id], onDelete: Cascade)
@@ -1085,4 +1102,112 @@ model ItemActa {
   @@index([organizacionId])
   @@index([visitaId])
   @@map("items_acta")
+}
+
+// ---------- Hoja de vida del cliente ----------
+// Datos de identificación que hoy viven en carpetas y correos. Son varios por
+// cliente, por eso van en tablas aparte y no como campos de Empresa.
+
+/// Actividad económica (CIIU). Un cliente puede tener varias; una es la principal.
+model ActividadEconomica {
+  id             String  @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  codigo         String // CIIU, p. ej. "6920"
+  descripcion    String?
+  principal      Boolean @default(false)
+  orden          Int     @default(0)
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@index([empresaId])
+  @@map("actividades_economicas")
+}
+
+/// Representante legal (principal o suplente), con su vigencia.
+model RepresentanteLegal {
+  id             String    @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  nombre         String
+  documento      String?
+  cargo          String? // Representante legal | Suplente | Apoderado…
+  principal      Boolean   @default(false)
+  desde          DateTime?
+  hasta          DateTime? // nulo = vigente
+  email          String?
+  telefono       String?
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([organizacionId])
+  @@index([empresaId])
+  @@map("representantes_legales")
+}
+
+/// Registro en una cámara de comercio. Un cliente puede estar en varias.
+///
+/// ⚠ A PROPÓSITO no guarda usuario ni contraseña. Guardar credenciales de los
+/// clientes convierte una filtración de la base en una filtración de SUS cuentas,
+/// bajo custodia de la firma (Ley 1581). Se deja constancia de QUIÉN tiene el
+/// acceso y DÓNDE está la clave (gestor de contraseñas), nunca la clave.
+model RegistroCamara {
+  id             String  @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  camara         String // p. ej. "Cámara de Comercio de Villavicencio"
+  matricula      String? // número de matrícula mercantil
+  responsableId  String? // usuario de la firma que tiene el acceso
+  ubicacionClave String? // dónde está guardada (p. ej. "Bitwarden · bóveda Clientes")
+  notas          String?
+
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  responsable Usuario? @relation("RegistroCamaraResponsable", fields: [responsableId], references: [id])
+
+  @@index([organizacionId])
+  @@index([empresaId])
+  @@map("registros_camara")
+}
+
+/// Cifras del cliente por año gravable. De aquí salen las obligaciones que
+/// dependen de topes (firma de contador, revisor fiscal, periodicidad de IVA,
+/// conciliación fiscal, RST, retención en persona natural).
+///
+/// Las normas hablan del "año inmediatamente anterior", así que se guardan POR
+/// AÑO: para evaluar 2026 se usan las cifras de 2025.
+model CifrasFiscales {
+  id             String   @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  anio           Int
+  /// Activos brutos a 31 de diciembre (equivale al patrimonio bruto).
+  activosBrutos  Decimal? @db.Decimal(18, 2)
+  ingresosBrutos Decimal? @db.Decimal(18, 2)
+  fuente         String?  // de dónde salió el dato (declaración, EEFF, cliente…)
+  notas          String?
+  updatedAt      DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, anio])
+  @@index([organizacionId])
+  @@map("cifras_fiscales")
+}
+
+/// UVT y SMMLV POR AÑO. Los topes de las normas se expresan en estas unidades y
+/// se comparan contra el año anterior, así que un valor único no sirve: en
+/// enero todos los cálculos quedarían mal y nadie se enteraría.
+/// (ParametrosLiquidacion conserva los valores vigentes para mora y sanciones.)
+model ParametroAnual {
+  id             String  @id @default(uuid())
+  organizacionId String
+  anio           Int
+  uvt            Decimal @db.Decimal(12, 2)
+  smmlv          Decimal @db.Decimal(12, 2)
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+
+  @@unique([organizacionId, anio])
+  @@map("parametros_anuales")
 }
