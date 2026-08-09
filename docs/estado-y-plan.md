@@ -234,6 +234,47 @@ entra siempre; lo que crece ante fallos seguidos es el retraso de la respuesta.
 filas: el tope por defecto de Express (100 KB) devolvía 413. Ampliado a 30 MB,
 que también cubre la subida de documentos.
 
+## Auditoría de CSS y navegabilidad (ago 2026)
+
+Revisión completa de la interfaz. El diagnóstico de partida: el sistema de diseño
+existía pero **casi no se usaba** —1.778 estilos en línea contra 612 usos de
+clase— y eso se notaba en cinco frentes. Resueltos, en orden:
+
+1. **La pantalla se congelaba al navegar.** No había ni un `loading.tsx`: las
+   vistas se arman en el servidor y entre el clic y el contenido no pasaba nada.
+   Se agregó esqueleto de carga en las diez secciones, pantalla de error propia
+   (con reintentar y código del incidente) y de página no encontrada. Además,
+   **cada pantalla tiene su título** ("Pagos · CERPAT"): antes las 26 decían lo
+   mismo.
+2. **Buscador global `Ctrl+K`.** Con más de 30 destinos, bajar por el menú dejó
+   de ser viable. Busca sin tildes, por partes ("plan trab") y por sinónimos
+   ("impuestos" → Vencimientos), y solo muestra lo que el rol puede ver. El mapa
+   de navegación vive en `navegacion.ts` y alimenta menú **y** buscador.
+3. **Tablas.** Encabezado fijo en los nueve listados largos (`.dt-alta`) y orden
+   por columna con el mismo ciclo en toda la plataforma. Pagos ordena en el
+   servidor, con el orden en la URL (se puede compartir el enlace).
+4. **Colores por significado** — ver ADR-0008. Con eso el **modo oscuro** quedó
+   utilizable en toda la app, y el tema "Oscuro" de Apariencia ahora oscurece el
+   contenido, no solo la barra.
+5. **Filtros parejos.** El embudo por columna estaba copiado en seis vistas y
+   otras dos no tenían filtro. Se extrajo a `_components/TablaDatos` (encabezado
+   fijo + orden + embudo + contador) y lo estrenaron **Clientes** y la tabla de
+   **tareas**. Pagos conserva su filtro en la URL, pero aplica al instante.
+
+**Un marco para todos los roles.** El marco de la aplicación (barra única, menú
+en acordeón que se recoge y se asoma al pasar el mouse, íconos propios de trazo,
+temas, buscador) vive en `_components/MarcoApp` + `MenuLateral` y lo usan **el
+personal y el Portal del Cliente** con su propia navegación — antes el portal
+tenía un marco aparte que se fue quedando atrás. Ver ADR-0007.
+
+Dos duplicaciones cerradas de paso: las siete pantallas que dibujaban su propio
+marco sin barra lateral (ahora comparten el layout del grupo `(app)`), y
+`/mis-visitas`, que era el portal de visitas anterior al portal (ahora redirige).
+
+**Queda pendiente** migrar los estilos en línea a clases. No se hará como
+proyecto aparte —sería un cambio enorme sin nada visible y con riesgo de romper
+pantallas que funcionan—: se hace vista por vista, cuando haya que tocarlas.
+
 ## Roadmap
 
 ### Fase 1 — Infraestructura y datos ✅ (hecho)
@@ -258,9 +299,9 @@ que también cubre la subida de documentos.
   ruta en el frontend (`lib/acceso.ts` + `exigirRuta`).
 - [x] Todos los endpoints exigen sesión, con **test de blindaje** que lo verifica.
 - [x] Freno a la fuerza bruta en el login (retraso creciente, sin bloquear la cuenta).
-- [ ] **Middleware de tenant**: resolver `organizacionId` desde la sesión en vez del
-  slug fijo `'cerpat'`. **Bloqueante antes de vender la plataforma a clientes**
-  (ADR-0002).
+- [x] **Tenant desde la sesión** (ago 2026): `orgDeSesion(req)` reemplaza el slug
+  fijo en los 40 puntos donde estaba cableado; el login resuelve la cuenta por
+  correo. Era lo bloqueante para vender la plataforma (ADR-0002 / ADR-0009).
 - [ ] Servir correos de clientes solo autenticado.
 
 ### Fase 3 — App real por vistas (reemplazar prototipo)
@@ -453,10 +494,12 @@ revisar/ajustar con el equipo. Transcrito del cronograma; borrador.
 mockup con el equipo y luego el modelo de datos + generación.
 
 ## Deuda técnica / notas
-- **`organizacionId` por slug fijo.** Los endpoints resuelven la organización con
-  `slug: 'cerpat'` en vez de tomarla de la sesión. Funciona con un solo tenant,
-  pero **hay que cambiarlo antes de abrir la plataforma a clientes** (ADR-0002) —
-  es la deuda más importante del backend hoy.
+- ~~`organizacionId` por slug fijo~~ — **resuelto (ago 2026, ADR-0009).** El
+  tenant sale del token de la sesión, con un único resolutor
+  (`apps/api/src/auth/tenant.ts`) y un test que impide la regresión. Queda por
+  decidir el **descubrimiento de firma en el login** (subdominio, dominio del
+  correo o selector); no hace falta hasta que entre el primer cliente con tenant
+  propio.
 - `prisma/data/clientes-cerpat.csv` contiene PII de clientes reales; vive en el repo privado por decisión del equipo.
 - Los documentos de clientes se guardan **dentro de Postgres** (no en un
   almacenamiento de objetos). Sirve para el volumen actual; si crece, mover a

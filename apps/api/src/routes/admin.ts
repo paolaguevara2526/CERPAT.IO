@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, requireRol, type AuthedRequest } from '../auth/middleware.js';
+import { orgDeSesion } from '../auth/tenant.js';
 import { hashPassword } from '../auth/password.js';
 
 export const adminRouter = Router();
@@ -16,8 +17,9 @@ const soloAdmin = requireRol('Administrador');
 const soloCoordinacion = requireRol('Administrador', 'Coordinador');
 const PASSWORD_TEMPORAL_DEFECTO = 'Cerpat2026*';
 
-async function orgId(): Promise<string | null> {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' }, select: { id: true } });
+// Identificador de la organización de la sesión (ver auth/tenant.ts).
+async function orgId(req: AuthedRequest): Promise<string | null> {
+  const org = await orgDeSesion(req);
   return org?.id ?? null;
 }
 
@@ -25,8 +27,8 @@ async function orgId(): Promise<string | null> {
 
 const CAMPOS_PARAM = ['tasaMoraMensual', 'valorUvt', 'smmlv', 'sancionMinimaUvt', 'pctSancionExtemporaneidad'] as const;
 
-adminRouter.get('/parametros', requireAuth, async (_req, res) => {
-  const id = await orgId();
+adminRouter.get('/parametros', requireAuth, async (req: AuthedRequest, res) => {
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const p = await prisma.parametrosLiquidacion.findUnique({ where: { organizacionId: id } });
   const num = (v: any) => (v != null ? Number(v) : null);
@@ -44,7 +46,7 @@ adminRouter.get('/parametros', requireAuth, async (_req, res) => {
 });
 
 adminRouter.put('/parametros', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data: Record<string, number> = {};
   for (const c of CAMPOS_PARAM) {
@@ -77,7 +79,7 @@ const CATALOGOS: Record<string, CatCfg> = {
 adminRouter.get('/catalogos/:tipo', requireAuth, async (req, res) => {
   const cfg = CATALOGOS[req.params.tipo];
   if (!cfg) return res.status(404).json({ error: 'Catálogo desconocido.' });
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const items = await cfg.delegate.findMany({
     where: { organizacionId: id },
@@ -90,7 +92,7 @@ adminRouter.get('/catalogos/:tipo', requireAuth, async (req, res) => {
 adminRouter.post('/catalogos/:tipo', requireAuth, soloAdmin, async (req, res) => {
   const cfg = CATALOGOS[req.params.tipo];
   if (!cfg) return res.status(404).json({ error: 'Catálogo desconocido.' });
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const nombre = String(req.body?.nombre ?? '').trim();
   if (!nombre) return res.status(422).json({ error: 'El nombre es obligatorio.' });
@@ -109,7 +111,7 @@ adminRouter.post('/catalogos/:tipo', requireAuth, soloAdmin, async (req, res) =>
 adminRouter.patch('/catalogos/:tipo/:id', requireAuth, soloAdmin, async (req, res) => {
   const cfg = CATALOGOS[req.params.tipo];
   if (!cfg) return res.status(404).json({ error: 'Catálogo desconocido.' });
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data: Record<string, any> = {};
   if (typeof req.body?.nombre === 'string' && req.body.nombre.trim()) data.nombre = req.body.nombre.trim();
@@ -128,7 +130,7 @@ adminRouter.patch('/catalogos/:tipo/:id', requireAuth, soloAdmin, async (req, re
 adminRouter.delete('/catalogos/:tipo/:id', requireAuth, soloAdmin, async (req, res) => {
   const cfg = CATALOGOS[req.params.tipo];
   if (!cfg) return res.status(404).json({ error: 'Catálogo desconocido.' });
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   try {
     const r = await cfg.delegate.deleteMany({ where: { id: req.params.id, organizacionId: id } });
@@ -158,8 +160,8 @@ function datosActividad(body: any, esCreacion: boolean): Record<string, any> {
   return data;
 }
 
-adminRouter.get('/actividades', requireAuth, async (_req, res) => {
-  const id = await orgId();
+adminRouter.get('/actividades', requireAuth, async (req: AuthedRequest, res) => {
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const items = await prisma.actividadPlan.findMany({
     where: { organizacionId: id },
@@ -175,7 +177,7 @@ adminRouter.get('/actividades', requireAuth, async (_req, res) => {
 });
 
 adminRouter.get('/actividades/:id', requireAuth, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const a = await prisma.actividadPlan.findFirst({
     where: { id: req.params.id, organizacionId: id },
@@ -186,7 +188,7 @@ adminRouter.get('/actividades/:id', requireAuth, async (req, res) => {
 });
 
 adminRouter.post('/actividades', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data = datosActividad(req.body, true);
   if (!data.codigo || !data.nombre) return res.status(422).json({ error: 'Código y nombre son obligatorios.' });
@@ -200,7 +202,7 @@ adminRouter.post('/actividades', requireAuth, soloAdmin, async (req, res) => {
 });
 
 adminRouter.patch('/actividades/:id', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data = datosActividad(req.body, false);
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
@@ -215,7 +217,7 @@ adminRouter.patch('/actividades/:id', requireAuth, soloAdmin, async (req, res) =
 });
 
 adminRouter.delete('/actividades/:id', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const conTareas = await prisma.tarea.count({ where: { organizacionId: id, actividadPlanId: req.params.id } });
   if (conTareas > 0) return res.status(409).json({ error: `No se puede eliminar: tiene ${conTareas} tarea(s) generadas. Puedes desactivarla en su lugar.` });
@@ -225,15 +227,15 @@ adminRouter.delete('/actividades/:id', requireAuth, soloAdmin, async (req, res) 
 });
 
 // Subtareas plantilla de una actividad
-async function actividadDeOrg(actId: string): Promise<boolean> {
-  const id = await orgId();
+async function actividadDeOrg(req: AuthedRequest, actId: string): Promise<boolean> {
+  const id = await orgId(req);
   if (!id) return false;
   const a = await prisma.actividadPlan.findFirst({ where: { id: actId, organizacionId: id }, select: { id: true } });
   return !!a;
 }
 
 adminRouter.post('/actividades/:id/subtareas', requireAuth, soloAdmin, async (req, res) => {
-  if (!(await actividadDeOrg(req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
+  if (!(await actividadDeOrg(req, req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
   const texto = String(req.body?.texto ?? '').trim();
   if (!texto) return res.status(422).json({ error: 'El texto de la subtarea es obligatorio.' });
   const s = await prisma.subtareaPlantilla.create({ data: { actividadPlanId: req.params.id, texto, orden: Number(req.body?.orden) || 0 }, select: { id: true, texto: true, orden: true } });
@@ -241,7 +243,7 @@ adminRouter.post('/actividades/:id/subtareas', requireAuth, soloAdmin, async (re
 });
 
 adminRouter.patch('/actividades/:id/subtareas/:subId', requireAuth, soloAdmin, async (req, res) => {
-  if (!(await actividadDeOrg(req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
+  if (!(await actividadDeOrg(req, req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
   const data: Record<string, any> = {};
   if (typeof req.body?.texto === 'string' && req.body.texto.trim()) data.texto = req.body.texto.trim();
   if (req.body?.orden !== undefined && req.body.orden !== null && req.body.orden !== '') data.orden = Number(req.body.orden) || 0;
@@ -252,7 +254,7 @@ adminRouter.patch('/actividades/:id/subtareas/:subId', requireAuth, soloAdmin, a
 });
 
 adminRouter.delete('/actividades/:id/subtareas/:subId', requireAuth, soloAdmin, async (req, res) => {
-  if (!(await actividadDeOrg(req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
+  if (!(await actividadDeOrg(req, req.params.id))) return res.status(404).json({ error: 'Actividad no encontrada.' });
   const r = await prisma.subtareaPlantilla.deleteMany({ where: { id: req.params.subId, actividadPlanId: req.params.id } });
   if (r.count === 0) return res.status(404).json({ error: 'Subtarea no encontrada.' });
   res.json({ ok: true });
@@ -276,7 +278,7 @@ function datosVencimiento(body: any): { data?: Record<string, any>; error?: stri
 }
 
 adminRouter.get('/vencimientos', requireAuth, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const periodo = typeof req.query.periodo === 'string' && req.query.periodo ? req.query.periodo : undefined;
   const obligacionId = typeof req.query.obligacionId === 'string' && req.query.obligacionId ? req.query.obligacionId : undefined;
@@ -293,7 +295,7 @@ adminRouter.get('/vencimientos', requireAuth, async (req, res) => {
 });
 
 adminRouter.post('/vencimientos', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const { data, error } = datosVencimiento(req.body);
   if (error) return res.status(422).json({ error });
@@ -303,7 +305,7 @@ adminRouter.post('/vencimientos', requireAuth, soloAdmin, async (req, res) => {
 });
 
 adminRouter.patch('/vencimientos/:id', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const { data, error } = datosVencimiento(req.body);
   if (error) return res.status(422).json({ error });
@@ -314,7 +316,7 @@ adminRouter.patch('/vencimientos/:id', requireAuth, soloAdmin, async (req, res) 
 });
 
 adminRouter.delete('/vencimientos/:id', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const r = await prisma.vencimiento.deleteMany({ where: { id: req.params.id, organizacionId: id } });
   if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
@@ -323,15 +325,15 @@ adminRouter.delete('/vencimientos/:id', requireAuth, soloAdmin, async (req, res)
 
 // ---------- Usuarios (crear/editar/roles/activar) ----------
 
-adminRouter.get('/roles', requireAuth, async (_req, res) => {
-  const id = await orgId();
+adminRouter.get('/roles', requireAuth, async (req: AuthedRequest, res) => {
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const roles = await prisma.rol.findMany({ where: { organizacionId: id }, orderBy: { nombre: 'asc' }, select: { id: true, nombre: true } });
   res.json({ roles });
 });
 
-adminRouter.get('/usuarios', requireAuth, soloCoordinacion, async (_req, res) => {
-  const id = await orgId();
+adminRouter.get('/usuarios', requireAuth, soloCoordinacion, async (req: AuthedRequest, res) => {
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const usuarios = await prisma.usuario.findMany({
     where: { organizacionId: id },
@@ -350,7 +352,7 @@ function normalizaRolIds(body: any): string[] {
 }
 
 adminRouter.post('/usuarios', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const nombre = String(req.body?.nombre ?? '').trim();
   const email = String(req.body?.email ?? '').trim().toLowerCase();
@@ -377,7 +379,7 @@ adminRouter.post('/usuarios', requireAuth, soloAdmin, async (req, res) => {
 });
 
 adminRouter.patch('/usuarios/:id', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const u = await prisma.usuario.findFirst({ where: { id: req.params.id, organizacionId: id }, select: { id: true, esRootPlataforma: true } });
   if (!u) return res.status(404).json({ error: 'Usuario no encontrado.' });
@@ -411,7 +413,7 @@ adminRouter.patch('/usuarios/:id', requireAuth, soloAdmin, async (req, res) => {
 });
 
 adminRouter.post('/usuarios/:id/reset-password', requireAuth, soloAdmin, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const u = await prisma.usuario.findFirst({ where: { id: req.params.id, organizacionId: id }, select: { id: true } });
   if (!u) return res.status(404).json({ error: 'Usuario no encontrado.' });
@@ -421,7 +423,7 @@ adminRouter.post('/usuarios/:id/reset-password', requireAuth, soloAdmin, async (
 });
 
 adminRouter.delete('/usuarios/:id', requireAuth, soloAdmin, async (req: AuthedRequest, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   if (req.params.id === req.user!.sub) return res.status(403).json({ error: 'No puedes eliminar tu propio usuario.' });
   const u = await prisma.usuario.findFirst({ where: { id: req.params.id, organizacionId: id }, select: { id: true, esRootPlataforma: true } });
@@ -451,7 +453,7 @@ function datosEmpresa(body: any): Record<string, any> {
 }
 
 adminRouter.get('/empresas', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const incluirInactivos = req.query.incluirInactivos === '1' || req.query.incluirInactivos === 'true';
   const items = await prisma.empresa.findMany({
@@ -469,7 +471,7 @@ adminRouter.get('/empresas', requireAuth, soloCoordinacion, async (req, res) => 
 });
 
 adminRouter.post('/empresas', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data = datosEmpresa(req.body);
   if (!data.nombre) return res.status(422).json({ error: 'El nombre del cliente es obligatorio.' });
@@ -478,7 +480,7 @@ adminRouter.post('/empresas', requireAuth, soloCoordinacion, async (req, res) =>
 });
 
 adminRouter.patch('/empresas/:id', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data = datosEmpresa(req.body);
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
@@ -488,7 +490,7 @@ adminRouter.patch('/empresas/:id', requireAuth, soloCoordinacion, async (req, re
 });
 
 adminRouter.delete('/empresas/:id', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   try {
     const r = await prisma.empresa.deleteMany({ where: { id: req.params.id, organizacionId: id } });
@@ -509,7 +511,7 @@ const MAX_DOC_BYTES = 20 * 1024 * 1024; // 20 MB por archivo
 
 // GET /admin/empresas/:empresaId/documentos — lista (sin binario) + resumen de uso.
 adminRouter.get('/empresas/:empresaId/documentos', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -525,7 +527,7 @@ adminRouter.get('/empresas/:empresaId/documentos', requireAuth, soloCoordinacion
 
 // POST /admin/empresas/:empresaId/documentos { tipo, nombre, mime, contenidoBase64 }
 adminRouter.post('/empresas/:empresaId/documentos', requireAuth, soloCoordinacion, async (req: any, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -550,7 +552,7 @@ adminRouter.post('/empresas/:empresaId/documentos', requireAuth, soloCoordinacio
 
 // GET /admin/documentos/:id — descarga (devuelve el archivo en base64).
 adminRouter.get('/documentos/:id', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   const doc = await prisma.documentoCliente.findFirst({ where: { id: req.params.id, organizacionId: id ?? undefined }, select: { nombre: true, mime: true, tamanoBytes: true, contenido: true } });
   if (!doc) return res.status(404).json({ error: 'Documento no encontrado.' });
   res.json({ nombre: doc.nombre, mime: doc.mime, tamanoBytes: doc.tamanoBytes, contenidoBase64: Buffer.from(doc.contenido).toString('base64') });
@@ -558,7 +560,7 @@ adminRouter.get('/documentos/:id', requireAuth, soloCoordinacion, async (req, re
 
 // DELETE /admin/documentos/:id — elimina un documento del cliente.
 adminRouter.delete('/documentos/:id', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   const r = await prisma.documentoCliente.deleteMany({ where: { id: req.params.id, organizacionId: id ?? undefined } });
   if (r.count === 0) return res.status(404).json({ error: 'Documento no encontrado.' });
   res.json({ ok: true });
@@ -581,7 +583,7 @@ const optFecha = (v: unknown): Date | null => {
 
 // Config nacional + ICA por municipio de una empresa.
 adminRouter.get('/config-tributaria/:empresaId', requireAuth, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true, nombre: true, nit: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -596,7 +598,7 @@ adminRouter.get('/config-tributaria/:empresaId', requireAuth, async (req, res) =
 
 // Guardar config nacional (upsert).
 adminRouter.put('/config-tributaria/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -617,7 +619,7 @@ adminRouter.put('/config-tributaria/:empresaId', requireAuth, soloCoordinacion, 
 
 // Agregar un municipio ICA a la empresa.
 adminRouter.post('/config-tributaria/:empresaId/ica', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -643,7 +645,7 @@ adminRouter.post('/config-tributaria/:empresaId/ica', requireAuth, soloCoordinac
 
 // Editar un municipio ICA.
 adminRouter.patch('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const b = req.body ?? {};
   const data: Record<string, any> = {};
@@ -660,7 +662,7 @@ adminRouter.patch('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloC
 
 // Quitar un municipio ICA.
 adminRouter.delete('/config-tributaria/:empresaId/ica/:icaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const r = await prisma.empresaMunicipioIca.deleteMany({ where: { id: req.params.icaId, empresaId: req.params.empresaId, organizacionId: id } });
   if (r.count === 0) return res.status(404).json({ error: 'Registro ICA no encontrado.' });
@@ -669,7 +671,7 @@ adminRouter.delete('/config-tributaria/:empresaId/ica/:icaId', requireAuth, solo
 
 // Búsqueda de municipios (para el selector de ICA).
 adminRouter.get('/municipios', requireAuth, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.json({ items: [] });
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
   const items = await prisma.municipio.findMany({
@@ -681,8 +683,8 @@ adminRouter.get('/municipios', requireAuth, async (req, res) => {
 });
 
 // GET /admin/municipios/sanciones — municipios con su sanción mínima propia (UVT).
-adminRouter.get('/municipios/sanciones', requireAuth, soloCoordinacion, async (_req, res) => {
-  const id = await orgId();
+adminRouter.get('/municipios/sanciones', requireAuth, soloCoordinacion, async (req: AuthedRequest, res) => {
+  const id = await orgId(req);
   if (!id) return res.json({ municipios: [] });
   const items = await prisma.municipio.findMany({
     where: { organizacionId: id }, orderBy: [{ nombre: 'asc' }],
@@ -694,7 +696,7 @@ adminRouter.get('/municipios/sanciones', requireAuth, soloCoordinacion, async (_
 // PATCH /admin/municipios/:id { sancionMinimaUvt } — fija/limpia la sanción mínima
 // propia del municipio (en UVT). Enviar null o vacío la deja en "usa la general".
 adminRouter.patch('/municipios/:id', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const raw = req.body?.sancionMinimaUvt;
   let val: number | null = null;
@@ -719,7 +721,7 @@ function aplicaEnMesPlan(periodicidad: string | null, mes1a12: number): boolean 
 // GET /admin/plan-cliente/:empresaId — catálogo de actividades por área con el
 // estado del plan del cliente (marcadas/periodicidad propia).
 adminRouter.get('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true, nombre: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -749,7 +751,7 @@ adminRouter.get('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async
 
 // PUT /admin/plan-cliente/:empresaId  { activas: [id], periodicidades: {id: 'Mensual'} }
 adminRouter.put('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -777,7 +779,7 @@ adminRouter.put('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async
 // POST /admin/plan-cliente/:empresaId/generar?periodo=YYYY-MM — genera las tareas
 // del cliente para ese período según su plan activo (idempotente).
 adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -839,7 +841,7 @@ adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinaci
 
 // GET /admin/asignaciones/:empresaId — todas las áreas con su asignación actual.
 adminRouter.get('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true, nombre: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -860,7 +862,7 @@ adminRouter.get('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async
 
 // PUT /admin/asignaciones/:empresaId  { asignaciones: [{ areaId, asesorId|null, auxiliarId|null, talla|null }] }
 adminRouter.put('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -896,7 +898,7 @@ adminRouter.put('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async
 // talla por Cliente × Área). Empareja por nombre (cliente, área, usuario). Con
 // dryRun devuelve la previsualización sin escribir. Idempotente (upsert por área).
 adminRouter.post('/asignaciones/importar', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const dryRun = !!req.body?.dryRun;
   const filas: any[] = Array.isArray(req.body?.filas) ? req.body.filas : [];
@@ -980,7 +982,7 @@ adminRouter.post('/asignaciones/importar', requireAuth, soloCoordinacion, async 
 //   'todas'    → absolutamente todas (incluye auditadas) — p. ej. antes de iniciar operación
 // Con dryRun solo cuenta lo que cambiaría. Solo Administrador / Coordinación / root.
 adminRouter.post('/asignaciones/sincronizar-tareas', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const dryRun = req.body?.dryRun === true;
   const alcance = ['todas', 'abiertas', 'actual'].includes(req.body?.alcance) ? req.body.alcance : 'actual';
@@ -1025,7 +1027,7 @@ adminRouter.post('/asignaciones/sincronizar-tareas', requireAuth, soloCoordinaci
 
 // GET /admin/entregas/:empresaId?periodo=YYYY-MM — estado de entregas del período.
 adminRouter.get('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -1047,7 +1049,7 @@ adminRouter.get('/entregas/:empresaId', requireAuth, soloCoordinacion, async (re
 
 // POST /admin/entregas/:empresaId { periodo, areaId|null } — libera (idempotente).
 adminRouter.post('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req: any, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -1069,7 +1071,7 @@ adminRouter.post('/entregas/:empresaId', requireAuth, soloCoordinacion, async (r
 
 // DELETE /admin/entregas/:empresaId { periodo, areaId|null } — revierte la entrega.
 adminRouter.delete('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
-  const id = await orgId();
+  const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
   if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });

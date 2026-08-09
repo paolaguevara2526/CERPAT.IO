@@ -9,11 +9,12 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth } from '../auth/middleware.js';
+import { orgDeSesion } from '../auth/tenant.js';
 
 export const empresasRouter = Router();
 
 empresasRouter.get('/', requireAuth, async (req, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ organizacion: null, total: 0, empresas: [] });
 
   // Por defecto solo clientes activos. ?incluirInactivos=1 los incluye (opción futura).
@@ -25,8 +26,11 @@ empresasRouter.get('/', requireAuth, async (req, res) => {
     include: { tipo: true, regimen: true },
   });
 
+  // El nombre de la firma se consulta aparte: el token solo trae su identificador.
+  const datosOrg = await prisma.organizacion.findUnique({ where: { id: org.id }, select: { nombre: true, slug: true } });
+
   res.json({
-    organizacion: { nombre: org.nombre, slug: org.slug },
+    organizacion: datosOrg ? { nombre: datosOrg.nombre, slug: datosOrg.slug } : null,
     total: empresas.length,
     empresas: empresas.map((e) => ({
       id: e.id,

@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { orgDeSesion } from '../auth/tenant.js';
 import { alcancePortal, empresasAsignadas } from '../auth/alcance-db.js';
 import { esStaffAcotado } from '../auth/alcance.js';
 import { vencimientosNacionales, vencimientosIca, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
@@ -60,8 +61,10 @@ function esUsuarioFirma(u: AuthedRequest['user']): boolean {
 function puedeEditar(u: AuthedRequest['user']): boolean {
   return !!u && (u.esRoot || u.roles.includes('Administrador'));
 }
-async function orgCerpat() {
-  return prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+// Organización de la sesión (ver auth/tenant.ts). Antes esto devolvía siempre
+// la firma "cerpat", que era el bloqueo para atender a más de una.
+async function orgActual(req: AuthedRequest) {
+  return orgDeSesion(req);
 }
 
 // Normaliza texto (sin acentos/mayúsculas) para emparejar municipios/nombres.
@@ -76,7 +79,7 @@ const ALIAS_MUNI: Record<string, { nombre: string; departamento: string }> = {
 // GET /vencimientos?anio=&empresaId=&mes=&estado=
 vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ total: 0, vencimientos: [] });
   const anio = Number(req.query.anio) || new Date().getFullYear();
   const empresaId = typeof req.query.empresaId === 'string' && req.query.empresaId ? req.query.empresaId : undefined;
@@ -107,7 +110,7 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
 // GET /vencimientos/resumen?anio= — KPIs + por empresa + por mes.
 vencimientosRouter.get('/resumen', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ kpis: null, porEmpresa: [], porMes: [] });
   const anio = Number(req.query.anio) || new Date().getFullYear();
   const items = await prisma.vencimientoEmpresa.findMany({
@@ -140,7 +143,7 @@ vencimientosRouter.get('/resumen', requireAuth, async (req: AuthedRequest, res) 
 // GET /vencimientos/empresas?anio= — empresas con vencimientos (para el filtro).
 vencimientosRouter.get('/empresas', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ empresas: [] });
   const anio = Number(req.query.anio) || new Date().getFullYear();
   const rows = await prisma.vencimientoEmpresa.findMany({
@@ -154,7 +157,7 @@ vencimientosRouter.get('/empresas', requireAuth, async (req: AuthedRequest, res)
 // sin pago / presentado y pagado), con su valor. Alimenta la vista de Pagos.
 vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ total: 0, vencimientos: [] });
   const pl = await cargarParamsLiq(org.id);
   const anio = Number(req.query.anio) || new Date().getFullYear();
@@ -201,7 +204,7 @@ vencimientosRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) =>
 // por NIT/grupo). Junta las obligaciones en ciclo de pago (generadas) y los pagos
 // pendientes agregados a mano, con valor, límite, mora y sanción a hoy.
 vencimientosRouter.get('/portal-pagos', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   const anio = Number(req.query.anio) || new Date().getFullYear();
   if (!org) return res.json({ anio, vencimientos: [], pendientes: [] });
   const alcance = await alcancePortal(req.user, org.id);
@@ -252,7 +255,7 @@ vencimientosRouter.get('/portal-pagos', requireAuth, async (req: AuthedRequest, 
 // GET /vencimientos/portal?anio=&mes= — vencimientos del cliente para el
 // Calendario (solo lectura, aislado por NIT/grupo). Si viene mes, filtra ese mes.
 vencimientosRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ vencimientos: [] });
   const alcance = await alcancePortal(req.user, org.id);
   if (alcance === null) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
@@ -283,7 +286,7 @@ vencimientosRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) =
 // "Pagos pendientes" en la vista de Pagos.
 vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.json({ total: 0, pendientes: [] });
   const pl = await cargarParamsLiq(org.id);
   const idsAsignadas = esStaffAcotado(req.user) ? await empresasAsignadas(req.user!.sub, org.id) : null;
@@ -325,7 +328,7 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
 // generado=false para distinguirlo de los vencimientos del generador.
 vencimientosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede agregar pagos pendientes.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const b = req.body ?? {};
 
@@ -380,7 +383,7 @@ vencimientosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
 // previsualiza el plan; sin dryRun escribe. Solo Administrador / root.
 vencimientosRouter.post('/importar', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede importar vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const b = req.body ?? {};
 
@@ -472,7 +475,7 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
   const u = req.user;
   if (!(u && (u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)))))
     return res.status(403).json({ error: 'Solo Administrador o Coordinación puede regenerar vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
 
   const empresa = await prisma.empresa.findFirst({
@@ -635,7 +638,7 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
 // correcta, el generador ya no lo vuelve a crear.
 vencimientosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede eliminar vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   const r = await prisma.vencimientoEmpresa.deleteMany({ where: { id: req.params.id, organizacionId: org?.id } });
   if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
   res.json({ ok: true });
@@ -648,7 +651,7 @@ vencimientosRouter.delete('/:id', requireAuth, async (req: AuthedRequest, res) =
 // GET /vencimientos/:id/abonos — abonos de una obligación (usuarios de la firma).
 vencimientosRouter.get('/:id/abonos', requireAuth, async (req: AuthedRequest, res) => {
   if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a abonos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   const venc = await prisma.vencimientoEmpresa.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true, valorPago: true } });
   if (!venc) return res.status(404).json({ error: 'Obligación no encontrada.' });
   const abonos = await prisma.abonoVencimiento.findMany({ where: { vencimientoId: venc.id }, orderBy: [{ fecha: 'asc' }, { createdAt: 'asc' }], select: { id: true, monto: true, fecha: true, notas: true } });
@@ -660,7 +663,7 @@ vencimientosRouter.get('/:id/abonos', requireAuth, async (req: AuthedRequest, re
 // POST /vencimientos/:id/abonos { monto, fecha?, notas? } — registra un abono.
 vencimientosRouter.post('/:id/abonos', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede registrar abonos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const venc = await prisma.vencimientoEmpresa.findFirst({ where: { id: req.params.id, organizacionId: org.id }, select: { id: true, valorPago: true, estado: true } });
   if (!venc) return res.status(404).json({ error: 'Obligación no encontrada.' });
@@ -687,7 +690,7 @@ vencimientosRouter.post('/:id/abonos', requireAuth, async (req: AuthedRequest, r
 // DELETE /vencimientos/abonos/:abonoId — elimina un abono (Administrador / root).
 vencimientosRouter.delete('/abonos/:abonoId', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede eliminar abonos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   const abono = await prisma.abonoVencimiento.findFirst({ where: { id: req.params.abonoId, organizacionId: org?.id }, select: { id: true } });
   if (!abono) return res.status(404).json({ error: 'Abono no encontrado.' });
   await prisma.abonoVencimiento.delete({ where: { id: abono.id } });
@@ -697,7 +700,7 @@ vencimientosRouter.delete('/abonos/:abonoId', requireAuth, async (req: AuthedReq
 // PATCH /vencimientos/:id — estado / fecha / notas (Administrador / root).
 vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede editar vencimientos.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   const data: Record<string, any> = {};
   if (typeof req.body?.estado === 'string') {
     if (!ESTADOS.includes(req.body.estado)) return res.status(422).json({ error: 'Estado inválido.' });
@@ -724,7 +727,7 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
 // GET /vencimientos/:id/detalle — vencimiento con su checklist y responsable
 // (para el modal del calendario). Lectura para cualquier usuario de la firma.
 vencimientosRouter.get('/:id/detalle', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const v = await prisma.vencimientoEmpresa.findFirst({
     where: { id: req.params.id, organizacionId: org.id },
@@ -748,7 +751,7 @@ const ESTADOS_SUBTAREA_VENC = ['pendiente', 'realizada', 'no_aplica', 'no_realiz
 vencimientosRouter.patch('/subtareas/:id', requireAuth, async (req: AuthedRequest, res) => {
   const estado = req.body?.estado;
   if (typeof estado !== 'string' || !ESTADOS_SUBTAREA_VENC.includes(estado)) return res.status(422).json({ error: 'Estado de subtarea inválido.' });
-  const org = await orgCerpat();
+  const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const sub = await prisma.subtareaVencimiento.findFirst({
     where: { id: req.params.id, vencimiento: { organizacionId: org.id } },

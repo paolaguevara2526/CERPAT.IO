@@ -12,6 +12,7 @@
 import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
+import { orgDeSesion } from '../auth/tenant.js';
 import { alcancePortal } from '../auth/alcance-db.js';
 import { esStaffAcotado } from '../auth/alcance.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
@@ -27,7 +28,7 @@ const EJECUTADA_VENC = ['presentado_sin_pago', 'presentado_pagado', 'presentado_
 // Filtros: ?periodo=YYYY-MM &estado= &area= &q= (empresa/actividad) &mias=1
 //   &prioridad= &asesorId= &auxiliarId= &estadoPago= &venceDesde=YYYY-MM-DD &venceHasta=
 planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
 
   const now = new Date();
@@ -222,7 +223,7 @@ planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, r
   const estado = String(req.body?.estado ?? '');
   if (!ESTADOS_VALIDOS.includes(estado)) return res.status(400).json({ error: 'Estado inválido.' });
 
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({
     where: { id: req.params.id, organizacionId: org?.id },
     include: { subtareas: true, actividadPlan: { select: { fase: true } } },
@@ -264,7 +265,7 @@ planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, r
 // GET /plan/auditoria — cola de tareas enviadas a auditoría (estado en_revision,
 // sin aprobar aún) del período. Autenticado.
 planRouter.get('/auditoria', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
 
   const now = new Date();
@@ -312,7 +313,7 @@ planRouter.patch('/tareas/:id/auditoria', requireAuth, async (req: AuthedRequest
   const accion = String(req.body?.accion ?? '');
   if (accion !== 'aprobar' && accion !== 'devolver') return res.status(400).json({ error: 'Acción inválida.' });
 
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
 
@@ -346,7 +347,7 @@ const ESTADOS_PAGO = ['pendiente', 'presentado_sin_pago', 'presentado_pagado', '
 
 // GET /plan/pagos — obligaciones con pago (tareas generaPago) del período. Autenticado.
 planRouter.get('/pagos', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
 
   const now = new Date();
@@ -423,7 +424,7 @@ planRouter.patch('/tareas/:id/pago', requireAuth, async (req: AuthedRequest, res
   }
   if (tieneEstado && !ESTADOS_PAGO.includes(req.body.estadoPago)) return res.status(400).json({ error: 'Estado de pago inválido.' });
 
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
 
@@ -449,7 +450,7 @@ planRouter.get('/asignaciones', requireAuth, async (req: AuthedRequest, res) => 
   const u = req.user;
   const esFirma = !!u && (u.esRoot || (u.roles.length > 0 && !u.empresaCliente && !u.grupoCliente));
   if (!esFirma) return res.status(403).json({ error: 'Sin acceso a asignaciones.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ esCoordinacion: false, yoId: u!.sub, areas: [], personas: [] });
 
   const acotado = esStaffAcotado(u);
@@ -489,8 +490,8 @@ function puedeGestionar(u: { esRoot: boolean; roles: string[] }): boolean {
 }
 
 // Datos comunes para el formulario de tarea (selects): clientes, áreas, personas.
-planRouter.get('/form-datos', requireAuth, async (_req, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+planRouter.get('/form-datos', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ empresas: [], areas: [], usuarios: [] });
   const [empresas, areas, usuarios] = await Promise.all([
     prisma.empresa.findMany({ where: { organizacionId: org.id, activo: true }, orderBy: { nombre: 'asc' }, select: { id: true, nombre: true } }),
@@ -530,7 +531,7 @@ function datosTarea(body: any): { data: Record<string, any>; error?: string } {
 
 // Una tarea con sus ids (para el formulario de edición).
 planRouter.get('/tareas/:id/detalle', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const t = await prisma.tarea.findFirst({
     where: { id: req.params.id, organizacionId: org?.id },
     select: {
@@ -577,7 +578,7 @@ const loteSelect = { id: true, tipoDocumento: true, desde: true, hasta: true, ca
 
 // GET /plan/tareas/:id/lotes
 planRouter.get('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
   const lotes = await prisma.loteCaptura.findMany({ where: { tareaId: tarea.id }, orderBy: [{ fecha: 'desc' }, { createdAt: 'desc' }], select: loteSelect });
@@ -586,7 +587,7 @@ planRouter.get('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res)
 
 // POST /plan/tareas/:id/lotes  { tipoDocumento, desde?, hasta?, cantidad?, fecha? }
 planRouter.post('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true, organizacionId: true, asesorId: true, auxiliarId: true } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
   const u = req.user!;
@@ -608,7 +609,7 @@ planRouter.post('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res
 
 // DELETE /plan/lotes/:id
 planRouter.delete('/lotes/:id', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const lote = await prisma.loteCaptura.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true, tarea: { select: { asesorId: true, auxiliarId: true } } } });
   if (!lote) return res.status(404).json({ error: 'Lote no encontrado.' });
   const u = req.user!;
@@ -622,7 +623,7 @@ planRouter.delete('/lotes/:id', requireAuth, async (req: AuthedRequest, res) => 
 // usuario (todas sus empresas del período), con el conteo de lotes registrados y
 // los de hoy, para capturar sin ir cliente por cliente. F1.3 — "Mi día del auxiliar".
 planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ periodo: null, hoy: null, total: 0, capturadosHoy: 0, tareas: [] });
 
   const now = new Date();
@@ -689,7 +690,7 @@ planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) =
 // Es la contraparte del auxiliar: en cuanto la captura se libera, el asesor ve aquí
 // qué clientes puede arrancar. F1 — vistas por rol.
 planRouter.get('/mi-dia/procesar', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
 
   const now = new Date();
@@ -742,7 +743,7 @@ planRouter.get('/mi-dia/procesar', requireAuth, async (req: AuthedRequest, res) 
 // por el ejecutor (asesor/auxiliar) o coordinación. cantidadRegistros la calcula
 // el frontend desde el rango, pero es editable, así que aquí solo se valida.
 planRouter.patch('/tareas/:id/registro', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({
     where: { id: req.params.id, organizacionId: org?.id },
     select: { id: true, asesorId: true, auxiliarId: true, auditoria: true },
@@ -770,7 +771,7 @@ planRouter.patch('/tareas/:id/registro', requireAuth, async (req: AuthedRequest,
 // Guardar el link de soporte documental. Permiso: coordinación o el asesor/auxiliar
 // de la tarea (para que el ejecutor pegue dónde va quedando el trabajo).
 planRouter.patch('/tareas/:id/soporte', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({
     where: { id: req.params.id, organizacionId: org?.id },
     select: { id: true, asesorId: true, auxiliarId: true, auditoria: true },
@@ -787,7 +788,7 @@ planRouter.patch('/tareas/:id/soporte', requireAuth, async (req: AuthedRequest, 
 
 planRouter.post('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede crear tareas.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const { data, error } = datosTarea(req.body);
   if (error) return res.status(422).json({ error });
@@ -810,7 +811,7 @@ planRouter.post('/tareas', requireAuth, async (req: AuthedRequest, res) => {
 
 planRouter.patch('/tareas/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede editar tareas.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
   if (tarea.auditoria === 'aprobada') return res.status(403).json({ error: 'La tarea está bloqueada (aprobada en Auditoría). Debe desbloquearse primero.' });
@@ -823,7 +824,7 @@ planRouter.patch('/tareas/:id', requireAuth, async (req: AuthedRequest, res) => 
 
 planRouter.delete('/tareas/:id', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede eliminar tareas.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const r = await prisma.tarea.deleteMany({ where: { id: req.params.id, organizacionId: org?.id } });
   if (r.count === 0) return res.status(404).json({ error: 'Tarea no encontrada.' });
   res.json({ ok: true });
@@ -831,7 +832,7 @@ planRouter.delete('/tareas/:id', requireAuth, async (req: AuthedRequest, res) =>
 
 // Subtareas de una tarea
 planRouter.get('/tareas/:id/subtareas', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
   const subtareas = await prisma.subtarea.findMany({ where: { tareaId: tarea.id }, orderBy: { orden: 'asc' }, select: { id: true, texto: true, estado: true, orden: true } });
@@ -840,7 +841,7 @@ planRouter.get('/tareas/:id/subtareas', requireAuth, async (req: AuthedRequest, 
 
 planRouter.post('/tareas/:id/subtareas', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede agregar subtareas.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
   const texto = String(req.body?.texto ?? '').trim();
@@ -852,7 +853,7 @@ planRouter.post('/tareas/:id/subtareas', requireAuth, async (req: AuthedRequest,
 
 // El ejecutor o coordinación puede cambiar el estado de una subtarea.
 planRouter.patch('/tareas/:id/subtareas/:subId', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true, asesorId: true, auxiliarId: true } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
   const u = req.user!;
@@ -872,7 +873,7 @@ planRouter.patch('/tareas/:id/subtareas/:subId', requireAuth, async (req: Authed
 
 planRouter.delete('/tareas/:id/subtareas/:subId', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede eliminar subtareas.' });
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id }, select: { id: true } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
   const r = await prisma.subtarea.deleteMany({ where: { id: req.params.subId, tareaId: tarea.id } });
@@ -885,7 +886,7 @@ planRouter.delete('/tareas/:id/subtareas/:subId', requireAuth, async (req: Authe
 // cuál es su etapa actual (dónde está el foco/cuello), su avance y si está en riesgo.
 // Es la vista del coordinador/gerente sobre la misma columna que auxiliar y asesor.
 planRouter.get('/flujo', requireAuth, async (req, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ periodo: null, resumen: null, clientes: [] });
 
   const now = new Date();
@@ -992,7 +993,7 @@ const TAREA_LABEL: Record<string, string> = {
 // GET /plan/portal?anio= — Plan de Trabajo del cliente (solo lectura, aislado por
 // NIT/grupo): matriz de cumplimiento (áreas × 12 meses) + listado de actividades.
 planRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   const anio = Number(req.query.anio) || new Date().getFullYear();
   if (!org) return res.json({ anio, kpis: null, matriz: [], actividades: [] });
   const alcance = await alcancePortal(req.user, org.id);
@@ -1030,7 +1031,7 @@ planRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
 });
 
 planRouter.get('/cumplimiento', requireAuth, async (req, res) => {
-  const org = await prisma.organizacion.findFirst({ where: { slug: 'cerpat' } });
+  const org = await orgDeSesion(req);
   if (!org) return res.json({ organizacion: null, periodo: null, kpis: null, porArea: [], porCliente: [] });
 
   const now = new Date();
@@ -1135,8 +1136,11 @@ planRouter.get('/cumplimiento', requireAuth, async (req, res) => {
       .map((v) => ({ nombre: v.nombre, total: v.total, ejecutadas: v.ejecutadas, vencidas: v.vencidas, cumplimiento: pct(v.ejecutadas, v.total) }))
       .sort((x, y) => x.cumplimiento - y.cumplimiento || y.total - x.total);
 
+  // El nombre de la firma se consulta aparte: el token solo trae su identificador.
+  const datosOrg = await prisma.organizacion.findUnique({ where: { id: org.id }, select: { nombre: true, slug: true } });
+
   res.json({
-    organizacion: { nombre: org.nombre },
+    organizacion: datosOrg ? { nombre: datosOrg.nombre } : null,
     periodo: periodoParam,
     kpis: { total, ejecutadas, vencidas, porAuditar, cumplimiento: pct(ejecutadas, total) },
     porArea,
