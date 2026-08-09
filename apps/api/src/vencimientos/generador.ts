@@ -124,7 +124,7 @@ function nthDiaHabil(anio: number, mes1a12: number, n: number): Date {
 // presentación (no genera pago). Las fechas son fijas nacionales (iguales para
 // todos, NO dependen del NIT). Aplica a personas jurídicas: quienes declaran
 // Renta como Persona Jurídica, Gran Contribuyente o RST consolidada.
-const RUB_OBLIGACION = 'RUB (Registro Único de Beneficiarios)';
+export const RUB_OBLIGACION = 'RUB (Registro Único de Beneficiarios)';
 
 // A quién le aplica el RUB: depende de la NATURALEZA JURÍDICA del cliente, no de
 // cómo declare renta. Antes se derivaba de `rentaTipo`, y eso tenía un efecto
@@ -134,8 +134,12 @@ const RUB_OBLIGACION = 'RUB (Registro Único de Beneficiarios)';
 //
 // Obligados: las personas jurídicas y las estructuras sin personería (consorcios
 // y uniones temporales). Las personas naturales NO.
-const RUB_TIPOS_OBLIGADOS = ['persona juridica', 'consorcio o union temporal', 'sucursal extranjera'];
-const RUB_TIPOS_EXENTOS = ['persona natural'];
+// Se comparan FRAGMENTOS, no el nombre exacto: el catálogo de tipos lo edita el
+// equipo y puede decir "Persona Jurídica", "Jurídica", "Consorcio", "Unión
+// Temporal" o "Sucursal de sociedad extranjera". Atarse al nombre exacto es la
+// misma fragilidad que ya nos costó una vez.
+const RUB_TIPOS_OBLIGADOS = ['juridica', 'consorcio', 'union temporal', 'sucursal'];
+const RUB_TIPOS_EXENTOS = ['natural'];
 
 // Compara sin tildes ni mayúsculas: el catálogo de tipos lo escribe el equipo.
 const sinTildes = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();

@@ -28,3 +28,13 @@ test('sin tipo definido no se inventa la obligación', () => {
   assert.equal(aplicaRub(''), false);
   assert.equal(aplicaRub(undefined), false);
 });
+
+// El catálogo de tipos lo edita el equipo: la regla no puede depender de que el
+// nombre esté escrito exactamente como en la siembra inicial.
+test('reconoce variantes de cómo se escriba el tipo', () => {
+  assert.equal(aplicaRub('Jurídica'), true);
+  assert.equal(aplicaRub('Consorcio'), true);
+  assert.equal(aplicaRub('Unión Temporal'), true);
+  assert.equal(aplicaRub('Sucursal de sociedad extranjera'), true);
+  assert.equal(aplicaRub('Persona natural comerciante'), false);
+});
