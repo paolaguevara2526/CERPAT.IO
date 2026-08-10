@@ -331,12 +331,120 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     { id: 'en_gestion', label: 'En gestión', n: nGestion },
     { id: 'vencido', label: 'Vencidos', n: nVencidos },
   ];
+
+  // ----- Matriz imprimible para enviar al cliente -----
+  //
+  // Mismo patrón que el acta de visita: una ventana con HTML propio y su CSS de
+  // impresión, sin depender de los estilos de la aplicación (que están pensados
+  // para pantalla y salen mal en papel).
+  //
+  // Imprime LO QUE SE ESTÁ VIENDO —la pestaña activa— y lo dice en el
+  // encabezado. Si alguien imprime "Vencidos" y el documento no lo aclara,
+  // el cliente lo lee como si fuera toda su matriz.
+  function imprimirMatriz() {
+    const esc = (v: unknown) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+    const parr = (v: unknown) => esc(v).replace(/\n/g, '<br>');
+    const cliente = empresaSel?.nombre ?? 'Cliente';
+    const hoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+    const fechaCorta = (iso: string | null) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } };
+    const alcance = TABS.find((t) => t.id === filtro)?.label ?? 'Todos';
+
+    const COLOR_RIESGO: Record<string, string> = { alto: '#b42318', medio: '#9a5b12', bajo: '#1a7f4b' };
+    const COLOR_ESTADO: Record<string, string> = { pendiente: '#5b6a82', en_gestion: '#24406f', resuelto: '#1a7f4b' };
+
+    const filas = filtrados.map((h, i) => {
+      const rl = RIESGO_META[h.riesgo]?.label ?? h.riesgo;
+      const el = ESTADO_META[h.estado]?.label ?? h.estado;
+      const pl = PRIORIDAD_LABEL[h.prioridad] ?? h.prioridad;
+      return `<tr${h.vencido ? ' class="venc"' : ''}>
+        <td class="num">${i + 1}</td>
+        <td>${esc(h.area) || '—'}</td>
+        <td><b>${esc(h.titulo)}</b>${h.descripcion ? `<div class="sub">${parr(h.descripcion)}</div>` : ''}</td>
+        <td class="mini">${parr(h.normatividad) || '—'}</td>
+        <td><span class="pill" style="color:${COLOR_RIESGO[h.riesgo] ?? '#5b6a82'};border-color:${COLOR_RIESGO[h.riesgo] ?? '#5b6a82'}">${esc(rl)}</span>${h.riesgoDescripcion ? `<div class="sub">${parr(h.riesgoDescripcion)}</div>` : ''}<div class="sub">Prioridad: ${esc(pl)}</div></td>
+        <td>${parr(h.planAccion) || '—'}</td>
+        <td>${esc(h.responsable) || '—'}</td>
+        <td class="nowrap">${fechaCorta(h.plazo)}${h.vencido ? '<div class="alerta">VENCIDO</div>' : ''}</td>
+        <td class="nowrap"><span class="pill" style="color:${COLOR_ESTADO[h.estado] ?? '#5b6a82'};border-color:${COLOR_ESTADO[h.estado] ?? '#5b6a82'}">${esc(el)}</span></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="9" class="vacio">Sin hallazgos en este alcance.</td></tr>';
+
+    const w = window.open('', '_blank');
+    if (!w) { setError('Habilita las ventanas emergentes para imprimir la matriz.'); return; }
+    w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Matriz de hallazgos — ${esc(cliente)}</title>
+    <style>
+      *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;color:#16233b;}
+      body{margin:0;} .doc{padding:22px 26px;}
+      .head{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2.5px solid #23406e;padding-bottom:10px;margin-bottom:14px;}
+      .brand{font-size:20px;font-weight:800;color:#23406e;letter-spacing:.5px;}
+      .brand small{display:block;font-size:10px;font-weight:600;color:#5b6a82;letter-spacing:2px;text-transform:uppercase;}
+      h1{font-size:15px;margin:0;text-align:right;color:#23406e;} h1 small{display:block;font-size:10.5px;color:#5b6a82;font-weight:600;margin-top:2px;}
+      .datos{display:flex;gap:26px;flex-wrap:wrap;font-size:11.5px;margin-bottom:12px;}
+      .datos b{color:#5b6a82;font-weight:700;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;display:block;}
+      .kpis{display:flex;gap:10px;margin-bottom:14px;}
+      .kpi{border:1px solid #d6dae2;border-radius:6px;padding:7px 12px;min-width:92px;}
+      .kpi b{display:block;font-size:17px;line-height:1.1;} .kpi span{font-size:9.5px;color:#5b6a82;text-transform:uppercase;letter-spacing:.3px;}
+      table{width:100%;border-collapse:collapse;font-size:10px;}
+      thead{display:table-header-group;}
+      th{background:#f1f3f7;text-align:left;padding:6px 7px;border:1px solid #d6dae2;font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:#5b6a82;}
+      td{padding:6px 7px;border:1px solid #d6dae2;vertical-align:top;line-height:1.45;}
+      tr{page-break-inside:avoid;}
+      .num{text-align:center;color:#9aa3b2;font-weight:700;width:26px;}
+      .sub{color:#5b6a82;font-size:9px;margin-top:3px;line-height:1.4;}
+      .mini{font-size:9px;color:#5b6a82;}
+      .nowrap{white-space:nowrap;}
+      .pill{display:inline-block;border:1px solid;border-radius:20px;padding:1px 7px;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+      .venc td{background:#fdf3f2;}
+      .alerta{color:#b42318;font-weight:800;font-size:8.5px;margin-top:3px;letter-spacing:.3px;}
+      .vacio{text-align:center;color:#9aa3b2;padding:22px;}
+      .firmas{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:38px;page-break-inside:avoid;}
+      .firma{border-top:1.5px solid #16233b;padding-top:6px;text-align:center;}
+      .firma b{display:block;font-size:11px;} .firma span{font-size:9.5px;color:#5b6a82;}
+      .foot{margin-top:20px;font-size:9px;color:#9aa3b2;text-align:center;}
+      @media print{@page{size:A4 landscape;margin:10mm;} .doc{padding:0;}}
+    </style></head><body><div class="doc">
+      <div class="head">
+        <div class="brand">CERPAT<small>Revisoría fiscal</small></div>
+        <h1>MATRIZ DE HALLAZGOS<small>Emitida el ${hoy}</small></h1>
+      </div>
+      <div class="datos">
+        <div><b>Cliente</b>${esc(cliente)}</div>
+        <div><b>Alcance del informe</b>${esc(alcance)}</div>
+        <div><b>Hallazgos incluidos</b>${filtrados.length} de ${hallazgos.length}</div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b>${hallazgos.length}</b><span>Total</span></div>
+        <div class="kpi"><b style="color:#1a7f4b">${nResueltos}</b><span>Resueltos</span></div>
+        <div class="kpi"><b style="color:#24406f">${nGestion}</b><span>En gestión</span></div>
+        <div class="kpi"><b style="color:#b42318">${nVencidos}</b><span>Vencidos</span></div>
+        <div class="kpi"><b>${hallazgos.length ? Math.round((nResueltos / hallazgos.length) * 100) : 0}%</b><span>Avance</span></div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>#</th><th>Área / proceso</th><th>Hallazgo</th><th>Normatividad</th>
+          <th>Riesgo</th><th>Plan de acción</th><th>Responsable</th><th>Plazo</th><th>Estado</th>
+        </tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+      <div class="firmas">
+        <div class="firma"><b>&nbsp;</b><span>Revisor fiscal / Auditor · CERPAT</span></div>
+        <div class="firma"><b>&nbsp;</b><span>Representante legal · ${esc(cliente)}</span></div>
+      </div>
+      <div class="foot">Documento generado desde el Planeador CERPAT el ${hoy}. El avance corresponde al estado registrado a esa fecha.</div>
+    </div></body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 350);
+  }
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
         {multi && <button className="dbtn" onClick={() => { setSel(null); setFiltro('todos'); }} style={{ fontSize: 13 }}>‹ Volver</button>}
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>{empresaSel?.nombre ?? 'Hallazgos'}</h1>
         <span className="sp" style={{ flex: 1 }} />
+        <button className="dbtn" onClick={imprimirMatriz} disabled={hallazgos.length === 0} style={{ fontSize: 13 }}
+          title="Abre la matriz lista para imprimir o guardar como PDF, con lo que estás viendo ahora">🖨 Imprimir matriz</button>
         <button className="dbtn" onClick={() => exportar(empresaSel?.nombre ?? 'empresa')} disabled={hallazgos.length === 0} style={{ fontSize: 13 }}>⭳ Exportar</button>
         {esGestor && <>
           <button className="dbtn" onClick={plantilla} style={{ fontSize: 13 }}>Plantilla</button>
