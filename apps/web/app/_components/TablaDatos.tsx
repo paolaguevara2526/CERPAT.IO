@@ -12,6 +12,7 @@
 
 import { useMemo, useState } from 'react';
 import FiltroColumna from './FiltroColumna';
+import FiltrosActivos from './FiltrosActivos';
 import { useOrden, ThOrden } from './orden';
 
 export type Columna<T> = {
@@ -87,6 +88,17 @@ export default function TablaDatos<T>({
           {nota ?? 'Clic en el título de la columna para ordenar · embudo ▼ para filtrar.'}
         </span>
       </div>
+
+      {/* Qué embudos están puestos. Sin esto, desmarcar el último valor de una
+          columna deja la tabla vacía sin ninguna pista de cuál fue. */}
+      <FiltrosActivos
+        filtros={columnas.filter((c) => c.filtrable !== false).map((c) => ({
+          clave: c.clave, etiqueta: c.label,
+          seleccion: filtros[c.clave] ?? null, total: (valores[c.clave] ?? []).length,
+        }))}
+        onQuitar={(clave) => setFiltros((f) => ({ ...f, [clave]: null }))}
+        onQuitarTodos={() => setFiltros({})}
+      />
 
       <div className="panel">
         <div className="dt-wrap dt-alta">
