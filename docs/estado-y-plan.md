@@ -314,6 +314,17 @@ alguien. Mandar a la persona a otra pantalla a arreglar lo que acaba de ver es
 justo el patrón que la ficha vino a corregir. Ambos listados marcan **en rojo** a
 quien no tiene tipo y explican qué reglas quedan sin evaluar mientras falte.
 
+**El asesor del listado sale de Asignaciones.** `Empresa.asesorNombre` es un texto
+suelto que vino de la importación: sirvió al principio, pero nadie lo mantiene, así
+que un cliente podía figurar **sin asesor** en el listado y tener a alguien
+trabajándolo en el tablero. Ahora la columna muestra el asesor de
+`AsignacionClienteArea` —por área, porque un cliente puede tener asesores distintos
+en áreas distintas—, el texto viejo queda como respaldo *en cursiva* y marcado como
+tal, y quien no tiene ni lo uno ni lo otro sale como **«sin asignar»**. El filtro y
+el orden usan el mismo valor que se ve: si el embudo ofreciera el texto viejo y la
+celda mostrara el de Asignaciones, filtrar por un asesor dejaría fuera clientes que
+sí son suyos.
+
 **La ficha es la vista por cliente; Administración conserva las transversales.**
 Revisar un cliente no debe obligar a abrir tres pantallas y recordar lo visto en
 las otras dos — así se cuela un error. Pero la pregunta *"¿a cuáles de los 90 les

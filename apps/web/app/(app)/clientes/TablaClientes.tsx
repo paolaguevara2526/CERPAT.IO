@@ -8,9 +8,37 @@ import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 export type Empresa = {
   id: string; nombre: string; nit: string | null; tipo: string | null;
   servicio: string | null; asesorNombre: string | null; regimen: string | null;
+  /** Asesor por área, desde Asignaciones. Puede haber más de uno. */
+  asignaciones: { area: string; asesor: string }[];
 };
 
 const guion = (v: string | null) => (v && v.trim() ? v : '—');
+
+// El asesor sale de ASIGNACIONES, que es donde la coordinación reparte el trabajo.
+// `asesorNombre` es un texto suelto de la importación que nadie mantiene: se deja
+// como respaldo, pero marcado, para no dar por asignado a quien no lo está.
+const asesoresDe = (e: Empresa) => [...new Set(e.asignaciones.map((a) => a.asesor))].sort((a, b) => a.localeCompare(b, 'es'));
+
+function CeldaAsesor({ e }: { e: Empresa }) {
+  const asesores = asesoresDe(e);
+  if (asesores.length > 0) {
+    const detalle = e.asignaciones.map((a) => `${a.area}: ${a.asesor}`).join('\n');
+    return (
+      <span title={detalle} style={{ color: 'var(--ink)' }}>
+        {asesores[0]}
+        {asesores.length > 1 && <span style={{ color: 'var(--muted)', fontWeight: 600 }}> +{asesores.length - 1}</span>}
+      </span>
+    );
+  }
+  if (e.asesorNombre?.trim()) {
+    return (
+      <span title="Del registro del cliente, no de Asignaciones. Asígnalo por área para que quede trazable." style={{ color: 'var(--muted)', fontStyle: 'italic' }}>
+        {e.asesorNombre}
+      </span>
+    );
+  }
+  return <span style={{ color: 'var(--alerta-fuerte)', fontWeight: 700 }}>sin asignar</span>;
+}
 
 const COLUMNAS: Columna<Empresa>[] = [
   {
@@ -30,7 +58,17 @@ const COLUMNAS: Columna<Empresa>[] = [
       : <span style={{ color: 'var(--peligro)', fontWeight: 700 }}>sin tipo</span>),
   },
   { clave: 'servicio', label: 'Servicio', valor: (e) => guion(e.servicio), estiloCelda: { color: 'var(--muted)' } },
-  { clave: 'asesor', label: 'Asesor', valor: (e) => guion(e.asesorNombre), buscar: true, estiloCelda: { color: 'var(--muted)' } },
+  {
+    clave: 'asesor', label: 'Asesor', buscar: true,
+    // El valor que se busca, ordena y filtra es el mismo que se ve: si el embudo
+    // ofreciera el texto viejo y la celda mostrara el de Asignaciones, filtrar
+    // por un asesor dejaría fuera clientes que sí son suyos.
+    valor: (e) => {
+      const a = asesoresDe(e);
+      return a.length > 0 ? a.join(', ') : (e.asesorNombre?.trim() || 'sin asignar');
+    },
+    render: (e) => <CeldaAsesor e={e} />,
+  },
   { clave: 'regimen', label: 'Régimen', valor: (e) => guion(e.regimen), estiloCelda: { color: 'var(--muted)' } },
 ];
 
