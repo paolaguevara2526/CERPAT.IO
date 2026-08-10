@@ -314,6 +314,18 @@ alguien. Mandar a la persona a otra pantalla a arreglar lo que acaba de ver es
 justo el patrón que la ficha vino a corregir. Ambos listados marcan **en rojo** a
 quien no tiene tipo y explican qué reglas quedan sin evaluar mientras falte.
 
+**Códigos CIIU con buscador.** Las actividades económicas se escribían a mano,
+código y descripción. Con 499 clases de nombres largos y parecidos, eso garantiza
+descripciones distintas para el mismo código entre un cliente y otro — y el CIIU
+es lo que la DIAN y la cámara usan para clasificar. Ahora hay un buscador por
+código o por texto que llena los dos campos. La nomenclatura (**CIIU Rev. 4 A.C.
+2020** del DANE) va **embebida en el código**, no en la base: es nacional, igual
+para todas las firmas, y no la edita nadie. Fuente en `docs/data/ciiu-rev4-ac.csv`,
+extraída del PDF oficial con `docs/data/ciiu-desde-pdf-dane.py` y verificada por
+tres vías —las notas explicativas del propio documento, el buscador en vivo del
+DANE y las pruebas de `ciiu-rev4-ac.test.ts`—, porque un PDF de 700 páginas se
+parsea mal sin que nada falle.
+
 **El asesor del listado sale de Asignaciones.** `Empresa.asesorNombre` es un texto
 suelto que vino de la importación: sirvió al principio, pero nadie lo mantiene, así
 que un cliente podía figurar **sin asesor** en el listado y tener a alguien

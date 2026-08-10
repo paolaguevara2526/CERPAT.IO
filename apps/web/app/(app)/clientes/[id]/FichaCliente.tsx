@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import ObligacionesCliente from './ObligacionesCliente';
 import SituacionTributaria from './SituacionTributaria';
+import PickerCiiu from './PickerCiiu';
 
 type Actividad = { id: string; codigo: string; descripcion: string | null; principal: boolean; orden: number };
 type Representante = { id: string; nombre: string; documento: string | null; cargo: string | null; principal: boolean; desde: string | null; hasta: string | null; email: string | null; telefono: string | null };
@@ -167,8 +168,10 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
         nota="La principal va de primera. Puedes registrar todas las que tenga el cliente."
         editable={editable}
         filas={f.actividadesEconomicas}
-        columnas={[['Código', (a: Actividad) => a.codigo], ['Descripción', (a: Actividad) => a.descripcion ?? '—'], ['', (a: Actividad) => (a.principal ? <span className="chip" style={{ color: 'var(--exito)', borderColor: 'var(--exito)' }}>principal</span> : null)]]}
-        campos={[['codigo', 'Código CIIU', 'text'], ['descripcion', 'Descripción', 'text'], ['principal', '¿Es la principal?', 'check']]}
+        columnas={[['Código', (a: Actividad) => <span style={{ fontFamily: 'var(--mono)' }}>{a.codigo}</span>], ['Descripción', (a: Actividad) => a.descripcion ?? '—'], ['', (a: Actividad) => (a.principal ? <span className="chip" style={{ color: 'var(--exito)', borderColor: 'var(--exito)' }}>principal</span> : null)]]}
+        // 'ciiu' abre el buscador de la nomenclatura del DANE y llena de paso
+        // la descripción, que es el cuarto elemento de la tupla.
+        campos={[['codigo', 'Código CIIU', 'ciiu', 'descripcion'], ['descripcion', 'Descripción', 'text'], ['principal', '¿Es la principal?', 'check']]}
         onAgregar={(d) => agregar('actividades', d)}
         onBorrar={(id, n) => borrar('actividades', id, `la actividad ${n}`)}
         nombreDe={(a: Actividad) => a.codigo}
@@ -205,7 +208,8 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
 function Lista<T extends { id: string }>({ titulo, nota, editable, filas, columnas, campos, onAgregar, onBorrar, nombreDe }: {
   titulo: string; nota: string; editable: boolean; filas: T[];
   columnas: [string, (f: T) => React.ReactNode][];
-  campos: [string, string, 'text' | 'date' | 'check'][];
+  /** [clave, etiqueta, tipo, claveAcompañante] — la última solo la usa 'ciiu'. */
+  campos: [string, string, 'text' | 'date' | 'check' | 'ciiu', string?][];
   onAgregar: (datos: Record<string, unknown>) => Promise<boolean>;
   onBorrar: (id: string, nombre: string) => void;
   nombreDe: (f: T) => string;
@@ -237,13 +241,20 @@ function Lista<T extends { id: string }>({ titulo, nota, editable, filas, column
         {editable && (abierto ? (
           <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 14 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12 }}>
-              {campos.map(([k, etiqueta, tipo]) => (
+              {campos.map(([k, etiqueta, tipo, acompanante]) => (
                 <div key={k}>
                   <span style={lbl}>{etiqueta}</span>
                   {tipo === 'check' ? (
                     <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13, cursor: 'pointer' }}>
                       <input type="checkbox" checked={!!form[k]} onChange={(e) => setForm((p) => ({ ...p, [k]: e.target.checked }))} style={{ accentColor: 'var(--navy)' }} /> Sí
                     </label>
+                  ) : tipo === 'ciiu' ? (
+                    <PickerCiiu
+                      estilo={inp}
+                      valor={String(form[k] ?? '')}
+                      descripcion={String(form[acompanante ?? ''] ?? '')}
+                      onElegir={(codigo, desc) => setForm((p) => ({ ...p, [k]: codigo, ...(acompanante ? { [acompanante]: desc } : {}) }))}
+                    />
                   ) : (
                     <input type={tipo} style={inp} value={String(form[k] ?? '')} onChange={(e) => setForm((p) => ({ ...p, [k]: e.target.value }))} />
                   )}
