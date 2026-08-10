@@ -20,6 +20,10 @@ import { orgDeSesion } from '../auth/tenant.js';
 import { obligacionesPorCifras, naturalezaDe } from '../fiscal/reglas.js';
 import { aplicaRub, RUB_OBLIGACION, ANIO_CALENDARIO } from '../vencimientos/generador.js';
 import { CIIU_REV4_AC, SECCIONES_CIIU } from '../fiscal/ciiu-rev4-ac.js';
+// Emparejar filas de Excel con clientes y leer montos vive aparte, con pruebas:
+// casar una fila con el cliente equivocado le escribe cifras ajenas y de ahí
+// salen mal sus obligaciones, sin que nada falle.
+import { indexar, emparejar, montoDe, anioValido } from '../fiscal/importar-cifras.js';
 
 export const fichaRouter = Router();
 
@@ -54,6 +58,112 @@ const fecha = (v: unknown): Date | null => {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d));
 };
+
+// ---------- Cifras en bloque (plantilla e importación) ----------
+//
+// Registrar activos e ingresos cliente por cliente son 90 fichas a mano, y las
+// cifras salen de un Excel que el equipo ya tiene. Estas dos rutas van ANTES de
+// /:empresaId por la misma razón que /catalogos.
+
+// GET /ficha/cifras?anio=YYYY — clientes activos con sus cifras de ese año.
+// Alimenta la plantilla de Excel (que ya sale con los clientes y sus NIT) y la
+// tabla de revisión.
+fichaRouter.get('/cifras', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeVerFicha(req.user)) return res.status(403).json({ error: 'Sin acceso a las fichas de clientes.' });
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const anio = anioValido(req.query.anio) ?? new Date().getFullYear() - 1;
+
+  const empresas = await prisma.empresa.findMany({
+    where: { organizacionId: org.id, activo: true },
+    orderBy: { nombre: 'asc' },
+    select: { id: true, nombre: true, nit: true, cifrasFiscales: { where: { anio } } },
+  });
+
+  res.json({
+    anio,
+    editable: puedeEditarFicha(req.user),
+    filas: empresas.map((e) => {
+      const c = e.cifrasFiscales[0];
+      return {
+        empresaId: e.id, empresa: e.nombre, nit: e.nit,
+        activosBrutos: c?.activosBrutos != null ? Number(c.activosBrutos) : null,
+        ingresosBrutos: c?.ingresosBrutos != null ? Number(c.ingresosBrutos) : null,
+        fuente: c?.fuente ?? null,
+      };
+    }),
+  });
+});
+
+// POST /ficha/cifras/importar { dryRun, anio, filas:[{nit, cliente, activos, ingresos, fuente}] }
+//
+// Con dryRun no toca nada: devuelve qué se aplicaría y qué está mal. Importar
+// cifras equivocadas cambia en silencio qué obligaciones le salen a un cliente,
+// así que se ve antes de escribir.
+fichaRouter.post('/cifras/importar', requireAuth, async (req: AuthedRequest, res) => {
+  if (!puedeEditarFicha(req.user)) return res.status(403).json({ error: 'Solo Administración o Coordinación puede importar cifras.' });
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+
+  const anio = anioValido(req.body?.anio);
+  if (!anio) return res.status(422).json({ error: 'Año inválido.' });
+  const filas = Array.isArray(req.body?.filas) ? req.body.filas : null;
+  if (!filas) return res.status(422).json({ error: 'No llegaron filas.' });
+  if (filas.length > 5000) return res.status(413).json({ error: 'Demasiadas filas (máximo 5000).' });
+  const dryRun = req.body?.dryRun !== false;
+
+  const empresas = await prisma.empresa.findMany({
+    where: { organizacionId: org.id }, select: { id: true, nombre: true, nit: true },
+  });
+  const idx = indexar(empresas);
+
+  const problemas: string[] = [];
+  const preview: string[] = [];
+  const aplicar: { empresaId: string; nombre: string; activos: number | null; ingresos: number | null; fuente: string | null }[] = [];
+  const yaVisto = new Map<string, number>();
+  const cop = (n: number) => `$${Math.round(n).toLocaleString('es-CO')}`;
+
+  filas.forEach((f: Record<string, unknown>, i: number) => {
+    const linea = i + 2; // +2: fila 1 son los encabezados del Excel
+    const activos = montoDe(f.activosBrutos);
+    const ingresos = montoDe(f.ingresosBrutos);
+    if (activos === 'invalido' || ingresos === 'invalido') {
+      problemas.push(`Fila ${linea}: hay un valor que no es un número (${activos === 'invalido' ? 'activos' : 'ingresos'}).`);
+      return;
+    }
+    if (activos == null && ingresos == null) return; // fila en blanco: se ignora sin ruido
+
+    const m = emparejar(idx, f.nit, f.cliente);
+    if ('error' in m) { problemas.push(`Fila ${linea}: ${m.error}.`); return; }
+
+    const antes = yaVisto.get(m.empresa.id);
+    if (antes != null) {
+      problemas.push(`Fila ${linea}: ${m.empresa.nombre} ya venía en la fila ${antes}; se ignora esta.`);
+      return;
+    }
+    yaVisto.set(m.empresa.id, linea);
+
+    aplicar.push({
+      empresaId: m.empresa.id, nombre: m.empresa.nombre, activos, ingresos,
+      fuente: typeof f.fuente === 'string' && f.fuente.trim() ? f.fuente.trim() : null,
+    });
+    if (preview.length < 40) {
+      preview.push(`${m.empresa.nombre} — activos ${activos != null ? cop(activos) : '—'} · ingresos ${ingresos != null ? cop(ingresos) : '—'}`);
+    }
+  });
+
+  if (dryRun) return res.json({ anio, aplicar: aplicar.length, problemas, preview, totalFilas: filas.length });
+
+  for (const a of aplicar) {
+    const datos = { activosBrutos: a.activos, ingresosBrutos: a.ingresos, fuente: a.fuente };
+    await prisma.cifrasFiscales.upsert({
+      where: { empresaId_anio: { empresaId: a.empresaId, anio } },
+      create: { organizacionId: org.id, empresaId: a.empresaId, anio, ...datos },
+      update: datos,
+    });
+  }
+  res.json({ anio, aplicadas: aplicar.length, problemas });
+});
 
 // GET /ficha/catalogos — opciones para los desplegables de la ficha.
 //
