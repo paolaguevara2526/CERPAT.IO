@@ -14,10 +14,12 @@ import SituacionTributaria from './SituacionTributaria';
 type Actividad = { id: string; codigo: string; descripcion: string | null; principal: boolean; orden: number };
 type Representante = { id: string; nombre: string; documento: string | null; cargo: string | null; principal: boolean; desde: string | null; hasta: string | null; email: string | null; telefono: string | null };
 type Camara = { id: string; camara: string; matricula: string | null; ubicacionClave: string | null; notas: string | null; responsable: { id: string; nombre: string } | null };
+type Opcion = { id: string; nombre: string };
 type Ficha = {
   id: string; nombre: string; nit: string | null; activo: boolean; servicio: string | null;
   direccion: string | null; emailDian: string | null; telefonoDian: string | null;
   emailCamara: string | null; telefonoCamara: string | null; fechaConstitucion: string | null;
+  tipoId: string | null; regimenId: string | null;
   tipo: { nombre: string } | null; regimen: { nombre: string } | null;
   municipio: { nombre: string; departamento: string | null } | null;
   actividadesEconomicas: Actividad[]; representantes: Representante[]; registrosCamara: Camara[];
@@ -32,6 +34,8 @@ const soloFecha = (iso: string | null) => (iso ? iso.slice(0, 10) : '');
 
 export default function FichaCliente({ empresaId }: { empresaId: string }) {
   const [f, setF] = useState<Ficha | null>(null);
+  const [tipos, setTipos] = useState<Opcion[]>([]);
+  const [regimenes, setRegimenes] = useState<Opcion[]>([]);
   const [editable, setEditable] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +50,10 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
     setCargando(false);
   }, [empresaId]);
   useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    fetch('/api/ficha/catalogos', { cache: 'no-store' }).then((r) => r.json())
+      .then((d) => { setTipos(d.tipos ?? []); setRegimenes(d.regimenes ?? []); }).catch(() => {});
+  }, []);
 
   async function guardarDatos() {
     if (!f) return;
@@ -56,10 +64,14 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
         direccion: f.direccion, emailDian: f.emailDian, telefonoDian: f.telefonoDian,
         emailCamara: f.emailCamara, telefonoCamara: f.telefonoCamara,
         fechaConstitucion: soloFecha(f.fechaConstitucion),
+        tipoId: f.tipoId ?? '', regimenId: f.regimenId ?? '',
       }),
     });
     if (!r.ok) { const d = await r.json().catch(() => ({})); setError(d.error || 'No se pudo guardar.'); return; }
     setOk(true); setTimeout(() => setOk(false), 1600);
+    // El tipo cambia lo que la ficha calcula (RUB, revisor fiscal, 368-2), así
+    // que se recarga para que lo de abajo deje de contradecir a lo de arriba.
+    cargar();
   }
 
   async function agregar(lista: string, datos: Record<string, unknown>) {
@@ -106,7 +118,31 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
           Los correos de notificación son los <strong>registrados ante cada entidad</strong>, que no siempre
           coinciden con los de contacto del día a día.
         </p>
+        {editable && !f.tipoId && (
+          <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '9px 12px', fontSize: 12.5, lineHeight: 1.6, marginBottom: 14 }}>
+            <strong>Falta el tipo de empresa.</strong> De él sale la naturaleza jurídica, y de ella dependen
+            el <strong>RUB</strong>, el <strong>revisor fiscal</strong> y el <strong>art. 368-2</strong>: mientras
+            falte, esas reglas no se evalúan. Asígnalo abajo y después regenera sus vencimientos.
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>
+          {/* Tipo y régimen se editan aquí, no solo en Administración: quien ve
+              el hueco es quien está revisando la ficha del cliente. */}
+          <div>
+            <span style={lbl}>Tipo de empresa</span>
+            <select style={{ ...inp, ...(f.tipoId ? {} : { borderColor: 'var(--peligro-borde)' }) }} disabled={!editable}
+              value={f.tipoId ?? ''} onChange={(e) => set('tipoId', e.target.value)}>
+              <option value="">— Sin asignar —</option>
+              {tipos.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+            </select>
+          </div>
+          <div>
+            <span style={lbl}>Régimen tributario</span>
+            <select style={inp} disabled={!editable} value={f.regimenId ?? ''} onChange={(e) => set('regimenId', e.target.value)}>
+              <option value="">— Sin asignar —</option>
+              {regimenes.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+            </select>
+          </div>
           <div><span style={lbl}>Dirección física</span><input style={inp} disabled={!editable} value={f.direccion ?? ''} onChange={(e) => set('direccion', e.target.value)} /></div>
           <div><span style={lbl}>Fecha de constitución</span><input type="date" style={inp} disabled={!editable} value={soloFecha(f.fechaConstitucion)} onChange={(e) => set('fechaConstitucion', e.target.value)} /></div>
           <div><span style={lbl}>Municipio</span><input style={{ ...inp, background: 'var(--panel-2)' }} disabled value={f.municipio ? `${f.municipio.nombre}${f.municipio.departamento ? ` · ${f.municipio.departamento}` : ''}` : '—'} /></div>
