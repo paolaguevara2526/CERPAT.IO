@@ -6,6 +6,7 @@
 // de Visitas y en el Calendario.
 
 import { useEffect, useState, useCallback } from 'react';
+import { logoCerpat } from '@/app/_components/logo-impresion';
 
 type Opcion = { id: string; nombre: string };
 export const VISITA_ESTADOS: { k: string; label: string; color: string }[] = [
@@ -169,8 +170,8 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
       body{margin:0;padding:0;}
       .doc{max-width:720px;margin:0 auto;padding:26px 30px;}
       .head{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2.5px solid #23406e;padding-bottom:10px;margin-bottom:16px;}
-      .brand{font-size:20px;font-weight:800;color:#23406e;letter-spacing:.5px;}
-      .brand small{display:block;font-size:10px;font-weight:600;color:#5b6a82;letter-spacing:2px;text-transform:uppercase;}
+      .brand svg{display:block;}
+      .brand small{display:block;font-size:9.5px;font-weight:600;color:#5b6a82;letter-spacing:2px;text-transform:uppercase;margin-top:5px;}
       h1{font-size:16px;margin:0;text-align:right;color:#23406e;} h1 small{display:block;font-size:10.5px;color:#5b6a82;font-weight:600;}
       .datos{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;font-size:12px;margin-bottom:6px;}
       .datos div{padding:4px 0;border-bottom:1px solid #eef1f6;}
@@ -187,7 +188,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
       @media print{@page{size:A4 portrait;margin:14mm;} .doc{padding:0;}}
     </style></head><body><div class="doc">
       <div class="head">
-        <div class="brand">CERPAT<small>Planeador contable</small></div>
+        <div class="brand">${logoCerpat(30)}<small>Planeador contable</small></div>
         <h1>ACTA DE VISITA<small>${fechaLarga(form.fecha)}</small></h1>
       </div>
       <div class="datos">
