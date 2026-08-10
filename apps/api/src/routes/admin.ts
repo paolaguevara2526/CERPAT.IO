@@ -10,6 +10,7 @@ import { prisma } from '../db.js';
 import { requireAuth, requireRol, type AuthedRequest } from '../auth/middleware.js';
 import { orgDeSesion } from '../auth/tenant.js';
 import { hashPassword } from '../auth/password.js';
+import { responderError } from '../errores.js';
 
 export const adminRouter = Router();
 
@@ -767,20 +768,59 @@ adminRouter.put('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async
   const activas: string[] = Array.isArray(req.body?.activas) ? req.body.activas.map((x: any) => String(x)) : [];
   const periods: Record<string, string> = (req.body?.periodicidades && typeof req.body.periodicidades === 'object') ? req.body.periodicidades : {};
   const activasSet = new Set(activas);
+  const activasIds = [...activasSet];
 
-  await prisma.$transaction(async (tx) => {
-    // Desactiva las que ya no están.
-    await tx.planClienteActividad.updateMany({ where: { organizacionId: id, empresaId: empresa.id, actividadPlanId: { notIn: activas.length ? activas : ['-'] } }, data: { activa: false } });
-    // Activa/actualiza las marcadas.
-    for (const actividadPlanId of activasSet) {
-      const periodicidad = periods[actividadPlanId] || null;
-      await tx.planClienteActividad.upsert({
-        where: { empresaId_actividadPlanId: { empresaId: empresa.id, actividadPlanId } },
-        create: { organizacionId: id, empresaId: empresa.id, actividadPlanId, activa: true, periodicidad },
-        update: { activa: true, periodicidad },
+  // Antes esto hacía un `upsert` por actividad: con un plan de 36 actividades son
+  // 37 idas y vueltas dentro de una transacción interactiva, que por defecto se
+  // cancela a los 5 segundos. Ahora se agrupa: una consulta para saber cuáles ya
+  // existen, un `updateMany` por periodicidad distinta (son pocas) y un
+  // `createMany` para las nuevas — del orden de 8 consultas en vez de 37.
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.planClienteActividad.updateMany({
+        where: { organizacionId: id, empresaId: empresa.id, actividadPlanId: { notIn: activasIds.length ? activasIds : ['-'] } },
+        data: { activa: false },
       });
-    }
-  });
+      if (activasIds.length === 0) return;
+
+      const existentes = await tx.planClienteActividad.findMany({
+        where: { empresaId: empresa.id, actividadPlanId: { in: activasIds } },
+        select: { actividadPlanId: true },
+      });
+      const yaEstan = new Set(existentes.map((x) => x.actividadPlanId));
+
+      // Las que ya existen: se agrupan por periodicidad para actualizarlas en bloque.
+      const porPeriodicidad = new Map<string, string[]>();
+      for (const actividadPlanId of activasIds) {
+        if (!yaEstan.has(actividadPlanId)) continue;
+        const clave = periods[actividadPlanId] || '';
+        const lista = porPeriodicidad.get(clave) ?? [];
+        lista.push(actividadPlanId);
+        porPeriodicidad.set(clave, lista);
+      }
+      for (const [clave, ids] of porPeriodicidad) {
+        await tx.planClienteActividad.updateMany({
+          where: { empresaId: empresa.id, actividadPlanId: { in: ids } },
+          data: { activa: true, periodicidad: clave || null },
+        });
+      }
+
+      const nuevas = activasIds.filter((x) => !yaEstan.has(x));
+      if (nuevas.length > 0) {
+        await tx.planClienteActividad.createMany({
+          data: nuevas.map((actividadPlanId) => ({
+            organizacionId: id, empresaId: empresa.id, actividadPlanId,
+            activa: true, periodicidad: periods[actividadPlanId] || null,
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }, { timeout: 20000, maxWait: 10000 });
+  } catch (e) {
+    // Sin esto el error salía como 500 sin cuerpo, el proxy lo volvía `{}` y la
+    // pantalla mostraba "No se pudo guardar el plan" — sin decir por qué.
+    return responderError(res, 'plan-cliente:guardar', e, 'No se pudo guardar el plan.');
+  }
   res.json({ ok: true, activas: activasSet.size });
 });
 
