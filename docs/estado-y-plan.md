@@ -358,6 +358,28 @@ distintos y enlazadas: cada fila del listado transversal abre la hoja de vida de
 cliente. Editar la configuración tributaria sigue en Administración (es un editor
 pesado, con ICA municipio por municipio); la ficha la muestra y enlaza.
 
+## Pendiente de fondo — el desfase de un mes en la entrega del insumo
+
+El ciclo real va corrido un mes: el auxiliar **captura julio**, libera el 2 de
+agosto, y el asesor pasa **agosto** liquidando retenciones y revisando balance
+**de julio**. En septiembre repite con agosto, y así.
+
+El sistema, en cambio, habilita una tarea de procesamiento del período *M* con la
+`EntregaInsumo` **del mismo período *M***. Consecuencia: al arrancar cualquier mes
+todo el procesamiento aparece bloqueado esperando una captura que no terminará
+hasta el mes siguiente.
+
+**Hoy se resuelve a mano:** *Administración → Plan por cliente → Liberar el insumo
+de todos los clientes*, que crea una entrega general `manual` para todos los
+activos del período (con simulación y reversión). Es el desbloqueo del arranque,
+no la corrección.
+
+**Lo que corresponde** es que el procesamiento de *M* se habilite con la captura
+de *M−1*. No se hizo junto con el desbloqueo porque cambia el comportamiento de
+todos los clientes a la vez y hay que decidir antes: si aplica a todas las áreas
+por igual, qué pasa con las de *insumo del cliente*, y cómo se trata el primer
+mes, que no tiene un mes anterior en el sistema.
+
 ## Roadmap
 
 ### Fase 1 — Infraestructura y datos ✅ (hecho)
