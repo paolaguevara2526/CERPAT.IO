@@ -19,6 +19,7 @@ import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { orgDeSesion } from '../auth/tenant.js';
 import { obligacionesPorCifras, naturalezaDe } from '../fiscal/reglas.js';
 import { aplicaRub, RUB_OBLIGACION, ANIO_CALENDARIO } from '../vencimientos/generador.js';
+import { CIIU_REV4_AC, SECCIONES_CIIU } from '../fiscal/ciiu-rev4-ac.js';
 
 export const fichaRouter = Router();
 
@@ -67,6 +68,19 @@ fichaRouter.get('/catalogos', requireAuth, async (req: AuthedRequest, res) => {
     prisma.regimenTributario.findMany({ where: { organizacionId: org.id }, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }], select: { id: true, nombre: true } }),
   ]);
   res.json({ tipos, regimenes });
+});
+
+// GET /ficha/ciiu — nomenclatura CIIU Rev. 4 A.C. completa (499 clases).
+//
+// Va embebida en el código y no en la base: es la clasificación nacional del
+// DANE, idéntica para todas las firmas y que no edita nadie. Se manda entera
+// —son unos 60 KB— para que el buscador de la ficha filtre al instante sin ir
+// y volver al servidor con cada tecla.
+//
+// También antes de /:empresaId, por el mismo motivo que /catalogos.
+fichaRouter.get('/ciiu', requireAuth, (_req, res) => {
+  res.set('Cache-Control', 'private, max-age=86400');
+  res.json({ secciones: SECCIONES_CIIU, clases: CIIU_REV4_AC });
 });
 
 // GET /ficha/:empresaId — hoja de vida completa.
