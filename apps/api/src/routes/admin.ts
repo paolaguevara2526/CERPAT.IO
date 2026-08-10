@@ -1095,28 +1095,6 @@ adminRouter.get('/entregas/:empresaId', requireAuth, soloCoordinacion, async (re
   });
 });
 
-// POST /admin/entregas/:empresaId { periodo, areaId|null } — libera (idempotente).
-adminRouter.post('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req: any, res) => {
-  const id = await orgId(req);
-  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
-  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
-  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
-  const periodo = typeof req.body?.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.body.periodo) ? req.body.periodo : null;
-  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
-  const areaId = req.body?.areaId ? String(req.body.areaId) : null;
-  if (areaId) {
-    const ok = await prisma.area.findFirst({ where: { id: areaId, organizacionId: id }, select: { id: true } });
-    if (!ok) return res.status(422).json({ error: 'Área inválida.' });
-  }
-  const existe = await prisma.entregaInsumo.findFirst({ where: { empresaId: empresa.id, periodo, areaId } });
-  if (!existe) {
-    await prisma.entregaInsumo.create({
-      data: { organizacionId: id, empresaId: empresa.id, periodo, areaId, origen: 'manual', entregadoPorId: req.user?.sub ?? null },
-    });
-  }
-  res.json({ ok: true });
-});
-
 // POST /admin/entregas/liberar-periodo { periodo, dryRun, revertir }
 //
 // Libera el insumo de TODOS los clientes activos de una vez, con una entrega
@@ -1169,6 +1147,28 @@ adminRouter.post('/entregas/liberar-periodo', requireAuth, soloCoordinacion, asy
   } catch (e) {
     responderError(res, 'entregas:liberar-periodo', e, 'No se pudo liberar el período.');
   }
+});
+
+// POST /admin/entregas/:empresaId { periodo, areaId|null } — libera (idempotente).
+adminRouter.post('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req: any, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresa = await prisma.empresa.findFirst({ where: { id: req.params.empresaId, organizacionId: id }, select: { id: true } });
+  if (!empresa) return res.status(404).json({ error: 'Cliente no encontrado.' });
+  const periodo = typeof req.body?.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.body.periodo) ? req.body.periodo : null;
+  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
+  const areaId = req.body?.areaId ? String(req.body.areaId) : null;
+  if (areaId) {
+    const ok = await prisma.area.findFirst({ where: { id: areaId, organizacionId: id }, select: { id: true } });
+    if (!ok) return res.status(422).json({ error: 'Área inválida.' });
+  }
+  const existe = await prisma.entregaInsumo.findFirst({ where: { empresaId: empresa.id, periodo, areaId } });
+  if (!existe) {
+    await prisma.entregaInsumo.create({
+      data: { organizacionId: id, empresaId: empresa.id, periodo, areaId, origen: 'manual', entregadoPorId: req.user?.sub ?? null },
+    });
+  }
+  res.json({ ok: true });
 });
 
 // DELETE /admin/entregas/:empresaId { periodo, areaId|null } — revierte la entrega.

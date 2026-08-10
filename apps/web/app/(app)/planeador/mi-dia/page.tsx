@@ -5,6 +5,7 @@
 import { fetchTareas, TareasTabla, nombrePeriodo } from '../tareas';
 import CapturaDelDia from './CapturaDelDia';
 import ListoParaProcesar from './ListoParaProcesar';
+import PanelPlegable from '@/app/_components/PanelPlegable';
 
 
 export const metadata = { title: 'Mi Día' };
@@ -29,14 +30,21 @@ export default async function MiDiaPage() {
         <ListoParaProcesar />
       </div>
 
-      <h2 style={{ fontSize: 14, fontWeight: 800, margin: '0 0 8px' }}>Mis tareas del período</h2>
-      {error ? (
-        <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>
-      ) : tareas.length === 0 ? (
-        <div className="panel" style={{ padding: 26, color: 'var(--muted)' }}>No tienes tareas asignadas este período. Cuando se te asignen actividades por área, aparecerán aquí.</div>
-      ) : (
-        <TareasTabla tareas={tareas} mostrarAsesor={false} />
-      )}
+      {/* El listado completo va plegable: en Mi Día lo primero es lo que se
+          ejecuta hoy, no el inventario del mes. Un componente de cliente puede
+          envolver contenido rendido en el servidor sin convertirlo. */}
+      <PanelPlegable id="mis-tareas-periodo" titulo="Mis tareas del período"
+        resumen={<span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tareas.length} tarea(s)</span>}>
+        <div style={{ padding: '12px 16px 16px' }}>
+          {error ? (
+            <div style={{ color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>
+          ) : tareas.length === 0 ? (
+            <div style={{ color: 'var(--muted)' }}>No tienes tareas asignadas este período. Cuando se te asignen actividades por área, aparecerán aquí.</div>
+          ) : (
+            <TareasTabla tareas={tareas} mostrarAsesor={false} />
+          )}
+        </div>
+      </PanelPlegable>
     </>
   );
 }

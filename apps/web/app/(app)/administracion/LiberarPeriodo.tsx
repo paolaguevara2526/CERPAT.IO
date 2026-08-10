@@ -26,6 +26,9 @@ export default function LiberarPeriodo() {
 
   async function pedir(dryRun: boolean, rev: boolean) {
     setTrabajando(true); setError(null); if (dryRun) setHecho(null);
+    // `finally`: con un `return` dentro del try, la línea de después del catch
+    // no se ejecuta y el botón se quedaba en "…" para siempre. Al fallar algo,
+    // había que recargar la página para volver a intentarlo.
     try {
       const r = await fetch('/api/admin/entregas/liberar-periodo', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -40,8 +43,7 @@ export default function LiberarPeriodo() {
           : `Insumo liberado para ${d.afectadas} cliente(s) en ${d.periodo}. Sus asesores ya pueden trabajar.`);
         setPrevio(null);
       }
-    } catch { setError('Error de red.'); }
-    setTrabajando(false);
+    } catch { setError('Error de red.'); } finally { setTrabajando(false); }
   }
 
   return (
