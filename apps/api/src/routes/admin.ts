@@ -74,6 +74,11 @@ const CATALOGOS: Record<string, CatCfg> = {
   periodicidades: { delegate: prisma.periodicidad, conOrden: true },
   etiquetas: { delegate: prisma.etiqueta, conOrden: false },
   grupos: { delegate: prisma.grupoEmpresarial, conOrden: false }, // grupos empresariales (Revisoría Fiscal)
+  // El tipo de empresa decide la naturaleza jurídica, y de ahí salen reglas
+  // reales (el RUB, el revisor fiscal, el 368-2). Estaba en la base pero sin
+  // pantalla: los clientes sin tipo no se podían arreglar desde la aplicación.
+  'tipos-empresa': { delegate: prisma.tipoEmpresa, conOrden: true },
+  regimenes: { delegate: prisma.regimenTributario, conOrden: true },
 };
 
 adminRouter.get('/catalogos/:tipo', requireAuth, async (req, res) => {
@@ -448,7 +453,8 @@ function datosEmpresa(body: any): Record<string, any> {
   for (const c of ['nit', 'servicio', 'asesorNombre'] as const) if (c in (body ?? {})) data[c] = typeof body[c] === 'string' && body[c].trim() ? body[c].trim() : null;
   for (const e of EMAILS_EMPRESA) if (e in (body ?? {})) data[e] = typeof body[e] === 'string' && body[e].trim() ? body[e].trim() : null;
   if ('activo' in (body ?? {})) data.activo = !!body.activo;
-  if ('grupoId' in (body ?? {})) data.grupoId = body.grupoId || null;
+  // Catálogos: cadena vacía significa "sin asignar", no "no tocar".
+  for (const c of ['grupoId', 'tipoId', 'regimenId'] as const) if (c in (body ?? {})) data[c] = body[c] || null;
   return data;
 }
 
@@ -461,6 +467,8 @@ adminRouter.get('/empresas', requireAuth, soloCoordinacion, async (req, res) => 
     orderBy: { nombre: 'asc' },
     select: {
       id: true, nombre: true, nit: true, servicio: true, asesorNombre: true, activo: true, grupoId: true,
+      tipoId: true, regimenId: true,
+      tipo: { select: { nombre: true } }, regimen: { select: { nombre: true } },
       emailRepresentante: true, emailAdministracion: true, emailContabilidad: true, emailTalentoHumano: true, emailTesoreria: true,
     },
   });

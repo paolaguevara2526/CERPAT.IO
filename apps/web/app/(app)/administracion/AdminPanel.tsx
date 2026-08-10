@@ -26,6 +26,8 @@ const TABS: Tab[] = [
   { id: 'checklist-venc', label: 'Checklist vencimientos' },
   { id: 'diag-rub', label: 'Diagnóstico RUB' },
   { id: 'param-anuales', label: 'Parámetros por año' },
+  { id: 'tipos-empresa', label: 'Tipos de empresa', tipo: 'tipos-empresa' },
+  { id: 'regimenes', label: 'Regímenes', tipo: 'regimenes' },
   { id: 'areas', label: 'Áreas', tipo: 'areas' },
   { id: 'tipos-tarea', label: 'Tipos de tarea', tipo: 'tipos-tarea' },
   { id: 'tipos-obligacion', label: 'Tipos de obligación', tipo: 'tipos-obligacion' },
