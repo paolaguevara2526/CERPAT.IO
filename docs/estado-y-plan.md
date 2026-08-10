@@ -306,10 +306,13 @@ para que nadie agregue el campo por descuido.
 **El tipo de empresa ya se puede editar.** `Empresa.tipoId` y `Empresa.regimenId`
 existían en la base desde el principio, pero **ningún formulario los exponía**: los
 clientes que llegaron sin tipo en la importación no se podían arreglar desde la
-aplicación, y son justo los que se quedaban sin RUB. Ahora están en *Administración
-→ Empresas* (con sus catálogos en *Tipos de empresa* y *Regímenes*), el listado
-marca en rojo a quien no tiene tipo, y el formulario advierte de qué reglas se
-quedan sin evaluar mientras falte.
+aplicación, y son justo los que se quedaban sin RUB. Ahora se editan en dos
+sitios, a propósito: en *Administración → Empresas* (con sus catálogos en *Tipos
+de empresa* y *Regímenes*) para el mantenimiento del maestro, y en la **hoja de
+vida del cliente**, que es donde se ve el hueco cuando se está revisando a
+alguien. Mandar a la persona a otra pantalla a arreglar lo que acaba de ver es
+justo el patrón que la ficha vino a corregir. Ambos listados marcan **en rojo** a
+quien no tiene tipo y explican qué reglas quedan sin evaluar mientras falte.
 
 **La ficha es la vista por cliente; Administración conserva las transversales.**
 Revisar un cliente no debe obligar a abrir tres pantallas y recordar lo visto en

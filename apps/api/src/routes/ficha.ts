@@ -54,6 +54,21 @@ const fecha = (v: unknown): Date | null => {
   return new Date(Date.UTC(y, m - 1, d));
 };
 
+// GET /ficha/catalogos — opciones para los desplegables de la ficha.
+//
+// Va ANTES de GET /:empresaId: si se declarara después, Express haría coincidir
+// "catalogos" con :empresaId y respondería "Cliente no encontrado".
+fichaRouter.get('/catalogos', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  if (!puedeVerFicha(req.user)) return res.status(403).json({ error: 'Sin acceso a las fichas de clientes.' });
+  const [tipos, regimenes] = await Promise.all([
+    prisma.tipoEmpresa.findMany({ where: { organizacionId: org.id }, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }], select: { id: true, nombre: true } }),
+    prisma.regimenTributario.findMany({ where: { organizacionId: org.id }, orderBy: [{ orden: 'asc' }, { nombre: 'asc' }], select: { id: true, nombre: true } }),
+  ]);
+  res.json({ tipos, regimenes });
+});
+
 // GET /ficha/:empresaId — hoja de vida completa.
 fichaRouter.get('/:empresaId', requireAuth, async (req: AuthedRequest, res) => {
   const org = await orgDeSesion(req);
@@ -75,6 +90,7 @@ fichaRouter.get('/:empresaId', requireAuth, async (req: AuthedRequest, res) => {
       id: true, nombre: true, nit: true, activo: true, servicio: true,
       direccion: true, emailDian: true, telefonoDian: true, emailCamara: true, telefonoCamara: true,
       fechaConstitucion: true,
+      tipoId: true, regimenId: true,
       tipo: { select: { nombre: true } },
       regimen: { select: { nombre: true } },
       municipio: { select: { nombre: true, departamento: true } },
@@ -103,6 +119,11 @@ fichaRouter.patch('/:empresaId', requireAuth, async (req: AuthedRequest, res) =>
     if (campo in b) data[campo] = texto(b[campo]);
   }
   if ('fechaConstitucion' in b) data.fechaConstitucion = fecha(b.fechaConstitucion);
+  // El tipo de empresa decide la naturaleza jurídica, y de ella salen el RUB, el
+  // revisor fiscal y el 368-2. Se edita aquí, junto al resto de la identificación
+  // del cliente, y no solo en Administración: quien ve el hueco es quien está
+  // revisando la ficha. Cadena vacía = "sin asignar", no "no tocar".
+  for (const c of ['tipoId', 'regimenId'] as const) if (c in b) data[c] = b[c] || null;
 
   const r = await prisma.empresa.updateMany({ where: { id: req.params.empresaId, organizacionId: org.id }, data });
   if (r.count === 0) return res.status(404).json({ error: 'Cliente no encontrado.' });
