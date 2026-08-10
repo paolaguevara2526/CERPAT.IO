@@ -29,6 +29,25 @@ empresasRouter.get('/', requireAuth, async (req, res) => {
   // El nombre de la firma se consulta aparte: el token solo trae su identificador.
   const datosOrg = await prisma.organizacion.findUnique({ where: { id: org.id }, select: { nombre: true, slug: true } });
 
+  // Asesor según ASIGNACIONES, que es donde la coordinación reparte el trabajo de
+  // verdad. `Empresa.asesorNombre` es un texto suelto que vino de la importación:
+  // sirvió al principio, pero nadie lo mantiene, así que un cliente podía figurar
+  // sin asesor aquí y tener uno trabajándolo en el tablero. Se manda la asignación
+  // por área —un cliente puede tener asesores distintos por área— y el texto viejo
+  // queda solo como respaldo, marcado como tal.
+  const asignaciones = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: org.id, empresaId: { in: empresas.map((e) => e.id) }, asesorId: { not: null } },
+    select: { empresaId: true, area: { select: { nombre: true, orden: true } }, asesor: { select: { nombre: true } } },
+  });
+  const porEmpresa = new Map<string, { area: string; asesor: string }[]>();
+  for (const a of asignaciones) {
+    if (!a.asesor?.nombre) continue;
+    const lista = porEmpresa.get(a.empresaId) ?? [];
+    lista.push({ area: a.area?.nombre ?? '—', asesor: a.asesor.nombre });
+    porEmpresa.set(a.empresaId, lista);
+  }
+  for (const lista of porEmpresa.values()) lista.sort((x, y) => x.area.localeCompare(y.area, 'es'));
+
   res.json({
     organizacion: datosOrg ? { nombre: datosOrg.nombre, slug: datosOrg.slug } : null,
     total: empresas.length,
@@ -39,6 +58,7 @@ empresasRouter.get('/', requireAuth, async (req, res) => {
       tipo: e.tipo?.nombre ?? null,
       servicio: e.servicio,
       asesorNombre: e.asesorNombre,
+      asignaciones: porEmpresa.get(e.id) ?? [],
       regimen: e.regimen?.nombre ?? null,
       activo: e.activo,
       // Correos omitidos a propósito en este endpoint público (privacidad).
