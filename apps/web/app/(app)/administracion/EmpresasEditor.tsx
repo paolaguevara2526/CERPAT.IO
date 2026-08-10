@@ -8,11 +8,13 @@ import DocumentosCliente, { fmtBytes } from './DocumentosCliente';
 
 type Empresa = {
   id: string; nombre: string; nit: string | null; servicio: string | null; asesorNombre: string | null; activo: boolean; grupoId: string | null;
+  tipoId: string | null; regimenId: string | null;
+  tipo?: { nombre: string } | null; regimen?: { nombre: string } | null;
   emailRepresentante: string | null; emailAdministracion: string | null; emailContabilidad: string | null; emailTalentoHumano: string | null; emailTesoreria: string | null;
   almacenBytes?: number; almacenDocs?: number;
 };
 type Grupo = { id: string; nombre: string };
-type Form = Omit<Empresa, 'id' | 'activo'> & { activo: boolean };
+type Form = Omit<Empresa, 'id' | 'activo' | 'tipo' | 'regimen'> & { activo: boolean };
 
 const EMAILS: { k: keyof Form; label: string }[] = [
   { k: 'emailRepresentante', label: 'Representante' },
@@ -21,13 +23,15 @@ const EMAILS: { k: keyof Form; label: string }[] = [
   { k: 'emailTalentoHumano', label: 'Talento humano' },
   { k: 'emailTesoreria', label: 'Tesorería' },
 ];
-const vacio = (): Form => ({ nombre: '', nit: '', servicio: '', asesorNombre: '', activo: true, grupoId: '', emailRepresentante: '', emailAdministracion: '', emailContabilidad: '', emailTalentoHumano: '', emailTesoreria: '' });
+const vacio = (): Form => ({ nombre: '', nit: '', servicio: '', asesorNombre: '', activo: true, grupoId: '', tipoId: '', regimenId: '', emailRepresentante: '', emailAdministracion: '', emailContabilidad: '', emailTalentoHumano: '', emailTesoreria: '' });
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 };
 
 export default function EmpresasEditor() {
   const [items, setItems] = useState<Empresa[]>([]);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
+  const [tipos, setTipos] = useState<Grupo[]>([]);
+  const [regimenes, setRegimenes] = useState<Grupo[]>([]);
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +50,11 @@ export default function EmpresasEditor() {
   }, [incluirInactivos]);
 
   useEffect(() => { cargar(); }, [cargar]);
-  useEffect(() => { fetch('/api/admin/catalogos/grupos', { cache: 'no-store' }).then((r) => r.json()).then((d) => setGrupos(d.items ?? [])).catch(() => {}); }, []);
+  useEffect(() => {
+    const cat = (t: string, set: (v: Grupo[]) => void) =>
+      fetch(`/api/admin/catalogos/${t}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => set(d.items ?? [])).catch(() => {});
+    cat('grupos', setGrupos); cat('tipos-empresa', setTipos); cat('regimenes', setRegimenes);
+  }, []);
 
   async function toggleActivo(e: Empresa) {
     const res = await fetch(`/api/admin/empresas/${e.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ activo: !e.activo }) });
@@ -63,10 +71,10 @@ export default function EmpresasEditor() {
   const filtrada = items.filter((e) => !q || `${e.nombre} ${e.nit ?? ''} ${e.asesorNombre ?? ''}`.toLowerCase().includes(q.toLowerCase()));
 
   async function descargar() {
-    const encabezado = ['Cliente', 'NIT', 'Servicio', 'Grupo', 'Asesor', 'Activo',
+    const encabezado = ['Cliente', 'NIT', 'Tipo', 'Servicio', 'Grupo', 'Asesor', 'Régimen', 'Activo',
       'Email representante', 'Email administración', 'Email contabilidad', 'Email talento humano', 'Email tesorería'];
     const filas = filtrada.map((e) => [
-      e.nombre, e.nit ?? '', e.servicio ?? '', nombreGrupo(e.grupoId) ?? '', e.asesorNombre ?? '', e.activo ? 'Sí' : 'No',
+      e.nombre, e.nit ?? '', e.tipo?.nombre ?? '', e.servicio ?? '', nombreGrupo(e.grupoId) ?? '', e.asesorNombre ?? '', e.regimen?.nombre ?? '', e.activo ? 'Sí' : 'No',
       e.emailRepresentante ?? '', e.emailAdministracion ?? '', e.emailContabilidad ?? '', e.emailTalentoHumano ?? '', e.emailTesoreria ?? '',
     ]);
     try {
@@ -90,19 +98,26 @@ export default function EmpresasEditor() {
       <div className="panel">
         <div className="dt-wrap dt-alta">
           <table className="dt">
-            <thead><tr><th>Cliente</th><th>NIT</th><th>Servicio</th><th>Grupo</th><th>Asesor</th><th style={{ whiteSpace: 'nowrap' }}>Almacenamiento</th><th>Activo</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>NIT</th><th>Tipo</th><th>Servicio</th><th>Grupo</th><th>Asesor</th><th>Régimen</th><th style={{ whiteSpace: 'nowrap' }}>Almacenamiento</th><th>Activo</th><th>Acciones</th></tr></thead>
             <tbody>
               {cargando ? (
-                <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
+                <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
               ) : filtrada.length === 0 ? (
-                <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin clientes.</td></tr>
+                <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin clientes.</td></tr>
               ) : filtrada.map((e) => (
                 <tr key={e.id}>
                   <td style={{ fontWeight: 600 }}>{e.nombre}</td>
                   <td style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 12.5 }}>{e.nit ?? '—'}</td>
+                  {/* Sin tipo no se puede saber la naturaleza jurídica, y de ahí
+                      dependen el RUB, el revisor fiscal y el 368-2. No es un
+                      hueco cosmético: se marca. */}
+                  <td style={{ color: e.tipo?.nombre ? 'var(--muted)' : 'var(--peligro)', fontWeight: e.tipo?.nombre ? 400 : 700 }}>
+                    {e.tipo?.nombre ?? 'sin tipo'}
+                  </td>
                   <td style={{ color: 'var(--muted)' }}>{e.servicio ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{nombreGrupo(e.grupoId) ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{e.asesorNombre ?? '—'}</td>
+                  <td style={{ color: 'var(--muted)' }}>{e.regimen?.nombre ?? '—'}</td>
                   <td style={{ whiteSpace: 'nowrap', color: (e.almacenBytes ?? 0) > 0 ? 'var(--ink)' : 'var(--muted)', fontSize: 12.5 }}>{(e.almacenBytes ?? 0) > 0 ? `${fmtBytes(e.almacenBytes ?? 0)} · ${e.almacenDocs ?? 0} doc` : '—'}</td>
                   <td><button onClick={() => toggleActivo(e)} title={e.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>{e.activo ? '🟢' : '⚪'}</button></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
@@ -116,17 +131,18 @@ export default function EmpresasEditor() {
         </div>
       </div>
 
-      {editar && <Editor empresa={editar} grupos={grupos} onClose={() => { setEditar(null); cargar(); }} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
+      {editar && <Editor empresa={editar} grupos={grupos} tipos={tipos} regimenes={regimenes} onClose={() => { setEditar(null); cargar(); }} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
     </div>
   );
 }
 
 const ic = (color: string): React.CSSProperties => ({ border: 'none', background: 'none', cursor: 'pointer', color, fontSize: 14, padding: '2px 5px' });
 
-function Editor({ empresa, grupos, onClose, onGuardado, onError }: { empresa: Empresa | 'nuevo'; grupos: Grupo[]; onClose: () => void; onGuardado: () => void; onError: (m: string) => void }) {
+function Editor({ empresa, grupos, tipos, regimenes, onClose, onGuardado, onError }: { empresa: Empresa | 'nuevo'; grupos: Grupo[]; tipos: Grupo[]; regimenes: Grupo[]; onClose: () => void; onGuardado: () => void; onError: (m: string) => void }) {
   const nuevo = empresa === 'nuevo';
   const [form, setForm] = useState<Form>(nuevo ? vacio() : {
     nombre: empresa.nombre, nit: empresa.nit ?? '', servicio: empresa.servicio ?? '', asesorNombre: empresa.asesorNombre ?? '', activo: empresa.activo, grupoId: empresa.grupoId ?? '',
+    tipoId: empresa.tipoId ?? '', regimenId: empresa.regimenId ?? '',
     emailRepresentante: empresa.emailRepresentante ?? '', emailAdministracion: empresa.emailAdministracion ?? '', emailContabilidad: empresa.emailContabilidad ?? '', emailTalentoHumano: empresa.emailTalentoHumano ?? '', emailTesoreria: empresa.emailTesoreria ?? '',
   });
   const [guardando, setGuardando] = useState(false);
@@ -156,6 +172,29 @@ function Editor({ empresa, grupos, onClose, onGuardado, onError }: { empresa: Em
             <label><span style={lbl}>NIT</span><input style={input} value={form.nit ?? ''} onChange={(e) => set('nit', e.target.value)} /></label>
             <label><span style={lbl}>Servicio</span><input style={input} value={form.servicio ?? ''} onChange={(e) => set('servicio', e.target.value)} placeholder="Outsourcing…" /></label>
           </div>
+          {/* El tipo de empresa no es un dato descriptivo: de él salen el RUB,
+              el revisor fiscal y el 368-2. Sin él esas reglas no se evalúan. */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label><span style={lbl}>Tipo de empresa</span>
+              <select style={{ ...input, ...(form.tipoId ? {} : { borderColor: 'var(--peligro-borde)' }) }} value={form.tipoId ?? ''} onChange={(e) => set('tipoId', e.target.value)}>
+                <option value="">— Sin asignar —</option>
+                {tipos.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+              </select>
+            </label>
+            <label><span style={lbl}>Régimen tributario</span>
+              <select style={input} value={form.regimenId ?? ''} onChange={(e) => set('regimenId', e.target.value)}>
+                <option value="">— Sin asignar —</option>
+                {regimenes.map((r) => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+              </select>
+            </label>
+          </div>
+          {!form.tipoId && (
+            <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12, lineHeight: 1.55, marginTop: -4 }}>
+              Sin tipo de empresa no se puede determinar la naturaleza jurídica, y de ella dependen el <strong>RUB</strong>,
+              el <strong>revisor fiscal</strong> y el <strong>art. 368-2</strong>. Después de asignarlo, regenera sus
+              vencimientos en <em>Config. tributaria</em>.
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <label><span style={lbl}>Asesor (nombre)</span><input style={input} value={form.asesorNombre ?? ''} onChange={(e) => set('asesorNombre', e.target.value)} /></label>
             <label><span style={lbl}>Grupo empresarial</span>

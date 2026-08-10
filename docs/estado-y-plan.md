@@ -303,6 +303,14 @@ custodia de la firma (Ley 1581). Se registra **quién** tiene el acceso y **dón
 está la clave; nunca la clave. La decisión quedó escrita en el modelo de datos
 para que nadie agregue el campo por descuido.
 
+**El tipo de empresa ya se puede editar.** `Empresa.tipoId` y `Empresa.regimenId`
+existían en la base desde el principio, pero **ningún formulario los exponía**: los
+clientes que llegaron sin tipo en la importación no se podían arreglar desde la
+aplicación, y son justo los que se quedaban sin RUB. Ahora están en *Administración
+→ Empresas* (con sus catálogos en *Tipos de empresa* y *Regímenes*), el listado
+marca en rojo a quien no tiene tipo, y el formulario advierte de qué reglas se
+quedan sin evaluar mientras falte.
+
 **La ficha es la vista por cliente; Administración conserva las transversales.**
 Revisar un cliente no debe obligar a abrir tres pantallas y recordar lo visto en
 las otras dos — así se cuela un error. Pero la pregunta *"¿a cuáles de los 90 les
