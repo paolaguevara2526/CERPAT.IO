@@ -11,6 +11,7 @@
 // convertirse en componente de cliente.
 
 import { useMemo, useState } from 'react';
+import { descargarXlsx, hoyISO } from './exportar';
 import FiltroColumna from './FiltroColumna';
 import FiltrosActivos from './FiltrosActivos';
 import { useOrden, ThOrden } from './orden';
@@ -34,7 +35,7 @@ export type Columna<T> = {
 };
 
 export default function TablaDatos<T>({
-  filas, columnas, idDe, vacio = 'No hay datos.', sinCoincidencias = 'Ninguno cumple los filtros.', nota, acciones,
+  filas, columnas, idDe, vacio = 'No hay datos.', sinCoincidencias = 'Ninguno cumple los filtros.', nota, acciones, exportar,
 }: {
   filas: T[];
   columnas: Columna<T>[];
@@ -45,7 +46,10 @@ export default function TablaDatos<T>({
   nota?: React.ReactNode;
   /** Columna final sin encabezado, para botones por fila. */
   acciones?: (fila: T) => React.ReactNode;
+  /** Nombre base del Excel. Si se pasa, aparece el botón de descarga. */
+  exportar?: string;
 }) {
+  const [exportando, setExportando] = useState(false);
   const [filtros, setFiltros] = useState<Record<string, Set<string> | null>>({});
   const { orden, alternar, ordenar } = useOrden<string>();
 
@@ -75,6 +79,20 @@ export default function TablaDatos<T>({
   const hayFiltro = Object.values(filtros).some((s) => s != null);
   const total = columnas.length + (acciones ? 1 : 0);
 
+  // Baja lo que se está viendo: con los filtros puestos y en el orden actual.
+  // Exportar siempre la tabla completa sería una trampa — quien acaba de filtrar
+  // por un asesor espera ese recorte, no las 90 filas, y la diferencia no se ve
+  // hasta que alguien trabaja sobre el archivo equivocado.
+  async function bajar() {
+    if (!exportar) return;
+    setExportando(true);
+    try {
+      const encabezado = columnas.map((c) => c.label);
+      const cuerpo = visibles.map((f) => columnas.map((c) => c.valor(f)));
+      await descargarXlsx(`${exportar}-${hoyISO()}.xlsx`, [{ nombre: exportar.slice(0, 31), filas: [encabezado, ...cuerpo] }]);
+    } finally { setExportando(false); }
+  }
+
   return (
     <>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
@@ -83,6 +101,12 @@ export default function TablaDatos<T>({
         </span>
         {hayFiltro && (
           <button className="dbtn" style={{ fontSize: 12 }} onClick={() => setFiltros({})}>Limpiar filtros</button>
+        )}
+        {exportar && (
+          <button className="dbtn" style={{ fontSize: 12 }} onClick={bajar} disabled={exportando || visibles.length === 0}
+            title={hayFiltro ? 'Descarga las filas que estás viendo, con los filtros puestos' : 'Descarga la tabla completa en Excel'}>
+            {exportando ? 'Generando…' : `⬇ Descargar Excel${hayFiltro ? ` (${visibles.length})` : ''}`}
+          </button>
         )}
         <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>
           {nota ?? 'Clic en el título de la columna para ordenar · embudo ▼ para filtrar.'}

@@ -80,6 +80,7 @@ export default function TablaClientes({ empresas }: { empresas: Empresa[] }) {
       idDe={(e) => e.id}
       vacio="No hay empresas cargadas todavía."
       sinCoincidencias="Ninguna empresa cumple los filtros."
+      exportar="clientes-cerpat"
     />
   );
 }
