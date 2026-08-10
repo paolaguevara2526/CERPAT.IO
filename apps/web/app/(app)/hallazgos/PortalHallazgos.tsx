@@ -43,7 +43,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<Hallazgo | 'nuevo' | null>(null);
   const [busqueda, setBusqueda] = useState('');
-  const [filtro, setFiltro] = useState<'todos' | 'resuelto' | 'en_gestion' | 'vencido'>('todos');
+  const [filtro, setFiltro] = useState<'todos' | 'pendiente' | 'en_gestion' | 'resuelto' | 'vencido'>('todos');
   const [importando, setImportando] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
   const [pegar, setPegar] = useState<string | null>(null); // null = cerrado; string = texto pegado
@@ -247,7 +247,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 20 }}>
             <div className="tile"><div className="k">Hallazgos</div><div className="v" style={{ color: 'var(--navy)' }}>{total}</div><div className="s">en total</div></div>
             <div className="tile"><div className="k">Resueltos</div><div className="v" style={{ color: 'var(--exito)' }}>{resueltos}<small>/{total}</small></div><div className="s">{pct}% cerrado</div></div>
-            <div className="tile"><div className="k">En gestión</div><div className="v" style={{ color: 'var(--info)' }}>{enGestion}</div><div className="s">en curso</div></div>
+            <div className="tile"><div className="k">Al día</div><div className="v" style={{ color: 'var(--info)' }}>{enGestion}</div><div className="s">abiertos dentro del plazo</div></div>
             <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: vencidos ? 'var(--peligro)' : 'var(--neutro)' }}>{vencidos}</div><div className="s">requieren atención</div></div>
           </div>
         )}
@@ -322,14 +322,29 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
 
   // ---- Detalle por empresa (matriz) ----
   const k = resumen?.porEmpresa.find((e) => e.empresaId === sel);
+  // El ESTADO del trabajo (pendiente / en gestión / resuelto) y el VENCIMIENTO
+  // son ejes distintos: un hallazgo puede estar en gestión Y vencido a la vez —
+  // de hecho es lo normal cuando se pasó el plazo y alguien lo está atendiendo.
+  //
+  // Antes "En gestión" se calculaba como "ni resuelto ni vencido", así que al
+  // marcar en gestión un hallazgo con el plazo pasado no cambiaba nada visible:
+  // el contador no se movía y, si se estaba en esa pestaña, la fila desaparecía.
+  // Parecía que la aplicación no dejaba guardarlo, y lo que estaba mal era el
+  // conteo. Ahora cada pestaña mira su propio eje.
+  const nPendientes = hallazgos.filter((h) => h.estado === 'pendiente').length;
+  const nGestion = hallazgos.filter((h) => h.estado === 'en_gestion').length;
   const nResueltos = hallazgos.filter((h) => h.estado === 'resuelto').length;
   const nVencidos = hallazgos.filter((h) => h.vencido).length;
-  const nGestion = hallazgos.filter((h) => !h.vencido && h.estado !== 'resuelto').length;
-  const filtrados = hallazgos.filter((h) => filtro === 'todos' ? true : filtro === 'vencido' ? h.vencido : filtro === 'resuelto' ? h.estado === 'resuelto' : (!h.vencido && h.estado !== 'resuelto'));
+  const filtrados = hallazgos.filter((h) => (
+    filtro === 'todos' ? true
+      : filtro === 'vencido' ? h.vencido
+        : h.estado === filtro
+  ));
   const TABS: { id: typeof filtro; label: string; n: number }[] = [
     { id: 'todos', label: 'Todos', n: hallazgos.length },
-    { id: 'resuelto', label: 'Resueltos', n: nResueltos },
+    { id: 'pendiente', label: 'Pendientes', n: nPendientes },
     { id: 'en_gestion', label: 'En gestión', n: nGestion },
+    { id: 'resuelto', label: 'Resueltos', n: nResueltos },
     { id: 'vencido', label: 'Vencidos', n: nVencidos },
   ];
 
@@ -460,7 +475,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 16 }}>
           <div className="tile"><div className="k">Hallazgos</div><div className="v" style={{ color: 'var(--navy)' }}>{k.total}</div><div className="s">de la empresa</div></div>
           <div className="tile"><div className="k">Resueltos</div><div className="v" style={{ color: 'var(--exito)' }}>{k.resueltos}</div><div className="s">{k.pct}% cerrado</div></div>
-          <div className="tile"><div className="k">En gestión</div><div className="v" style={{ color: 'var(--info)' }}>{k.enGestion}</div><div className="s">en curso</div></div>
+          <div className="tile"><div className="k">Al día</div><div className="v" style={{ color: 'var(--info)' }}>{k.enGestion}</div><div className="s">abiertos dentro del plazo</div></div>
           <div className="tile"><div className="k">Vencidos</div><div className="v" style={{ color: k.vencidos ? 'var(--peligro)' : 'var(--neutro)' }}>{k.vencidos}</div><div className="s">requieren atención</div></div>
         </div>
       )}
@@ -474,6 +489,11 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
             </button>
           );
         })}
+        {nVencidos > 0 && (
+          <span style={{ alignSelf: 'center', fontSize: 11.5, color: 'var(--muted)', marginLeft: 4 }}>
+            «Vencidos» cruza a las demás: un hallazgo puede estar en gestión y vencido a la vez.
+          </span>
+        )}
       </div>
       {esGestor && (
         <div
