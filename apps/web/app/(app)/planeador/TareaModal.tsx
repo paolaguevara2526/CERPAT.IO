@@ -5,6 +5,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { contarConsecutivos } from './consecutivos';
 
 type Opcion = { id: string; nombre: string };
 type Sub = { id: string; texto: string; estado: string };
@@ -19,14 +20,7 @@ const VACIO: Form = {
   observaciones: '', generaPago: false, requiereRevisionTecnica: false,
 };
 const iso = (s?: string) => (s ? s.slice(0, 10) : '');
-// Cuenta registros a partir del rango de comprobantes (dígitos finales):
-// CE-1045 → CE-1290 = 246 (final − inicial + 1). '' si no se puede calcular.
-function contarRegistros(desde: string, hasta: string): string {
-  const a = desde.match(/(\d+)\s*$/); const b = hasta.match(/(\d+)\s*$/);
-  if (!a || !b) return '';
-  const na = parseInt(a[1], 10), nb = parseInt(b[1], 10);
-  return nb >= na ? String(nb - na + 1) : '';
-}
+// El conteo lo comparte con la captura por lotes del auxiliar: ver consecutivos.ts.
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 };
 
@@ -46,10 +40,10 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
   const [reg, setReg] = useState({ desde: '', hasta: '', cantidad: '' });
   const [cantidadManual, setCantidadManual] = useState(false);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const setDesde = (v: string) => setReg((r) => ({ ...r, desde: v, cantidad: cantidadManual ? r.cantidad : contarRegistros(v, r.hasta) }));
-  const setHasta = (v: string) => setReg((r) => ({ ...r, hasta: v, cantidad: cantidadManual ? r.cantidad : contarRegistros(r.desde, v) }));
+  const setDesde = (v: string) => setReg((r) => ({ ...r, desde: v, cantidad: cantidadManual ? r.cantidad : contarConsecutivos(v, r.hasta) }));
+  const setHasta = (v: string) => setReg((r) => ({ ...r, hasta: v, cantidad: cantidadManual ? r.cantidad : contarConsecutivos(r.desde, v) }));
   const setCantidad = (v: string) => { setCantidadManual(true); setReg((r) => ({ ...r, cantidad: v })); };
-  const recalcular = () => { setCantidadManual(false); setReg((r) => ({ ...r, cantidad: contarRegistros(r.desde, r.hasta) })); };
+  const recalcular = () => { setCantidadManual(false); setReg((r) => ({ ...r, cantidad: contarConsecutivos(r.desde, r.hasta) })); };
 
   const cargarSubs = useCallback(async (tid: string) => {
     const r = await fetch(`/api/planeador/gestion/tareas/${tid}/subtareas`, { cache: 'no-store' });

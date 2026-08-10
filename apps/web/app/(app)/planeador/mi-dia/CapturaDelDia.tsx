@@ -4,6 +4,7 @@
 // registrar lotes en línea, sin entrar cliente por cliente al calendario.
 
 import { Fragment, useEffect, useState } from 'react';
+import { contarConsecutivos } from '../consecutivos';
 
 const TIPOS_DOC = ['Egresos', 'Facturas de compra', 'Facturas de venta', 'Documento equivalente', 'Notas contables', 'Nómina', 'Ingresos'];
 
@@ -21,8 +22,11 @@ const ESTADOS_EDIT = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'no
 type Fila = {
   id: string; estado: string; empresa: string; area: string | null;
   totalLotes: number; lotesHoy: number; ultimaFecha: string | null;
+  /** 'ejecuta' = le toca capturar · 'observa' = es de su auxiliar, solo mira. */
+  rol: 'ejecuta' | 'observa';
+  auxiliar: string | null;
 };
-type Resp = { periodo: string | null; hoy: string | null; total: number; capturadosHoy: number; tareas: Fila[] };
+type Resp = { periodo: string | null; hoy: string | null; total: number; totalObservadas: number; capturadosHoy: number; tareas: Fila[] };
 type NuevoLote = { tipoDocumento: string; desde: string; hasta: string; cantidad: string; fecha: string };
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
@@ -39,6 +43,17 @@ export default function CapturaDelDia() {
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null); // tareaId con el formulario abierto
   const [nl, setNl] = useState<NuevoLote>(loteVacio());
+  // La cantidad se calcula del rango, pero se puede corregir: hay lotes con
+  // consecutivos anulados en medio, y ahí el conteo real no es el del rango.
+  // Si el auxiliar la escribe, manda lo que escribió; si vacía el campo, el
+  // cálculo vuelve a tomar el control.
+  const [cantidadManual, setCantidadManual] = useState(false);
+  const setDesde = (v: string) => setNl((p) => ({ ...p, desde: v, cantidad: cantidadManual ? p.cantidad : contarConsecutivos(v, p.hasta) }));
+  const setHasta = (v: string) => setNl((p) => ({ ...p, hasta: v, cantidad: cantidadManual ? p.cantidad : contarConsecutivos(p.desde, v) }));
+  const setCantidad = (v: string) => {
+    setCantidadManual(v.trim() !== '');
+    setNl((p) => ({ ...p, cantidad: v.trim() === '' ? contarConsecutivos(p.desde, p.hasta) : v }));
+  };
   const [msg, setMsg] = useState<{ id: string; texto: string; ok: boolean } | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -56,7 +71,7 @@ export default function CapturaDelDia() {
 
   function abrir(id: string) {
     if (abierto === id) { setAbierto(null); return; }
-    setAbierto(id); setNl(loteVacio()); setMsg(null);
+    setAbierto(id); setNl(loteVacio()); setCantidadManual(false); setMsg(null);
   }
 
   async function agregarLote(id: string) {
@@ -70,6 +85,7 @@ export default function CapturaDelDia() {
       if (!r.ok) { setMsg({ id, texto: d?.error ?? 'No se pudo registrar el lote.', ok: false }); return; }
       setMsg({ id, texto: `✓ ${nl.tipoDocumento} registrado.`, ok: true });
       setNl((p) => ({ ...loteVacio(), fecha: p.fecha })); // limpia campos, conserva la fecha para seguir capturando
+      setCantidadManual(false);
       await cargar();
     } finally { setGuardando(false); }
   }
@@ -87,14 +103,18 @@ export default function CapturaDelDia() {
 
   if (cargando) return null; // silencioso mientras carga
   if (error) return <div className="panel" style={{ padding: 16, color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudo cargar la captura: {error}.</div>;
-  // Sin captura asignada (p. ej. un asesor): se oculta para no meter ruido.
-  if (!data || data.total === 0) return null;
+  // Sin nada que capturar NI que vigilar: se oculta para no meter ruido.
+  if (!data || (data.total === 0 && data.totalObservadas === 0)) return null;
+  const mias = data.tareas.filter((t) => t.rol === 'ejecuta');
+  const deAuxiliares = data.tareas.filter((t) => t.rol === 'observa');
 
   const th: React.CSSProperties = { textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '8px 10px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
   const td: React.CSSProperties = { padding: '9px 10px', fontSize: 13, borderBottom: '1px solid var(--border)', verticalAlign: 'middle' };
   const inp: React.CSSProperties = { padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12.5, background: 'var(--card, #fff)', color: 'inherit' };
 
   return (
+    <>
+    {mias.length > 0 && (
     <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
         <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>📥 Captura del día</h2>
@@ -117,7 +137,7 @@ export default function CapturaDelDia() {
             </tr>
           </thead>
           <tbody>
-            {data.tareas.map((t) => {
+            {mias.map((t) => {
               const abiertaAqui = abierto === t.id;
               const em = ESTADOS[t.estado] ?? { label: t.estado, color: 'var(--muted)' };
               return (
@@ -157,9 +177,14 @@ export default function CapturaDelDia() {
                           <Campo label="Tipo de documento" w={200}>
                             <input list="tipos-doc-midia" value={nl.tipoDocumento} onChange={(e) => setNl({ ...nl, tipoDocumento: e.target.value })} placeholder="Egresos, Facturas…" style={{ ...inp, width: '100%' }} />
                           </Campo>
-                          <Campo label="Desde" w={110}><input value={nl.desde} onChange={(e) => setNl({ ...nl, desde: e.target.value })} placeholder="consec." style={{ ...inp, width: '100%' }} /></Campo>
-                          <Campo label="Hasta" w={110}><input value={nl.hasta} onChange={(e) => setNl({ ...nl, hasta: e.target.value })} placeholder="consec." style={{ ...inp, width: '100%' }} /></Campo>
-                          <Campo label="Cantidad" w={90}><input type="number" min={0} value={nl.cantidad} onChange={(e) => setNl({ ...nl, cantidad: e.target.value })} style={{ ...inp, width: '100%' }} /></Campo>
+                          <Campo label="Desde" w={110}><input value={nl.desde} onChange={(e) => setDesde(e.target.value)} placeholder="consec." style={{ ...inp, width: '100%' }} /></Campo>
+                          <Campo label="Hasta" w={110}><input value={nl.hasta} onChange={(e) => setHasta(e.target.value)} placeholder="consec." style={{ ...inp, width: '100%' }} /></Campo>
+                          <Campo label={cantidadManual ? 'Cantidad ·  a mano' : 'Cantidad · auto'} w={110}>
+                            <input type="number" min={0} value={nl.cantidad} onChange={(e) => setCantidad(e.target.value)}
+                              title={cantidadManual
+                                ? 'Lo estás escribiendo tú. Borra el campo para que vuelva a calcularse del rango.'
+                                : 'Se calcula del rango, contando los dos extremos: de 100 a 105 son 6 documentos.'}
+                              style={{ ...inp, width: '100%', ...(cantidadManual ? {} : { color: 'var(--muted)' }) }} /></Campo>
                           <Campo label="Fecha" w={140}><input type="date" value={nl.fecha} onChange={(e) => setNl({ ...nl, fecha: e.target.value })} style={{ ...inp, width: '100%' }} /></Campo>
                           <button onClick={() => agregarLote(t.id)} disabled={guardando} className="dbtn primary" style={{ fontSize: 12.5, fontWeight: 700, opacity: guardando ? 0.6 : 1 }}>＋ Agregar</button>
                         </div>
@@ -175,6 +200,71 @@ export default function CapturaDelDia() {
           </tbody>
         </table>
         <datalist id="tipos-doc-midia">{TIPOS_DOC.map((x) => <option key={x} value={x} />)}</datalist>
+      </div>
+    </div>
+    )}
+
+    {deAuxiliares.length > 0 && <CapturaDeAuxiliares filas={deAuxiliares} />}
+    </>
+  );
+}
+
+// Lo que capturan los auxiliares del asesor: solo lectura.
+//
+// El asesor no captura, pero necesita ver cómo va: de que la captura quede
+// terminada depende que se le libere el insumo y pueda arrancar. Antes esta
+// misma información le llegaba con botón de "Registrar lote" y selector de
+// estado — trabajo que no es suyo y que, si lo tocaba, tapaba que su auxiliar
+// no lo había hecho.
+function CapturaDeAuxiliares({ filas }: { filas: Fila[] }) {
+  const th: React.CSSProperties = { textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '8px 10px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
+  const td: React.CSSProperties = { padding: '9px 10px', fontSize: 13, borderBottom: '1px solid var(--border)', verticalAlign: 'middle' };
+  const pendientes = filas.filter((f) => f.estado !== 'terminado' && f.estado !== 'auditado').length;
+
+  return (
+    <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+        <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>👀 Captura de mis auxiliares</h2>
+        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Solo consulta — el insumo se libera cuando quede terminada.</span>
+        <span style={{ marginLeft: 'auto' }}>
+          <Chip n={pendientes} label="sin terminar" tono={pendientes ? 'var(--alerta-fuerte)' : undefined} />
+        </span>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
+          <thead>
+            <tr>
+              <th style={th}>Cliente</th>
+              <th style={th}>Auxiliar</th>
+              <th style={{ ...th, textAlign: 'center' }}>Hoy</th>
+              <th style={{ ...th, textAlign: 'center' }}>Lotes</th>
+              <th style={th}>Última</th>
+              <th style={th}>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((t) => {
+              const em = ESTADOS[t.estado] ?? { label: t.estado, color: 'var(--muted)' };
+              return (
+                <tr key={t.id}>
+                  <td style={{ ...td, fontWeight: 600 }}>
+                    {t.empresa}
+                    {t.area && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6, fontSize: 11.5 }}>· {t.area}</span>}
+                  </td>
+                  <td style={{ ...td, color: 'var(--muted)' }}>{t.auxiliar ?? '—'}</td>
+                  <td style={{ ...td, textAlign: 'center' }}>
+                    {t.lotesHoy > 0
+                      ? <span style={{ fontWeight: 800, color: 'var(--exito)' }}>{t.lotesHoy}</span>
+                      : <span style={{ color: 'var(--muted)' }}>—</span>}
+                  </td>
+                  <td style={{ ...td, textAlign: 'center', color: 'var(--muted)' }}>{t.totalLotes}</td>
+                  <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtFecha(t.ultimaFecha)}</td>
+                  <td style={td}><span className="chip" style={{ color: em.color, borderColor: em.color }}>{em.label}</span></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

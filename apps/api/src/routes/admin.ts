@@ -1117,6 +1117,60 @@ adminRouter.post('/entregas/:empresaId', requireAuth, soloCoordinacion, async (r
   res.json({ ok: true });
 });
 
+// POST /admin/entregas/liberar-periodo { periodo, dryRun, revertir }
+//
+// Libera el insumo de TODOS los clientes activos de una vez, con una entrega
+// GENERAL (sin área) y origen 'manual'.
+//
+// Existe por el desfase real del ciclo contable: el asesor trabaja en agosto
+// sobre lo que se capturó en julio. El sistema, en cambio, exige la entrega del
+// MISMO período, así que al arrancar un mes todo el procesamiento aparece
+// bloqueado esperando una captura que no terminará hasta el mes siguiente. Sin
+// esto, la salida era entrar cliente por cliente: 90 veces.
+//
+// 'manual' es deliberado: la auto-entrega nunca revierte lo manual, así que una
+// captura reabierta no vuelve a bloquear al asesor que ya estaba trabajando.
+adminRouter.post('/entregas/liberar-periodo', requireAuth, soloCoordinacion, async (req: any, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const periodo = typeof req.body?.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.body.periodo) ? req.body.periodo : null;
+  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
+  const dryRun = req.body?.dryRun === true;
+  const revertir = req.body?.revertir === true;
+
+  try {
+    const empresas = await prisma.empresa.findMany({
+      where: { organizacionId: id, activo: true }, select: { id: true, nombre: true }, orderBy: { nombre: 'asc' },
+    });
+    // Solo las generales y manuales: una entrega por área, o una automática que
+    // nació de una captura terminada, no son de este mecanismo y no se tocan.
+    const yaLiberadas = await prisma.entregaInsumo.findMany({
+      where: { organizacionId: id, periodo, areaId: null, origen: 'manual' },
+      select: { empresaId: true },
+    });
+    const set = new Set(yaLiberadas.map((e) => e.empresaId));
+
+    if (revertir) {
+      const afectadas = empresas.filter((e) => set.has(e.id));
+      if (dryRun) return res.json({ periodo, revertir: true, afectadas: afectadas.length, nombres: afectadas.slice(0, 40).map((e) => e.nombre), total: empresas.length });
+      const r = await prisma.entregaInsumo.deleteMany({ where: { organizacionId: id, periodo, areaId: null, origen: 'manual' } });
+      return res.json({ periodo, revertir: true, afectadas: r.count });
+    }
+
+    const faltantes = empresas.filter((e) => !set.has(e.id));
+    if (dryRun) return res.json({ periodo, afectadas: faltantes.length, nombres: faltantes.slice(0, 40).map((e) => e.nombre), total: empresas.length, yaLiberadas: set.size });
+    if (faltantes.length > 0) {
+      await prisma.entregaInsumo.createMany({
+        data: faltantes.map((e) => ({ organizacionId: id, empresaId: e.id, periodo, areaId: null, origen: 'manual', entregadoPorId: req.user?.sub ?? null })),
+        skipDuplicates: true,
+      });
+    }
+    res.json({ periodo, afectadas: faltantes.length, yaLiberadas: set.size, total: empresas.length });
+  } catch (e) {
+    responderError(res, 'entregas:liberar-periodo', e, 'No se pudo liberar el período.');
+  }
+});
+
 // DELETE /admin/entregas/:empresaId { periodo, areaId|null } — revierte la entrega.
 adminRouter.delete('/entregas/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId(req);
