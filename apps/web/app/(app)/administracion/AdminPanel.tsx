@@ -9,6 +9,7 @@ import VencimientosEditor from './VencimientosEditor';
 import ChecklistVencimientos from './ChecklistVencimientos';
 import DiagnosticoRub from './DiagnosticoRub';
 import ParametrosAnuales from './ParametrosAnuales';
+import CifrasFiscales from './CifrasFiscales';
 import EmpresasEditor from './EmpresasEditor';
 import PlanClienteEditor from './PlanClienteEditor';
 import ConfigTributariaEditor from './ConfigTributariaEditor';
@@ -26,6 +27,7 @@ const TABS: Tab[] = [
   { id: 'checklist-venc', label: 'Checklist vencimientos' },
   { id: 'diag-rub', label: 'Diagnóstico RUB' },
   { id: 'param-anuales', label: 'Parámetros por año' },
+  { id: 'cifras', label: 'Cifras fiscales' },
   { id: 'tipos-empresa', label: 'Tipos de empresa', tipo: 'tipos-empresa' },
   { id: 'regimenes', label: 'Regímenes', tipo: 'regimenes' },
   { id: 'areas', label: 'Áreas', tipo: 'areas' },
@@ -80,6 +82,7 @@ export default function AdminPanel({ esAdmin = true }: { esAdmin?: boolean }) {
         : activo.id === 'checklist-venc' ? <ChecklistVencimientos />
         : activo.id === 'diag-rub' ? <DiagnosticoRub />
         : activo.id === 'param-anuales' ? <ParametrosAnuales />
+        : activo.id === 'cifras' ? <CifrasFiscales />
         : <ParametrosEditor />}
     </div>
   );

@@ -314,6 +314,18 @@ alguien. Mandar a la persona a otra pantalla a arreglar lo que acaba de ver es
 justo el patrón que la ficha vino a corregir. Ambos listados marcan **en rojo** a
 quien no tiene tipo y explican qué reglas quedan sin evaluar mientras falte.
 
+**Cifras en bloque.** Registrar activos e ingresos cliente por cliente son 90
+fichas a mano, y las cifras ya viven en un Excel del equipo. *Administración →
+Cifras fiscales* descarga una **plantilla con los clientes y sus NIT ya puestos**
+—solo hay que llenar dos columnas—, la importa de vuelta y muestra quién sigue
+sin cifras. **Siempre previsualiza antes de escribir**, como al regenerar
+vencimientos: una cifra equivocada cambia en silencio qué obligaciones le salen
+al cliente. El emparejamiento por NIT es la parte delicada y vive aparte, con
+pruebas (`fiscal/importar-cifras.ts`): la coincidencia exacta gana siempre, la
+variante sin dígito de verificación solo se acepta si es única, y ante cualquier
+ambigüedad la fila se rechaza — que quede sin importar es recuperable, que entre
+en el cliente equivocado no.
+
 **Códigos CIIU con buscador.** Las actividades económicas se escribían a mano,
 código y descripción. Con 499 clases de nombres largos y parecidos, eso garantiza
 descripciones distintas para el mismo código entre un cliente y otro — y el CIIU
