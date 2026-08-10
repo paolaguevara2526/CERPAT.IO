@@ -8,6 +8,7 @@ import HallazgoModal from './HallazgoModal';
 import { toCSV, parseCSV, descargar, normRiesgo, normPrioridad, normEstado, normFecha } from './csv';
 
 import { tinte } from '@/app/_components/color';
+import { logoCerpat } from '@/app/_components/logo-impresion';
 export type Empresa = { id: string; nombre: string; grupo: string | null };
 export type Hallazgo = {
   id: string; empresaId: string; empresa: string | null; area: string | null; titulo: string; descripcion: string | null;
@@ -376,8 +377,8 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
       *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;color:#16233b;}
       body{margin:0;} .doc{padding:22px 26px;}
       .head{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:2.5px solid #23406e;padding-bottom:10px;margin-bottom:14px;}
-      .brand{font-size:20px;font-weight:800;color:#23406e;letter-spacing:.5px;}
-      .brand small{display:block;font-size:10px;font-weight:600;color:#5b6a82;letter-spacing:2px;text-transform:uppercase;}
+      .brand svg{display:block;}
+      .brand small{display:block;font-size:9.5px;font-weight:600;color:#5b6a82;letter-spacing:2px;text-transform:uppercase;margin-top:5px;}
       h1{font-size:15px;margin:0;text-align:right;color:#23406e;} h1 small{display:block;font-size:10.5px;color:#5b6a82;font-weight:600;margin-top:2px;}
       .datos{display:flex;gap:26px;flex-wrap:wrap;font-size:11.5px;margin-bottom:12px;}
       .datos b{color:#5b6a82;font-weight:700;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;display:block;}
@@ -404,7 +405,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
       @media print{@page{size:A4 landscape;margin:10mm;} .doc{padding:0;}}
     </style></head><body><div class="doc">
       <div class="head">
-        <div class="brand">CERPAT<small>Revisoría fiscal</small></div>
+        <div class="brand">${logoCerpat(30)}<small>Revisoría fiscal</small></div>
         <h1>MATRIZ DE HALLAZGOS<small>Emitida el ${hoy}</small></h1>
       </div>
       <div class="datos">
