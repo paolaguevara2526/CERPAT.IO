@@ -642,7 +642,8 @@ planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) =
   const uid = u.sub;
 
   // Coordinación/root ve todas las capturas del período; el ejecutor, las suyas.
-  const scope = puedeGestionar(u) ? {} : { OR: [{ asesorId: uid }, { auxiliarId: uid }] };
+  const gestiona = puedeGestionar(u);
+  const scope = gestiona ? {} : { OR: [{ asesorId: uid }, { auxiliarId: uid }] };
 
   const tareas = await prisma.tarea.findMany({
     where: {
@@ -651,13 +652,27 @@ planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) =
       ...scope,
     },
     select: {
-      id: true, estado: true,
+      id: true, estado: true, asesorId: true, auxiliarId: true,
       empresa: { select: { nombre: true } },
       area: { select: { nombre: true } },
+      auxiliar: { select: { nombre: true } },
     },
     orderBy: [{ empresa: { nombre: 'asc' } }],
     take: 500,
   });
+
+  // Quién CAPTURA y quién solo MIRA. La captura la ejecuta el auxiliar; el asesor
+  // solo cuando el cliente no tiene auxiliar asignado. Antes esta bandeja no
+  // distinguía, y al asesor le salían once clientes con botón de "Registrar lote"
+  // — trabajo que no hace y que, si lo hiciera, taparía que su auxiliar no lo hizo.
+  // Sigue viendo los de sus auxiliares, pero en solo lectura: necesita saber cómo
+  // va la captura porque de ella depende que se le libere el insumo.
+  const rolDe = (t: { asesorId: string | null; auxiliarId: string | null }): 'ejecuta' | 'observa' => {
+    if (gestiona) return 'ejecuta';
+    if (t.auxiliarId === uid) return 'ejecuta';
+    if (t.asesorId === uid && t.auxiliarId === null) return 'ejecuta';
+    return 'observa';
+  };
 
   const ids = tareas.map((t) => t.id);
   // Límites del día (UTC) para contar los lotes capturados hoy.
@@ -676,10 +691,12 @@ planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) =
   const filas = tareas.map((t) => {
     const tot = totMap.get(t.id);
     const lh = hoyMap.get(t.id) ?? 0;
-    if (lh > 0) capturadosHoy++;
+    const rol = rolDe(t);
+    if (lh > 0 && rol === 'ejecuta') capturadosHoy++;
     return {
-      id: t.id, estado: t.estado,
+      id: t.id, estado: t.estado, rol,
       empresa: t.empresa?.nombre ?? '—', area: t.area?.nombre ?? null,
+      auxiliar: t.auxiliar?.nombre ?? null,
       totalLotes: tot?.n ?? 0, lotesHoy: lh, ultimaFecha: tot?.ult ?? null,
     };
   });
@@ -687,7 +704,10 @@ planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) =
   res.json({
     periodo,
     hoy: hoyIni.toISOString().slice(0, 10),
-    total: filas.length,
+    // `total` es lo que le toca capturar a esta persona; lo de sus auxiliares va
+    // aparte para que el contador de su bandeja no cuente trabajo ajeno.
+    total: filas.filter((f) => f.rol === 'ejecuta').length,
+    totalObservadas: filas.filter((f) => f.rol === 'observa').length,
     capturadosHoy,
     tareas: filas,
   });
