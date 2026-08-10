@@ -17,6 +17,7 @@ import { vencimientosRouter } from './routes/vencimientos.js';
 import { visitasRouter } from './routes/visitas.js';
 import { fichaRouter } from './routes/ficha.js';
 import { promoverRootSiSePide } from './bootstrap-root.js';
+import { mensajeDeError } from './errores.js';
 
 const app = express();
 
@@ -48,6 +49,22 @@ app.use('/ficha', fichaRouter);
 //  1) Verificar el token de sesión (middleware de autenticación).
 //  2) Verificar el rol del usuario contra la acción solicitada.
 //  3) Aplicar las reglas de negocio de CONTEXTO-PARA-CLAUDE-CODE.md antes de tocar la base de datos.
+
+// Último middleware: convierte cualquier error en JSON con un mensaje legible.
+// Sin esto, Express responde su página HTML por defecto, el proxy del frontend
+// no la puede leer, la vuelve `{}` y la pantalla muestra un genérico del tipo
+// "No se pudo guardar" — sin decir qué pasó ni dejar rastro para quien lo mire.
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[error no controlado]', err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: mensajeDeError(err) });
+});
+
+// Una promesa rechazada sin capturar mata el proceso de Node por defecto. En una
+// API eso significa que un solo request malo deja sin servicio a todo el equipo.
+// Se registra y se sigue en pie; el request que la provocó ya falló de todos modos.
+process.on('unhandledRejection', (razon) => console.error('[promesa sin capturar]', razon));
+process.on('uncaughtException', (e) => console.error('[excepción sin capturar]', e));
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 app.listen(PORT, () => {
