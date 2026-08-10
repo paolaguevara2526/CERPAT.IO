@@ -5,6 +5,7 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import { contarConsecutivos } from '../consecutivos';
+import PanelPlegable from '@/app/_components/PanelPlegable';
 
 const TIPOS_DOC = ['Egresos', 'Facturas de compra', 'Facturas de venta', 'Documento equivalente', 'Notas contables', 'Nómina', 'Ingresos'];
 
@@ -115,14 +116,13 @@ export default function CapturaDelDia() {
   return (
     <>
     {mias.length > 0 && (
-    <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-        <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>📥 Captura del día</h2>
-        <span style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Chip n={data.total} label="clientes por capturar" />
-          <Chip n={data.capturadosHoy} label="con captura hoy" tono="#22a670" />
-        </span>
-      </div>
+    <PanelPlegable
+      id="captura-del-dia" titulo="📥 Captura del día"
+      resumen={<>
+        <Chip n={data.total} label="clientes por capturar" />
+        <Chip n={data.capturadosHoy} label="con captura hoy" tono="#22a670" />
+      </>}
+    >
 
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
@@ -201,7 +201,7 @@ export default function CapturaDelDia() {
         </table>
         <datalist id="tipos-doc-midia">{TIPOS_DOC.map((x) => <option key={x} value={x} />)}</datalist>
       </div>
-    </div>
+    </PanelPlegable>
     )}
 
     {deAuxiliares.length > 0 && <CapturaDeAuxiliares filas={deAuxiliares} />}
@@ -222,14 +222,14 @@ function CapturaDeAuxiliares({ filas }: { filas: Fila[] }) {
   const pendientes = filas.filter((f) => f.estado !== 'terminado' && f.estado !== 'auditado').length;
 
   return (
-    <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-        <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>👀 Captura de mis auxiliares</h2>
-        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Solo consulta — el insumo se libera cuando quede terminada.</span>
-        <span style={{ marginLeft: 'auto' }}>
-          <Chip n={pendientes} label="sin terminar" tono={pendientes ? 'var(--alerta-fuerte)' : undefined} />
-        </span>
-      </div>
+    // Plegado por defecto: el asesor no lo ejecuta, lo consulta cuando quiere
+    // saber por qué algo no se ha liberado. Abierto le empujaba su propio
+    // trabajo fuera de la pantalla.
+    <PanelPlegable
+      id="captura-auxiliares" titulo="👀 Captura de mis auxiliares" abiertoPorDefecto={false}
+      nota="Solo consulta — el insumo se libera cuando quede terminada."
+      resumen={<Chip n={pendientes} label="sin terminar" tono={pendientes ? 'var(--alerta-fuerte)' : undefined} />}
+    >
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
           <thead>
@@ -266,7 +266,7 @@ function CapturaDeAuxiliares({ filas }: { filas: Fila[] }) {
           </tbody>
         </table>
       </div>
-    </div>
+    </PanelPlegable>
   );
 }
 

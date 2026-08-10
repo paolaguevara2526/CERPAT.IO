@@ -5,6 +5,7 @@
 // cliente. Se oculta si no hay nada listo.
 
 import { useEffect, useState } from 'react';
+import PanelPlegable from '@/app/_components/PanelPlegable';
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
   por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
@@ -72,15 +73,17 @@ export default function ListoParaProcesar() {
   const inp: React.CSSProperties = { padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12.5, background: 'var(--card, #fff)', color: 'inherit' };
 
   return (
-    <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-        <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>🟢 Listo para procesar</h2>
-        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>El insumo ya fue entregado — puedes arrancar.</span>
-        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'var(--exito-suave)', border: '1px solid #bfe8d2', borderRadius: 20, padding: '4px 12px' }}>
+    // Abierto por defecto: para el asesor es su trabajo, no una consulta.
+    <PanelPlegable
+      id="listo-para-procesar" titulo="🟢 Listo para procesar"
+      nota="El insumo ya fue entregado — puedes arrancar."
+      resumen={
+        <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: 'var(--exito-suave)', border: '1px solid #bfe8d2', borderRadius: 20, padding: '4px 12px' }}>
           <b style={{ fontSize: 14, color: 'var(--green-edge)' }}>{data.total}</b>
           <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>por procesar</span>
         </span>
-      </div>
+      }
+    >
 
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
@@ -118,6 +121,6 @@ export default function ListoParaProcesar() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PanelPlegable>
   );
 }

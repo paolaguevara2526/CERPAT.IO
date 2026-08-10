@@ -75,8 +75,22 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   };
   // Alcance: un Asesor/Auxiliar solo ve SUS tareas (donde es asesor o auxiliar).
   // Se combina con AND para no pisar otros OR (búsqueda/estado). Roles elevados ven todo.
+  // Alcance de un Asesor/Auxiliar. No basta con "donde figura": las tareas
+  // heredan asesor Y auxiliar de la asignación por cliente×área, así que un
+  // auxiliar figura también en el procesamiento de sus clientes — trabajo que
+  // no ejecuta. Le llenaba la Lista de tareas ajenas, la mayoría bloqueadas.
+  //
+  // El asesor sí conserva la vista amplia: ve lo suyo y lo de sus auxiliares,
+  // que es justo para lo que existe la Lista.
   if (esStaffAcotado(req.user)) {
-    where.AND = [...(where.AND ?? []), { OR: [{ asesorId: uid }, { auxiliarId: uid }] }];
+    where.AND = [...(where.AND ?? []), {
+      OR: [
+        { asesorId: uid },
+        { auxiliarId: uid, actividadPlan: { fase: 'captura' } },
+        // Sin asesor asignado no hay a quién más mostrárselo: se queda con él.
+        { auxiliarId: uid, asesorId: null },
+      ],
+    }];
   }
   // Mi Día = solo lo que le toca EJECUTAR al usuario, por tipo de actividad:
   //  - captura → la ejecuta el auxiliar (o el asesor si no hay auxiliar);
