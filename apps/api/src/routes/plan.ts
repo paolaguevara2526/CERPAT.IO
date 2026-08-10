@@ -707,8 +707,12 @@ planRouter.get('/mi-dia/procesar', requireAuth, async (req: AuthedRequest, res) 
     : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const u = req.user!;
   const uid = u.sub;
-  // Coordinación/root ve todo el procesamiento del período; el ejecutor, lo suyo.
-  const scope = puedeGestionar(u) ? {} : { OR: [{ asesorId: uid }, { auxiliarId: uid }] };
+  // Esta bandeja es del ASESOR: el procesamiento lo ejecuta él, igual que en la
+  // regla de Mi Día. Antes el alcance incluía `auxiliarId`, y como las tareas
+  // heredan asesor Y auxiliar de la asignación por cliente×área, al auxiliar le
+  // salían todas las tareas de procesamiento de sus clientes — trabajo que no es
+  // suyo — justo debajo de su captura del día.
+  const scope = puedeGestionar(u) ? {} : { asesorId: uid };
 
   const tareas = await prisma.tarea.findMany({
     where: {

@@ -20,6 +20,13 @@ function fmtFecha(iso: string): string {
 
 const guion = (v: string | null | undefined) => (v && v.trim() ? v : '—');
 
+// Quién ejecuta cada fase, y qué cuenta para liberarle el insumo al asesor.
+const FASE_META: Record<string, { label: string; color: string }> = {
+  captura: { label: 'Captura', color: 'var(--info)' },
+  procesamiento: { label: 'Procesamiento', color: 'var(--navy)' },
+  revision: { label: 'Revisión', color: 'var(--alerta-fuerte)' },
+};
+
 export default function TareasTablaCliente({ tareas, mostrarAsesor = true, gestionable = false }: {
   tareas: Tarea[]; mostrarAsesor?: boolean; gestionable?: boolean;
 }) {
@@ -40,6 +47,19 @@ export default function TareasTablaCliente({ tareas, mostrarAsesor = true, gesti
       ),
     },
     { clave: 'cliente', label: 'Cliente', valor: (t) => guion(t.empresa), buscar: true, estiloCelda: { color: 'var(--muted)' } },
+    {
+      // La fase decide quién ejecuta (captura → auxiliar; el resto → asesor) y
+      // cuándo se libera el insumo. Estaba en los datos pero no se veía, así que
+      // no había forma de entender por qué una tarea le tocaba a uno o a otro.
+      clave: 'fase', label: 'Fase', valor: (t) => FASE_META[t.fase ?? '']?.label ?? 'Sin fase',
+      render: (t) => {
+        const m = FASE_META[t.fase ?? ''];
+        return m
+          ? <span className="chip" style={{ color: m.color, borderColor: m.color }}>{m.label}</span>
+          : <span className="chip" style={{ color: 'var(--alerta-fuerte)', borderColor: 'var(--alerta-fuerte)' }}
+              title="Sin fase no se sabe quién la ejecuta ni cuenta para liberar el insumo al asesor. Se asigna en Administración → Cat. Tareas.">Sin fase</span>;
+      },
+    },
     { clave: 'area', label: 'Área', valor: (t) => guion(t.area), estiloCelda: { color: 'var(--muted)' } },
     ...(mostrarAsesor ? [{ clave: 'asesor', label: 'Asesor', valor: (t: Tarea) => guion(t.asesor), buscar: true, estiloCelda: { color: 'var(--muted)' } }] : []),
     { clave: 'auxiliar', label: 'Auxiliar', valor: (t) => guion(t.auxiliar), buscar: true, estiloCelda: { color: 'var(--muted)' } },
