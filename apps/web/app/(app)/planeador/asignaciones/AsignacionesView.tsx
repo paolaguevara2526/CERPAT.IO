@@ -8,6 +8,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import SyncResponsablesBoton from './SyncResponsablesBoton';
 import FiltroColumna from '@/app/_components/FiltroColumna';
+import FiltrosActivos from '@/app/_components/FiltrosActivos';
 
 import { tinte } from '@/app/_components/color';
 export type FilaAsignacion = {
@@ -144,6 +145,16 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
   const hayFiltro = !!(q || area || persona) || hayColFil;
   const limpiar = () => { setQ(''); setArea(''); setPersona(''); setRol('todos'); setColFil(SIN_COL); };
   const setCol = (c: ColKey, s: Set<string> | null) => setColFil((p) => ({ ...p, [c]: s }));
+
+  const ETIQUETA: Record<ColKey, string> = { empresa: 'Cliente', area: 'Área', asesor: 'Asesor', auxiliar: 'Auxiliar' };
+  const filtrosActivos = COLS.map((c) => ({ clave: c, etiqueta: ETIQUETA[c], seleccion: colFil[c], total: valores[c].length }));
+  // Con la tabla vacía no basta con decir "nada cumple los filtros": hay que
+  // decir CUÁL filtro, porque en esta vista los encabezados —y con ellos los
+  // embudos— dejan de dibujarse justo cuando más falta hacen.
+  const culpables = COLS.filter((c) => colFil[c] != null).map((c) => ETIQUETA[c]);
+  const vacioPorFiltro = culpables.length > 0
+    ? `Nada cumple los filtros. El embudo de ${culpables.length > 1 ? 'las columnas' : 'la columna'} ${culpables.join(' y ')} está limitando el resultado — quítalo arriba para volver a verlo todo.`
+    : 'Nada cumple los filtros.';
   // Embudo estilo Excel en el encabezado de una columna (detiene el clic para no ordenar).
   const embudo = (c: ColKey) => (
     <span onClick={(e) => e.stopPropagation()} style={{ display: 'inline-flex' }}>
@@ -242,6 +253,12 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
             <span style={{ marginLeft: 'auto', fontSize: 12.5, color: 'var(--muted)' }}>{filtradas.length} asignación(es){hayFiltro ? ` · de ${filas.length}` : ''}</span>
           </div>
 
+          <FiltrosActivos
+            filtros={filtrosActivos}
+            onQuitar={(c) => setCol(c as ColKey, null)}
+            onQuitarTodos={() => setColFil(SIN_COL)}
+          />
+
           {vista === 'persona' && esCoordinacion && (
             <div className="panel">
               <div className="dt-wrap dt-alta">
@@ -254,7 +271,7 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
                   </tr></thead>
                   <tbody>
                     {porPersona.length === 0 ? (
-                      <tr><td colSpan={4} style={{ padding: 22, textAlign: 'center', color: 'var(--muted)' }}>Nadie cumple los filtros.</td></tr>
+                      <tr><td colSpan={4} style={{ padding: 22, textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: 1.6 }}>{vacioPorFiltro.replace('Nada cumple', 'Nadie cumple')}</td></tr>
                     ) : porPersona.map((p) => {
                       const abierta = expandida === p.id;
                       return (
@@ -290,7 +307,7 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
           {vista === 'area' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
               {porArea.length === 0 ? (
-                <div className="panel" style={{ padding: 22, textAlign: 'center', color: 'var(--muted)' }}>Nada cumple los filtros.</div>
+                <div className="panel" style={{ padding: 22, textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: 1.6 }}>{vacioPorFiltro}</div>
               ) : porArea.map((g) => (
                 <div key={g.areaId}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
@@ -327,7 +344,7 @@ export default function AsignacionesView({ filas, esCoordinacion }: { filas: Fil
                 </tr></thead>
                 <tbody>
                   {porCliente.length === 0 ? (
-                    <tr><td colSpan={4} style={{ padding: 22, textAlign: 'center', color: 'var(--muted)' }}>Nada cumple los filtros.</td></tr>
+                    <tr><td colSpan={4} style={{ padding: 22, textAlign: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: 1.6 }}>{vacioPorFiltro}</td></tr>
                   ) : porCliente.map((f, i) => (
                     <tr key={f.empresaId + (f.areaId ?? '') + i}>
                       <td style={{ fontWeight: 600 }}>{f.empresa}</td>

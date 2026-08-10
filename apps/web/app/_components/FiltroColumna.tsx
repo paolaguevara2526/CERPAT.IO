@@ -66,7 +66,10 @@ export default function FiltroColumna({
     };
   }, [abierto]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const activo = seleccion != null && seleccion.size < valores.length;
+  // Cualquier selección explícita cuenta como filtro activo, incluso la vacía
+  // (que no deja pasar nada) y la que hoy cubre todos los valores: esa última
+  // sigue filtrando en cuanto aparezca un valor nuevo en los datos.
+  const activo = seleccion != null;
   const estaSel = (v: string) => seleccion == null || seleccion.has(v);
   const filtrados = valores.filter((v) => !busq.trim() || (v || '(vacío)').toLowerCase().includes(busq.trim().toLowerCase()));
 
