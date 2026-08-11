@@ -7,6 +7,7 @@ import { descargarXlsx, hoyISO, enLotes } from './exportar';
 import ImportarAsignacionesModal from './ImportarAsignacionesModal';
 import LiberarPeriodo from './LiberarPeriodo';
 import RecalcularFechas from './RecalcularFechas';
+import GenerarPeriodo from './GenerarPeriodo';
 
 type Empresa = { id: string; nombre: string };
 type Usuario = { id: string; nombre: string };
@@ -180,8 +181,11 @@ export default function PlanClienteEditor() {
 
   return (
     <>
-      <LiberarPeriodo />
+      {/* El orden es el del mes: primero se genera el período para todos,
+          después se ajustan plazos si cambió el catálogo, y al final se libera. */}
+      <GenerarPeriodo />
       <RecalcularFechas />
+      <LiberarPeriodo />
     <div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>

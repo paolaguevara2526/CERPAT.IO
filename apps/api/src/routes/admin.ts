@@ -12,6 +12,7 @@ import { orgDeSesion } from '../auth/tenant.js';
 import { hashPassword } from '../auth/password.js';
 import { responderError } from '../errores.js';
 import { nthDiaHabil } from '../vencimientos/generador.js';
+import { aplicaEnMesPlan } from '../plan/periodicidad.js';
 
 export const adminRouter = Router();
 
@@ -729,12 +730,6 @@ adminRouter.patch('/municipios/:id', requireAuth, soloCoordinacion, async (req, 
 
 // ---------- Plan de trabajo por cliente (PlanClienteActividad) ----------
 
-const PASO_PLAN: Record<string, number> = { Mensual: 1, Bimestral: 2, Trimestral: 3, Cuatrimestral: 4, Semestral: 6, Anual: 12 };
-function aplicaEnMesPlan(periodicidad: string | null, mes1a12: number): boolean {
-  const n = PASO_PLAN[(periodicidad || '').trim()];
-  return n ? (mes1a12 - 1) % n === 0 : false;
-}
-
 // GET /admin/plan-cliente/:empresaId — catálogo de actividades por área con el
 // estado del plan del cliente (marcadas/periodicidad propia).
 adminRouter.get('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
@@ -896,6 +891,136 @@ adminRouter.post('/plan-cliente/recalcular-fechas', requireAuth, soloCoordinacio
     res.json({ periodo, afectadas: total, revisadas: tareas.length });
   } catch (e) {
     responderError(res, 'plan-cliente:recalcular-fechas', e, 'No se pudieron recalcular las fechas.');
+  }
+});
+
+// POST /admin/plan-cliente/generar-masivo { periodo, dryRun }
+//
+// Genera el período completo para TODOS los clientes activos con plan, de una
+// sola vez. Antes había que entrar cliente por cliente y darle "Generar": con
+// ~90 clientes eso son ~90 vueltas a mano cada mes, y basta olvidar una para
+// que a un asesor no le aparezca trabajo que sí tiene que hacer.
+//
+// Es la misma regla que la generación por cliente, aplicada en bloque. Y es
+// igual de idempotente: lo ya generado no se duplica ni se toca, así que se
+// puede correr las veces que haga falta — al agregar un cliente nuevo a mitad
+// de mes, por ejemplo.
+//
+// Todo se resuelve con cinco consultas y el resto en memoria. Repetir la
+// versión por cliente noventa veces serían miles de consultas y un tiempo de
+// respuesta que Railway corta a la mitad.
+//
+// A diferencia de la generación por cliente, esta NO borra las tareas-duplicado
+// heredadas de actividades ligadas a un vencimiento. Es a propósito: aquí nunca
+// se crean, y un borrado masivo sobre toda la organización es un riesgo mayor
+// que el problema que resolvería. Si a algún cliente le quedaron de antes, su
+// "Generar" individual sigue limpiándolas.
+adminRouter.post('/plan-cliente/generar-masivo', requireAuth, soloCoordinacion, async (req: any, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const periodo = typeof req.body?.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.body.periodo) ? req.body.periodo : null;
+  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
+  const dryRun = req.body?.dryRun === true;
+  const [anio, mes] = periodo.split('-').map(Number);
+  if (mes < 1 || mes > 12) return res.status(422).json({ error: 'Período inválido (el mes debe estar entre 01 y 12).' });
+  const fechaInicio = new Date(Date.UTC(anio, mes - 1, 1));
+  const finDeMes = new Date(Date.UTC(anio, mes, 0));
+
+  try {
+    const [empresas, planes, asign, existentes, areas] = await Promise.all([
+      // Los inactivos quedan fuera: generarles tareas pondría trabajo fantasma
+      // en el tablero de alguien por un cliente que la firma ya no atiende.
+      prisma.empresa.findMany({ where: { organizacionId: id, activo: true }, select: { id: true, nombre: true }, orderBy: { nombre: 'asc' } }),
+      prisma.planClienteActividad.findMany({
+        where: { organizacionId: id, activa: true },
+        select: {
+          empresaId: true, actividadPlanId: true, periodicidad: true,
+          actividad: { select: { nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true, obligacionVencimiento: true, diaHabilEntrega: true } },
+        },
+      }),
+      prisma.asignacionClienteArea.findMany({ where: { organizacionId: id }, select: { empresaId: true, areaId: true, asesorId: true, auxiliarId: true } }),
+      prisma.tarea.findMany({ where: { organizacionId: id, periodo, actividadPlanId: { not: null } }, select: { empresaId: true, actividadPlanId: true } }),
+      prisma.area.findMany({ where: { organizacionId: id }, select: { id: true, nombre: true } }),
+    ]);
+
+    const activas = new Set(empresas.map((e) => e.id));
+    const nombreEmpresa = new Map(empresas.map((e) => [e.id, e.nombre]));
+    const nombreArea = new Map(areas.map((a) => [a.id, a.nombre]));
+    const asignPorClienteArea = new Map(asign.map((a) => [`${a.empresaId}|${a.areaId}`, a]));
+    const yaExiste = new Set(existentes.map((t) => `${t.empresaId}|${t.actividadPlanId}`));
+
+    // La fecha depende solo del día hábil, no del cliente: se calcula una vez
+    // por día y la comparten las cientos de tareas que caen en el mismo plazo.
+    const fechaPorDia = new Map<number, Date>();
+    const venceDe = (dia: number | null | undefined) => {
+      if (!dia) return finDeMes;
+      let d = fechaPorDia.get(dia);
+      if (!d) { d = nthDiaHabil(anio, mes, dia); fechaPorDia.set(dia, d); }
+      return d;
+    };
+
+    const nuevas: any[] = [];
+    const porCliente = new Map<string, number>();
+    const porArea = new Map<string, number>();
+    const conPlan = new Set<string>();
+
+    for (const p of planes) {
+      if (!p.actividad) continue;
+      if (!activas.has(p.empresaId)) continue;
+      conPlan.add(p.empresaId);
+      if (p.actividad.obligacionVencimiento) continue; // se controla en Vencimientos, no se duplica como tarea
+      if (!aplicaEnMesPlan(p.periodicidad || p.actividad.periodicidad, mes)) continue;
+      if (yaExiste.has(`${p.empresaId}|${p.actividadPlanId}`)) continue;
+
+      const a = p.actividad.areaId ? asignPorClienteArea.get(`${p.empresaId}|${p.actividad.areaId}`) : undefined;
+      nuevas.push({
+        organizacionId: id, titulo: p.actividad.nombre, empresaId: p.empresaId,
+        fechaInicio, fechaVencimiento: venceDe(p.actividad.diaHabilEntrega),
+        actividadPlanId: p.actividadPlanId, areaId: p.actividad.areaId, generaPago: p.actividad.generaPago,
+        requiereRevisionTecnica: p.actividad.requiereAuditoria, periodo,
+        asesorId: a?.asesorId ?? null, auxiliarId: a?.auxiliarId ?? null,
+      });
+      const cli = nombreEmpresa.get(p.empresaId) ?? p.empresaId;
+      porCliente.set(cli, (porCliente.get(cli) ?? 0) + 1);
+      const ar = p.actividad.areaId ? (nombreArea.get(p.actividad.areaId) ?? 'Sin área') : 'Sin área';
+      porArea.set(ar, (porArea.get(ar) ?? 0) + 1);
+    }
+
+    // Un cliente activo sin plan no genera nada y nadie se entera. Se nombran
+    // para que la coordinación sepa a quién le falta configurar el plan.
+    const sinPlan = empresas.filter((e) => !conPlan.has(e.id)).map((e) => e.nombre);
+    const resumen = {
+      periodo,
+      porCrear: nuevas.length,
+      clientesActivos: empresas.length,
+      clientesConPlan: conPlan.size,
+      clientesAfectados: porCliente.size,
+      yaExistian: existentes.length,
+      sinPlan: sinPlan.slice(0, 50),
+      sinPlanTotal: sinPlan.length,
+      porArea: [...porArea.entries()].map(([area, n]) => ({ area, n })).sort((x, y) => y.n - x.n),
+    };
+    if (dryRun) return res.json({ ...resumen, dryRun: true });
+
+    // Por lotes y FUERA de una transacción: una transacción con miles de filas
+    // se pasa del tiempo límite y no deja nada. Como la operación es
+    // idempotente, si un lote falla se vuelve a correr y termina el trabajo,
+    // que es preferible a perderlo todo por el último lote.
+    //
+    // Lo que evita duplicar es el conjunto `yaExiste`, no la base: no hay un
+    // índice único sobre (empresa, actividad, período). Alcanza porque quien
+    // genera es una sola persona y el botón se bloquea mientras trabaja, pero
+    // dos pestañas a la vez sí podrían duplicar. Poner el índice es la solución
+    // de fondo y hay que hacerlo revisando antes si los datos actuales lo
+    // admiten: una migración de índice único que falle deja la API abajo.
+    let creadas = 0;
+    for (let i = 0; i < nuevas.length; i += 500) {
+      const r = await prisma.tarea.createMany({ data: nuevas.slice(i, i + 500) });
+      creadas += r.count;
+    }
+    res.json({ ...resumen, creadas });
+  } catch (e) {
+    responderError(res, 'plan-cliente:generar-masivo', e, 'No se pudo generar el período.');
   }
 });
 
