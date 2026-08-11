@@ -13,6 +13,9 @@ import { vencimientosNacionales, vencimientosIca, aplicaRub, RUB_OBLIGACION, OBL
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
 import { vinculoDeObligacion, VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
+import { transicion, puedePresentar, actorDe, EVENTO_DE, type EstadoRevision, type AccionRevision } from '../vencimientos/revision.js';
+
+const ACCIONES_REVISION = ['iniciar', 'enviar', 'devolver', 'aprobar', 'reabrir'];
 
 // ¿La obligación causa sanción por extemporaneidad? Aplica a las NO presentadas
 // y a las que quedaron INEFICACES (retención/autorretención/ReteICA que pasaron
@@ -321,6 +324,199 @@ vencimientosRouter.get('/pendientes', requireAuth, async (req: AuthedRequest, re
       };
     }),
   });
+});
+
+// ---------- Circuito de revisión de impuestos (ver vencimientos/revision.ts) ----------
+
+// Coordinación = quien puede saltarse el circuito y reabrir lo aprobado.
+const esCoordinacion = (u: AuthedRequest['user']) =>
+  !!u && (u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)));
+const tieneRolRevisor = (u: AuthedRequest['user']) => !!u && u.roles.includes('Revisor');
+
+/** Área a la que pertenece cada obligación, según la actividad vinculada del catálogo. */
+async function areaPorObligacion(orgId: string): Promise<Map<string, string>> {
+  const acts = await prisma.actividadPlan.findMany({
+    where: { organizacionId: orgId, obligacionVencimiento: { not: null }, areaId: { not: null } },
+    select: { obligacionVencimiento: true, areaId: true },
+  });
+  const porKey = new Map(acts.map((a) => [a.obligacionVencimiento as string, a.areaId as string]));
+  const out = new Map<string, string>();
+  for (const v of VINCULOS_VENCIMIENTO) {
+    const areaId = porKey.get(v.key);
+    if (areaId) for (const ob of v.obligaciones) out.set(ob, areaId);
+  }
+  return out;
+}
+
+// GET /vencimientos/mi-dia — los impuestos del asesor: lo que puede liquidar hoy
+// y lo que todavía espera el insumo del auxiliar.
+//
+// No esconde lo que está esperando: el asesor necesita ver el mes completo para
+// saber qué se le viene, y ocultar algo por no poder emparejar su período sería
+// la peor forma de fallar — trabajo invisible que aparece vencido.
+vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
+  const org = await orgActual(req);
+  if (!org) return res.json({ total: 0, listos: 0, esperando: 0, impuestos: [] });
+  const u = req.user!;
+  const scope = esCoordinacion(u) ? {} : { asesorId: u.sub };
+
+  const items = await prisma.vencimientoEmpresa.findMany({
+    where: { organizacionId: org.id, estado: 'pendiente', ...scope },
+    orderBy: [{ fechaVencimiento: 'asc' }],
+    select: {
+      id: true, empresaId: true, obligacion: true, periodo: true, fechaVencimiento: true,
+      estadoRevision: true, observacionRevision: true, enviadoRevisionEn: true, valorPago: true,
+      empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
+      revisor: { select: { nombre: true } },
+      subtareas: { select: { estado: true } },
+    },
+    take: 300,
+  });
+  if (items.length === 0) return res.json({ total: 0, listos: 0, esperando: 0, impuestos: [] });
+
+  // Insumo liberado por área: la entrega que crea el auxiliar al liberar el mes.
+  const [areaDe, entregas] = await Promise.all([
+    areaPorObligacion(org.id),
+    prisma.entregaInsumo.findMany({
+      where: { organizacionId: org.id, empresaId: { in: [...new Set(items.map((v) => v.empresaId))] } },
+      select: { empresaId: true, periodo: true, areaId: true, entregadoEn: true },
+    }),
+  ]);
+  const entMap = new Map<string, Date>();
+  for (const e of entregas) entMap.set(`${e.empresaId}|${e.periodo}|${e.areaId ?? 'gen'}`, e.entregadoEn);
+
+  const hoy = new Date();
+  const filas = items.map((v) => {
+    const areaId = areaDe.get(v.obligacion) ?? null;
+    // Solo las obligaciones mensuales traen un período "YYYY-MM" que se puede
+    // emparejar con la liberación del auxiliar. Las trimestrales y anuales
+    // ("1er trimestre", "declaración y pago") no cuelgan de un cierre mensual:
+    // se dan por disponibles en vez de quedar trabadas para siempre.
+    const mensual = !!v.periodo && /^\d{4}-\d{2}$/.test(v.periodo);
+    let liberadoEn: Date | null = null;
+    if (!mensual) liberadoEn = null;
+    else if (areaId) liberadoEn = entMap.get(`${v.empresaId}|${v.periodo}|${areaId}`) ?? entMap.get(`${v.empresaId}|${v.periodo}|gen`) ?? null;
+    const liberado = !mensual || liberadoEn != null;
+    const subs = v.subtareas;
+    return {
+      id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
+      empresa: v.empresa?.nombre ?? '—', municipio: v.municipio?.nombre ?? null,
+      estadoRevision: v.estadoRevision, observacionRevision: v.observacionRevision,
+      enviadoRevisionEn: v.enviadoRevisionEn, revisor: v.revisor?.nombre ?? null,
+      valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+      checklistTotal: subs.length, checklistHechas: subs.filter((s) => s.estado === 'realizada').length,
+      liberado, liberadoEn,
+      vencido: v.fechaVencimiento < hoy,
+    };
+  });
+
+  res.json({
+    total: filas.length,
+    listos: filas.filter((f) => f.liberado).length,
+    esperando: filas.filter((f) => !f.liberado).length,
+    impuestos: filas,
+  });
+});
+
+// GET /vencimientos/revision/cola — cola COMPARTIDA de los revisores.
+//
+// No hay asignación fija por cliente ni por mes: se atiende por orden de
+// llegada, que es como trabajan hoy. Quién revisó qué queda igual en el rastro,
+// así que los indicadores por revisor salen lo mismo.
+vencimientosRouter.get('/revision/cola', requireAuth, async (req: AuthedRequest, res) => {
+  const u = req.user!;
+  if (!tieneRolRevisor(u) && !esCoordinacion(u)) return res.status(403).json({ error: 'Solo los revisores ven la cola de revisión.' });
+  const org = await orgActual(req);
+  if (!org) return res.json({ total: 0, impuestos: [] });
+
+  const items = await prisma.vencimientoEmpresa.findMany({
+    where: { organizacionId: org.id, estadoRevision: 'en_revision' },
+    orderBy: [{ enviadoRevisionEn: 'asc' }],
+    select: {
+      id: true, obligacion: true, periodo: true, fechaVencimiento: true, valorPago: true,
+      enviadoRevisionEn: true, asesorId: true,
+      empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
+      asesor: { select: { nombre: true } },
+      subtareas: { select: { estado: true } },
+    },
+    take: 300,
+  });
+  const hoy = new Date();
+  res.json({
+    total: items.length,
+    impuestos: items.map((v) => ({
+      id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento,
+      empresa: v.empresa?.nombre ?? '—', municipio: v.municipio?.nombre ?? null,
+      asesor: v.asesor?.nombre ?? null,
+      valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+      enviadoRevisionEn: v.enviadoRevisionEn,
+      checklistTotal: v.subtareas.length, checklistHechas: v.subtareas.filter((s) => s.estado === 'realizada').length,
+      vencido: v.fechaVencimiento < hoy,
+      // Sobre lo suyo actúa como asesor, no como revisor: no puede aprobarlo.
+      propio: v.asesorId === u.sub,
+    })),
+  });
+});
+
+// POST /vencimientos/:id/revision { accion, observaciones? }
+// Mueve el impuesto por el circuito. Las reglas de quién puede hacer qué y desde
+// dónde están en vencimientos/revision.ts, probadas aparte.
+vencimientosRouter.post('/:id/revision', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
+  const org = await orgActual(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const accion = req.body?.accion;
+  if (!ACCIONES_REVISION.includes(accion)) return res.status(422).json({ error: 'Acción inválida.' });
+
+  const v = await prisma.vencimientoEmpresa.findFirst({
+    where: { id: req.params.id, organizacionId: org.id },
+    select: { id: true, asesorId: true, estadoRevision: true },
+  });
+  if (!v) return res.status(404).json({ error: 'Obligación no encontrada.' });
+
+  const u = req.user!;
+  const actor = actorDe({
+    esCoordinacion: esCoordinacion(u),
+    esAsesorDelVencimiento: v.asesorId === u.sub,
+    tieneRolRevisor: tieneRolRevisor(u),
+  });
+  if (!actor) return res.status(403).json({ error: 'Este impuesto no es tuyo ni estás en revisión.' });
+
+  const r = transicion(v.estadoRevision as EstadoRevision, accion as AccionRevision, actor);
+  if (!r.ok) return res.status(409).json({ error: r.motivo });
+
+  // Al devolver, la observación es lo único que el asesor va a leer para saber
+  // qué corregir: sin ella la devolución no dice nada y genera una llamada.
+  const observaciones = typeof req.body?.observaciones === 'string' && req.body.observaciones.trim() ? req.body.observaciones.trim() : null;
+  if (accion === 'devolver' && !observaciones) return res.status(422).json({ error: 'Escribe qué hay que corregir antes de devolverlo.' });
+
+  const data: Record<string, any> = { estadoRevision: r.hasta };
+  if (accion === 'enviar') { data.enviadoRevisionEn = new Date(); data.observacionRevision = null; }
+  if (accion === 'devolver') { data.revisorId = u.sub; data.observacionRevision = observaciones; }
+  if (accion === 'aprobar') { data.revisorId = u.sub; data.observacionRevision = null; }
+
+  await prisma.$transaction([
+    prisma.vencimientoEmpresa.update({ where: { id: v.id }, data }),
+    prisma.eventoVencimiento.create({
+      data: { organizacionId: org.id, vencimientoId: v.id, tipo: EVENTO_DE[accion as AccionRevision], observaciones, usuarioId: u.sub },
+    }),
+  ]);
+  res.json({ ok: true, estadoRevision: r.hasta });
+});
+
+// GET /vencimientos/:id/rastro — el recorrido completo del impuesto, con fecha y
+// responsable de cada paso. Es la materia prima de los indicadores.
+vencimientosRouter.get('/:id/rastro', requireAuth, async (req: AuthedRequest, res) => {
+  if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
+  const org = await orgActual(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const eventos = await prisma.eventoVencimiento.findMany({
+    where: { vencimientoId: req.params.id, organizacionId: org.id },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, tipo: true, observaciones: true, createdAt: true, usuario: { select: { nombre: true } } },
+  });
+  res.json({ eventos: eventos.map((e) => ({ ...e, usuario: e.usuario?.nombre ?? null })) });
 });
 
 // POST /vencimientos — registra un pago pendiente a mano (Administrador / root).
@@ -879,13 +1075,41 @@ vencimientosRouter.delete('/abonos/:abonoId', requireAuth, async (req: AuthedReq
   res.json({ ok: true });
 });
 
-// PATCH /vencimientos/:id — estado / fecha / notas (Administrador / root).
+// PATCH /vencimientos/:id — estado / fecha / notas / valor a pagar.
+//
+// Los permisos van POR CAMPO, no por rol a secas. Antes esto era solo del
+// Administrador, y por eso el asesor de impuestos no podía guardar el valor a
+// pagar ni dar por presentada su propia declaración — tenía que pedírselo a
+// alguien más.
+//
+// La fecha de vencimiento sigue siendo solo del Administrador: es la fecha legal
+// y no la mueve quien trabaja la obligación.
 vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
-  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede editar vencimientos.' });
+  if (!esUsuarioFirma(req.user)) return res.status(403).json({ error: 'Sin acceso a vencimientos.' });
   const org = await orgActual(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const actual = await prisma.vencimientoEmpresa.findFirst({
+    where: { id: req.params.id, organizacionId: org.id },
+    select: { id: true, asesorId: true, auxiliarId: true, estado: true, estadoRevision: true },
+  });
+  if (!actual) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
+
+  const u = req.user!;
+  const coordinacion = esCoordinacion(u);
+  const esSuyo = actual.asesorId === u.sub || actual.auxiliarId === u.sub;
+  if (!coordinacion && !esSuyo) return res.status(403).json({ error: 'Esta obligación no está asignada a ti.' });
+
   const data: Record<string, any> = {};
   if (typeof req.body?.estado === 'string') {
     if (!ESTADOS.includes(req.body.estado)) return res.status(422).json({ error: 'Estado inválido.' });
+    // Dar por presentado es el acto que se controla: para el asesor exige la
+    // aprobación del revisor. Sin esta línea la revisión sería decorativa.
+    if (req.body.estado !== 'pendiente' && req.body.estado !== actual.estado) {
+      const actor = actorDe({ esCoordinacion: coordinacion, esAsesorDelVencimiento: actual.asesorId === u.sub, tieneRolRevisor: tieneRolRevisor(u) });
+      const p = puedePresentar(actual.estadoRevision as EstadoRevision, actor ?? 'asesor');
+      if (!p.ok) return res.status(409).json({ error: p.motivo });
+      if (PRESENTADOS.includes(req.body.estado)) { data.fechaPresentacion = new Date(); data.presentadoPorId = u.sub; }
+    }
     data.estado = req.body.estado;
   }
   if ('notas' in (req.body ?? {})) data.notas = typeof req.body.notas === 'string' && req.body.notas.trim() ? req.body.notas.trim() : null;
@@ -896,13 +1120,21 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
     else { const n = Number(v); if (!isFinite(n) || n < 0) return res.status(422).json({ error: 'El valor a pagar debe ser un número ≥ 0.' }); data.valorPago = n; }
   }
   if ('fechaVencimiento' in (req.body ?? {})) {
+    // La fecha legal no la mueve quien trabaja la obligación.
+    if (!puedeEditar(u)) return res.status(403).json({ error: 'Solo el Administrador puede cambiar la fecha de vencimiento.' });
     const d = new Date(req.body.fechaVencimiento);
     if (isNaN(d.getTime())) return res.status(422).json({ error: 'Fecha inválida.' });
     data.fechaVencimiento = d;
   }
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
-  const r = await prisma.vencimientoEmpresa.updateMany({ where: { id: req.params.id, organizacionId: org?.id }, data });
-  if (r.count === 0) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
+  await prisma.vencimientoEmpresa.update({ where: { id: actual.id }, data });
+  // La presentación entra al rastro: es el cierre del circuito y la fecha con la
+  // que se mide cuánto antes del vencimiento se presentó.
+  if (data.fechaPresentacion) {
+    await prisma.eventoVencimiento.create({
+      data: { organizacionId: org.id, vencimientoId: actual.id, tipo: 'presentacion', observaciones: `Estado: ${data.estado}`, usuarioId: u.sub },
+    });
+  }
   res.json({ ok: true });
 });
 

@@ -393,11 +393,28 @@ adminRouter.post('/usuarios', requireAuth, soloAdmin, async (req, res) => {
   }
 });
 
-adminRouter.patch('/usuarios/:id', requireAuth, soloAdmin, async (req, res) => {
+// La coordinación puede repartir roles operativos (p. ej. marcar quién revisa
+// impuestos) sin depender del Administrador. Lo que NO puede es tocar
+// administradores ni volver administrador a nadie: eso sería darse a sí misma
+// todos los permisos del sistema por la puerta de atrás.
+adminRouter.patch('/usuarios/:id', requireAuth, soloCoordinacion, async (req: AuthedRequest, res) => {
   const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
-  const u = await prisma.usuario.findFirst({ where: { id: req.params.id, organizacionId: id }, select: { id: true, esRootPlataforma: true } });
+  const u = await prisma.usuario.findFirst({
+    where: { id: req.params.id, organizacionId: id },
+    select: { id: true, esRootPlataforma: true, roles: { select: { rol: { select: { nombre: true } } } } },
+  });
   if (!u) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+  const actor = req.user!;
+  const esAdmin = actor.esRoot || actor.roles.includes('Administrador');
+  if (!esAdmin) {
+    const camposDeAdmin = ['activo', 'empresaClienteId', 'grupoClienteId'].filter((c) => c in (req.body ?? {}));
+    if (camposDeAdmin.length) return res.status(403).json({ error: 'Solo el Administrador puede cambiar esos datos del usuario.' });
+    if (u.esRootPlataforma || u.roles.some((r) => r.rol.nombre === 'Administrador')) {
+      return res.status(403).json({ error: 'Solo el Administrador puede editar a otro Administrador.' });
+    }
+  }
 
   const data: Record<string, any> = {};
   if (typeof req.body?.nombre === 'string' && req.body.nombre.trim()) data.nombre = req.body.nombre.trim();
@@ -411,6 +428,15 @@ adminRouter.patch('/usuarios/:id', requireAuth, soloAdmin, async (req, res) => {
   if ('grupoClienteId' in req.body) data.grupoClienteId = req.body.grupoClienteId || null;
 
   const cambiarRoles = Array.isArray(req.body?.roles);
+  // Los roles llegan por id, así que "no puede volver administrador a nadie" hay
+  // que verificarlo contra la tabla: comparar nombres del cuerpo sería confiar
+  // en lo que manda el navegador.
+  if (cambiarRoles && !esAdmin) {
+    const rolAdmin = await prisma.rol.findFirst({ where: { organizacionId: id, nombre: 'Administrador' }, select: { id: true } });
+    if (rolAdmin && normalizaRolIds(req.body).includes(rolAdmin.id)) {
+      return res.status(403).json({ error: 'Solo el Administrador puede otorgar el rol de Administrador.' });
+    }
+  }
   try {
     await prisma.$transaction(async (tx) => {
       if (Object.keys(data).length) await tx.usuario.update({ where: { id: u.id }, data });

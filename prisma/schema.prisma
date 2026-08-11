@@ -79,6 +79,18 @@ enum EstadoPago {
   no_obligado
 }
 
+// Circuito del impuesto DENTRO de la firma, antes de presentarlo.
+// El asesor liquida → manda a revisión → el revisor aprueba o devuelve con
+// observaciones → aprobado, el asesor presenta. No se confunde con EstadoPago,
+// que es lo que pasó ante la DIAN y es lo que ve el calendario.
+enum EstadoRevisionVenc {
+  sin_iniciar
+  en_proceso
+  en_revision
+  devuelto
+  aprobado
+}
+
 // Estado de una visita del asesor/auditor al cliente.
 enum EstadoVisita {
   programada
@@ -154,6 +166,8 @@ model Organizacion {
   eventosTarea     EventoTarea[]
   lotesCaptura     LoteCaptura[]
 
+  eventosVencimiento EventoVencimiento[]
+
   // Visitas a clientes (asesor/auditor) y sus compromisos
   visitas           Visita[]
   compromisosVisita CompromisoVisita[]
@@ -202,6 +216,9 @@ model Usuario {
   tareasComoAuxiliar         Tarea[]                 @relation("TareaAuxiliar")
   vencimientosComoAsesor     VencimientoEmpresa[]    @relation("VencAsesor")
   vencimientosComoAuxiliar   VencimientoEmpresa[]    @relation("VencAuxiliar")
+  vencimientosRevisados      VencimientoEmpresa[]    @relation("VencRevisor")
+  vencimientosPresentados    VencimientoEmpresa[]    @relation("VencPresentadoPor")
+  eventosVencimiento         EventoVencimiento[]
   areasComoAsesor            AsignacionClienteArea[] @relation("AsesorArea")
   areasComoAuxiliar          AsignacionClienteArea[] @relation("AuxiliarArea")
   entregasRealizadas         EntregaInsumo[]
@@ -967,16 +984,36 @@ model VencimientoEmpresa {
   // Responsable heredado del área de la actividad vinculada (asignación cliente×área).
   asesorId         String?
   auxiliarId       String?
+  // ---- Circuito de trabajo interno (distinto del estado tributario de arriba) ----
+  // `estado` dice qué pasó ANTE LA DIAN y es lo que muestra el calendario.
+  // `estadoRevision` dice en qué punto va el trabajo DENTRO de la firma. Son dos
+  // cosas: un impuesto puede estar aprobado por el revisor y todavía pendiente de
+  // presentar. Mezclarlos en un solo campo es lo que haría que el calendario y
+  // Mi Día se contradigan.
+  estadoRevision      EstadoRevisionVenc @default(sin_iniciar)
+  // Momento en que el asesor lo mandó a revisión: ordena la cola compartida de
+  // los revisores (por orden de llegada, no por asignación fija).
+  enviadoRevisionEn   DateTime?
+  revisorId           String? // quién lo revisó de último
+  observacionRevision String? // lo que el revisor escribió al devolverlo
+  // Cuándo se presentó de verdad. `updatedAt` no sirve para medir: cualquier
+  // edición posterior lo pisa. De aquí sale "cuántos días antes del vencimiento
+  // se presentó", que es el indicador que se quiere seguir.
+  fechaPresentacion   DateTime?
+  presentadoPorId     String?
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 
-  organizacion Organizacion          @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
-  empresa      Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  municipio    Municipio?            @relation(fields: [municipioId], references: [id])
-  asesor       Usuario?              @relation("VencAsesor", fields: [asesorId], references: [id])
-  auxiliar     Usuario?              @relation("VencAuxiliar", fields: [auxiliarId], references: [id])
-  subtareas    SubtareaVencimiento[]
-  abonos       AbonoVencimiento[]
+  organizacion  Organizacion          @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa       Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  municipio     Municipio?            @relation(fields: [municipioId], references: [id])
+  asesor        Usuario?              @relation("VencAsesor", fields: [asesorId], references: [id])
+  auxiliar      Usuario?              @relation("VencAuxiliar", fields: [auxiliarId], references: [id])
+  revisor       Usuario?              @relation("VencRevisor", fields: [revisorId], references: [id])
+  presentadoPor Usuario?              @relation("VencPresentadoPor", fields: [presentadoPorId], references: [id])
+  subtareas     SubtareaVencimiento[]
+  abonos        AbonoVencimiento[]
+  eventos       EventoVencimiento[]
 
   @@index([organizacionId])
   @@index([empresaId])
@@ -1009,6 +1046,31 @@ model AbonoVencimiento {
 // del plan vinculada (ActividadPlan.obligacionVencimiento) al generar el
 // vencimiento. El asesor le da "chulo" desde el calendario. El texto se congela
 // (no se re-sincroniza si luego cambia la plantilla), como Subtarea de Tarea.
+// Rastro del circuito de un impuesto: cada paso con su fecha y su responsable.
+//
+// Los campos de VencimientoEmpresa guardan solo el estado actual — si un impuesto
+// se devuelve dos veces, la segunda observación pisa la primera. Aquí queda todo,
+// que es lo que hace medibles las preguntas reales: cuánto tarda un revisor en
+// devolver, cuántas vueltas da un mismo impuesto, y cuántos días antes del
+// vencimiento se presentó.
+model EventoVencimiento {
+  id             String   @id @default(uuid())
+  organizacionId String
+  vencimientoId  String
+  tipo           String // "inicio" | "envio_revision" | "devolucion" | "aprobacion" | "presentacion" | "reapertura"
+  observaciones  String?
+  usuarioId      String?
+  createdAt      DateTime @default(now())
+
+  organizacion Organizacion       @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  vencimiento  VencimientoEmpresa @relation(fields: [vencimientoId], references: [id], onDelete: Cascade)
+  usuario      Usuario?           @relation(fields: [usuarioId], references: [id])
+
+  @@index([organizacionId])
+  @@index([vencimientoId])
+  @@map("eventos_vencimiento")
+}
+
 model SubtareaVencimiento {
   id            String         @id @default(uuid())
   vencimientoId String

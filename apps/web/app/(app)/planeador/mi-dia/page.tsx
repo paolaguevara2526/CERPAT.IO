@@ -5,6 +5,7 @@
 import { fetchTareas, TareasTabla, nombrePeriodo } from '../tareas';
 import CapturaDelDia from './CapturaDelDia';
 import ListoParaProcesar from './ListoParaProcesar';
+import ImpuestosDelDia from './ImpuestosDelDia';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 
 
@@ -24,10 +25,13 @@ export default async function MiDiaPage() {
       <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>Las actividades que te toca <strong>ejecutar</strong> en el período. Para ver también lo de tus auxiliares a cargo, usa la <strong>Lista</strong>.</p>
 
       {/* Cockpit por rol (cada sección se oculta sola si no aplica al usuario):
-          captura del día (auxiliar) y listo para procesar (asesor). */}
+          captura del día (auxiliar), listo para procesar e impuestos (asesor).
+          Los impuestos van aparte porque no son tareas del plan: se trabajan
+          sobre el vencimiento mismo, que es lo que ve el calendario. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
         <CapturaDelDia />
         <ListoParaProcesar />
+        <ImpuestosDelDia />
       </div>
 
       {/* El listado completo va plegable: en Mi Día lo primero es lo que se

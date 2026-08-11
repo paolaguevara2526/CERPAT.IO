@@ -37,7 +37,7 @@ const rolesDe = (u: Usuario): string[] => (u.roles.length ? u.roles.map((r) => r
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 };
 
-export default function UsuariosPanel() {
+export default function UsuariosPanel({ esAdmin = true }: { esAdmin?: boolean }) {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [roles, setRoles] = useState<Rol[]>([]);
   const [empresas, setEmpresas] = useState<Opcion[]>([]);
@@ -124,7 +124,7 @@ export default function UsuariosPanel() {
           <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{filtrados.length}{hayFiltro ? ` de ${usuarios.length}` : ''} usuarios · {filtrados.filter((u) => u.activo).length} activos</span>
           {hayFiltro && <button className="dbtn" onClick={() => setFiltros(sinFiltros())} style={{ fontSize: 12 }}>Limpiar filtros</button>}
         </div>
-        <button className="dbtn primary" onClick={() => setEditar('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo usuario</button>
+        {esAdmin && <button className="dbtn primary" onClick={() => setEditar('nuevo')} style={{ fontSize: 13 }}>＋ Nuevo usuario</button>}
       </div>
 
       <div className="panel">
@@ -145,11 +145,11 @@ export default function UsuariosPanel() {
                   <td style={{ color: 'var(--muted)' }}>{u.cargo ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{u.area ?? '—'}</td>
                   <td>{u.roles.length === 0 ? <span style={{ color: 'var(--muted)' }}>—</span> : u.roles.map((r) => { const c = ROL_COLOR[r.nombre] ?? 'var(--muted)'; return <span key={r.id} className="chip" style={{ color: c, background: `${tinte(c, 12)}`, borderColor: `${tinte(c, 30)}`, marginRight: 4 }}>{r.nombre}</span>; })}</td>
-                  <td><button onClick={() => toggleActivo(u)} disabled={u.esRoot} title={u.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: u.esRoot ? 'default' : 'pointer', fontSize: 20, lineHeight: 1, color: u.activo ? 'var(--exito)' : 'var(--neutro)', opacity: u.esRoot ? 0.5 : 1 }}>{u.activo ? '🟢' : '⚪'}</button></td>
+                  <td><button onClick={() => toggleActivo(u)} disabled={u.esRoot || !esAdmin} title={u.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: u.esRoot || !esAdmin ? 'default' : 'pointer', fontSize: 20, lineHeight: 1, color: u.activo ? 'var(--exito)' : 'var(--neutro)', opacity: u.esRoot ? 0.5 : 1 }}>{u.activo ? '🟢' : '⚪'}</button></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button onClick={() => setEditar(u)} title="Editar" style={ic('var(--navy)')}>✎</button>
-                    <button onClick={() => reset(u)} title="Restablecer contraseña" style={ic('var(--alerta)')}>🔑</button>
-                    {!u.esRoot && <button onClick={() => eliminar(u)} title="Eliminar" style={ic('var(--peligro)')}>🗑</button>}
+                    {esAdmin && <button onClick={() => reset(u)} title="Restablecer contraseña" style={ic('var(--alerta)')}>🔑</button>}
+                    {esAdmin && !u.esRoot && <button onClick={() => eliminar(u)} title="Eliminar" style={ic('var(--peligro)')}>🗑</button>}
                   </td>
                 </tr>
               ))}
@@ -158,14 +158,14 @@ export default function UsuariosPanel() {
         </div>
       </div>
 
-      {editar && <Editor usuario={editar} roles={roles} empresas={empresas} grupos={grupos} onClose={() => setEditar(null)} onGuardado={(msg) => { setEditar(null); setAviso(msg ?? null); cargar(); }} onError={setError} />}
+      {editar && <Editor esAdmin={esAdmin} usuario={editar} roles={roles} empresas={empresas} grupos={grupos} onClose={() => setEditar(null)} onGuardado={(msg) => { setEditar(null); setAviso(msg ?? null); cargar(); }} onError={setError} />}
     </div>
   );
 }
 
 const ic = (color: string): React.CSSProperties => ({ border: 'none', background: 'none', cursor: 'pointer', color, fontSize: 14, padding: '2px 5px' });
 
-function Editor({ usuario, roles, empresas, grupos, onClose, onGuardado, onError }: { usuario: Usuario | 'nuevo'; roles: Rol[]; empresas: Opcion[]; grupos: Opcion[]; onClose: () => void; onGuardado: (msg?: string) => void; onError: (m: string) => void }) {
+function Editor({ usuario, roles, empresas, grupos, esAdmin, onClose, onGuardado, onError }: { usuario: Usuario | 'nuevo'; roles: Rol[]; empresas: Opcion[]; grupos: Opcion[]; esAdmin: boolean; onClose: () => void; onGuardado: (msg?: string) => void; onError: (m: string) => void }) {
   const nuevo = usuario === 'nuevo';
   const [form, setForm] = useState<Form>(nuevo ? VACIO : {
     nombre: usuario.nombre, email: usuario.email, cargo: usuario.cargo ?? '', area: usuario.area ?? '',
@@ -191,7 +191,7 @@ function Editor({ usuario, roles, empresas, grupos, onClose, onGuardado, onError
         if (!res.ok) { onError(d.error || 'No se pudo crear.'); setGuardando(false); return; }
         onGuardado(`Usuario ${form.nombre} creado. Contraseña temporal: ${d.passwordTemporal} (deberá cambiarla al ingresar).`);
       } else {
-        const res = await fetch(`/api/admin/usuarios/${(usuario as Usuario).id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: form.nombre, cargo: form.cargo, area: form.area, roles: form.roles, activo: form.activo, empresaClienteId, grupoClienteId }) });
+        const res = await fetch(`/api/admin/usuarios/${(usuario as Usuario).id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: form.nombre, cargo: form.cargo, area: form.area, roles: form.roles, ...(esAdmin ? { activo: form.activo, empresaClienteId, grupoClienteId } : {}) }) });
         const d = await res.json();
         if (!res.ok) { onError(d.error || 'No se pudo guardar.'); setGuardando(false); return; }
         onGuardado();

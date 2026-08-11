@@ -151,6 +151,65 @@ no contempla — por eso una casilla mal puesta puede llevarse obligaciones real
 - Para **solo agregar** sin riesgo de baja —p. ej. aplicar un checklist nuevo a lo
   ya cargado— está *Administración → Checklist vencimientos*, que nunca borra.
 
+## Circuito de revisión de impuestos
+
+El área de Impuestos **no trabaja sobre tareas del plan**: trabaja sobre el
+**vencimiento mismo**. Las actividades del catálogo vinculadas a una obligación
+(`ActividadPlan.obligacionVencimiento`) no generan tarea a propósito — duplicarlas
+daría dos objetos para un mismo trabajo, cada uno con su estado, y tarde o temprano
+el calendario diría una cosa y Mi Día otra.
+
+Por eso el asesor de impuestos trabaja desde **Mi Día → Mis impuestos**: el chulo que
+marca, el valor que digita y el estado que pone son los de esa obligación, así que
+**el calendario y Pagos se actualizan solos**. El calendario sigue siendo, como se
+acordó, únicamente vencimientos.
+
+**Dos estados que no se mezclan.** `VencimientoEmpresa.estado` (`EstadoPago`) es lo que
+pasó **ante la DIAN** y es lo que muestra el calendario. `estadoRevision`
+(`EstadoRevisionVenc`) es en qué punto va el trabajo **dentro de la firma**. Un impuesto
+puede estar aprobado por el revisor y todavía pendiente de presentar.
+
+| Estado interno | Quién actúa | Qué significa |
+|---|---|---|
+| `sin_iniciar` | — | El asesor aún no lo abre |
+| `en_proceso` | Asesor | Lo está liquidando |
+| `en_revision` | Revisor | En la cola compartida; el asesor no lo edita |
+| `devuelto` | Asesor | Volvió con observación (obligatoria) |
+| `aprobado` | Asesor | Ya puede presentarlo |
+
+Reglas, todas verificadas en el backend (`apps/api/src/vencimientos/revision.ts`, con
+pruebas en `revision.test.ts`):
+
+- **Nadie aprueba su propio trabajo.** Si quien revisa es además el asesor de ese
+  vencimiento, actúa como asesor aunque cargue el rol de Revisor.
+- **Devolver exige decir qué corregir.** Sin la observación, la devolución no informa
+  nada y genera una llamada.
+- **Presentar exige la aprobación del revisor.** Sin esta regla la revisión sería
+  decorativa. La **coordinación puede saltársela** —un revisor enfermo el día del
+  vencimiento no puede impedir presentar— y queda registrado con su nombre.
+- **Reabrir lo aprobado es solo de coordinación.** Si el asesor pudiera reabrir lo
+  suyo, la aprobación sería una formalidad.
+- **La fecha legal de vencimiento solo la mueve el Administrador.**
+
+**Cola compartida, sin reparto.** Los revisores ven lo mismo y toman por orden de
+llegada (`enviadoRevisionEn`). No hay asignación fija por cliente ni por mes: así
+trabaja la firma hoy. Quién revisó qué queda igual en el rastro, así que los
+indicadores por revisor no dependen de repartir la cola.
+
+**El rastro (`EventoVencimiento`).** Cada paso queda con fecha, tipo y responsable. Los
+campos del vencimiento guardan solo el estado actual —una segunda devolución pisa la
+observación de la primera—, así que el rastro es lo que hace medibles las preguntas
+reales: cuánto tarda un revisor en devolver, cuántas vueltas da un mismo impuesto, y
+**cuántos días antes del vencimiento se presentó** (`fechaPresentacion`, que existe
+porque `updatedAt` lo pisa cualquier edición posterior).
+
+**Liberación del insumo.** El asesor ve marcado qué está liberado y qué espera al
+auxiliar. Solo las obligaciones **mensuales** (período `YYYY-MM`) se emparejan con la
+entrega del auxiliar; las trimestrales y anuales (`"1er trimestre"`, `"declaración y
+pago"`) no cuelgan de un cierre mensual y se dan por disponibles. **Nada se oculta**:
+esperando insumo se muestra igual, porque trabajo invisible que después aparece vencido
+es la peor forma de fallar.
+
 ## Obligaciones que se derivan de las cifras del cliente
 
 Seis obligaciones no se marcan a mano: **se calculan** con los activos brutos y
@@ -210,17 +269,31 @@ Cada ítem del menú se muestra según el rol, y el acceso se bloquea también p
 (`ACCESO_RUTA` + `puedeVerRuta`) y `acceso-server.ts` (`exigirRuta`). Administrador
 y root ven todo. Un usuario con varios roles ve la **unión** de lo permitido.
 
-| Sección | Auxiliar | Asesor | Coordinador | Auditor |
-|---|---|---|---|---|
-| Inicio, Mi Día, Calendario, Tablero, Lista | ✅ | ✅ | ✅ | ✅ |
-| Visitas | — | ✅ | ✅ | ✅ |
-| Pagos | — | ✅ | ✅ | ✅ |
-| Vencimientos, Auditoría, Plan de Trabajo, Flujo del cierre | — | — | ✅ | ✅ |
-| Gestión › Coordinación | — | — | ✅ | ✅ |
-| Gestión › Administración (solo Empresas, Config. tributaria, Plan por cliente) | — | — | ✅ | — |
-| Gestión › Administración (todas las pestañas) · Clientes · Usuarios | — | — | — | — (solo Admin) |
-| Servicios › Calculadora, Punto de equilibrio, Más herramientas | ✅ | ✅ | ✅ | ✅ |
-| Servicios › Portal de Hallazgos | — | — | — | ✅ |
+| Sección | Auxiliar | Asesor | Coordinador | Auditor | Revisor |
+|---|---|---|---|---|---|
+| Inicio, Mi Día, Calendario, Tablero, Lista | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Visitas | — | ✅ | ✅ | ✅ | — |
+| Pagos | — | ✅ | ✅ | ✅ | — |
+| Vencimientos, Auditoría, Plan de Trabajo, Flujo del cierre | — | — | ✅ | ✅ | — |
+| Revisión de impuestos (cola compartida) | — | — | ✅ | — | ✅ |
+| Gestión › Coordinación | — | — | ✅ | ✅ | — |
+| Gestión › Administración (solo Empresas, Config. tributaria, Plan por cliente) | — | — | ✅ | — | — |
+| Gestión › Usuarios (solo repartir roles) | — | — | ✅ | — | — |
+| Gestión › Administración (todas las pestañas) · Clientes · Usuarios (CRUD completo) | — | — | — | — (solo Admin) | — |
+| Servicios › Calculadora, Punto de equilibrio, Más herramientas | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Servicios › Portal de Hallazgos | — | — | — | ✅ | — |
+
+> **Revisor no es Auditor.** El *Revisor* valida los impuestos que el asesor liquida,
+> antes de presentarlos. El *Auditor* maneja el Portal de Hallazgos y la auditoría del
+> plan de trabajo. Son dos trabajos distintos y no comparten permisos: hay pruebas en
+> `apps/web/lib/acceso.test.ts` que fallan si alguien los junta.
+
+> **Usuarios en modo acotado (Coordinador).** Entra a repartir roles sin depender de que
+> el Administrador esté disponible. **No** puede crear, eliminar, desactivar ni
+> restablecer contraseñas, **ni otorgar el rol de Administrador** ni editar a quien ya lo
+> tenga. Lo bloquean la pantalla *y* el backend (`PATCH /admin/usuarios/:id`); la
+> verificación del rol Administrador se hace contra la tabla, no contra lo que manda el
+> navegador.
 
 > El menú oculta lo no permitido y las páginas redirigen a `/planeador` si se entra
 > por URL sin permiso. Esto complementa (no reemplaza) la validación por rol en cada
