@@ -8,20 +8,31 @@
 
 import { Router } from 'express';
 import { prisma } from '../db.js';
-import { requireAuth } from '../auth/middleware.js';
+import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { orgDeSesion } from '../auth/tenant.js';
+import { empresasAsignadas } from '../auth/alcance-db.js';
+import { esStaffAcotado } from '../auth/alcance.js';
 
 export const empresasRouter = Router();
 
-empresasRouter.get('/', requireAuth, async (req, res) => {
+empresasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   const org = await orgDeSesion(req);
   if (!org) return res.json({ organizacion: null, total: 0, empresas: [] });
 
   // Por defecto solo clientes activos. ?incluirInactivos=1 los incluye (opción futura).
   const incluirInactivos = req.query.incluirInactivos === '1' || req.query.incluirInactivos === 'true';
 
+  // Un Asesor/Auxiliar ve SOLO su cartera, igual que en el resto de las vistas
+  // internas. La cartera completa de la firma es información de la dirección, no
+  // de cada asesor: no hay razón para que uno vea los clientes de otro.
+  const idsAsignadas = esStaffAcotado(req.user) ? await empresasAsignadas(req.user!.sub, org.id) : null;
+
   const empresas = await prisma.empresa.findMany({
-    where: { organizacionId: org.id, ...(incluirInactivos ? {} : { activo: true }) },
+    where: {
+      organizacionId: org.id,
+      ...(incluirInactivos ? {} : { activo: true }),
+      ...(idsAsignadas ? { id: { in: idsAsignadas } } : {}),
+    },
     orderBy: { nombre: 'asc' },
     include: { tipo: true, regimen: true },
   });

@@ -72,7 +72,10 @@ const COLUMNAS: Columna<Empresa>[] = [
   { clave: 'regimen', label: 'Régimen', valor: (e) => guion(e.regimen), estiloCelda: { color: 'var(--muted)' } },
 ];
 
-export default function TablaClientes({ empresas }: { empresas: Empresa[] }) {
+// `puedeExportar` lo decide el servidor por rol: la descarga del listado se
+// lleva la cartera entera en un archivo, y eso es información de la dirección.
+// Un asesor consulta sus clientes en pantalla; no se lleva la base.
+export default function TablaClientes({ empresas, puedeExportar = false }: { empresas: Empresa[]; puedeExportar?: boolean }) {
   return (
     <TablaDatos
       filas={empresas}
@@ -80,7 +83,7 @@ export default function TablaClientes({ empresas }: { empresas: Empresa[] }) {
       idDe={(e) => e.id}
       vacio="No hay empresas cargadas todavía."
       sinCoincidencias="Ninguna empresa cumple los filtros."
-      exportar="clientes-cerpat"
+      exportar={puedeExportar ? 'clientes-cerpat' : undefined}
     />
   );
 }

@@ -151,6 +151,26 @@ no contempla — por eso una casilla mal puesta puede llevarse obligaciones real
 - Para **solo agregar** sin riesgo de baja —p. ej. aplicar un checklist nuevo a lo
   ya cargado— está *Administración → Checklist vencimientos*, que nunca borra.
 
+## "No aplica" en los checklists
+
+Un punto del checklist puede quedar en **`no_aplica`**, y **sale del denominador** de la
+medición. El porqué es de negocio: una empresa **sin movimiento** en el mes puede tener
+que hacer 2 de 13 puntos, y otra con operación los 13. Si los 11 que no aplican cuentan
+en el total, la primera aparece siempre en 2/13 —incumpliendo— cuando en realidad
+terminó su trabajo.
+
+- El control **gira con un clic**: pendiente → hecha → no aplica → pendiente. Un solo
+  control en vez de tres botones por línea: con trece puntos, treinta y nueve controles
+  en un modal no se leen. Marcar hecho —el caso de todos los días— sigue siendo un clic.
+- **`no_realizada` NO sale del denominador.** Ahí había que hacerlo y no se hizo;
+  sacarlo sería premiar el incumplimiento.
+- Un checklist **enteramente** "no aplica" cuenta como **completo**, no como 0 %.
+- La cuenta vive en `apps/web/lib/checklist.ts` con pruebas. Es una sola porque la usan
+  el calendario, Mi Día y la cola de revisión: tres copias darían tres números para el
+  mismo checklist.
+- En la **cola de revisión** los puntos marcados "no aplica" se señalan: validar que de
+  verdad no aplicaban es parte de lo que el revisor debe mirar antes de aprobar.
+
 ## Recepción del insumo del cliente
 
 En las áreas marcadas **insumo del cliente** (`AsignacionClienteArea.insumoCliente`)
@@ -343,6 +363,14 @@ en las vistas internas — forzado en el backend (`esStaffAcotado`):
 - **Calendario (visitas)** → solo visitas donde es el **responsable**.
 - **Calendario (vencimientos)** y **Pagos** → solo vencimientos de sus **empresas
   asignadas** (Asignación cliente × área, donde figura como asesor o auxiliar).
+- **Gestión › Clientes** → solo sus **empresas asignadas**. La cartera completa de la
+  firma es información de la dirección: no hay razón para que un asesor vea los clientes
+  de otro. La **descarga en Excel** del listado queda además reservada a Administración
+  y Coordinación — la pantalla se consulta, la base no se la lleva nadie.
+- **Lista de tareas** → el asesor **no ve la captura que ejecuta su auxiliar**. Él no
+  captura: observa. Para mirar cómo va esa captura está *Mi Día*, que la muestra aparte
+  y en solo lectura. Sí conserva la captura de los clientes **sin auxiliar asignado**,
+  porque ahí la ejecuta él.
 
 Coordinador, Auditor, Administrador y root ven todo. "Mi Día" siempre es del usuario.
 

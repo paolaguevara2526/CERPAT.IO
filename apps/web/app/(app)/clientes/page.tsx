@@ -34,7 +34,10 @@ async function getEmpresas(): Promise<{ data: Respuesta | null; error: string | 
 }
 
 export default async function ClientesPage() {
-  await exigirRuta('/clientes'); // solo Administrador / root
+  const sesion = await exigirRuta('/clientes');
+  // La descarga del listado es de Administración y Coordinación. El backend ya
+  // acota QUÉ clientes ve cada quien; esto acota QUIÉN se los puede llevar.
+  const puedeExportar = sesion.esRoot || sesion.roles.some((r) => ['Administrador', 'Coordinador'].includes(r));
   const { data, error } = await getEmpresas();
   const empresas = data?.empresas ?? [];
 
@@ -44,7 +47,9 @@ export default async function ClientesPage() {
     Clientes {data?.organizacion ? `· ${data.organizacion.nombre}` : ''}
   </h1>
   <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>
-    Empresas cliente de la firma, en vivo desde la base. Los correos de contacto no se muestran aquí por privacidad.
+    {puedeExportar
+      ? 'Empresas cliente de la firma, en vivo desde la base. Los correos de contacto no se muestran aquí por privacidad.'
+      : 'Los clientes que tienes asignados, en vivo desde la base. Los correos de contacto no se muestran aquí por privacidad.'}
   </p>
 
   {error ? (
@@ -58,10 +63,10 @@ export default async function ClientesPage() {
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 30, fontWeight: 800, color: 'var(--green-2)' }}>{empresas.length}</span>
-        <span style={{ fontSize: 13.5, color: 'var(--muted)', fontWeight: 600 }}>empresas cliente</span>
+        <span style={{ fontSize: 13.5, color: 'var(--muted)', fontWeight: 600 }}>{puedeExportar ? 'empresas cliente' : 'clientes asignados'}</span>
       </div>
 
-      <TablaClientes empresas={empresas} />
+      <TablaClientes empresas={empresas} puedeExportar={puedeExportar} />
     </>
   )}
     </>

@@ -80,12 +80,23 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   // auxiliar figura también en el procesamiento de sus clientes — trabajo que
   // no ejecuta. Le llenaba la Lista de tareas ajenas, la mayoría bloqueadas.
   //
-  // El asesor sí conserva la vista amplia: ve lo suyo y lo de sus auxiliares,
-  // que es justo para lo que existe la Lista.
+  // El asesor TAMPOCO captura. Antes esta lista le mostraba la captura de sus
+  // auxiliares mezclada con su propio trabajo, como si fuera suya. La captura
+  // que ejecuta otra persona sale de aquí: para mirar cómo va está Mi Día, que
+  // la muestra aparte y en solo lectura.
+  //
+  // Se conserva cuando NO hay auxiliar: ahí la captura sí la ejecuta él.
   if (esStaffAcotado(req.user)) {
     where.AND = [...(where.AND ?? []), {
       OR: [
-        { asesorId: uid },
+        {
+          asesorId: uid,
+          OR: [
+            { auxiliarId: null }, // sin auxiliar, la captura es suya
+            { actividadPlan: { fase: { not: 'captura' } } },
+            { actividadPlan: { fase: null } }, // sin clasificar: no se esconde
+          ],
+        },
         { auxiliarId: uid, actividadPlan: { fase: 'captura' } },
         // Sin asesor asignado no hay a quién más mostrárselo: se queda con él.
         { auxiliarId: uid, asesorId: null },
