@@ -41,6 +41,18 @@ const ESTADOS_PRESENTAR = [
   { v: 'presentado_cero', label: 'Presentado en ceros' },
   { v: 'no_obligado', label: 'No obligado' },
 ];
+// El selector de ESTADO completo, con las mismas opciones y etiquetas del modal
+// del calendario: quien trabaja en las dos pantallas ve un solo vocabulario.
+// Elegir un estado aquí pasa por la misma puerta del circuito: sin la
+// aprobación del revisor, el backend lo rechaza y el motivo se muestra.
+const ESTADOS_VENC = [
+  { v: 'pendiente', label: 'Pendiente' },
+  { v: 'presentado_sin_pago', label: 'Presentado (sin pago)' },
+  { v: 'presentado_pagado', label: 'Presentado y pagado' },
+  { v: 'presentado_cero', label: 'Presentado en $0' },
+  { v: 'no_presentado', label: 'No presentado' },
+  { v: 'no_obligado', label: 'No obligado' },
+];
 
 const fmt = (iso: string | null) => {
   if (!iso) return '—';
@@ -277,21 +289,43 @@ function Detalle({ f, subs, valor, setValor, inp, link, setLink, linkOk, setLink
             </>)}
         </div>
 
-        {f.sinPago ? (
-          <div style={{ minWidth: 240, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Valor a pagar</div>
-            Obligación de <b>solo presentación</b>: no lleva valor a pagar y no entra al ciclo de Pagos.
-          </div>
-        ) : (
-          <div style={{ minWidth: 240 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 6 }}>Valor a pagar</div>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
-              <input value={valor} onChange={(e) => setValor(e.target.value)} inputMode="numeric" placeholder="0" style={{ ...inp, width: 140, fontFamily: 'var(--mono)' }} />
-              <button className="dbtn" disabled={trabajando} onClick={onGuardarValor} style={{ fontSize: 12, padding: '6px 10px' }}>Guardar</button>
+        <div style={{ minWidth: 240 }}>
+          {f.sinPago ? (
+            <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Valor a pagar</div>
+              Obligación de <b>solo presentación</b>: no lleva valor a pagar y no entra al ciclo de Pagos.
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Actual: {pesos(f.valorPago)} · va directo a Pagos.</div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 6 }}>Valor a pagar</div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                <input value={valor} onChange={(e) => setValor(e.target.value)} inputMode="numeric" placeholder="0" style={{ ...inp, width: 140, fontFamily: 'var(--mono)' }} />
+                <button className="dbtn" disabled={trabajando} onClick={onGuardarValor} style={{ fontSize: 12, padding: '6px 10px' }}>Guardar</button>
+              </div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Actual: {pesos(f.valorPago)} · va directo a Pagos.</div>
+            </div>
+          )}
+
+          {/* El mismo ESTADO del modal del calendario. Todo lo que se ve aquí
+              está 'pendiente' (lo presentado sale de Mi Día), así que el
+              selector siempre parte de Pendiente; al elegir otro estado se
+              guarda y la fila se despide de la lista. La puerta del circuito
+              sigue siendo del backend: sin aprobación del revisor, rechaza y
+              el motivo aparece arriba. */}
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 6 }}>Estado</div>
+            <select value="pendiente" disabled={trabajando}
+              onChange={(e) => { if (e.target.value !== 'pendiente') onPresentar(e.target.value); }}
+              style={{ ...inp, minWidth: 190 }}>
+              {ESTADOS_VENC.map((e) => <option key={e.v} value={e.v}>{e.label}</option>)}
+            </select>
+            {f.estadoRevision !== 'aprobado' && (
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                Para dar por presentado necesita el visto bueno del revisor.
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Dónde quedó guardado el trabajo. Es el mismo campo del vencimiento que
