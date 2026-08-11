@@ -6,7 +6,7 @@ Para el **modelo de operación** (flujo, roles, entregas y medición) ver
 plataforma** (de planeador a producto SaaS multi-módulo, modalidades, módulos,
 fundaciones y nomenclatura) ver [`vision-plataforma.md`](./vision-plataforma.md).
 
-_Última actualización: 2026-08-09._
+_Última actualización: 2026-08-11._
 
 ## En producción hoy
 
@@ -424,6 +424,71 @@ La coordinación puede repartir el rol sin depender del Administrador (*Usuarios
 modo acotado). El rol entra **por migración**, no por el seed: en el despliegue solo
 corren las migraciones.
 
+## Sesión del 10–11 de agosto 2026 — 12 PR
+
+Jornada larga con el equipo ya operando. El hilo conductor fue el **área de Impuestos**,
+que hasta ese día no tenía dónde trabajar, y una familia de errores que apareció tres
+veces disfrazada de cosas distintas: **datos heredados que quedan viejos**.
+
+### Plan de trabajo
+- **Día hábil de entrega por actividad** (#202). Antes toda tarea vencía a fin de mes.
+  La coordinación lo digita una vez en el catálogo y rige para todos los planes. De paso
+  se corrigió `nthDiaHabil`, que devolvía el **día 1** cuando el mes no tenía tantos
+  hábiles — un plazo adelantado que habría mostrado todo vencido sin motivo.
+- **Generación masiva del período** (#203). Agosto se generó con ~90 clics uno por uno.
+  Ahora es un botón con simulación previa, desglose por área y la lista de clientes
+  activos **sin plan configurado**, que antes no generaban nada y nadie se enteraba.
+- **Aplicar los responsables a un período ya generado** (#207). La pieza que faltaba:
+  la tarea nace con el responsable que había *en ese momento*, y corregir la asignación
+  no reescribe lo ya creado. Sin esto, se corregía la asignación y a la persona
+  equivocada le seguía apareciendo el trabajo todo el mes.
+- **Diagnóstico de responsables mal puestos** (#206). Las dos casillas ofrecían la
+  misma lista completa de usuarios: poner un auxiliar como asesor era un clic y el error
+  se veía semanas después. Ahora se separan por rol, se avisa, y hay un panel que lista
+  **todos** los casos de la firma — buscarlos a mano entre 90 clientes es no buscarlos.
+
+### Impuestos
+- **Mi Día → Mis impuestos + rol Revisor** (#204). Ver la sección anterior.
+- **Alcance** (#208): el panel filtraba solo por `asesorId` del vencimiento, que se
+  hereda al generarse. Ahora va **también** por empresas asignadas hoy, que es la fuente
+  de verdad de a quién pertenece un cliente.
+- **Ventana y embudos** (#209). Hasta fin del mes en curso, con corte **solo por
+  arriba**: lo vencido de meses anteriores sigue a la vista. Septiembre se habilita solo.
+  Para tener filtros sin perder el detalle desplegable, `TablaDatos` ganó una fila
+  expandible opcional — sirve para cualquier tabla.
+- **Decir qué mes de insumo falta** (#210). "Esperando" a secas no dejaba ver que la
+  liberación se había hecho sobre el mes equivocado.
+- **Obligaciones de solo presentación** (#211): sin casilla de valor a pagar, también
+  verificado en el backend.
+- **Cerrar el modal al guardar el valor** (#212).
+
+### Alcance y datos
+- **Clientes acotado al asesor** y descarga en Excel solo para Administración y
+  Coordinación (#205).
+- **`esStaffAcotado` fallaba ABIERTO** (#207): terminaba en
+  `roles.some(['Asesor','Auxiliar'])`, así que un **Revisor**, alguien con el rol mal
+  puesto o un usuario recién creado sin roles **veían la cartera completa de la firma**.
+  Ahora se decide por lo que el usuario *no* tiene. Es el hallazgo más serio del día.
+- **Recepción del insumo del cliente** (#205) y **"no aplica" en los checklists** (#205),
+  ambos documentados en `reglas-de-negocio.md`.
+- **AutoICA de Malambo** (#213): el calendario municipal solo tenía ReteICA para ese
+  municipio, así que al regenerar el cliente quedó sin nada. Cargado de agosto en
+  adelante.
+
+### Lo que hay que hacer en la aplicación (no lo hace un despliegue)
+- [x] Liberar el insumo de **2026-07** (los impuestos de julio esperaban ese mes, no agosto).
+- [x] Aplicar los responsables a **2026-08**.
+- [x] Asignar el rol **Revisor** a las dos personas.
+- [ ] **Regenerar los vencimientos del cliente NG** para que aparezca el AutoICA de Malambo.
+- [ ] Decidir si el **AutoICA de julio** de ese cliente (venció el 10 de agosto) se
+      registra a mano en *Pagos → Pagos pendientes*.
+
+### Para avisarle al equipo
+Dos cosas que confunden la primera vez:
+1. El checklist **gira con un clic**: pendiente → hecha → **no aplica**.
+2. Al liberar el insumo se pone **el mes de los datos**, no el mes en que se trabaja:
+   en septiembre se libera `2026-08` para destrabar los impuestos de agosto.
+
 ## Roadmap
 
 ### Fase 1 — Infraestructura y datos ✅ (hecho)
@@ -654,6 +719,22 @@ mockup con el equipo y luego el modelo de datos + generación.
   almacenamiento de objetos). Sirve para el volumen actual; si crece, mover a
   Cloudflare R2 / S3 y dejar solo la referencia en la base.
 
+### Siguientes candidatos (código)
+1. **Calendario municipal administrable desde la aplicación.** Hoy vive en
+   `docs/data/calendario-ica-municipal-2026.csv` y se compila a un `.ts`: cada municipio
+   u obligación nueva **bloquea a la coordinación esperando un despliegue**. Con 90
+   clientes y 1.100 municipios posibles, no es sostenible. Lo destapó el AutoICA de
+   Malambo (#213).
+2. **El "corresponde a"** — el mes contable de cada tarea. Es lo último que queda del
+   desfase de un mes; la regla ya está decidida (ver arriba) y arranca en septiembre.
+3. **Tablero de indicadores.** Ya tiene de dónde alimentarse: `EventoVencimiento`
+   (el recorrido de cada impuesto), `EventoInsumo` (entregas del cliente) y
+   `fechaPresentacion`.
+4. **Índice único** sobre (empresa, actividad, período) en `tareas`. Hoy lo que evita
+   duplicar en la generación masiva es el cálculo en memoria, no la base. Requiere
+   revisar antes si los datos actuales lo admiten: una migración de índice único que
+   falle deja la API abajo.
+
 ### Pendientes operativos (fuera del código)
 Cosas que **no** se resuelven con un despliegue; las hace el equipo en los paneles:
 - [ ] Railway → API: **quitar `PROMOVER_ROOT_EMAIL`** (el root ya quedó otorgado).
@@ -661,9 +742,46 @@ Cosas que **no** se resuelven con un despliegue; las hace el equipo en los panel
   guardan documentos de clientes en la base).
 - [ ] Railway → API: verificar que **`CORS_ORIGIN`** esté definido; si falta, la API
   acepta peticiones desde cualquier origen.
-- [ ] **Redirección 301** de `cerpat.com` → `cerpat.io` y **apagar el WordPress**
-  (previo respaldo). ⚠️ El sitio anterior está **comprometido**: tenía publicaciones
-  de spam de casinos y corría sobre PHP 7.4. Cambiar también las contraseñas de
-  hosting/WordPress.
-- [ ] Microsoft 365: migrar las casillas reales a `@cerpat.io`.
+- [x] **Microsoft 365: casillas migradas a `@cerpat.io`** (11 ago 2026). Era el riesgo
+  mayor y quedó cerrado. **`@cerpat.com` sigue recibiendo**: su `MX` apunta al mismo
+  tenant, así que los clientes que no actualizaron la libreta siguen llegando — razón
+  de peso para **no dejar vencer el dominio**.
+- [ ] **Rotar la clave del cPanel** y revisar usuarios FTP. Urgente: el servidor está
+  comprometido y la credencial se compartió por chat.
+- [ ] **Documentar la evidencia del sitio comprometido** y recién después **apagarlo**
+  desde cPanel (la firma sí tiene ese acceso). Al hacerlo, **no tocar los registros
+  `MX`, `SPF` ni los `TXT`** de la zona: de ellos depende el correo.
+
+### El dominio `cerpat.com` — estado real (11 ago 2026)
+
+Verificado contra el registro público, no contra lo que dice la agencia:
+
+| Dato | Valor |
+|---|---|
+| Registrador | **GoDaddy** (abuse@godaddy.com) |
+| Vence | **2026-10-07** |
+| Candados | `clientTransfer/Update/Renew/DeleteProhibited` |
+| DNS | `ns1–4.supercp.com` (panel de la agencia) |
+| Web | A2 Hosting / Hosting.com (abuse@hosting.com) |
+| Correo | **Microsoft 365 de la firma** ✓ |
+
+**Los cuatro candados son de tipo `client`**, es decir, puestos desde la cuenta y
+removibles por quien la controle. **No hay ningún candado `server`** ni restricción de
+ICANN: "no podemos, nos presenta un bloqueo" no se sostiene como explicación técnica.
+
+Lo que sí es cierto es otra cosa: la agencia **perdió el acceso a la cuenta de GoDaddy**
+y lleva desde el **21 de julio** en un proceso de recuperación (**caso 01324464**). En
+esas comunicaciones se presenta como *"legitimate owner … of that website and the
+business associated with it"* y dice *"domains that I legally own"* — es decir, **está
+reclamando ante GoDaddy la titularidad del dominio de la firma**.
+
+- [ ] **Enviar a GoDaddy el reclamo de titularidad** referenciando el caso 01324464.
+  Es lo más urgente: si GoDaddy resuelve esa recuperación sin conocer la posición de
+  CERPAT, revertirlo después es mucho más difícil. Evidencia disponible: Cámara de
+  Comercio y RUT, el `MX` apuntando al tenant propio, el token `MS=` de verificación,
+  el acceso al cPanel y la disposición a hacer cualquier verificación técnica.
+- [ ] **Pedirle a la agencia por escrito** que confirme que CERPAT es la propietaria del
+  dominio, y a nombre de quién figura el **registrant**. Ese dato no es público
+  (privacidad) y define todo el camino.
+- [ ] **Que no se venza el 7 de octubre.** Tiene `clientRenewProhibited` puesto.
 - [ ] `api.cerpat.io` como dominio propio de la API (hoy responde el host de Railway).
