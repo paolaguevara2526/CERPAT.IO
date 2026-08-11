@@ -12,12 +12,13 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import PanelPlegable from '@/app/_components/PanelPlegable';
+import { etiquetaDeConteos, siguienteEstado, ASPECTO } from '@/lib/checklist';
 
 type Fila = {
   id: string; obligacion: string; periodo: string | null; fechaVencimiento: string;
   empresa: string; municipio: string | null;
   estadoRevision: string; observacionRevision: string | null; revisor: string | null;
-  valorPago: number | null; checklistTotal: number; checklistHechas: number;
+  valorPago: number | null; checklistTotal: number; checklistHechas: number; checklistAplicables: number;
   liberado: boolean; liberadoEn: string | null; vencido: boolean;
 };
 type Resp = { total: number; listos: number; esperando: number; impuestos: Fila[] };
@@ -188,7 +189,7 @@ export default function ImpuestosDelDia() {
                       <span style={{ fontSize: 11.5, fontWeight: 700, color: rev.color, background: rev.fondo, borderRadius: 20, padding: '2px 9px' }}>{rev.label}</span>
                     </td>
                     <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', fontSize: 12 }}>
-                      {f.checklistTotal > 0 ? `${f.checklistHechas}/${f.checklistTotal}` : '—'}
+                      {f.checklistTotal > 0 ? etiquetaDeConteos(f.checklistHechas, f.checklistAplicables, f.checklistTotal) : '—'}
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>
                       <button className="dbtn" onClick={() => abrir(f)} style={{ fontSize: 12, padding: '5px 10px' }}>{activa ? 'Cerrar' : 'Abrir'}</button>
@@ -211,12 +212,21 @@ export default function ImpuestosDelDia() {
                             <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 6 }}>Checklist</div>
                             {subs.length === 0
                               ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Esta obligación no tiene checklist configurado.</div>
-                              : subs.map((s) => (
-                                <label key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, padding: '3px 0', cursor: 'pointer' }}>
-                                  <input type="checkbox" checked={s.estado === 'realizada'} onChange={(e) => marcarSub(s.id, e.target.checked ? 'realizada' : 'pendiente')} style={{ marginTop: 2 }} />
-                                  <span style={{ color: s.estado === 'realizada' ? 'var(--muted)' : 'var(--ink)', textDecoration: s.estado === 'realizada' ? 'line-through' : undefined }}>{s.texto}</span>
-                                </label>
-                              ))}
+                              : (<>
+                                {subs.map((s) => {
+                                  const a = ASPECTO[s.estado] ?? ASPECTO.pendiente;
+                                  return (
+                                    <button key={s.id} onClick={() => marcarSub(s.id, siguienteEstado(s.estado))} title={a.titulo}
+                                      style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, padding: '3px 0', cursor: 'pointer', background: 'none', border: 'none', textAlign: 'left', width: '100%', fontFamily: 'var(--ui)' }}>
+                                      <span style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${a.borde}`, background: a.fondo, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 11, flexShrink: 0, marginTop: 1, fontWeight: 800 }}>{a.marca}</span>
+                                      <span style={{ color: a.color, textDecoration: a.tacha ? 'line-through' : undefined }}>{s.texto}</span>
+                                    </button>
+                                  );
+                                })}
+                                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+                                  Clic para cambiar: pendiente → <b>hecha</b> → <b>no aplica</b>. Lo que no aplica no cuenta para la medición.
+                                </div>
+                              </>)}
                           </div>
 
                           <div style={{ minWidth: 240 }}>

@@ -405,7 +405,11 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
       estadoRevision: v.estadoRevision, observacionRevision: v.observacionRevision,
       enviadoRevisionEn: v.enviadoRevisionEn, revisor: v.revisor?.nombre ?? null,
       valorPago: v.valorPago != null ? Number(v.valorPago) : null,
-      checklistTotal: subs.length, checklistHechas: subs.filter((s) => s.estado === 'realizada').length,
+      checklistTotal: subs.length,
+      checklistHechas: subs.filter((s) => s.estado === 'realizada').length,
+      // Lo marcado "no aplica" sale del denominador: una empresa sin movimiento
+      // que solo tenía 2 puntos por hacer no puede medirse contra 13.
+      checklistAplicables: subs.filter((s) => s.estado !== 'no_aplica').length,
       liberado, liberadoEn,
       vencido: v.fechaVencimiento < hoy,
     };
@@ -451,7 +455,9 @@ vencimientosRouter.get('/revision/cola', requireAuth, async (req: AuthedRequest,
       asesor: v.asesor?.nombre ?? null,
       valorPago: v.valorPago != null ? Number(v.valorPago) : null,
       enviadoRevisionEn: v.enviadoRevisionEn,
-      checklistTotal: v.subtareas.length, checklistHechas: v.subtareas.filter((s) => s.estado === 'realizada').length,
+      checklistTotal: v.subtareas.length,
+      checklistHechas: v.subtareas.filter((s) => s.estado === 'realizada').length,
+      checklistAplicables: v.subtareas.filter((s) => s.estado !== 'no_aplica').length,
       vencido: v.fechaVencimiento < hoy,
       // Sobre lo suyo actúa como asesor, no como revisor: no puede aprobarlo.
       propio: v.asesorId === u.sub,

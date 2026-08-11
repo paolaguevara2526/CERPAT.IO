@@ -167,6 +167,7 @@ model Organizacion {
   lotesCaptura     LoteCaptura[]
 
   eventosVencimiento EventoVencimiento[]
+  eventosInsumo      EventoInsumo[]
 
   // Visitas a clientes (asesor/auditor) y sus compromisos
   visitas           Visita[]
@@ -179,9 +180,9 @@ model Organizacion {
   configuracionesTributarias ConfiguracionTributaria[]
   municipiosIca              EmpresaMunicipioIca[]
   vencimientosEmpresa        VencimientoEmpresa[]
+  parametrosAnuales          ParametroAnual[]
 
   @@map("organizaciones")
-  parametrosAnuales ParametroAnual[]
 }
 
 // ---------- USUARIOS Y ROLES ----------
@@ -219,6 +220,7 @@ model Usuario {
   vencimientosRevisados      VencimientoEmpresa[]    @relation("VencRevisor")
   vencimientosPresentados    VencimientoEmpresa[]    @relation("VencPresentadoPor")
   eventosVencimiento         EventoVencimiento[]
+  eventosInsumo              EventoInsumo[]
   areasComoAsesor            AsignacionClienteArea[] @relation("AsesorArea")
   areasComoAuxiliar          AsignacionClienteArea[] @relation("AuxiliarArea")
   entregasRealizadas         EntregaInsumo[]
@@ -328,6 +330,7 @@ model Empresa {
   representantes          RepresentanteLegal[]
   registrosCamara         RegistroCamara[]
   cifrasFiscales          CifrasFiscales[]
+  eventosInsumo           EventoInsumo[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -731,6 +734,7 @@ model Area {
   asignaciones   AsignacionClienteArea[]
   tareas         Tarea[]
   entregasInsumo EntregaInsumo[]
+  eventosInsumo  EventoInsumo[]
 
   @@unique([organizacionId, nombre])
   @@index([organizacionId])
@@ -854,8 +858,13 @@ model EntregaInsumo {
   periodo        String // "YYYY-MM"
   areaId         String? // NULL = entrega general
   entregadoPorId String?
-  origen         String   @default("manual") // "auto" | "manual"
+  origen         String   @default("manual") // "auto" | "manual" | "cliente"
+  // OJO: es la fecha en que llegó el insumo, NO en que alguien lo marcó. En las
+  // áreas de insumo del cliente se digita: el cliente manda el 3 y el asesor
+  // marca el 5, y grabar "hoy" le cargaría al cliente dos días de demora que no
+  // son suyos — justo la cifra que se le va a mostrar en una reunión.
   entregadoEn    DateTime @default(now())
+  marcadoEn      DateTime @default(now()) // cuándo se registró (para auditoría)
 
   organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -967,23 +976,23 @@ model EmpresaMunicipioIca {
 // Vencimiento generado para una empresa (salida del generador: config × calendario
 // × último dígito del NIT). Editable solo por Administrador/root por ahora.
 model VencimientoEmpresa {
-  id               String     @id @default(uuid())
-  organizacionId   String
-  empresaId        String
-  anio             Int
-  obligacion       String // Retención en la fuente, IVA, Impuesto al consumo, Anticipo RST, Renta PJ/GC/PN, RST consolidada Renta, IVA consolidado RST
-  periodicidad     String?
-  periodo          String? // 2026-01, ene-feb, 1a cuota, anual...
-  municipioId      String? // ICA (a futuro)
-  fechaVencimiento DateTime
-  estado           EstadoPago @default(pendiente)
-  generado         Boolean    @default(true) // creado por el generador (vs. agregado a mano)
-  notas            String?
-  soporteLink      String? // link (Drive/OneDrive) donde va quedando el trabajo de la obligación
-  valorPago        Decimal?   @db.Decimal(14, 2) // valor a pagar de la obligación (cuando da valor)
+  id                  String             @id @default(uuid())
+  organizacionId      String
+  empresaId           String
+  anio                Int
+  obligacion          String // Retención en la fuente, IVA, Impuesto al consumo, Anticipo RST, Renta PJ/GC/PN, RST consolidada Renta, IVA consolidado RST
+  periodicidad        String?
+  periodo             String? // 2026-01, ene-feb, 1a cuota, anual...
+  municipioId         String? // ICA (a futuro)
+  fechaVencimiento    DateTime
+  estado              EstadoPago         @default(pendiente)
+  generado            Boolean            @default(true) // creado por el generador (vs. agregado a mano)
+  notas               String?
+  soporteLink         String? // link (Drive/OneDrive) donde va quedando el trabajo de la obligación
+  valorPago           Decimal?           @db.Decimal(14, 2) // valor a pagar de la obligación (cuando da valor)
   // Responsable heredado del área de la actividad vinculada (asignación cliente×área).
-  asesorId         String?
-  auxiliarId       String?
+  asesorId            String?
+  auxiliarId          String?
   // ---- Circuito de trabajo interno (distinto del estado tributario de arriba) ----
   // `estado` dice qué pasó ANTE LA DIAN y es lo que muestra el calendario.
   // `estadoRevision` dice en qué punto va el trabajo DENTRO de la firma. Son dos
@@ -1001,8 +1010,8 @@ model VencimientoEmpresa {
   // se presentó", que es el indicador que se quiere seguir.
   fechaPresentacion   DateTime?
   presentadoPorId     String?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   organizacion  Organizacion          @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa       Empresa               @relation(fields: [empresaId], references: [id], onDelete: Cascade)
@@ -1046,6 +1055,32 @@ model AbonoVencimiento {
 // del plan vinculada (ActividadPlan.obligacionVencimiento) al generar el
 // vencimiento. El asesor le da "chulo" desde el calendario. El texto se congela
 // (no se re-sincroniza si luego cambia la plantilla), como Subtarea de Tarea.
+// Rastro de las marcas de recepción del insumo del cliente.
+//
+// NO tiene llave foránea a EntregaInsumo a propósito: desmarcar borra esa fila, y
+// un rastro que desaparece junto con lo que quería auditar no sirve de nada. Se
+// guarda la coordenada (empresa · área · período) y sobrevive por su cuenta.
+model EventoInsumo {
+  id             String    @id @default(uuid())
+  organizacionId String
+  empresaId      String
+  areaId         String?
+  periodo        String // "YYYY-MM"
+  tipo           String // "marca" | "desmarca"
+  fecha          DateTime? // fecha de entrega declarada (solo en "marca")
+  usuarioId      String?
+  createdAt      DateTime  @default(now())
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  area         Area?        @relation(fields: [areaId], references: [id])
+  usuario      Usuario?     @relation(fields: [usuarioId], references: [id])
+
+  @@index([organizacionId])
+  @@index([empresaId, periodo])
+  @@map("eventos_insumo")
+}
+
 // Rastro del circuito de un impuesto: cada paso con su fecha y su responsable.
 //
 // Los campos de VencimientoEmpresa guardan solo el estado actual — si un impuesto
@@ -1251,7 +1286,7 @@ model CifrasFiscales {
   /// Activos brutos a 31 de diciembre (equivale al patrimonio bruto).
   activosBrutos  Decimal? @db.Decimal(18, 2)
   ingresosBrutos Decimal? @db.Decimal(18, 2)
-  fuente         String?  // de dónde salió el dato (declaración, EEFF, cliente…)
+  fuente         String? // de dónde salió el dato (declaración, EEFF, cliente…)
   notas          String?
   updatedAt      DateTime @updatedAt
 

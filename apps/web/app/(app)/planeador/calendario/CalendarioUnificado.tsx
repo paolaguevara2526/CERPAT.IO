@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import VisitaModal from '../visitas/VisitaModal';
 
 import { tinte } from '@/app/_components/color';
+import { progresoChecklist, etiquetaProgreso, siguienteEstado, ASPECTO } from '@/lib/checklist';
 // Estados de un VENCIMIENTO tributario (enum EstadoPago).
 const VENC_META: Record<string, { label: string; color: string }> = {
   pendiente: { label: 'Pendiente', color: 'var(--muted)' },
@@ -494,9 +495,10 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
     return () => { vivo = false; };
   }, [ev.id]);
 
-  // Marca/desmarca una subtarea del checklist (optimista; revierte si falla).
+  // Gira el estado de una subtarea (optimista; revierte si falla).
+  // pendiente → realizada → no aplica → pendiente. Ver lib/checklist.ts.
   async function toggleSub(s: { id: string; estado: string }) {
-    const nuevo = s.estado === 'realizada' ? 'pendiente' : 'realizada';
+    const nuevo = siguienteEstado(s.estado);
     setDet((d) => d ? { ...d, subtareas: d.subtareas.map((x) => x.id === s.id ? { ...x, estado: nuevo } : x) } : d);
     setAviso(null);
     const r = await fetch(`/api/vencimientos/subtareas/${encodeURIComponent(s.id)}`, {
@@ -571,18 +573,23 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
 
         {det && det.subtareas.length > 0 && (
           <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px' }}>
-            <div style={{ ...lbl2, marginBottom: 8 }}>✔️ Checklist ({det.subtareas.filter((s) => s.estado === 'realizada').length}/{det.subtareas.length})</div>
+            <div style={{ ...lbl2, marginBottom: 8 }}>✔️ Checklist ({etiquetaProgreso(progresoChecklist(det.subtareas))})</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {det.subtareas.map((s) => {
-                const done = s.estado === 'realizada';
+                const a = ASPECTO[s.estado] ?? ASPECTO.pendiente;
                 return (
-                  <button key={s.id} onClick={() => toggleSub(s)} title="Marcar / desmarcar"
+                  <button key={s.id} onClick={() => toggleSub(s)} title={a.titulo}
                     style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 4px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--ui)', width: '100%' }}>
-                    <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${done ? 'var(--exito)' : 'var(--edge-strong)'}`, background: done ? 'var(--exito)' : 'transparent', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, flexShrink: 0 }}>{done ? '✓' : ''}</span>
-                    <span style={{ fontSize: 12.5, color: done ? 'var(--muted)' : 'var(--ink)', textDecoration: done ? 'line-through' : 'none' }}>{s.texto}</span>
+                    <span style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${a.borde}`, background: a.fondo, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, flexShrink: 0, fontWeight: 800 }}>{a.marca}</span>
+                    <span style={{ fontSize: 12.5, color: a.color, textDecoration: a.tacha ? 'line-through' : 'none' }}>{s.texto}</span>
                   </button>
                 );
               })}
+            </div>
+            {/* Sin esta línea nadie descubre el tercer estado: el control gira,
+                no se ve que gire. */}
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 7 }}>
+              Clic para cambiar: pendiente → <b>hecha</b> → <b>no aplica</b>. Lo que no aplica no cuenta para la medición.
             </div>
           </div>
         )}

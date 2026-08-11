@@ -6,6 +6,7 @@
 
 import { exigirRuta } from '@/lib/acceso-server';
 import { apiFetch } from '@/lib/session';
+import SinEntregarCliente from './SinEntregarCliente';
 
 
 export const metadata = { title: 'Coordinación' };
@@ -145,6 +146,11 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
               <TablaPersonas titulo="Seguimiento por auxiliar" sub="ejecutor" filas={porAuxiliar} />
             </div>
           )}
+
+          {/* Insumo que depende del cliente: se muestra ANTES de "clientes en
+              riesgo" porque explica parte de ese riesgo — un cliente que no
+              entregó no es un incumplimiento de la firma. */}
+          <SinEntregarCliente periodo={searchParams?.periodo} />
 
           {/* Clientes en riesgo */}
           <div>

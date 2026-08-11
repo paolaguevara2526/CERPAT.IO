@@ -7,12 +7,13 @@
 // de repartir la cola.
 
 import { Fragment, useEffect, useState } from 'react';
+import { etiquetaDeConteos } from '@/lib/checklist';
 
 type Fila = {
   id: string; obligacion: string; periodo: string | null; fechaVencimiento: string;
   empresa: string; municipio: string | null; asesor: string | null;
   valorPago: number | null; enviadoRevisionEn: string | null;
-  checklistTotal: number; checklistHechas: number; vencido: boolean; propio: boolean;
+  checklistTotal: number; checklistHechas: number; checklistAplicables: number; vencido: boolean; propio: boolean;
 };
 type Sub = { id: string; texto: string; estado: string };
 
@@ -138,7 +139,7 @@ export default function ColaRevision() {
                         )}
 
                         <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 6 }}>
-                          Checklist del asesor {f.checklistTotal > 0 && <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>({f.checklistHechas}/{f.checklistTotal})</span>}
+                          Checklist del asesor {f.checklistTotal > 0 && <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>({etiquetaDeConteos(f.checklistHechas, f.checklistAplicables, f.checklistTotal)})</span>}
                         </div>
                         {subs.length === 0
                           ? <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>Esta obligación no tiene checklist configurado.</div>
@@ -146,8 +147,14 @@ export default function ColaRevision() {
                             <div style={{ marginBottom: 12 }}>
                               {subs.map((s) => (
                                 <div key={s.id} style={{ display: 'flex', gap: 8, fontSize: 12.5, padding: '2px 0' }}>
-                                  <span style={{ color: s.estado === 'realizada' ? 'var(--exito-fuerte)' : 'var(--alerta-fuerte)', fontWeight: 700 }}>{s.estado === 'realizada' ? '✓' : '○'}</span>
+                                  <span style={{ color: s.estado === 'realizada' ? 'var(--exito-fuerte)' : s.estado === 'no_aplica' ? 'var(--neutro)' : 'var(--alerta-fuerte)', fontWeight: 700 }}>
+                                    {s.estado === 'realizada' ? '✓' : s.estado === 'no_aplica' ? '–' : '○'}
+                                  </span>
                                   <span style={{ color: 'var(--muted)' }}>{s.texto}</span>
+                                  {/* Lo marcado "no aplica" se señala: validar
+                                      que de verdad no aplicaba es parte de lo
+                                      que el revisor tiene que mirar. */}
+                                  {s.estado === 'no_aplica' && <span style={{ fontSize: 10.5, color: 'var(--neutro)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3 }}>no aplica</span>}
                                 </div>
                               ))}
                             </div>
