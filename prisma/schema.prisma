@@ -925,6 +925,10 @@ model LoteCaptura {
   organizacionId String
   tareaId        String
   tipoDocumento  String
+  // Prefijo del consecutivo (FE, CE, FV-…). Va aparte y no dentro de
+  // desde/hasta: se escribe una vez en lugar de dos, y deja el dato
+  // estructurado para poder agrupar por prefijo más adelante.
+  prefijo        String?
   desde          String?
   hasta          String?
   cantidad       Int?

@@ -607,7 +607,7 @@ planRouter.get('/tareas/:id/detalle', requireAuth, async (req: AuthedRequest, re
 // El auxiliar registra, por tipo de documento, el rango de consecutivos y la
 // cantidad, con su fecha. Trabajo diario dentro de la tarea "Captura de documentos".
 
-const loteSelect = { id: true, tipoDocumento: true, desde: true, hasta: true, cantidad: true, fecha: true } as const;
+const loteSelect = { id: true, tipoDocumento: true, prefijo: true, desde: true, hasta: true, cantidad: true, fecha: true } as const;
 
 // GET /plan/tareas/:id/lotes
 planRouter.get('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res) => {
@@ -634,7 +634,7 @@ planRouter.post('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res
   const cantidad = req.body?.cantidad !== '' && req.body?.cantidad != null && Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : null;
   const fecha = req.body?.fecha && !isNaN(new Date(req.body.fecha).getTime()) ? new Date(req.body.fecha) : new Date();
   const lote = await prisma.loteCaptura.create({
-    data: { organizacionId: tarea.organizacionId, tareaId: tarea.id, tipoDocumento, desde: txt(req.body?.desde), hasta: txt(req.body?.hasta), cantidad, fecha },
+    data: { organizacionId: tarea.organizacionId, tareaId: tarea.id, tipoDocumento, prefijo: txt(req.body?.prefijo), desde: txt(req.body?.desde), hasta: txt(req.body?.hasta), cantidad, fecha },
     select: loteSelect,
   });
   res.json({ ok: true, lote });
