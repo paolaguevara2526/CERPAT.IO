@@ -9,11 +9,16 @@
 //   Coordinador → lo del Asesor + Vencimientos, Auditoría, Plan de Trabajo,
 //                 Flujo del cierre + Coordinación.
 //   Auditor     → lo del Coordinador + Portal de Hallazgos.
+//   Revisor     → lo del Asesor + la cola de revisión de impuestos.
+//
+// 'Revisor' NO es 'Auditor': revisa los impuestos que el asesor liquida, antes
+// de presentarlos. El Auditor maneja el Portal de Hallazgos y la auditoría del
+// plan de trabajo — dos trabajos distintos que no deben compartir permisos.
 
 export type UsuarioAcceso = { esRoot?: boolean; roles: string[] };
 
 // Todos los perfiles de la firma (para las vistas comunes).
-const TODOS = ['Administrador', 'Coordinador', 'Asesor', 'Auditor', 'Auxiliar'];
+const TODOS = ['Administrador', 'Coordinador', 'Asesor', 'Auditor', 'Auxiliar', 'Revisor'];
 
 // Roles que ven cada ruta (además de Administrador/root, que siempre pueden).
 // Un arreglo vacío = solo Administrador/root.
@@ -31,12 +36,18 @@ export const ACCESO_RUTA: Record<string, string[]> = {
   '/planeador/pagos': ['Asesor', 'Coordinador', 'Auditor'],
   '/vencimientos': ['Coordinador', 'Auditor'],
   '/planeador/auditoria': ['Coordinador', 'Auditor'],
+  // Cola compartida de revisión de impuestos. El Asesor no entra: vería el
+  // trabajo de sus compañeros esperando visto bueno, que no le corresponde.
+  '/planeador/revision': ['Revisor', 'Coordinador'],
   // Gestión
   // Coordinación y asesores consultan la ficha de sus clientes; la edición la
   // restringe el backend a Administración y Coordinación. Auxiliares no entran.
   '/clientes': ['Coordinador', 'Asesor'],
   '/coordinacion': ['Coordinador', 'Auditor'],
-  '/usuarios': [], // solo Administrador/root
+  // La coordinación entra en modo acotado: solo reparte roles. Crear, eliminar,
+  // desactivar y restablecer claves siguen siendo del Administrador — lo bloquea
+  // la pantalla y también el backend.
+  '/usuarios': ['Coordinador'],
   '/administracion': ['Coordinador'], // Coordinador: solo Empresas, Config. tributaria y Plan por cliente
   // Servicios
   '/servicios/retenciones': TODOS,

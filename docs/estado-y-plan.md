@@ -375,10 +375,53 @@ activos del período (con simulación y reversión). Es el desbloqueo del arranq
 no la corrección.
 
 **Lo que corresponde** es que el procesamiento de *M* se habilite con la captura
-de *M−1*. No se hizo junto con el desbloqueo porque cambia el comportamiento de
-todos los clientes a la vez y hay que decidir antes: si aplica a todas las áreas
-por igual, qué pasa con las de *insumo del cliente*, y cómo se trata el primer
-mes, que no tiene un mes anterior en el sistema.
+de *M−1*.
+
+### Decidido con la dirección (11 ago 2026)
+
+Las tres definiciones que faltaban quedaron resueltas:
+
+1. **La tarea es del mes en que se trabaja, y *corresponde* al mes anterior.** Son
+   dos datos distintos y se guardan los dos. La tarea que el asesor hace en agosto
+   sobre el cierre de julio **es de agosto** y *corresponde a julio*. Nada de lo que
+   ya está andando se reetiqueta: se agrega el dato de a qué mes corresponde. Los
+   plazos (día hábil) se siguen contando sobre el mes de trabajo; los indicadores y
+   lo que ve el cliente usan el mes al que corresponde.
+2. **El desfase aplica igual a todas las áreas**, así que **lo define la fase, no el
+   área**: `captura` → mismo mes; `procesamiento` y `revision` → mes anterior. Sale
+   de `ActividadPlan.fase`, que ya está cargada: no hay nada que configurar por área.
+   En un mismo plan conviven la captura de agosto y el procesamiento de julio, que es
+   lo que pasa en la operación real.
+3. **Insumo del cliente:** lo destraba el **asesor**, marcando "el cliente ya
+   entregó" con fecha. Es quien sabe —el insumo le llega a él— y no depende de que el
+   cliente entre al portal. El subproducto es el valor real: queda la **lista de
+   clientes que no han entregado**, que hoy no existe y es un problema de negocio, no
+   de operación. Más adelante el cliente podrá marcarlo desde el portal como
+   precarga, pero la marca que vale sigue siendo la del asesor.
+
+**Transición:** agosto 2026 queda como está (hay gente trabajando encima); el
+criterio nuevo arranca en **septiembre**.
+
+## Revisión de impuestos y rol Revisor ✅ (11 ago 2026)
+
+El área de Impuestos no tenía dónde trabajar: los vencimientos viven en una pantalla
+cerrada para el rol Asesor, y sus actividades no generan tarea a propósito. Ahora el
+asesor trabaja desde **Mi Día → Mis impuestos**, sobre el vencimiento mismo — sin
+copias, así que el calendario y Pagos se actualizan solos y el calendario sigue siendo
+solo vencimientos.
+
+Con él entra el rol **Revisor** (dos personas): cola **compartida**, por orden de
+llegada, sin asignación fija. Aprueba o devuelve con observación obligatoria, y solo
+después el asesor presenta. Nadie aprueba su propio trabajo. Todo el circuito y sus
+reglas están en [`reglas-de-negocio.md`](./reglas-de-negocio.md#circuito-de-revisión-de-impuestos).
+
+Cada paso queda en `EventoVencimiento` con fecha y responsable: es la materia prima
+del tablero de indicadores que sigue — cuánto tarda un revisor, cuántas vueltas da un
+impuesto, y cuántos días antes del vencimiento se presentó.
+
+La coordinación puede repartir el rol sin depender del Administrador (*Usuarios* en
+modo acotado). El rol entra **por migración**, no por el seed: en el despliegue solo
+corren las migraciones.
 
 ## Roadmap
 

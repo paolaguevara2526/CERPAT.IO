@@ -35,6 +35,7 @@ export const SECCIONES: Seccion[] = [
       { label: 'Pagos', icon: 'pagos', href: '/planeador/pagos', claves: ['abonos', 'mora', 'sanción', 'por pagar', 'deuda'] },
       { label: 'Vencimientos', icon: 'vencimientos', href: '/vencimientos', claves: ['impuestos', 'obligaciones', 'declaraciones', 'dian', 'ica'] },
       { label: 'Auditoría', icon: 'auditoria', href: '/planeador/auditoria', claves: ['revisar', 'aprobar', 'cola'] },
+      { label: 'Revisión de impuestos', icon: 'auditoria', href: '/planeador/revision', claves: ['revisor', 'aprobar impuestos', 'visto bueno', 'devolver', 'declaraciones'] },
     ],
   },
   {

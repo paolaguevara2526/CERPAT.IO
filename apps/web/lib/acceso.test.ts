@@ -29,13 +29,24 @@ const CASOS: { rol: string; ve: string[]; noVe: string[] }[] = [
   },
   {
     rol: 'Coordinador',
-    ve: ['/planeador/visitas', '/planeador/pagos', '/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion', '/administracion', '/clientes'],
-    noVe: ['/usuarios', '/hallazgos'],
+    // /usuarios en modo acotado: reparte roles (quién revisa impuestos, por
+    // ejemplo) sin esperar al Administrador. Crear, eliminar, desactivar y
+    // restablecer claves siguen siendo del Administrador — lo bloquean la
+    // pantalla y el backend, no esta matriz.
+    ve: ['/planeador/visitas', '/planeador/pagos', '/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/planeador/flujo', '/coordinacion', '/administracion', '/clientes', '/usuarios', '/planeador/revision'],
+    noVe: ['/hallazgos'],
   },
   {
     rol: 'Auditor',
     ve: ['/planeador/visitas', '/vencimientos', '/planeador/auditoria', '/planeador/cronograma', '/coordinacion', '/hallazgos'],
-    noVe: ['/clientes', '/usuarios', '/administracion'],
+    noVe: ['/clientes', '/usuarios', '/administracion', '/planeador/revision'],
+  },
+  {
+    // Revisa los impuestos que el asesor liquida, antes de presentarlos. No es
+    // Auditor: no entra al Portal de Hallazgos ni a la auditoría del plan.
+    rol: 'Revisor',
+    ve: ['/planeador/mi-dia', '/planeador/revision', '/planeador/calendario', '/planeador/tablero'],
+    noVe: ['/hallazgos', '/planeador/auditoria', '/vencimientos', '/administracion', '/usuarios', '/coordinacion'],
   },
 ];
 
@@ -54,6 +65,21 @@ test('Administrador y root ven todo (incluye Gestión)', () => {
       assert.equal(puedeVerRuta(u, ruta), true, `admin/root debería ver ${ruta}`);
     }
   }
+});
+
+test('la cola de revisión no la ve el Asesor ni el Auxiliar', () => {
+  // Un asesor ahí vería el trabajo de sus compañeros esperando visto bueno.
+  // Y ningún rol operativo puede aprobar: para eso está el Revisor.
+  assert.equal(puedeVerRuta(rol('Asesor'), '/planeador/revision'), false);
+  assert.equal(puedeVerRuta(rol('Auxiliar'), '/planeador/revision'), false);
+  assert.equal(puedeVerRuta(rol('Revisor'), '/planeador/revision'), true);
+  assert.equal(puedeVerRuta(rol('Coordinador'), '/planeador/revision'), true);
+});
+
+test('Revisor y Auditor no se heredan permisos entre sí', () => {
+  // Son dos trabajos distintos; el día que alguien los junte, esto falla.
+  assert.equal(puedeVerRuta(rol('Revisor'), '/hallazgos'), false);
+  assert.equal(puedeVerRuta(rol('Auditor'), '/planeador/revision'), false);
 });
 
 test('Portal de Hallazgos: solo Auditor (y admin), no Coordinador', () => {

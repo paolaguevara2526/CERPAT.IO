@@ -38,7 +38,11 @@ async function main() {
   });
 
   // ---------- Roles (por organización) ----------
-  const roles = ['Administrador', 'Asesor', 'Auditor', 'Auxiliar', 'Coordinador'];
+  // 'Revisor' revisa los impuestos que el asesor liquida, antes de presentarlos.
+  // No es lo mismo que 'Auditor', que maneja el Portal de Hallazgos y la
+  // auditoría del plan de trabajo. En las organizaciones que ya existen lo crea
+  // la migración 20260811040000_revision_impuestos.
+  const roles = ['Administrador', 'Asesor', 'Auditor', 'Auxiliar', 'Coordinador', 'Revisor'];
   const rolIds: Record<string, string> = {};
   for (const [i, nombre] of roles.entries()) {
     const id = `seed-rol-${i}`;
