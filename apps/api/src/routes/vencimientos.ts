@@ -359,10 +359,20 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
   const org = await orgActual(req);
   if (!org) return res.json({ total: 0, listos: 0, esperando: 0, impuestos: [] });
   const u = req.user!;
-  const scope = esCoordinacion(u) ? {} : { asesorId: u.sub };
+  // DOS filtros, no uno. `asesorId` dice de quién es la obligación, pero lo
+  // hereda al generarse y se queda con quien tenía entonces: si después cambia
+  // la asignación, ese dato queda viejo y le muestra a alguien clientes que ya
+  // no son suyos. Por eso encima va la misma regla que el resto de la
+  // aplicación — solo las empresas asignadas hoy — que es la fuente de verdad
+  // de a quién pertenece un cliente.
+  const idsAsignadas = esStaffAcotado(u) ? await empresasAsignadas(u.sub, org.id) : null;
 
   const items = await prisma.vencimientoEmpresa.findMany({
-    where: { organizacionId: org.id, estado: 'pendiente', ...scope },
+    where: {
+      organizacionId: org.id, estado: 'pendiente',
+      ...(esCoordinacion(u) ? {} : { asesorId: u.sub }),
+      ...(idsAsignadas ? { empresaId: { in: idsAsignadas } } : {}),
+    },
     orderBy: [{ fechaVencimiento: 'asc' }],
     select: {
       id: true, empresaId: true, obligacion: true, periodo: true, fechaVencimiento: true,

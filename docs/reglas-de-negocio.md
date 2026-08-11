@@ -294,6 +294,14 @@ reales: cuánto tarda un revisor en devolver, cuántas vueltas da un mismo impue
 **cuántos días antes del vencimiento se presentó** (`fechaPresentacion`, que existe
 porque `updatedAt` lo pisa cualquier edición posterior).
 
+**Alcance de "Mis impuestos": dos filtros, no uno.** `VencimientoEmpresa.asesorId` dice
+de quién es la obligación, pero se **hereda al generarse** y se queda con quien tenía la
+asignación entonces. Si después cambia, ese dato queda viejo y le muestra a alguien
+clientes que ya no son suyos. Por eso encima va la misma regla que el resto de la
+aplicación —**solo las empresas asignadas hoy**—, que es la fuente de verdad de a quién
+pertenece un cliente. Para corregir el dato viejo está *Plan por cliente → Aplicar los
+responsables a un período ya generado*, que también actualiza vencimientos.
+
 **Liberación del insumo.** El asesor ve marcado qué está liberado y qué espera al
 auxiliar. Solo las obligaciones **mensuales** (período `YYYY-MM`) se emparejan con la
 entrega del auxiliar; las trimestrales y anuales (`"1er trimestre"`, `"declaración y
