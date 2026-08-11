@@ -480,7 +480,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
   const [guardandoVal, setGuardandoVal] = useState(false);
   const [valOk, setValOk] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
-  type Det = { subtareas: { id: string; texto: string; estado: string; orden: number }[]; asesor: { nombre: string } | null; auxiliar: { nombre: string } | null };
+  type Det = { subtareas: { id: string; texto: string; estado: string; orden: number }[]; asesor: { nombre: string } | null; auxiliar: { nombre: string } | null; sinPago?: boolean };
   const [det, setDet] = useState<Det | null>(null);
 
   useEffect(() => {
@@ -494,6 +494,8 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
       .then((r) => r.json()).then((d) => { if (vivo && d.vencimiento) setDet(d.vencimiento); }).catch(() => {});
     return () => { vivo = false; };
   }, [ev.id]);
+
+  const sinPago = det?.sinPago === true;
 
   // Gira el estado de una subtarea (optimista; revierte si falla).
   // pendiente → realizada → no aplica → pendiente. Ver lib/checklist.ts.
@@ -562,6 +564,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
             style={{ fontSize: 12.5, fontWeight: 800, color: col, background: `${tinte(col, 12)}`, border: `1px solid ${tinte(col, 35)}`, borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'var(--ui)' }}>
             {Object.entries(VENC_META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
           </select>
+          {sinPago && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Obligación de solo presentación: no lleva valor a pagar.</div>}
         </div>
 
         {det && (det.asesor || det.auxiliar) && (
@@ -594,6 +597,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
           </div>
         )}
 
+        {!sinPago && (
         <div style={{ border: '1px solid var(--line)', borderRadius: 8, padding: '11px 13px' }}>
           <div style={{ ...lbl2, marginBottom: 6 }}>💲 Valor a pagar</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -606,6 +610,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
           </div>
           <p style={{ fontSize: 11, color: 'var(--muted)', margin: '8px 0 0', lineHeight: 1.4 }}>Si el estado es <b>Presentado (sin pago)</b>, esta obligación aparece en <b>Pagos</b> con este valor.</p>
         </div>
+        )}
 
         {aviso && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{aviso}</div>}
 

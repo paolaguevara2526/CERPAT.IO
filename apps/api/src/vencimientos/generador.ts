@@ -252,6 +252,20 @@ export const OBLIGACIONES_ICA = new Set<string>(['ICA', 'ReteICA', 'AutoICA']);
 // Pagos (nunca causan interés ni sanción).
 export const OBLIGACIONES_SIN_PAGO = new Set<string>(['Envío de nómina electrónica', 'Seguridad social (PILA)', RUB_OBLIGACION]);
 
+/**
+ * ¿Esta obligación es de SOLO PRESENTACIÓN (nunca tiene un valor a pagar)?
+ *
+ * Además de la lista fija, cubre la **información exógena**: es un reporte, no
+ * una declaración con saldo, así que no genera pago **se llame como se llame el
+ * municipio en el nombre** ("Exógena municipal (medios magnéticos)", "Exógena de
+ * ICA", …). Esas se agregan a mano y su nombre es texto libre, por eso no se
+ * pueden enumerar una por una.
+ */
+export function obligacionSinPago(obligacion: string): boolean {
+  if (OBLIGACIONES_SIN_PAGO.has(obligacion)) return true;
+  return /ex[oó]gena/i.test(obligacion ?? '');
+}
+
 // ---- ICA municipal ----
 // Config de ICA de una empresa en un municipio (fila de EmpresaMunicipioIca).
 export type MunicipioIcaInput = {
