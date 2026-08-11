@@ -367,9 +367,26 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
   // de a quién pertenece un cliente.
   const idsAsignadas = esStaffAcotado(u) ? await empresasAsignadas(u.sub, org.id) : null;
 
+  // Ventana: hasta el fin del mes pedido (por defecto, el mes en curso).
+  //
+  // El corte es POR ARRIBA solamente: lo vencido de meses anteriores sigue
+  // apareciendo. Esconderlo al pasar de mes sería la peor forma de "ordenar la
+  // vista" — una retención de julio sin presentar no deja de existir el 1 de
+  // agosto, y al desaparecer de la pantalla nadie la vuelve a mirar.
+  //
+  // Y como la ventana se calcula contra el calendario, septiembre se habilita
+  // solo: no hay nada que activar cuando termine agosto.
+  const mesPedido = typeof req.query.mes === 'string' && /^\d{4}-\d{2}$/.test(req.query.mes) ? req.query.mes : null;
+  const ahora = new Date();
+  const [anioV, mesV] = mesPedido
+    ? mesPedido.split('-').map(Number)
+    : [ahora.getUTCFullYear(), ahora.getUTCMonth() + 1];
+  const finDeVentana = new Date(Date.UTC(anioV, mesV, 1)); // primer día del mes siguiente
+
   const items = await prisma.vencimientoEmpresa.findMany({
     where: {
       organizacionId: org.id, estado: 'pendiente',
+      fechaVencimiento: { lt: finDeVentana },
       ...(esCoordinacion(u) ? {} : { asesorId: u.sub }),
       ...(idsAsignadas ? { empresaId: { in: idsAsignadas } } : {}),
     },
@@ -383,7 +400,8 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
     },
     take: 300,
   });
-  if (items.length === 0) return res.json({ total: 0, listos: 0, esperando: 0, impuestos: [] });
+  const mesVentana = `${anioV}-${String(mesV).padStart(2, '0')}`;
+  if (items.length === 0) return res.json({ mes: mesVentana, total: 0, listos: 0, esperando: 0, vencidos: 0, impuestos: [] });
 
   // Insumo liberado por área: la entrega que crea el auxiliar al liberar el mes.
   const [areaDe, entregas] = await Promise.all([
@@ -426,9 +444,11 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
   });
 
   res.json({
+    mes: mesVentana,
     total: filas.length,
     listos: filas.filter((f) => f.liberado).length,
     esperando: filas.filter((f) => !f.liberado).length,
+    vencidos: filas.filter((f) => f.vencido).length,
     impuestos: filas,
   });
 });

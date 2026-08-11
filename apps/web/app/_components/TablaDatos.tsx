@@ -10,7 +10,7 @@
 // Recibe FILAS PLANAS: una vista de servidor puede pasarle sus datos sin
 // convertirse en componente de cliente.
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { descargarXlsx, hoyISO } from './exportar';
 import FiltroColumna from './FiltroColumna';
 import FiltrosActivos from './FiltrosActivos';
@@ -35,7 +35,7 @@ export type Columna<T> = {
 };
 
 export default function TablaDatos<T>({
-  filas, columnas, idDe, vacio = 'No hay datos.', sinCoincidencias = 'Ninguno cumple los filtros.', nota, acciones, exportar,
+  filas, columnas, idDe, vacio = 'No hay datos.', sinCoincidencias = 'Ninguno cumple los filtros.', nota, acciones, exportar, detalle,
 }: {
   filas: T[];
   columnas: Columna<T>[];
@@ -48,7 +48,12 @@ export default function TablaDatos<T>({
   acciones?: (fila: T) => React.ReactNode;
   /** Nombre base del Excel. Si se pasa, aparece el botón de descarga. */
   exportar?: string;
+  /** Fila desplegable: si se pasa, cada fila se puede abrir y muestra esto
+   *  debajo, a todo el ancho. Permite tablas con filtros Y detalle, que antes
+   *  obligaba a escribir la tabla a mano y perder el embudo. */
+  detalle?: (fila: T, cerrar: () => void) => React.ReactNode;
 }) {
+  const [abierta, setAbierta] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
   const [filtros, setFiltros] = useState<Record<string, Set<string> | null>>({});
   const { orden, alternar, ordenar } = useOrden<string>();
@@ -77,7 +82,7 @@ export default function TablaDatos<T>({
   }, [filas, columnas, filtros, ordenar]);
 
   const hayFiltro = Object.values(filtros).some((s) => s != null);
-  const total = columnas.length + (acciones ? 1 : 0);
+  const total = columnas.length + (acciones ? 1 : 0) + (detalle ? 1 : 0);
 
   // Baja lo que se está viendo: con los filtros puestos y en el orden actual.
   // Exportar siempre la tabla completa sería una trampa — quien acaba de filtrar
@@ -148,6 +153,7 @@ export default function TablaDatos<T>({
                   );
                 })}
                 {acciones && <th style={{ width: 44 }} />}
+                {detalle && <th style={{ width: 44 }} />}
               </tr>
             </thead>
             <tbody>
@@ -155,14 +161,34 @@ export default function TablaDatos<T>({
                 <tr><td colSpan={total} style={{ padding: 34, textAlign: 'center', color: 'var(--muted)' }}>{vacio}</td></tr>
               ) : visibles.length === 0 ? (
                 <tr><td colSpan={total} style={{ padding: 34, textAlign: 'center', color: 'var(--muted)' }}>{sinCoincidencias}</td></tr>
-              ) : visibles.map((f) => (
-                <tr key={idDe(f)}>
-                  {columnas.map((c) => (
-                    <td key={c.clave} style={c.estiloCelda}>{c.render ? c.render(f) : c.valor(f)}</td>
-                  ))}
-                  {acciones && <td>{acciones(f)}</td>}
-                </tr>
-              ))}
+              ) : visibles.map((f) => {
+                const id = idDe(f);
+                const activa = detalle != null && abierta === id;
+                return (
+                  <Fragment key={id}>
+                    <tr style={activa ? { background: 'var(--panel-2)' } : undefined}>
+                      {columnas.map((c) => (
+                        <td key={c.clave} style={c.estiloCelda}>{c.render ? c.render(f) : c.valor(f)}</td>
+                      ))}
+                      {acciones && <td>{acciones(f)}</td>}
+                      {detalle && (
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button className="dbtn" onClick={() => setAbierta(activa ? null : id)} style={{ fontSize: 12, padding: '4px 10px' }}>
+                            {activa ? 'Cerrar' : 'Abrir'}
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                    {activa && (
+                      <tr>
+                        <td colSpan={total} style={{ background: 'var(--panel-2)', padding: '4px 14px 16px' }}>
+                          {detalle!(f, () => setAbierta(null))}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

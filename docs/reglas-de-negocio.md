@@ -302,6 +302,14 @@ aplicación —**solo las empresas asignadas hoy**—, que es la fuente de verda
 pertenece un cliente. Para corregir el dato viejo está *Plan por cliente → Aplicar los
 responsables a un período ya generado*, que también actualiza vencimientos.
 
+**Ventana de tiempo.** "Mis impuestos" llega **hasta el fin del mes en curso**, y el corte
+es **solo por arriba**: lo vencido de meses anteriores sigue apareciendo, marcado. Esconderlo
+al pasar de mes sería la peor forma de ordenar la vista — una retención de julio sin
+presentar no deja de existir el 1 de agosto, y al desaparecer de la pantalla nadie la
+vuelve a mirar. Como la ventana se calcula contra el calendario, **septiembre se habilita
+solo**: no hay nada que activar al terminar agosto. El mes es editable para mirar hacia
+adelante.
+
 **Liberación del insumo.** El asesor ve marcado qué está liberado y qué espera al
 auxiliar. Solo las obligaciones **mensuales** (período `YYYY-MM`) se emparejan con la
 entrega del auxiliar; las trimestrales y anuales (`"1er trimestre"`, `"declaración y
