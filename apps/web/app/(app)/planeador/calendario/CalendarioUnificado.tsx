@@ -315,7 +315,15 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>{error}</div>
       ) : (
         <div className="panel" style={{ padding: 0, overflow: 'hidden', opacity: cargando ? 0.6 : 1, transition: 'opacity .15s' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols},1fr)` }}>
+          {/* minmax(0,1fr) y no 1fr: "1fr" es "minmax(auto,1fr)", y ese `auto`
+              deja que el contenido empuje la columna más allá de lo que hay
+              disponible. Con nombres de cliente largos las siete columnas
+              sumaban más que el panel, y como el panel recorta (overflow
+              hidden) los últimos días desaparecían sin forma de llegar a
+              ellos: el mes se veía de lunes a jueves. Con minmax(0,…) las
+              columnas se reparten el ancho por igual y el texto se corta con
+              puntos suspensivos, que es lo que ya estaba previsto. */}
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols},minmax(0,1fr))` }}>
             {DIAS.slice(0, cols).map((d, idx) => (
               <div key={d} style={{ padding: '8px 10px', fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase', color: idx >= 5 ? 'var(--neutro)' : 'var(--muted)', borderBottom: '1px solid var(--line)', background: idx >= 5 ? 'rgba(91,106,130,0.12)' : 'var(--panel-2)' }}>{d}</div>
             ))}
