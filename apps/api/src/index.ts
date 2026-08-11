@@ -16,6 +16,7 @@ import { hallazgosRouter } from './routes/hallazgos.js';
 import { vencimientosRouter } from './routes/vencimientos.js';
 import { visitasRouter } from './routes/visitas.js';
 import { fichaRouter } from './routes/ficha.js';
+import { novedadesRouter } from './routes/novedades.js';
 import { promoverRootSiSePide } from './bootstrap-root.js';
 import { mensajeDeError } from './errores.js';
 
@@ -42,6 +43,7 @@ app.use('/hallazgos', hallazgosRouter);
 app.use('/vencimientos', vencimientosRouter);
 app.use('/visitas', visitasRouter);
 app.use('/ficha', fichaRouter);
+app.use('/novedades', novedadesRouter);
 
 // TODO (Claude Code): agregar aquí, en el mismo patrón, los routers de:
 // /auth, /usuarios, /empresas, /pagos, /catalogos, /vencimientos, /parametros, /auditoria

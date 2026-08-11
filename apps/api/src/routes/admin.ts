@@ -86,6 +86,10 @@ const CATALOGOS: Record<string, CatCfg> = {
   // Tipos de documento de la captura. Estaba escrito en el frontend: agregar uno
   // exigía un despliegue, y el campo quedaba de texto libre.
   'tipos-documento': { delegate: prisma.tipoDocumentoCaptura, conOrden: true },
+  // Causas de las novedades del día. Es catálogo y no texto libre para que
+  // sumar por causa —"cuánto nos costó el internet este mes"— dé un número y no
+  // tres variantes de la misma palabra.
+  'tipos-novedad': { delegate: prisma.tipoNovedad, conOrden: true },
 };
 
 adminRouter.get('/catalogos/:tipo', requireAuth, async (req, res) => {

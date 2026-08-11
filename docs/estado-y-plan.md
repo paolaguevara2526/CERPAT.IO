@@ -424,6 +424,26 @@ La coordinación puede repartir el rol sin depender del Administrador (*Usuarios
 modo acotado). El rol entra **por migración**, no por el seed: en el despliegue solo
 corren las migraciones.
 
+## Novedades del día ✅ (11 ago 2026)
+
+Los auxiliares reportan a diario lo que les impidió trabajar (internet, acceso al
+sistema, equipo lento) y hasta ahora se contaba de palabra. Ahora se reporta en
+**Mi Día → Novedades** — tipo de catálogo, qué pasó, horas desde–hasta y **plan de
+acción obligatorio y libre** (la condición con la que la dirección abrió el espacio) —
+y la coordinación ve el consolidado con la **suma de minutos por causa** en
+**Coordinación → Novedades del equipo**: "el internet nos costó 6 h este mes" deja de
+ser una opinión.
+
+La cierra quien la reportó o la coordinación, con registro de quién y cuándo; se puede
+reabrir. **Una novedad nunca cambia el estado de una tarea**: explica el atraso, no lo
+disculpa. Reglas completas en
+[`reglas-de-negocio.md`](./reglas-de-negocio.md#novedades-del-día-con-plan-de-acción-obligatorio).
+Los tipos se administran en *Administración → Tipos de novedad*; los siete iniciales
+entran **por migración** (el seed no corre en el despliegue).
+
+En la misma sesión: el asesor de impuestos ya tiene el campo **🔗 Soporte documental**
+también en *Mis impuestos* (era solo del modal del calendario, que su rol no abre).
+
 ## Sesión del 10–11 de agosto 2026 — 12 PR
 
 Jornada larga con el equipo ya operando. El hilo conductor fue el **área de Impuestos**,

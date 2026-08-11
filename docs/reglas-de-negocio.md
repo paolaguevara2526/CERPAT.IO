@@ -414,6 +414,42 @@ fija el comportamiento **justo por encima y por debajo** de cada tope (las norma
 alternan entre "superiores a" e "iguales o superiores a", y esa diferencia decide
 casos reales).
 
+## Novedades del día (con plan de acción obligatorio)
+
+Los auxiliares y asesores reportan a diario lo que les impidió trabajar: se cayó el
+internet, no dio acceso el sistema, el equipo estaba lento. Hasta ahora eso se contaba
+de palabra — "el internet nos tiene mal" era una opinión que no se podía llevar a una
+cotización. Las novedades lo vuelven una cifra. Se reportan en **Mi Día → Novedades**;
+la coordinación ve el consolidado de la firma en **Coordinación → Novedades del
+equipo**, con la **suma de minutos por causa**.
+
+- **No hay novedad sin plan de acción.** Es la condición con la que se abrió el
+  espacio (decisión de la dirección, 11 ago 2026): reportar sin decir qué se hizo
+  convierte esto en un buzón de quejas. El plan es **texto libre** —lo que se hace ante
+  una caída de internet no cabe en una lista cerrada— pero **obligatorio**, y el
+  backend lo exige (`POST /novedades`), no solo la pantalla.
+- **El tipo es catálogo, no texto libre** (*Administración → Tipos de novedad*), por la
+  misma lección de los tipos de documento: con texto libre entran `Internet`,
+  `internet` e `INTERNET` como cosas distintas y la suma por causa queda inservible.
+- **El tiempo se pide como dos horas (desde–hasta), no como una estimación**: una hora
+  es un hecho y "como una hora" es una opinión. Los minutos los calcula y guarda el
+  backend (`minutosNovedad`, con pruebas); si el fin va antes que el inicio se rechaza
+  en vez de asumir que cruzó la medianoche — lo más probable es que esté mal escrito, y
+  un número inventado ensucia el total con el que se decide. Las horas son opcionales:
+  una novedad sin horas cuenta como evento, solo que no suma minutos.
+- **Cliente y área son opcionales**: no toda novedad es de un cliente, y exigirlo
+  llevaría a inventar uno para poder reportar.
+- **La cierra quien la reportó o la coordinación**, y queda registrado **quién y
+  cuándo** (`cerradaEn`, `cerradaPorId`): sin la fecha de cierre no se sabe cuánto
+  estuvo abierta. Se puede reabrir (el problema volvió), y al reabrir se limpia el
+  cierre anterior.
+- **Una novedad nunca cambia el estado de una tarea.** Explica el atraso, no lo
+  disculpa: si moviera estados, reportar novedades sería la forma de cerrar trabajo sin
+  hacerlo.
+- Alcance: **cada quien ve las suyas**; la coordinación (Administrador/Coordinador/root)
+  ve todas (`GET /novedades?todas=1`). El desplegable de clientes del formulario
+  respeta el alcance general (el asesor elige entre sus asignados).
+
 ## Acceso por rol al Planeador (menú y URL)
 
 Cada ítem del menú se muestra según el rol, y el acceso se bloquea también por URL

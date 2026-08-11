@@ -8,6 +8,7 @@ import CapturaDelDia from './CapturaDelDia';
 import ListoParaProcesar from './ListoParaProcesar';
 import ImpuestosDelDia from './ImpuestosDelDia';
 import InsumoDelCliente from './InsumoDelCliente';
+import NovedadesDelDia from './NovedadesDelDia';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 
 
@@ -40,6 +41,7 @@ export default async function MiDiaPage() {
         <InsumoDelCliente />
         <ListoParaProcesar />
         <ImpuestosDelDia />
+        <NovedadesDelDia />
       </div>
 
       {/* El listado completo va plegable: en Mi Día lo primero es lo que se

@@ -169,6 +169,8 @@ model Organizacion {
 
   eventosVencimiento EventoVencimiento[]
   eventosInsumo      EventoInsumo[]
+  tiposNovedad       TipoNovedad[]
+  novedades          Novedad[]
 
   // Visitas a clientes (asesor/auditor) y sus compromisos
   visitas           Visita[]
@@ -230,6 +232,8 @@ model Usuario {
   visitasCreadas             Visita[]                @relation("VisitasCreadas")
   compromisosComoResponsable CompromisoVisita[]      @relation("CompromisoResponsable")
   camarasACargo              RegistroCamara[]        @relation("RegistroCamaraResponsable")
+  novedadesReportadas        Novedad[]               @relation("NovedadReporta")
+  novedadesCerradas          Novedad[]               @relation("NovedadCierra")
 
   // Email único por organización (dos firmas distintas pueden repetir email).
   @@unique([organizacionId, email])
@@ -332,6 +336,7 @@ model Empresa {
   registrosCamara         RegistroCamara[]
   cifrasFiscales          CifrasFiscales[]
   eventosInsumo           EventoInsumo[]
+  novedades               Novedad[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -736,6 +741,7 @@ model Area {
   tareas         Tarea[]
   entregasInsumo EntregaInsumo[]
   eventosInsumo  EventoInsumo[]
+  novedades      Novedad[]
 
   @@unique([organizacionId, nombre])
   @@index([organizacionId])
@@ -941,6 +947,82 @@ model LoteCaptura {
   @@index([organizacionId])
   @@index([tareaId])
   @@map("lotes_captura")
+}
+
+// ---------- NOVEDADES DEL DÍA ----------
+//
+// Lo que impidió trabajar: se cayó el internet, no dio acceso el sistema, el
+// equipo estaba lento. Los auxiliares las reportan a diario y hasta ahora se
+// contaban de palabra, con lo cual "el internet nos tiene mal" era una opinión
+// que nadie podía llevar a una cotización.
+//
+// Dos decisiones que se ven en el modelo:
+//
+//  1. El TIPO es catálogo, no texto libre. Con texto libre entran "Internet",
+//     "internet" e "INTERNET" como cosas distintas y la suma por causa —el único
+//     número que sirve para decidir— queda inservible. Es la misma lección de
+//     los tipos de documento de captura.
+//  2. El PLAN DE ACCIÓN es texto libre y obligatorio. Obligatorio porque es la
+//     condición con la que se abrió el espacio: reportar sin decir qué se hizo
+//     convierte esto en un buzón de quejas. Libre porque lo que se hace ante una
+//     caída de internet no cabe en una lista cerrada.
+//
+// Una novedad NUNCA cambia el estado de una tarea: explica el atraso, no lo
+// disculpa. Si moviera estados, reportar novedades se volvería la forma de
+// cerrar trabajo sin hacerlo.
+model TipoNovedad {
+  id             String @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int    @default(0)
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  novedades    Novedad[]
+
+  @@unique([organizacionId, nombre])
+  @@index([organizacionId])
+  @@map("tipos_novedad")
+}
+
+model Novedad {
+  id             String    @id @default(uuid())
+  organizacionId String
+  usuarioId      String // quien la reporta
+  tipoId         String
+  fecha          DateTime // día en que ocurrió (no necesariamente hoy)
+  descripcion    String
+  planAccion     String // obligatorio: qué se hizo o se va a hacer
+  // Horas del mismo día, "HH:MM". Se piden dos horas concretas y no "¿cuánto
+  // tiempo perdiste?" porque una hora es un hecho y una estimación es una
+  // opinión. `minutos` se calcula en el backend y se guarda para poder sumar sin
+  // reinterpretar las horas en cada consulta.
+  horaDesde      String?
+  horaHasta      String?
+  minutos        Int?
+  // Contexto opcional: no toda novedad es de un cliente ni de un área. Exigirlo
+  // llevaría a inventar un cliente para poder reportar.
+  empresaId      String?
+  areaId         String?
+  estado         String    @default("abierta") // "abierta" | "resuelta"
+  // Quién cerró y cuándo. Cierra el mismo que reporta o la coordinación, y en
+  // ambos casos queda el registro: sin la fecha de cierre no se puede saber
+  // cuánto tiempo estuvo abierta una novedad.
+  cerradaEn      DateTime?
+  cerradaPorId   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  usuario      Usuario      @relation("NovedadReporta", fields: [usuarioId], references: [id])
+  tipo         TipoNovedad  @relation(fields: [tipoId], references: [id])
+  empresa      Empresa?     @relation(fields: [empresaId], references: [id])
+  area         Area?        @relation(fields: [areaId], references: [id])
+  cerradaPor   Usuario?     @relation("NovedadCierra", fields: [cerradaPorId], references: [id])
+
+  @@index([organizacionId, fecha])
+  @@index([organizacionId, estado])
+  @@index([usuarioId])
+  @@map("novedades")
 }
 
 // ---------- Parametrización de vencimientos tributarios ----------

@@ -7,6 +7,7 @@
 import { exigirRuta } from '@/lib/acceso-server';
 import { apiFetch } from '@/lib/session';
 import SinEntregarCliente from './SinEntregarCliente';
+import NovedadesConsolidado from './NovedadesConsolidado';
 
 
 export const metadata = { title: 'Coordinación' };
@@ -178,6 +179,12 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
           </div>
         </div>
       )}
+
+      {/* Va por fuera del condicional de KPIs a propósito: las novedades del
+          equipo existen aunque el plan del mes no se haya generado. */}
+      <div style={{ marginTop: 22 }}>
+        <NovedadesConsolidado />
+      </div>
     </>
   );
 }
