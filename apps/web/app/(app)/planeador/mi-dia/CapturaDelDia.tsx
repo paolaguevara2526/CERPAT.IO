@@ -30,11 +30,11 @@ type Fila = {
   auxiliar: string | null;
 };
 type Resp = { periodo: string | null; hoy: string | null; total: number; totalObservadas: number; capturadosHoy: number; tareas: Fila[] };
-type NuevoLote = { tipoDocumento: string; desde: string; hasta: string; cantidad: string; fecha: string };
-type Lote = { id: string; tipoDocumento: string; desde: string | null; hasta: string | null; cantidad: number | null; fecha: string };
+type NuevoLote = { tipoDocumento: string; prefijo: string; desde: string; hasta: string; cantidad: string; fecha: string };
+type Lote = { id: string; tipoDocumento: string; prefijo: string | null; desde: string | null; hasta: string | null; cantidad: number | null; fecha: string };
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
-const loteVacio = (): NuevoLote => ({ tipoDocumento: '', desde: '', hasta: '', cantidad: '', fecha: hoyISO() });
+const loteVacio = (): NuevoLote => ({ tipoDocumento: '', prefijo: '', desde: '', hasta: '', cantidad: '', fecha: hoyISO() });
 
 function fmtFecha(iso: string | null): string {
   if (!iso) return '—';
@@ -223,8 +223,8 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
                           : (
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
                               <thead>
-                                <tr>{['Fecha', 'Tipo de documento', 'Desde', 'Hasta', 'Cantidad', ''].map((h, i) => (
-                                  <th key={h + i} style={{ textAlign: i >= 2 && i <= 4 ? 'right' : 'left', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '5px 8px', borderBottom: '1px solid var(--line)' }}>{h}</th>
+                                <tr>{['Fecha', 'Tipo de documento', 'Prefijo', 'Desde', 'Hasta', 'Cantidad', ''].map((h, i) => (
+                                  <th key={h + i} style={{ textAlign: i >= 3 && i <= 5 ? 'right' : 'left', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '5px 8px', borderBottom: '1px solid var(--line)' }}>{h}</th>
                                 ))}</tr>
                               </thead>
                               <tbody>
@@ -232,6 +232,7 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
                                   <tr key={l.id}>
                                     <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fmtFecha(l.fecha)}</td>
                                     <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', fontWeight: 600 }}>{l.tipoDocumento}</td>
+                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', color: 'var(--muted)' }}>{l.prefijo ?? '—'}</td>
                                     <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)' }}>{l.desde ?? '—'}</td>
                                     <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)' }}>{l.hasta ?? '—'}</td>
                                     <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{l.cantidad ?? '—'}</td>
@@ -258,6 +259,11 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
                               <option value="">— Elegir —</option>
                               {tipos.map((x) => <option key={x} value={x}>{x}</option>)}
                             </select>
+                          </Campo>
+                          <Campo label="Prefijo" w={90}>
+                            <input value={nl.prefijo} onChange={(e) => setNl({ ...nl, prefijo: e.target.value })} placeholder="FE, CE…"
+                              title="Prefijo del consecutivo. Va aparte para que Desde/Hasta queden numéricos y la cantidad se siga calculando sola."
+                              style={{ ...inp, width: '100%' }} />
                           </Campo>
                           <Campo label="Desde" w={110}><input value={nl.desde} onChange={(e) => setDesde(e.target.value)} placeholder="consec." style={{ ...inp, width: '100%' }} /></Campo>
                           <Campo label="Hasta" w={110}><input value={nl.hasta} onChange={(e) => setHasta(e.target.value)} placeholder="consec." style={{ ...inp, width: '100%' }} /></Campo>

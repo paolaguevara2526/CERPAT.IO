@@ -220,6 +220,11 @@ demás catálogos.
   hubieran capturado** con el campo abierto: si el desplegable no los ofreciera, lo ya
   registrado no se podría volver a repetir.
 
+**Prefijo del consecutivo.** Va en su **propio campo**, no dentro de *Desde*/*Hasta*: se
+escribe una vez en lugar de dos, *Desde* y *Hasta* quedan numéricos —así la cantidad se
+sigue calculando sola— y el dato queda estructurado para poder agrupar por prefijo más
+adelante.
+
 **Ver y eliminar lotes.** En *Mi Día → Captura del día*, el número de la columna
 **Lotes** se abre y muestra el detalle (fecha, tipo, consecutivo desde–hasta, cantidad).
 Antes ese número era un dato muerto: decía "4" y no había forma de saber cuáles, así que
