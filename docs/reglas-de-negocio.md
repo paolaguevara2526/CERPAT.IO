@@ -208,13 +208,13 @@ terminó su trabajo.
 ## Obligaciones de solo presentación
 
 Algunas obligaciones **no tienen saldo**: son un reporte, no una declaración con valor.
-En ellas no se ofrece la casilla de **valor a pagar** ni los estados de pago, porque
-ofrecerlos invita a registrar un pago que no existe — y ese valor terminaría en *Pagos*
-y en los indicadores.
+En ellas **no se ofrece la casilla de valor a pagar**, porque ofrecerla invita a
+registrar un pago que no existe — y ese valor terminaría en *Pagos* y en los
+indicadores.
 
-- Se ofrecen solo: **Pendiente**, **Presentado**, **No presentado** y **No obligado**.
-  "Presentado (sin pago)" se muestra simplemente como **Presentado**: no hay pago del
-  cual carecer.
+- **Los estados quedan completos**, como en cualquier otra obligación: se decidió tocar
+  solo la casilla de valor. Bajo el selector aparece una línea aclarando que la
+  obligación no lleva pago.
 - **El backend también lo rechaza** (`PATCH /vencimientos/:id`), no solo la pantalla: un
   valor enviado a mano o por una pantalla desactualizada no entra.
 - **Cuáles son** (`obligacionSinPago`, con pruebas): nómina electrónica, seguridad social

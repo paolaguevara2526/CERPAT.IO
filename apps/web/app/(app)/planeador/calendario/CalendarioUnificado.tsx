@@ -19,14 +19,6 @@ const VENC_META: Record<string, { label: string; color: string }> = {
   no_presentado: { label: 'No presentado', color: 'var(--peligro)' },
   no_obligado: { label: 'No obligado', color: 'var(--neutro)' },
 };
-// Una obligación de solo presentación (exógena, nómina electrónica, PILA) no
-// tiene saldo: ofrecer "presentado y pagado" o "presentado en $0" es ruido, y
-// peor, invita a registrar un pago que no existe. Se ofrece lo único que puede
-// pasarle: se presentó, no se presentó, o no estaba obligada.
-const VENC_SIN_PAGO = ['pendiente', 'presentado_sin_pago', 'no_presentado', 'no_obligado'];
-// Y "Presentado (sin pago)" no se llama así acá: no hay pago del cual carecer.
-const ETIQUETA_SIN_PAGO: Record<string, string> = { presentado_sin_pago: 'Presentado' };
-
 // Estados de una VISITA (asesor/auditor al cliente).
 const VISITA_META: Record<string, { label: string; color: string }> = {
   programada: { label: 'Programada', color: 'var(--info)' },
@@ -570,9 +562,7 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
           <div style={{ ...lbl2, marginBottom: 4 }}>Estado</div>
           <select value={estado} onChange={(e) => cambiarEstado(e.target.value)}
             style={{ fontSize: 12.5, fontWeight: 800, color: col, background: `${tinte(col, 12)}`, border: `1px solid ${tinte(col, 35)}`, borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'var(--ui)' }}>
-            {Object.entries(VENC_META)
-              .filter(([k]) => !sinPago || VENC_SIN_PAGO.includes(k))
-              .map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{(sinPago && ETIQUETA_SIN_PAGO[k]) || v.label}</option>)}
+            {Object.entries(VENC_META).map(([k, v]) => <option key={k} value={k} style={{ color: '#111' }}>{v.label}</option>)}
           </select>
           {sinPago && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Obligación de solo presentación: no lleva valor a pagar.</div>}
         </div>

@@ -40,12 +40,6 @@ const ESTADOS_PRESENTAR = [
   { v: 'presentado_cero', label: 'Presentado en ceros' },
   { v: 'no_obligado', label: 'No obligado' },
 ];
-// En una obligación de SOLO PRESENTACIÓN no hay saldo: ofrecer "y pagado" o "en
-// ceros" es ruido, y peor, invita a registrar un pago que no existe.
-const ESTADOS_PRESENTAR_SIN_PAGO = [
-  { v: 'presentado_sin_pago', label: 'Presentado' },
-  { v: 'no_obligado', label: 'No obligado' },
-];
 
 const fmt = (iso: string | null) => {
   if (!iso) return '—';
@@ -297,7 +291,7 @@ function Detalle({ f, subs, valor, setValor, inp, onAbrir, onSub, onAccion, onGu
         {f.estadoRevision === 'aprobado' && (
           <>
             <span style={{ fontSize: 12.5, color: 'var(--exito-fuerte)', fontWeight: 700 }}>✓ Aprobado{f.revisor ? ` por ${f.revisor}` : ''} — ya podés presentar:</span>
-            {(f.sinPago ? ESTADOS_PRESENTAR_SIN_PAGO : ESTADOS_PRESENTAR).map((e) => (
+            {ESTADOS_PRESENTAR.map((e) => (
               <button key={e.v} className="dbtn" disabled={trabajando} onClick={() => onPresentar(e.v)} style={{ fontSize: 12.5 }}>{e.label}</button>
             ))}
           </>
