@@ -171,9 +171,19 @@ no le corresponde.
   2. alguien como **auxiliar** sin ningún rol que ejecute trabajo;
   3. **la misma persona como asesor y auxiliar** de la misma área — se estaría liberando
      el insumo a sí misma, que rompe el circuito de captura y liberación.
-- **Corregir la asignación no reasigna lo ya generado:** las tareas del mes conservan el
-  responsable con el que nacieron. Hay que corregir la asignación *y* revisar las tareas
-  del período en curso.
+- **Corregir la asignación no reasigna lo ya generado:** las tareas nacen con el asesor y
+  el auxiliar que tenía la asignación *en ese momento*. Para ponerlas al día está
+  *Plan por cliente → **Aplicar los responsables a un período ya generado***, que
+  actualiza tareas **y** vencimientos del período (con simulación previa). **No toca las
+  terminadas ni las auditadas**: cambiarles el responsable falsearía quién hizo un
+  trabajo que ya se hizo.
+
+**Alcance por defecto: cerrado.** `esStaffAcotado` decide por lo que el usuario **no**
+tiene: se acota a todo usuario interno **salvo** Administrador, Coordinador, Auditor y
+root. Antes terminaba en `roles.some(['Asesor','Auxiliar'])` y fallaba **abierto** — un
+Revisor, alguien con el rol mal puesto o un usuario recién creado sin roles pasaban por
+"no acotado" y veían la cartera completa de la firma. El peor caso debe ser *no ver lo
+que sí corresponde* —que se reclama el mismo día— y no al revés.
 
 ## "No aplica" en los checklists
 

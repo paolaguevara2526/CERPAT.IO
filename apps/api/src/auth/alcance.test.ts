@@ -70,3 +70,31 @@ test('un cliente externo no es staff acotado', () => {
   assert.equal(esStaffAcotado(clienteGrupo), false);
   assert.equal(esStaffAcotado(null), false);
 });
+
+test('esStaffAcotado: acota a todo interno sin rol elevado', () => {
+  const con = (roles: string[]) => ({ esRoot: false, roles, empresaCliente: null, grupoCliente: null });
+  assert.equal(esStaffAcotado(con(['Asesor'])), true);
+  assert.equal(esStaffAcotado(con(['Auxiliar'])), true);
+  // Elevados y root ven toda la firma.
+  for (const r of ['Administrador', 'Coordinador', 'Auditor']) assert.equal(esStaffAcotado(con([r])), false, r);
+  assert.equal(esStaffAcotado(root), false);
+  // Un rol elevado combinado con uno acotado manda el elevado.
+  assert.equal(esStaffAcotado(con(['Asesor', 'Coordinador'])), false);
+});
+
+test('esStaffAcotado falla CERRADO ante roles que no conoce', () => {
+  // Antes terminaba en roles.some(['Asesor','Auxiliar']) y devolvía false para
+  // cualquier otra cosa: un Revisor, alguien con el rol mal puesto o un usuario
+  // recién creado sin roles pasaban por "no acotado" y veían la cartera entera
+  // de la firma. El peor caso debe ser "no ve lo que sí debe", no al revés.
+  const con = (roles: string[]) => ({ esRoot: false, roles, empresaCliente: null, grupoCliente: null });
+  assert.equal(esStaffAcotado(con(['Revisor'])), true);
+  assert.equal(esStaffAcotado(con([])), true);
+  assert.equal(esStaffAcotado(con(['RolQueNoExiste'])), true);
+});
+
+test('esStaffAcotado no aplica a clientes externos (se acotan por otro camino)', () => {
+  assert.equal(esStaffAcotado(clienteEmpresa), false);
+  assert.equal(esStaffAcotado(clienteGrupo), false);
+  assert.equal(esStaffAcotado(null), false);
+});

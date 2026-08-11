@@ -9,6 +9,7 @@ import LiberarPeriodo from './LiberarPeriodo';
 import RecalcularFechas from './RecalcularFechas';
 import GenerarPeriodo from './GenerarPeriodo';
 import RevisionResponsables from './RevisionResponsables';
+import ResincronizarResponsables from './ResincronizarResponsables';
 
 type Empresa = { id: string; nombre: string };
 type Usuario = { id: string; nombre: string; roles: string[] };
@@ -234,6 +235,9 @@ export default function PlanClienteEditor() {
           replica el error en todas las tareas del mes. */}
       <RevisionResponsables onIr={(id) => { setEmpresaId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
       <GenerarPeriodo />
+      {/* Va junto al recálculo de fechas: los dos arreglan lo YA generado, que
+          es lo que ni Guardar ni Generar tocan. */}
+      <ResincronizarResponsables />
       <RecalcularFechas />
       <LiberarPeriodo />
     <div>
