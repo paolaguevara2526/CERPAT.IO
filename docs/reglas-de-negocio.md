@@ -205,6 +205,28 @@ terminó su trabajo.
 - En la **cola de revisión** los puntos marcados "no aplica" se señalan: validar que de
   verdad no aplicaban es parte de lo que el revisor debe mirar antes de aprobar.
 
+## Tipos de documento de la captura
+
+Los tipos que el auxiliar elige al registrar un lote (Egresos, Facturas de compra, …)
+son un **catálogo administrable**: *Administración → Tipos de documento*, junto a los
+demás catálogos.
+
+- **La lista es cerrada.** Antes el campo era de texto libre con sugerencias escritas en
+  el código: no se podía agregar un tipo sin desplegar, y entraban `Egresos`, `egresos` y
+  `Egreso` como si fueran cosas distintas — con lo cual **cualquier medición por tipo de
+  documento quedaba inservible**. Si falta uno, la coordinación lo crea en segundos y
+  aparece de inmediato, sin desplegar nada.
+- La migración **siembra los siete tipos originales** y, además, **todos los que ya se
+  hubieran capturado** con el campo abierto: si el desplegable no los ofreciera, lo ya
+  registrado no se podría volver a repetir.
+
+**Ver y eliminar lotes.** En *Mi Día → Captura del día*, el número de la columna
+**Lotes** se abre y muestra el detalle (fecha, tipo, consecutivo desde–hasta, cantidad).
+Antes ese número era un dato muerto: decía "4" y no había forma de saber cuáles, así que
+corregir un error era adivinar. **El botón de eliminar se le muestra solo a la
+coordinación**; el backend además se lo permite al asesor/auxiliar de la tarea, para que
+puedan deshacer su propio error de digitación.
+
 ## Obligaciones de solo presentación
 
 Algunas obligaciones **no tienen saldo**: son un reporte, no una declaración con valor.

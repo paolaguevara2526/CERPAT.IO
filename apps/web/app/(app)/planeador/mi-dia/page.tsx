@@ -3,6 +3,7 @@
 // solo lugar) y, debajo, todas sus tareas del período.
 
 import { fetchTareas, TareasTabla, nombrePeriodo } from '../tareas';
+import { getSessionUser } from '@/lib/session';
 import CapturaDelDia from './CapturaDelDia';
 import ListoParaProcesar from './ListoParaProcesar';
 import ImpuestosDelDia from './ImpuestosDelDia';
@@ -14,6 +15,11 @@ export const metadata = { title: 'Mi Día' };
 export const dynamic = 'force-dynamic';
 
 export default async function MiDiaPage() {
+  // Eliminar un lote borra trabajo ya registrado: se reserva a la coordinación.
+  // El backend además lo permite al asesor/auxiliar de la tarea; acá solo se
+  // decide a quién se le muestra el botón.
+  const sesion = await getSessionUser();
+  const puedeBorrarLotes = !!sesion && (sesion.esRoot || sesion.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)));
   const { data, error } = await fetchTareas('miDia=1');
   const tareas = data?.tareas ?? [];
 
@@ -30,7 +36,7 @@ export default async function MiDiaPage() {
           Los impuestos van aparte porque no son tareas del plan: se trabajan
           sobre el vencimiento mismo, que es lo que ve el calendario. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
-        <CapturaDelDia />
+        <CapturaDelDia puedeBorrar={puedeBorrarLotes} />
         <InsumoDelCliente />
         <ListoParaProcesar />
         <ImpuestosDelDia />

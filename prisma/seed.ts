@@ -54,6 +54,19 @@ async function main() {
     });
   }
 
+  // ---------- Tipos de documento de la captura ----------
+  // En las organizaciones que ya existen los siembra la migración
+  // 20260811150000_tipos_documento_captura.
+  const tiposDocumento = ['Egresos', 'Facturas de compra', 'Facturas de venta',
+    'Documento equivalente', 'Notas contables', 'Nómina', 'Ingresos'];
+  for (const [i, nombre] of tiposDocumento.entries()) {
+    await prisma.tipoDocumentoCaptura.upsert({
+      where: { organizacionId_nombre: { organizacionId: ORG_ID, nombre } },
+      update: {},
+      create: { organizacionId: ORG_ID, nombre, orden: i + 1 },
+    });
+  }
+
   // ---------- Administrador de la organización ----------
   await prisma.usuario.upsert({
     where: { organizacionId_email: { organizacionId: ORG_ID, email: 'admin@cerpat.io' } },
