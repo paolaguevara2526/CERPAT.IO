@@ -151,6 +151,30 @@ no contempla — por eso una casilla mal puesta puede llevarse obligaciones real
 - Para **solo agregar** sin riesgo de baja —p. ej. aplicar un checklist nuevo a lo
   ya cargado— está *Administración → Checklist vencimientos*, que nunca borra.
 
+## Responsables por área: quién puede ir en cada casilla
+
+De la **asignación cliente × área** heredan asesor y auxiliar **todas** las tareas del
+plan y los vencimientos vinculados. Poner a alguien en la casilla equivocada no falla al
+guardar: falla semanas después, cuando a esa persona le aparece en su lista trabajo que
+no le corresponde.
+
+- La casilla **Asesor** espera a alguien con rol **Asesor** (o Coordinador /
+  Administrador). La casilla **Auxiliar** acepta además el rol **Auxiliar**.
+- **No se bloquea.** A veces un asesor cubre como auxiliar, y prohibirlo obligaría a
+  pelear con la herramienta. Los desplegables separan en dos grupos —los del rol
+  esperado y *"Otros (revisar)"*— y **avisan** cuando la persona elegida no es de las
+  esperadas.
+- *Administración → Plan por cliente* muestra arriba un **diagnóstico** con todas las
+  asignaciones mal puestas de la firma, porque buscarlas a mano entre noventa clientes
+  por varias áreas es, en la práctica, no buscarlas. Reporta solo lo inequívoco:
+  1. alguien como **asesor** sin ningún rol que lo habilite;
+  2. alguien como **auxiliar** sin ningún rol que ejecute trabajo;
+  3. **la misma persona como asesor y auxiliar** de la misma área — se estaría liberando
+     el insumo a sí misma, que rompe el circuito de captura y liberación.
+- **Corregir la asignación no reasigna lo ya generado:** las tareas del mes conservan el
+  responsable con el que nacieron. Hay que corregir la asignación *y* revisar las tareas
+  del período en curso.
+
 ## "No aplica" en los checklists
 
 Un punto del checklist puede quedar en **`no_aplica`**, y **sale del denominador** de la
