@@ -151,6 +151,43 @@ no contempla — por eso una casilla mal puesta puede llevarse obligaciones real
 - Para **solo agregar** sin riesgo de baja —p. ej. aplicar un checklist nuevo a lo
   ya cargado— está *Administración → Checklist vencimientos*, que nunca borra.
 
+## Recepción del insumo del cliente
+
+En las áreas marcadas **insumo del cliente** (`AsignacionClienteArea.insumoCliente`)
+no hay auxiliar que capture ni que libere: el insumo lo manda el cliente. Por eso
+quedan fuera de la liberación automática — y hasta que existió esta marca, eso
+significaba que **nada las destrababa nunca**.
+
+**Quién marca:** el **asesor o el auxiliar** del área (y coordinación). Cualquiera que
+reciba. Restringirlo solo al asesor haría que el trabajo se acumule esperando a que
+él entre a marcar algo que su auxiliar ya tiene en las manos.
+
+**Dónde:** *Mi Día → Esperando al cliente*. Va ahí porque es donde el asesor ya está
+todas las mañanas y porque esa marca destraba **su propio** trabajo. Enterrada en otra
+pantalla no se marcaría, y una marca que no se marca no mide nada.
+
+**La fecha es la de ENTREGA, no la de hoy.** El cliente manda el 3 y el asesor marca
+el 5; grabar "hoy" le cargaría al cliente dos días de demora que no son suyos — y esa
+es justo la cifra que se le va a mostrar en una reunión. Se sugiere hoy, se puede
+cambiar, y no se aceptan fechas futuras.
+
+**Es binaria** — "ya tengo lo que necesito para trabajar" — a sabiendas de que en la
+práctica los documentos llegan en tandas. Un seguimiento parcial que nadie llena
+termina peor que uno binario que sí se usa.
+
+**Se puede deshacer.** Alguien va a marcar el cliente equivocado. Deshacer solo afecta
+las entregas con `origen = 'cliente'`: nunca toca una liberación del auxiliar.
+
+**El rastro (`EventoInsumo`)** guarda marcas y desmarcas con fecha, usuario y la fecha
+de entrega declarada. **No tiene llave foránea a `EntregaInsumo`** a propósito:
+desmarcar borra esa fila, y un rastro que desaparece junto con lo que quería auditar
+no sirve de nada.
+
+**El subproducto es el valor real:** *Coordinación → Insumo del cliente* lista los
+clientes que **no han entregado**, con el área, el asesor y los días que llevan,
+ordenados por el que más se demora. Va antes de "clientes en riesgo" porque explica
+parte de ese riesgo: un cliente que no entregó no es un incumplimiento de la firma.
+
 ## Circuito de revisión de impuestos
 
 El área de Impuestos **no trabaja sobre tareas del plan**: trabaja sobre el

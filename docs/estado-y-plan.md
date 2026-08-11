@@ -392,12 +392,13 @@ Las tres definiciones que faltaban quedaron resueltas:
    de `ActividadPlan.fase`, que ya está cargada: no hay nada que configurar por área.
    En un mismo plan conviven la captura de agosto y el procesamiento de julio, que es
    lo que pasa en la operación real.
-3. **Insumo del cliente:** lo destraba el **asesor**, marcando "el cliente ya
-   entregó" con fecha. Es quien sabe —el insumo le llega a él— y no depende de que el
-   cliente entre al portal. El subproducto es el valor real: queda la **lista de
-   clientes que no han entregado**, que hoy no existe y es un problema de negocio, no
-   de operación. Más adelante el cliente podrá marcarlo desde el portal como
-   precarga, pero la marca que vale sigue siendo la del asesor.
+3. **Insumo del cliente:** ✅ **hecho** — lo destraba quien recibe (asesor o auxiliar
+   del área), marcando "el cliente ya entregó" **con la fecha de entrega**. No depende
+   de que el cliente entre al portal. El subproducto es el valor real: queda la
+   **lista de clientes que no han entregado**, que antes no existía y es un problema
+   de negocio, no de operación. Más adelante el cliente podrá marcarlo desde el portal
+   como precarga, pero la marca que vale sigue siendo la de quien recibe. Detalle en
+   [`reglas-de-negocio.md`](./reglas-de-negocio.md#recepción-del-insumo-del-cliente).
 
 **Transición:** agosto 2026 queda como está (hay gente trabajando encima); el
 criterio nuevo arranca en **septiembre**.

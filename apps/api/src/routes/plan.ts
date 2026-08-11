@@ -727,6 +727,137 @@ planRouter.get('/mi-dia/captura', requireAuth, async (req: AuthedRequest, res) =
   });
 });
 
+// ---------- Recepción del insumo del cliente ----------
+//
+// En las áreas marcadas "insumo del cliente" no hay auxiliar que capture ni que
+// libere: el insumo lo manda el cliente. Por eso quedan fuera de la liberación
+// automática — y hasta ahora eso significaba que NADA las destrababa nunca.
+//
+// Lo marca quien recibe: el asesor o el auxiliar del área (y coordinación).
+// Restringirlo solo al asesor haría que el trabajo se acumule esperando a que él
+// entre a marcar algo que su auxiliar ya tiene en las manos.
+
+const PERIODO_RE = /^\d{4}-\d{2}$/;
+const periodoDeHoy = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+
+// GET /plan/insumo-cliente?periodo=YYYY-MM
+// Las áreas de insumo del cliente del usuario, marcadas y sin marcar.
+planRouter.get('/insumo-cliente', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.json({ periodo: null, total: 0, pendientes: 0, filas: [] });
+  const periodo = typeof req.query.periodo === 'string' && PERIODO_RE.test(req.query.periodo) ? req.query.periodo : periodoDeHoy();
+  const u = req.user!;
+  const uid = u.sub;
+  // Coordinación ve todo: de ahí sale la lista de clientes que no han entregado.
+  const scope = puedeGestionar(u) ? {} : { OR: [{ asesorId: uid }, { auxiliarId: uid }] };
+
+  const asigs = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: org.id, insumoCliente: true, empresa: { activo: true }, ...scope },
+    select: {
+      empresaId: true, areaId: true,
+      empresa: { select: { nombre: true } }, area: { select: { nombre: true } },
+      asesor: { select: { nombre: true } }, auxiliar: { select: { nombre: true } },
+    },
+  });
+  if (asigs.length === 0) return res.json({ periodo, total: 0, pendientes: 0, filas: [] });
+
+  const entregas = await prisma.entregaInsumo.findMany({
+    where: { organizacionId: org.id, periodo, empresaId: { in: [...new Set(asigs.map((a) => a.empresaId))] } },
+    select: { empresaId: true, areaId: true, entregadoEn: true, entregadoPor: { select: { nombre: true } } },
+  });
+  const entMap = new Map(entregas.filter((e) => e.areaId).map((e) => [`${e.empresaId}|${e.areaId}`, e]));
+
+  // Días esperando: se cuentan desde que empezó el período, que es cuando el
+  // cliente ya debería estar mandando.
+  const [anio, mes] = periodo.split('-').map(Number);
+  const inicio = new Date(Date.UTC(anio, mes - 1, 1));
+  const hoy = new Date();
+  const diasDesdeInicio = Math.max(0, Math.floor((hoy.getTime() - inicio.getTime()) / 86400000));
+
+  const filas = asigs.map((a) => {
+    const e = entMap.get(`${a.empresaId}|${a.areaId}`);
+    return {
+      empresaId: a.empresaId, areaId: a.areaId,
+      empresa: a.empresa?.nombre ?? '—', area: a.area?.nombre ?? '—',
+      asesor: a.asesor?.nombre ?? null, auxiliar: a.auxiliar?.nombre ?? null,
+      recibido: !!e,
+      fechaEntrega: e?.entregadoEn ?? null,
+      marcadoPor: e?.entregadoPor?.nombre ?? null,
+      diasEsperando: e ? 0 : diasDesdeInicio,
+    };
+  }).sort((x, y) => (x.recibido === y.recibido ? x.empresa.localeCompare(y.empresa, 'es') : x.recibido ? 1 : -1));
+
+  res.json({ periodo, total: filas.length, pendientes: filas.filter((f) => !f.recibido).length, filas });
+});
+
+// POST /plan/insumo-cliente { empresaId, areaId, periodo, fecha }
+// Marca que el cliente ya entregó. `fecha` es la de ENTREGA, no la de hoy.
+planRouter.post('/insumo-cliente', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const { empresaId, areaId } = req.body ?? {};
+  if (typeof empresaId !== 'string' || typeof areaId !== 'string') return res.status(422).json({ error: 'Faltan el cliente y el área.' });
+  const periodo = typeof req.body?.periodo === 'string' && PERIODO_RE.test(req.body.periodo) ? req.body.periodo : periodoDeHoy();
+
+  const asig = await prisma.asignacionClienteArea.findFirst({
+    where: { organizacionId: org.id, empresaId, areaId },
+    select: { asesorId: true, auxiliarId: true, insumoCliente: true },
+  });
+  if (!asig) return res.status(404).json({ error: 'Ese cliente no tiene asignada esa área.' });
+  if (!asig.insumoCliente) return res.status(422).json({ error: 'Esa área no está marcada como "insumo del cliente".' });
+  const u = req.user!;
+  if (!puedeGestionar(u) && asig.asesorId !== u.sub && asig.auxiliarId !== u.sub) {
+    return res.status(403).json({ error: 'Esa área de ese cliente no está a tu cargo.' });
+  }
+
+  // La fecha la digita quien recibe, y es lo que después se le atribuye al
+  // cliente como demora. Se valida que no sea futura: nadie recibió mañana.
+  const fecha = req.body?.fecha ? new Date(req.body.fecha) : new Date();
+  if (isNaN(fecha.getTime())) return res.status(422).json({ error: 'Fecha de entrega inválida.' });
+  const finDeHoy = new Date(); finDeHoy.setHours(23, 59, 59, 999);
+  if (fecha > finDeHoy) return res.status(422).json({ error: 'La fecha de entrega no puede ser futura.' });
+
+  await prisma.$transaction([
+    prisma.entregaInsumo.upsert({
+      where: { empresaId_periodo_areaId: { empresaId, periodo, areaId } },
+      create: { organizacionId: org.id, empresaId, periodo, areaId, origen: 'cliente', entregadoPorId: u.sub, entregadoEn: fecha },
+      update: { origen: 'cliente', entregadoPorId: u.sub, entregadoEn: fecha, marcadoEn: new Date() },
+    }),
+    prisma.eventoInsumo.create({
+      data: { organizacionId: org.id, empresaId, areaId, periodo, tipo: 'marca', fecha, usuarioId: u.sub },
+    }),
+  ]);
+  res.json({ ok: true, periodo, fechaEntrega: fecha });
+});
+
+// DELETE /plan/insumo-cliente?empresaId=&areaId=&periodo= — deshace la marca.
+// Alguien va a marcar el cliente equivocado; queda el rastro de ambas cosas.
+planRouter.delete('/insumo-cliente', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresaId = String(req.query.empresaId ?? '');
+  const areaId = String(req.query.areaId ?? '');
+  if (!empresaId || !areaId) return res.status(422).json({ error: 'Faltan el cliente y el área.' });
+  const periodo = typeof req.query.periodo === 'string' && PERIODO_RE.test(req.query.periodo) ? req.query.periodo : periodoDeHoy();
+
+  const asig = await prisma.asignacionClienteArea.findFirst({
+    where: { organizacionId: org.id, empresaId, areaId },
+    select: { asesorId: true, auxiliarId: true },
+  });
+  if (!asig) return res.status(404).json({ error: 'Ese cliente no tiene asignada esa área.' });
+  const u = req.user!;
+  if (!puedeGestionar(u) && asig.asesorId !== u.sub && asig.auxiliarId !== u.sub) {
+    return res.status(403).json({ error: 'Esa área de ese cliente no está a tu cargo.' });
+  }
+
+  // Solo se deshace la marca de recepción del cliente: una entrega creada por la
+  // liberación del auxiliar no se toca desde aquí.
+  const r = await prisma.entregaInsumo.deleteMany({ where: { organizacionId: org.id, empresaId, areaId, periodo, origen: 'cliente' } });
+  if (r.count === 0) return res.status(404).json({ error: 'No hay una marca de recepción que deshacer.' });
+  await prisma.eventoInsumo.create({ data: { organizacionId: org.id, empresaId, areaId, periodo, tipo: 'desmarca', usuarioId: u.sub } });
+  res.json({ ok: true });
+});
+
 // GET /plan/mi-dia/procesar — bandeja "listo para procesar" del asesor: sus tareas
 // de PROCESAMIENTO cuyo insumo YA fue entregado (auto o manual) y siguen pendientes.
 // Es la contraparte del auxiliar: en cuanto la captura se libera, el asesor ve aquí
