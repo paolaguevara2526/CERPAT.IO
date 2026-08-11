@@ -19,7 +19,8 @@ type Fila = {
   id: string; obligacion: string; periodo: string | null; fechaVencimiento: string;
   empresa: string; municipio: string | null;
   estadoRevision: string; observacionRevision: string | null; revisor: string | null;
-  valorPago: number | null; checklistTotal: number; checklistHechas: number; checklistAplicables: number;
+  valorPago: number | null; soporteLink: string | null;
+  checklistTotal: number; checklistHechas: number; checklistAplicables: number;
   liberado: boolean; liberadoEn: string | null; vencido: boolean; sinPago: boolean;
 };
 type Resp = { mes: string; total: number; listos: number; esperando: number; vencidos: number; impuestos: Fila[] };
@@ -53,6 +54,8 @@ export default function ImpuestosDelDia() {
   const [mes, setMes] = useState('');
   const [subs, setSubs] = useState<Sub[]>([]);
   const [valor, setValor] = useState('');
+  const [link, setLink] = useState('');
+  const [linkOk, setLinkOk] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
@@ -70,6 +73,7 @@ export default function ImpuestosDelDia() {
   async function abrir(f: Fila) {
     setSubs([]); setMsg(null);
     setValor(f.valorPago != null ? String(f.valorPago) : '');
+    setLink(f.soporteLink ?? ''); setLinkOk(false);
     try {
       setUltimaAbierta(f.id);
       const r = await fetch(`/api/vencimientos/${f.id}/detalle`, { cache: 'no-store' });
@@ -117,6 +121,21 @@ export default function ImpuestosDelDia() {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg(d.error ?? 'No se pudo guardar el valor.'); return; }
       setMsg('✓ Valor guardado.'); await cargar();
+    } catch { setMsg('Error de red.'); } finally { setTrabajando(false); }
+  }
+
+  // El link se guarda solo, sin depender de que además se guarde el valor: hay
+  // obligaciones de solo presentación que no tienen valor y sí tienen soporte.
+  async function guardarLink(id: string) {
+    setTrabajando(true); setMsg(null); setLinkOk(false);
+    try {
+      const r = await fetch(`/api/vencimientos/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soporteLink: link }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setMsg(d.error ?? 'No se pudo guardar el link.'); return; }
+      setLinkOk(true); await cargar();
     } catch { setMsg('Error de red.'); } finally { setTrabajando(false); }
   }
 
@@ -206,20 +225,23 @@ export default function ImpuestosDelDia() {
           vacio="No tienes impuestos pendientes en esta ventana."
           sinCoincidencias="Ninguno cumple los filtros."
           detalle={(f) => <Detalle f={f} subs={subs} valor={valor} setValor={setValor} inp={inp}
+            link={link} setLink={setLink} linkOk={linkOk} setLinkOk={setLinkOk}
             onAbrir={() => abrir(f)} onSub={marcarSub} onAccion={accion}
-            onGuardarValor={() => guardarValor(f.id)} onPresentar={(e) => presentar(f.id, e)} trabajando={trabajando} />}
+            onGuardarValor={() => guardarValor(f.id)} onGuardarLink={() => guardarLink(f.id)}
+            onPresentar={(e) => presentar(f.id, e)} trabajando={trabajando} />}
         />
       </div>
     </PanelPlegable>
   );
 }
 
-// Detalle de una obligación: checklist, valor a pagar y la acción que
-// corresponda al punto del circuito en que está.
-function Detalle({ f, subs, valor, setValor, inp, onAbrir, onSub, onAccion, onGuardarValor, onPresentar, trabajando }: {
+// Detalle de una obligación: checklist, valor a pagar, soporte documental y la
+// acción que corresponda al punto del circuito en que está.
+function Detalle({ f, subs, valor, setValor, inp, link, setLink, linkOk, setLinkOk, onAbrir, onSub, onAccion, onGuardarValor, onGuardarLink, onPresentar, trabajando }: {
   f: Fila; subs: Sub[]; valor: string; setValor: (v: string) => void; inp: React.CSSProperties;
+  link: string; setLink: (v: string) => void; linkOk: boolean; setLinkOk: (v: boolean) => void;
   onAbrir: () => void; onSub: (id: string, estado: string) => void; onAccion: (id: string, acc: string) => void;
-  onGuardarValor: () => void; onPresentar: (estado: string) => void; trabajando: boolean;
+  onGuardarValor: () => void; onGuardarLink: () => void; onPresentar: (estado: string) => void; trabajando: boolean;
 }) {
   useEffect(() => { onAbrir(); /* carga el checklist al desplegar */ }, [f.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -269,6 +291,30 @@ function Detalle({ f, subs, valor, setValor, inp, onAbrir, onSub, onAccion, onGu
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Actual: {pesos(f.valorPago)} · va directo a Pagos.</div>
           </div>
+        )}
+      </div>
+
+      {/* Dónde quedó guardado el trabajo. Es el mismo campo del vencimiento que
+          se ve en el calendario, no una copia: el revisor abre ese link para
+          revisar, así que si el asesor no lo pega aquí la revisión se traba. */}
+      <div style={{ border: '1px solid color-mix(in srgb, var(--brand, #2E5090) 40%, var(--line))', borderRadius: 8, padding: '10px 12px', marginTop: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 5 }}>🔗 Soporte documental</div>
+        <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.4 }}>
+          Pega el link (Drive / OneDrive) donde quedó guardada la liquidación. El revisor abre este mismo link.
+        </p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input value={link} onChange={(e) => { setLink(e.target.value); setLinkOk(false); }}
+            placeholder="https://drive.google.com/… o link de OneDrive"
+            style={{ ...inp, flex: 1, minWidth: 220 }} />
+          <button className="dbtn primary" disabled={trabajando} onClick={onGuardarLink} style={{ fontSize: 12.5 }}>
+            {linkOk ? '✓ Guardado' : 'Guardar'}
+          </button>
+        </div>
+        {f.soporteLink && (
+          <a href={f.soporteLink} target="_blank" rel="noreferrer"
+            style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: 'var(--brand, #2E5090)', wordBreak: 'break-all' }}>
+            ↗ Abrir soporte actual
+          </a>
         )}
       </div>
 
