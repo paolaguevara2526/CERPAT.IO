@@ -13,6 +13,7 @@ import { hashPassword } from '../auth/password.js';
 import { responderError } from '../errores.js';
 import { nthDiaHabil } from '../vencimientos/generador.js';
 import { aplicaEnMesPlan } from '../plan/periodicidad.js';
+import { VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
 
 export const adminRouter = Router();
 
@@ -941,6 +942,109 @@ adminRouter.post('/plan-cliente/recalcular-fechas', requireAuth, soloCoordinacio
 // se crean, y un borrado masivo sobre toda la organización es un riesgo mayor
 // que el problema que resolvería. Si a algún cliente le quedaron de antes, su
 // "Generar" individual sigue limpiándolas.
+/** Área de cada obligación, según la actividad del catálogo que la tiene vinculada. */
+async function areaPorObligacionAdmin(orgId: string): Promise<Map<string, string>> {
+  const acts = await prisma.actividadPlan.findMany({
+    where: { organizacionId: orgId, obligacionVencimiento: { not: null }, areaId: { not: null } },
+    select: { obligacionVencimiento: true, areaId: true },
+  });
+  const porKey = new Map(acts.map((a) => [a.obligacionVencimiento as string, a.areaId as string]));
+  const out = new Map<string, string>();
+  for (const v of VINCULOS_VENCIMIENTO) {
+    const areaId = porKey.get(v.key);
+    if (areaId) for (const ob of v.obligaciones) out.set(ob, areaId);
+  }
+  return out;
+}
+
+// POST /admin/plan-cliente/resincronizar-responsables { periodo, dryRun }
+//
+// Aplica los responsables ACTUALES de la asignación cliente×área a lo que ya
+// está generado del período.
+//
+// Hace falta porque la tarea nace con el asesor y el auxiliar que tenía la
+// asignación en ese momento, y guardar el plan no reescribe lo ya creado.
+// Consecuencia real: se corrige la asignación, pero a la persona equivocada le
+// sigue apareciendo el trabajo todo el mes — y quien lo corrigió cree que ya
+// quedó.
+//
+// No toca las terminadas ni las auditadas: cambiarles el responsable falsearía
+// quién hizo un trabajo que ya se hizo.
+adminRouter.post('/plan-cliente/resincronizar-responsables', requireAuth, soloCoordinacion, async (req: any, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const periodo = typeof req.body?.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.body.periodo) ? req.body.periodo : null;
+  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
+  const dryRun = req.body?.dryRun === true;
+  const [anio, mes] = periodo.split('-').map(Number);
+
+  try {
+    const [asigs, tareas] = await Promise.all([
+      prisma.asignacionClienteArea.findMany({ where: { organizacionId: id }, select: { empresaId: true, areaId: true, asesorId: true, auxiliarId: true } }),
+      prisma.tarea.findMany({
+        where: { organizacionId: id, periodo, actividadPlanId: { not: null }, areaId: { not: null }, estado: { notIn: ['terminado', 'auditado'] } },
+        select: { id: true, empresaId: true, areaId: true, asesorId: true, auxiliarId: true, titulo: true, empresa: { select: { nombre: true } } },
+      }),
+    ]);
+    const porClienteArea = new Map(asigs.map((a) => [`${a.empresaId}|${a.areaId}`, a]));
+
+    // Se agrupan por par (asesor, auxiliar) para no disparar una consulta por
+    // tarea: son cientos y comparten muy pocos pares distintos.
+    const porPar = new Map<string, string[]>();
+    const ejemplos: string[] = [];
+    for (const t of tareas) {
+      const a = porClienteArea.get(`${t.empresaId}|${t.areaId}`);
+      if (!a) continue; // sin asignación: se deja como está, no se borra el responsable
+      if (a.asesorId === t.asesorId && a.auxiliarId === t.auxiliarId) continue;
+      const clave = `${a.asesorId ?? ''}|${a.auxiliarId ?? ''}`;
+      const lista = porPar.get(clave) ?? [];
+      lista.push(t.id);
+      porPar.set(clave, lista);
+      if (ejemplos.length < 30) ejemplos.push(`${t.empresa?.nombre ?? '—'} · ${t.titulo}`);
+    }
+
+    const total = [...porPar.values()].reduce((n, l) => n + l.length, 0);
+
+    // Los vencimientos heredan el mismo responsable y sufren lo mismo: si el
+    // asesor quedó mal, el impuesto le aparece en Mi Día a quien no es.
+    const desde = new Date(Date.UTC(anio, mes - 1, 1));
+    const hasta = new Date(Date.UTC(anio, mes, 1));
+    const vencs = await prisma.vencimientoEmpresa.findMany({
+      where: { organizacionId: id, fechaVencimiento: { gte: desde, lt: hasta }, estado: 'pendiente' },
+      select: { id: true, empresaId: true, obligacion: true, asesorId: true, auxiliarId: true },
+    });
+    const areaDe = await areaPorObligacionAdmin(id);
+    const vencPorPar = new Map<string, string[]>();
+    for (const v of vencs) {
+      const areaId = areaDe.get(v.obligacion);
+      if (!areaId) continue;
+      const a = porClienteArea.get(`${v.empresaId}|${areaId}`);
+      if (!a) continue;
+      if (a.asesorId === v.asesorId && a.auxiliarId === v.auxiliarId) continue;
+      const clave = `${a.asesorId ?? ''}|${a.auxiliarId ?? ''}`;
+      const lista = vencPorPar.get(clave) ?? [];
+      lista.push(v.id);
+      vencPorPar.set(clave, lista);
+    }
+    const totalVenc = [...vencPorPar.values()].reduce((n, l) => n + l.length, 0);
+
+    if (dryRun) return res.json({ periodo, tareas: total, vencimientos: totalVenc, revisadas: tareas.length, ejemplos });
+
+    const aplicar = async (mapa: Map<string, string[]>, tabla: 'tarea' | 'vencimientoEmpresa') => {
+      for (const [clave, ids] of mapa) {
+        const [asesor, auxiliar] = clave.split('|');
+        const data = { asesorId: asesor || null, auxiliarId: auxiliar || null };
+        await (prisma[tabla] as any).updateMany({ where: { id: { in: ids } }, data });
+      }
+    };
+    await aplicar(porPar, 'tarea');
+    await aplicar(vencPorPar, 'vencimientoEmpresa');
+    res.json({ periodo, tareas: total, vencimientos: totalVenc, revisadas: tareas.length });
+  } catch (e) {
+    responderError(res, 'plan-cliente:resincronizar-responsables', e, 'No se pudieron resincronizar los responsables.');
+  }
+});
+
 adminRouter.post('/plan-cliente/generar-masivo', requireAuth, soloCoordinacion, async (req: any, res) => {
   const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
