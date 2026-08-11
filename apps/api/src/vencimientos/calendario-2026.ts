@@ -3908,6 +3908,15 @@ export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; rent
       "departamento": "Atlántico",
       "obligacion": "AutoICA",
       "periodicidad": "Mensual",
+      "periodo": "jul",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-10"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
       "periodo": "ago",
       "ultimo_digito": "",
       "fecha_vencimiento": "2026-09-08"
