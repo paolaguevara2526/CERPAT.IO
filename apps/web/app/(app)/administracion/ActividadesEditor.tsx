@@ -17,13 +17,13 @@ type Form = {
   codigo: string; nombre: string; areaId: string; grupo: string; periodicidad: string;
   documentoFormato: string; descripcion: string; orden: string;
   generaPago: boolean; requiereAuditoria: boolean; esRegistroSoftware: boolean; activo: boolean;
-  obligacionVencimiento: string; fase: string; esCapturaDocumentos: boolean;
+  obligacionVencimiento: string; fase: string; esCapturaDocumentos: boolean; diaHabilEntrega: string;
 };
 
 const VACIO: Form = {
   codigo: '', nombre: '', areaId: '', grupo: '', periodicidad: '', documentoFormato: '', descripcion: '', orden: '0',
   generaPago: false, requiereAuditoria: false, esRegistroSoftware: false, activo: true,
-  obligacionVencimiento: '', fase: '', esCapturaDocumentos: false,
+  obligacionVencimiento: '', fase: '', esCapturaDocumentos: false, diaHabilEntrega: '',
 };
 
 // Fase en la cadena del cierre (la captura del auxiliar habilita el procesamiento del asesor).
@@ -94,6 +94,7 @@ export default function ActividadesEditor() {
       orden: String(a.orden ?? 0), generaPago: !!a.generaPago, requiereAuditoria: !!a.requiereAuditoria,
       esRegistroSoftware: !!a.esRegistroSoftware, activo: a.activo !== false,
       obligacionVencimiento: a.obligacionVencimiento ?? '', fase: a.fase ?? '', esCapturaDocumentos: !!a.esCapturaDocumentos,
+        diaHabilEntrega: a.diaHabilEntrega != null ? String(a.diaHabilEntrega) : '',
     });
     setSubs(a.subtareas ?? []);
   }
@@ -217,6 +218,17 @@ export default function ActividadesEditor() {
               </select>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                 La <b>captura</b> (auxiliar) habilita el <b>procesamiento</b> (asesor). Sin clasificar = no participa del bloqueo del flujo.
+              </span>
+            </label>
+
+            <label style={{ maxWidth: 260 }}>
+              <span style={lbl}>Día hábil de entrega</span>
+              <input type="number" min={1} max={23} style={input} value={form.diaHabilEntrega}
+                onChange={(e) => set('diaHabilEntrega', e.target.value)} placeholder="Sin plazo propio" />
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                En qué <b>día hábil del mes</b> se debe entregar, saltando sábados, domingos y festivos.
+                Se define aquí una vez y aplica a <b>todos los clientes</b>. Vacío = vence a fin de mes.
+                Si el mes tiene menos días hábiles, se usa el último.
               </span>
             </label>
 

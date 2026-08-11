@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { descargarXlsx, hoyISO, enLotes } from './exportar';
 import ImportarAsignacionesModal from './ImportarAsignacionesModal';
 import LiberarPeriodo from './LiberarPeriodo';
+import RecalcularFechas from './RecalcularFechas';
 
 type Empresa = { id: string; nombre: string };
 type Usuario = { id: string; nombre: string };
@@ -180,6 +181,7 @@ export default function PlanClienteEditor() {
   return (
     <>
       <LiberarPeriodo />
+      <RecalcularFechas />
     <div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>

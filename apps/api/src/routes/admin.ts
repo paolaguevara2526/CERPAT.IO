@@ -11,6 +11,7 @@ import { requireAuth, requireRol, type AuthedRequest } from '../auth/middleware.
 import { orgDeSesion } from '../auth/tenant.js';
 import { hashPassword } from '../auth/password.js';
 import { responderError } from '../errores.js';
+import { nthDiaHabil } from '../vencimientos/generador.js';
 
 export const adminRouter = Router();
 
@@ -161,6 +162,13 @@ function datosActividad(body: any, esCreacion: boolean): Record<string, any> {
   for (const c of TEXTO_ACT) if (c in (body ?? {})) data[c] = typeof body[c] === 'string' && body[c].trim() ? body[c].trim() : null;
   for (const b of BOOL_ACT) if (b in (body ?? {})) data[b] = !!body[b];
   if ('fase' in (body ?? {})) data.fase = ['captura', 'procesamiento', 'revision'].includes(body.fase) ? body.fase : null;
+  // Día hábil de entrega: 1..23 (ningún mes tiene más hábiles). Vacío = sin
+  // plazo propio, la tarea vence a fin de mes como antes.
+  if ('diaHabilEntrega' in (body ?? {})) {
+    const v = body.diaHabilEntrega;
+    const n = v === '' || v == null ? null : Number(v);
+    data.diaHabilEntrega = n != null && Number.isInteger(n) && n >= 1 && n <= 23 ? n : null;
+  }
   if (body?.orden !== undefined && body.orden !== null && body.orden !== '') data.orden = Number(body.orden) || 0;
   if (esCreacion && data.orden === undefined) data.orden = 0;
   return data;
@@ -174,7 +182,7 @@ adminRouter.get('/actividades', requireAuth, async (req: AuthedRequest, res) => 
     orderBy: [{ orden: 'asc' }, { codigo: 'asc' }],
     select: {
       id: true, codigo: true, nombre: true, grupo: true, periodicidad: true, orden: true, activo: true,
-      esRegistroSoftware: true, requiereAuditoria: true, generaPago: true,
+      esRegistroSoftware: true, requiereAuditoria: true, generaPago: true, diaHabilEntrega: true,
       area: { select: { id: true, nombre: true } },
       _count: { select: { subtareas: true, tareas: true } },
     },
@@ -824,6 +832,73 @@ adminRouter.put('/plan-cliente/:empresaId', requireAuth, soloCoordinacion, async
   res.json({ ok: true, activas: activasSet.size });
 });
 
+
+// POST /admin/plan-cliente/recalcular-fechas { periodo, dryRun }
+//
+// Aplica el día hábil del catálogo a las tareas YA generadas de un período.
+// Hace falta porque cambiar el catálogo no toca lo que ya existe, y "Generar"
+// tampoco: solo crea lo que falta. Sin esto, el día hábil solo valdría a partir
+// del mes siguiente.
+//
+// No toca las terminadas ni las auditadas: su fecha de vencimiento es parte de
+// lo que ya pasó, y reescribirla falsearía cualquier medición posterior de
+// cumplimiento.
+adminRouter.post('/plan-cliente/recalcular-fechas', requireAuth, soloCoordinacion, async (req: any, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const periodo = typeof req.body?.periodo === 'string' && /^\d{4}-\d{2}$/.test(req.body.periodo) ? req.body.periodo : null;
+  if (!periodo) return res.status(422).json({ error: 'Período inválido (YYYY-MM).' });
+  const dryRun = req.body?.dryRun === true;
+  const [anio, mes] = periodo.split('-').map(Number);
+
+  try {
+    const tareas = await prisma.tarea.findMany({
+      where: {
+        organizacionId: id, periodo,
+        actividadPlanId: { not: null },
+        estado: { notIn: ['terminado', 'auditado'] },
+        actividadPlan: { diaHabilEntrega: { not: null } },
+      },
+      select: {
+        id: true, fechaVencimiento: true,
+        actividadPlan: { select: { nombre: true, diaHabilEntrega: true } },
+      },
+    });
+
+    // La fecha depende solo de la actividad, no del cliente: se calcula una vez
+    // por día hábil y se reutiliza para las cientos de tareas que la comparten.
+    const fechaPorDia = new Map<number, Date>();
+    const porFecha = new Map<string, string[]>();
+    const ejemplos = new Map<string, string>();
+    for (const t of tareas) {
+      const dia = t.actividadPlan?.diaHabilEntrega;
+      if (!dia) continue;
+      let nueva = fechaPorDia.get(dia);
+      if (!nueva) { nueva = nthDiaHabil(anio, mes, dia); fechaPorDia.set(dia, nueva); }
+      if (t.fechaVencimiento && t.fechaVencimiento.getTime() === nueva.getTime()) continue; // ya está bien
+      const clave = nueva.toISOString();
+      const lista = porFecha.get(clave) ?? [];
+      lista.push(t.id);
+      porFecha.set(clave, lista);
+      const nombre = t.actividadPlan?.nombre ?? '';
+      if (nombre && !ejemplos.has(nombre)) {
+        ejemplos.set(nombre, `${nombre} → día hábil ${dia} (${nueva.toISOString().slice(0, 10)})`);
+      }
+    }
+
+    const total = [...porFecha.values()].reduce((a, l) => a + l.length, 0);
+    if (dryRun) {
+      return res.json({ periodo, afectadas: total, revisadas: tareas.length, ejemplos: [...ejemplos.values()].slice(0, 30) });
+    }
+    for (const [iso, ids] of porFecha) {
+      await prisma.tarea.updateMany({ where: { id: { in: ids } }, data: { fechaVencimiento: new Date(iso) } });
+    }
+    res.json({ periodo, afectadas: total, revisadas: tareas.length });
+  } catch (e) {
+    responderError(res, 'plan-cliente:recalcular-fechas', e, 'No se pudieron recalcular las fechas.');
+  }
+});
+
 // POST /admin/plan-cliente/:empresaId/generar?periodo=YYYY-MM — genera las tareas
 // del cliente para ese período según su plan activo (idempotente).
 adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinacion, async (req, res) => {
@@ -840,7 +915,7 @@ adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinaci
 
   const planes = await prisma.planClienteActividad.findMany({
     where: { organizacionId: id, empresaId: empresa.id, activa: true },
-    select: { actividadPlanId: true, periodicidad: true, actividad: { select: { nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true, obligacionVencimiento: true } } },
+    select: { actividadPlanId: true, periodicidad: true, actividad: { select: { nombre: true, areaId: true, periodicidad: true, requiereAuditoria: true, generaPago: true, obligacionVencimiento: true, diaHabilEntrega: true } } },
   });
   const asign = await prisma.asignacionClienteArea.findMany({ where: { organizacionId: id, empresaId: empresa.id }, select: { areaId: true, asesorId: true, auxiliarId: true } });
   const asignPorArea = new Map(asign.map((a) => [a.areaId, { asesorId: a.asesorId, auxiliarId: a.auxiliarId }]));
@@ -855,8 +930,10 @@ adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinaci
     if (!aplicaEnMesPlan(per, month)) continue;
     if (yaExiste.has(p.actividadPlanId)) continue;
     const a = p.actividad.areaId ? asignPorArea.get(p.actividad.areaId) : undefined;
+    // El plazo sale del día hábil del catálogo; sin él, fin de mes como antes.
+    const vence = p.actividad.diaHabilEntrega ? nthDiaHabil(year, month, p.actividad.diaHabilEntrega) : fechaVencimiento;
     nuevas.push({
-      organizacionId: id, titulo: p.actividad.nombre, empresaId: empresa.id, fechaInicio, fechaVencimiento,
+      organizacionId: id, titulo: p.actividad.nombre, empresaId: empresa.id, fechaInicio, fechaVencimiento: vence,
       actividadPlanId: p.actividadPlanId, areaId: p.actividad.areaId, generaPago: p.actividad.generaPago,
       requiereRevisionTecnica: p.actividad.requiereAuditoria, periodo,
       asesorId: a?.asesorId ?? null, auxiliarId: a?.auxiliarId ?? null,

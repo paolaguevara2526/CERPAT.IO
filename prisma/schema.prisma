@@ -743,6 +743,11 @@ model ActividadPlan {
   // flujo: la captura (auxiliar) habilita el procesamiento (asesor). Ver F1 en
   // docs/metodologia-operacion.md. Null = sin clasificar (no participa del bloqueo).
   fase                  FaseActividad?
+  // Día hábil del mes en que se debe entregar (1 = primer día hábil), definido
+  // una sola vez en el catálogo y aplicado a TODOS los planes. Null = sin plazo
+  // propio: la tarea vence a fin de mes, como antes. Se cuenta saltando
+  // sábados, domingos y festivos de Colombia.
+  diaHabilEntrega       Int?
   // Actividad especial "Captura de documentos": su tarea muestra el detalle de
   // lotes (tipo de documento · consecutivo desde–hasta · cantidad · fecha).
   esCapturaDocumentos   Boolean        @default(false)
