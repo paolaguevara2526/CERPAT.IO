@@ -9,7 +9,7 @@ import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { orgDeSesion } from '../auth/tenant.js';
 import { alcancePortal, empresasAsignadas } from '../auth/alcance-db.js';
 import { esStaffAcotado } from '../auth/alcance.js';
-import { vencimientosNacionales, vencimientosIca, aplicaRub, RUB_OBLIGACION, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
+import { vencimientosNacionales, vencimientosIca, aplicaRub, RUB_OBLIGACION, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, obligacionSinPago, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
 import { vinculoDeObligacion, VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
@@ -433,6 +433,7 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
       estadoRevision: v.estadoRevision, observacionRevision: v.observacionRevision,
       enviadoRevisionEn: v.enviadoRevisionEn, revisor: v.revisor?.nombre ?? null,
       valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+      sinPago: obligacionSinPago(v.obligacion),
       checklistTotal: subs.length,
       checklistHechas: subs.filter((s) => s.estado === 'realizada').length,
       // Lo marcado "no aplica" sale del denominador: una empresa sin movimiento
@@ -484,6 +485,7 @@ vencimientosRouter.get('/revision/cola', requireAuth, async (req: AuthedRequest,
       empresa: v.empresa?.nombre ?? '—', municipio: v.municipio?.nombre ?? null,
       asesor: v.asesor?.nombre ?? null,
       valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+      sinPago: obligacionSinPago(v.obligacion),
       enviadoRevisionEn: v.enviadoRevisionEn,
       checklistTotal: v.subtareas.length,
       checklistHechas: v.subtareas.filter((s) => s.estado === 'realizada').length,
@@ -1126,7 +1128,7 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const actual = await prisma.vencimientoEmpresa.findFirst({
     where: { id: req.params.id, organizacionId: org.id },
-    select: { id: true, asesorId: true, auxiliarId: true, estado: true, estadoRevision: true },
+    select: { id: true, asesorId: true, auxiliarId: true, estado: true, estadoRevision: true, obligacion: true },
   });
   if (!actual) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
 
@@ -1153,7 +1155,12 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
   if ('valorPago' in (req.body ?? {})) {
     const v = req.body.valorPago;
     if (v === null || v === '') data.valorPago = null;
-    else { const n = Number(v); if (!isFinite(n) || n < 0) return res.status(422).json({ error: 'El valor a pagar debe ser un número ≥ 0.' }); data.valorPago = n; }
+    else {
+      // Una obligación de solo presentación no tiene saldo. Sin esta guarda, un
+      // valor digitado por error entra a Pagos y a los indicadores.
+      if (obligacionSinPago(actual.obligacion)) return res.status(422).json({ error: 'Esta obligación es de solo presentación: no lleva valor a pagar.' });
+      const n = Number(v); if (!isFinite(n) || n < 0) return res.status(422).json({ error: 'El valor a pagar debe ser un número ≥ 0.' }); data.valorPago = n;
+    }
   }
   if ('fechaVencimiento' in (req.body ?? {})) {
     // La fecha legal no la mueve quien trabaja la obligación.
@@ -1191,7 +1198,9 @@ vencimientosRouter.get('/:id/detalle', requireAuth, async (req: AuthedRequest, r
     },
   });
   if (!v) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
-  res.json({ vencimiento: v });
+  // La pantalla no puede deducirlo del nombre: se lo dice el backend, que es
+  // donde vive la regla.
+  res.json({ vencimiento: { ...v, sinPago: obligacionSinPago(v.obligacion) } });
 });
 
 // PATCH /vencimientos/subtareas/:id — marca/desmarca una subtarea del checklist

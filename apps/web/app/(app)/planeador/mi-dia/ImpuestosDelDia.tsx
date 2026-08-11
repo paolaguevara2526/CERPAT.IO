@@ -20,7 +20,7 @@ type Fila = {
   empresa: string; municipio: string | null;
   estadoRevision: string; observacionRevision: string | null; revisor: string | null;
   valorPago: number | null; checklistTotal: number; checklistHechas: number; checklistAplicables: number;
-  liberado: boolean; liberadoEn: string | null; vencido: boolean;
+  liberado: boolean; liberadoEn: string | null; vencido: boolean; sinPago: boolean;
 };
 type Resp = { mes: string; total: number; listos: number; esperando: number; vencidos: number; impuestos: Fila[] };
 type Sub = { id: string; texto: string; estado: string };
@@ -38,6 +38,12 @@ const ESTADOS_PRESENTAR = [
   { v: 'presentado_sin_pago', label: 'Presentado sin pago' },
   { v: 'presentado_pagado', label: 'Presentado y pagado' },
   { v: 'presentado_cero', label: 'Presentado en ceros' },
+  { v: 'no_obligado', label: 'No obligado' },
+];
+// En una obligación de SOLO PRESENTACIÓN no hay saldo: ofrecer "y pagado" o "en
+// ceros" es ruido, y peor, invita a registrar un pago que no existe.
+const ESTADOS_PRESENTAR_SIN_PAGO = [
+  { v: 'presentado_sin_pago', label: 'Presentado' },
   { v: 'no_obligado', label: 'No obligado' },
 ];
 
@@ -255,14 +261,21 @@ function Detalle({ f, subs, valor, setValor, inp, onAbrir, onSub, onAccion, onGu
             </>)}
         </div>
 
-        <div style={{ minWidth: 240 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 6 }}>Valor a pagar</div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
-            <input value={valor} onChange={(e) => setValor(e.target.value)} inputMode="numeric" placeholder="0" style={{ ...inp, width: 140, fontFamily: 'var(--mono)' }} />
-            <button className="dbtn" disabled={trabajando} onClick={onGuardarValor} style={{ fontSize: 12, padding: '6px 10px' }}>Guardar</button>
+        {f.sinPago ? (
+          <div style={{ minWidth: 240, fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Valor a pagar</div>
+            Obligación de <b>solo presentación</b>: no lleva valor a pagar y no entra al ciclo de Pagos.
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Actual: {pesos(f.valorPago)} · va directo a Pagos.</div>
-        </div>
+        ) : (
+          <div style={{ minWidth: 240 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 6 }}>Valor a pagar</div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+              <input value={valor} onChange={(e) => setValor(e.target.value)} inputMode="numeric" placeholder="0" style={{ ...inp, width: 140, fontFamily: 'var(--mono)' }} />
+              <button className="dbtn" disabled={trabajando} onClick={onGuardarValor} style={{ fontSize: 12, padding: '6px 10px' }}>Guardar</button>
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>Actual: {pesos(f.valorPago)} · va directo a Pagos.</div>
+          </div>
+        )}
       </div>
 
       {/* Solo aparece la acción que corresponde: menos que decidir, menos que explicar. */}
@@ -284,7 +297,7 @@ function Detalle({ f, subs, valor, setValor, inp, onAbrir, onSub, onAccion, onGu
         {f.estadoRevision === 'aprobado' && (
           <>
             <span style={{ fontSize: 12.5, color: 'var(--exito-fuerte)', fontWeight: 700 }}>✓ Aprobado{f.revisor ? ` por ${f.revisor}` : ''} — ya podés presentar:</span>
-            {ESTADOS_PRESENTAR.map((e) => (
+            {(f.sinPago ? ESTADOS_PRESENTAR_SIN_PAGO : ESTADOS_PRESENTAR).map((e) => (
               <button key={e.v} className="dbtn" disabled={trabajando} onClick={() => onPresentar(e.v)} style={{ fontSize: 12.5 }}>{e.label}</button>
             ))}
           </>

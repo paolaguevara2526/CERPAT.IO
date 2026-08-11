@@ -205,6 +205,24 @@ terminó su trabajo.
 - En la **cola de revisión** los puntos marcados "no aplica" se señalan: validar que de
   verdad no aplicaban es parte de lo que el revisor debe mirar antes de aprobar.
 
+## Obligaciones de solo presentación
+
+Algunas obligaciones **no tienen saldo**: son un reporte, no una declaración con valor.
+En ellas no se ofrece la casilla de **valor a pagar** ni los estados de pago, porque
+ofrecerlos invita a registrar un pago que no existe — y ese valor terminaría en *Pagos*
+y en los indicadores.
+
+- Se ofrecen solo: **Pendiente**, **Presentado**, **No presentado** y **No obligado**.
+  "Presentado (sin pago)" se muestra simplemente como **Presentado**: no hay pago del
+  cual carecer.
+- **El backend también lo rechaza** (`PATCH /vencimientos/:id`), no solo la pantalla: un
+  valor enviado a mano o por una pantalla desactualizada no entra.
+- **Cuáles son** (`obligacionSinPago`, con pruebas): nómina electrónica, seguridad social
+  (PILA), RUB, y **toda la información exógena**. Las exógenas se reconocen por el
+  nombre, no por una lista fija, porque se agregan a mano y su nombre es texto libre
+  ("Exógena municipal (medios magnéticos)", "Exógena de ICA", …): enumerarlas dejaría
+  fuera la del municipio que se cargue mañana.
+
 ## Recepción del insumo del cliente
 
 En las áreas marcadas **insumo del cliente** (`AsignacionClienteArea.insumoCliente`)
