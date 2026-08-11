@@ -3904,6 +3904,51 @@ export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; rent
       "fecha_vencimiento": "2027-01-13"
     },
     {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-09-08"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "sep",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-08"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-11-09"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "nov",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-09"
+    },
+    {
+      "municipio": "Malambo",
+      "departamento": "Atlántico",
+      "obligacion": "AutoICA",
+      "periodicidad": "Mensual",
+      "periodo": "dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-01-08"
+    },
+    {
       "municipio": "Mosquera",
       "departamento": "Cundinamarca",
       "obligacion": "ReteICA",
