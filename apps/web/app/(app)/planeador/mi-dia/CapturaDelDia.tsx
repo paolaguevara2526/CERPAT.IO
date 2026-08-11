@@ -7,7 +7,9 @@ import { Fragment, useEffect, useState } from 'react';
 import { contarConsecutivos } from '../consecutivos';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 
-const TIPOS_DOC = ['Egresos', 'Facturas de compra', 'Facturas de venta', 'Documento equivalente', 'Notas contables', 'Nómina', 'Ingresos'];
+// Los tipos vienen del catálogo (Administración → Tipos de documento). Estaban
+// escritos acá: agregar uno exigía un despliegue, y como el campo era de texto
+// libre entraban "Egresos", "egresos" y "Egreso" como cosas distintas.
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
   por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
@@ -29,6 +31,7 @@ type Fila = {
 };
 type Resp = { periodo: string | null; hoy: string | null; total: number; totalObservadas: number; capturadosHoy: number; tareas: Fila[] };
 type NuevoLote = { tipoDocumento: string; desde: string; hasta: string; cantidad: string; fecha: string };
+type Lote = { id: string; tipoDocumento: string; desde: string | null; hasta: string | null; cantidad: number | null; fecha: string };
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const loteVacio = (): NuevoLote => ({ tipoDocumento: '', desde: '', hasta: '', cantidad: '', fecha: hoyISO() });
@@ -38,11 +41,16 @@ function fmtFecha(iso: string | null): string {
   try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return '—'; }
 }
 
-export default function CapturaDelDia() {
+export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: boolean }) {
   const [data, setData] = useState<Resp | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null); // tareaId con el formulario abierto
+  const [tipos, setTipos] = useState<string[]>([]);
+  // tareaId cuyos lotes se están viendo, y los lotes cargados.
+  const [viendo, setViendo] = useState<string | null>(null);
+  const [lotes, setLotes] = useState<Lote[]>([]);
+  const [cargandoLotes, setCargandoLotes] = useState(false);
   const [nl, setNl] = useState<NuevoLote>(loteVacio());
   // La cantidad se calcula del rango, pero se puede corregir: hay lotes con
   // consecutivos anulados en medio, y ahí el conteo real no es el del rango.
@@ -69,6 +77,33 @@ export default function CapturaDelDia() {
     } finally { setCargando(false); }
   }
   useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    fetch('/api/admin/catalogos/tipos-documento', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => setTipos((d.items ?? []).map((x: { nombre: string }) => x.nombre)))
+      .catch(() => {});
+  }, []);
+
+  // Ver los lotes ya registrados de una tarea. El conteo decía "4" y no había
+  // forma de saber cuáles: para corregir un error había que adivinar.
+  async function verLotes(id: string) {
+    if (viendo === id) { setViendo(null); setLotes([]); return; }
+    setViendo(id); setLotes([]); setCargandoLotes(true);
+    try {
+      const r = await fetch(`/api/planeador/gestion/tareas/${id}/lotes`, { cache: 'no-store' });
+      const d = await r.json();
+      if (r.ok) setLotes(d.lotes ?? []);
+    } catch { /* el detalle es complementario */ }
+    finally { setCargandoLotes(false); }
+  }
+
+  async function borrarLote(loteId: string, tareaId: string) {
+    if (!confirm('¿Eliminar este lote? No se puede deshacer.')) return;
+    const r = await fetch(`/api/planeador/gestion/lotes/${loteId}`, { method: 'DELETE' });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); setMsg({ id: tareaId, texto: d.error ?? 'No se pudo eliminar.', ok: false }); return; }
+    setLotes((l) => l.filter((x) => x.id !== loteId));
+    await cargar();
+  }
 
   function abrir(id: string) {
     if (abierto === id) { setAbierto(null); return; }
@@ -152,7 +187,14 @@ export default function CapturaDelDia() {
                         ? <span style={{ fontWeight: 800, color: 'var(--exito)' }}>{t.lotesHoy}</span>
                         : <span style={{ color: 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ ...td, textAlign: 'center', color: 'var(--muted)' }}>{t.totalLotes}</td>
+                    <td style={{ ...td, textAlign: 'center' }}>
+                      {t.totalLotes > 0 ? (
+                        <button onClick={() => verLotes(t.id)} title="Ver los lotes registrados"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: 'var(--navy)', fontWeight: 700, textDecoration: 'underline' }}>
+                          {t.totalLotes}
+                        </button>
+                      ) : <span style={{ color: 'var(--muted)' }}>0</span>}
+                    </td>
                     <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtFecha(t.ultimaFecha)}</td>
                     <td style={td}>
                       <select
@@ -170,12 +212,52 @@ export default function CapturaDelDia() {
                       </button>
                     </td>
                   </tr>
+                  {viendo === t.id && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '4px 12px 14px', background: 'var(--panel-2)', borderBottom: '1px solid var(--line)' }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', margin: '8px 0 6px' }}>
+                          Lotes registrados
+                        </div>
+                        {cargandoLotes ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Cargando…</div>
+                          : lotes.length === 0 ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Sin lotes.</div>
+                          : (
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                              <thead>
+                                <tr>{['Fecha', 'Tipo de documento', 'Desde', 'Hasta', 'Cantidad', ''].map((h, i) => (
+                                  <th key={h + i} style={{ textAlign: i >= 2 && i <= 4 ? 'right' : 'left', fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '5px 8px', borderBottom: '1px solid var(--line)' }}>{h}</th>
+                                ))}</tr>
+                              </thead>
+                              <tbody>
+                                {lotes.map((l) => (
+                                  <tr key={l.id}>
+                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fmtFecha(l.fecha)}</td>
+                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', fontWeight: 600 }}>{l.tipoDocumento}</td>
+                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)' }}>{l.desde ?? '—'}</td>
+                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)' }}>{l.hasta ?? '—'}</td>
+                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{l.cantidad ?? '—'}</td>
+                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right' }}>
+                                      {puedeBorrar && (
+                                        <button onClick={() => borrarLote(l.id, t.id)} title="Eliminar este lote"
+                                          style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 14 }}>🗑</button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                      </td>
+                    </tr>
+                  )}
                   {abiertaAqui && (
                     <tr>
                       <td colSpan={6} style={{ padding: '4px 10px 14px', background: 'var(--hover, #f6f8fb)', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                           <Campo label="Tipo de documento" w={200}>
-                            <input list="tipos-doc-midia" value={nl.tipoDocumento} onChange={(e) => setNl({ ...nl, tipoDocumento: e.target.value })} placeholder="Egresos, Facturas…" style={{ ...inp, width: '100%' }} />
+                            <select value={nl.tipoDocumento} onChange={(e) => setNl({ ...nl, tipoDocumento: e.target.value })} style={{ ...inp, width: '100%' }}>
+                              <option value="">— Elegir —</option>
+                              {tipos.map((x) => <option key={x} value={x}>{x}</option>)}
+                            </select>
                           </Campo>
                           <Campo label="Desde" w={110}><input value={nl.desde} onChange={(e) => setDesde(e.target.value)} placeholder="consec." style={{ ...inp, width: '100%' }} /></Campo>
                           <Campo label="Hasta" w={110}><input value={nl.hasta} onChange={(e) => setHasta(e.target.value)} placeholder="consec." style={{ ...inp, width: '100%' }} /></Campo>
@@ -199,7 +281,6 @@ export default function CapturaDelDia() {
             })}
           </tbody>
         </table>
-        <datalist id="tipos-doc-midia">{TIPOS_DOC.map((x) => <option key={x} value={x} />)}</datalist>
       </div>
     </PanelPlegable>
     )}

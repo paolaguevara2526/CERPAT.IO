@@ -83,6 +83,9 @@ const CATALOGOS: Record<string, CatCfg> = {
   // pantalla: los clientes sin tipo no se podían arreglar desde la aplicación.
   'tipos-empresa': { delegate: prisma.tipoEmpresa, conOrden: true },
   regimenes: { delegate: prisma.regimenTributario, conOrden: true },
+  // Tipos de documento de la captura. Estaba escrito en el frontend: agregar uno
+  // exigía un despliegue, y el campo quedaba de texto libre.
+  'tipos-documento': { delegate: prisma.tipoDocumentoCaptura, conOrden: true },
 };
 
 adminRouter.get('/catalogos/:tipo', requireAuth, async (req, res) => {

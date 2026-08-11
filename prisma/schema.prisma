@@ -165,6 +165,7 @@ model Organizacion {
   entregasInsumo   EntregaInsumo[]
   eventosTarea     EventoTarea[]
   lotesCaptura     LoteCaptura[]
+  tiposDocumento   TipoDocumentoCaptura[]
 
   eventosVencimiento EventoVencimiento[]
   eventosInsumo      EventoInsumo[]
@@ -901,6 +902,24 @@ model EventoTarea {
 // Lote de captura de documentos (dentro de la tarea "Captura de documentos"):
 // el auxiliar registra, por tipo de documento, el rango de consecutivos y la
 // cantidad capturada, con su fecha. Trabajo diario dentro de la tarea del mes.
+// Tipos de documento que el auxiliar registra al capturar (Egresos, Facturas de
+// compra, …). Antes era una lista escrita en el código: no se podía agregar uno
+// sin un despliegue, y el campo quedaba de texto libre — con lo cual entraban
+// "Egresos", "egresos" y "Egreso" como si fueran cosas distintas y cualquier
+// medición por tipo de documento quedaba inservible.
+model TipoDocumentoCaptura {
+  id             String @id @default(uuid())
+  organizacionId String
+  nombre         String
+  orden          Int    @default(0)
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+
+  @@unique([organizacionId, nombre])
+  @@index([organizacionId])
+  @@map("tipos_documento_captura")
+}
+
 model LoteCaptura {
   id             String   @id @default(uuid())
   organizacionId String
