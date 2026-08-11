@@ -150,10 +150,19 @@ export default function ImpuestosDelDia() {
     { clave: 'periodo', label: 'Período', valor: (f) => f.periodo ?? '—', estiloCelda: { color: 'var(--muted)', whiteSpace: 'nowrap' } },
     { clave: 'vence', label: 'Vence', valor: (f) => fmt(f.fechaVencimiento), orden: (f) => f.fechaVencimiento,
       render: (f) => <span style={{ whiteSpace: 'nowrap', color: f.vencido ? 'var(--peligro-fuerte)' : 'var(--muted)', fontWeight: f.vencido ? 700 : 400 }}>{fmt(f.fechaVencimiento)}</span> },
+    // Decir "esperando" a secas no alcanza: lo que se espera es la liberación
+    // del mes de LOS DATOS (una retención de julio espera el insumo de julio,
+    // aunque se declare en agosto). Sin nombrar ese mes, quien libera el mes
+    // equivocado no tiene cómo darse cuenta.
     { clave: 'insumo', label: 'Insumo', valor: (f) => (f.liberado ? 'listo' : 'esperando'),
       render: (f) => (f.liberado
         ? <span title={f.liberadoEn ? `Liberado el ${fmt(f.liberadoEn)}` : 'Sin cierre mensual del que dependa'} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--exito-fuerte)', whiteSpace: 'nowrap' }}>✓ listo</span>
-        : <span title="El auxiliar aún no libera el mes de este cliente" style={{ fontSize: 11.5, color: 'var(--alerta-fuerte)', fontWeight: 700, whiteSpace: 'nowrap' }}>⏳ esperando</span>) },
+        : (
+          <span title={`Falta la liberación del insumo del período ${f.periodo ?? '—'} para este cliente. Ojo: es el mes de los DATOS, no el mes en que se trabaja.`}
+            style={{ fontSize: 11.5, color: 'var(--alerta-fuerte)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            ⏳ esperando {f.periodo && <span style={{ fontFamily: 'var(--mono)', fontWeight: 800 }}>{f.periodo}</span>}
+          </span>
+        )) },
     { clave: 'estado', label: 'Estado', valor: (f) => rev(f.estadoRevision).label,
       render: (f) => <span style={{ fontSize: 11.5, fontWeight: 700, color: rev(f.estadoRevision).color, background: rev(f.estadoRevision).fondo, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{rev(f.estadoRevision).label}</span> },
     { clave: 'checklist', label: 'Checklist', filtrable: false,
