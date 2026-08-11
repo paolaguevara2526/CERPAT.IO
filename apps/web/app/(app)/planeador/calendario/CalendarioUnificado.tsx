@@ -532,10 +532,20 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
     if (await patch({ soporteLink: link })) { setLinkOk(true); onChanged(); setTimeout(() => setLinkOk(false), 2000); }
     setGuardandoLink(false);
   }
+  // Al guardar el valor se cierra el modal. Antes quedaba abierto y con el mismo
+  // aspecto: no había forma de saber si había guardado, y la duda lleva a darle
+  // otra vez o a irse sin estar seguro.
+  //
+  // El "✓ Guardado" se alcanza a ver medio segundo antes de cerrar: si la
+  // ventana se desvaneciera de golpe parecería un error, no una confirmación.
+  // Si falla, NO se cierra: el error queda a la vista y el valor no se pierde.
   async function guardarValor() {
     setGuardandoVal(true); setValOk(false);
-    if (await patch({ valorPago: valor === '' ? null : Number(valor) })) { setValOk(true); onChanged(); setTimeout(() => setValOk(false), 2000); }
+    const ok = await patch({ valorPago: valor === '' ? null : Number(valor) });
     setGuardandoVal(false);
+    if (!ok) return;
+    setValOk(true); onChanged();
+    setTimeout(() => onClose(), 500);
   }
   const fFecha = (iso?: string | null) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch { return '—'; } };
 
