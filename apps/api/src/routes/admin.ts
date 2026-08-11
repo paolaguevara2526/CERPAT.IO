@@ -1115,6 +1115,67 @@ adminRouter.post('/plan-cliente/:empresaId/generar', requireAuth, soloCoordinaci
 // ---------- Asignaciones cliente × área (asesor responsable / auxiliar ejecutor / talla) ----------
 // De aquí heredan el responsable las tareas del plan y los vencimientos vinculados.
 
+// GET /admin/asignaciones/revision — asignaciones con el responsable mal puesto.
+//
+// De la asignación cliente×área heredan asesor y auxiliar TODAS las tareas y los
+// vencimientos. Un auxiliar puesto en la casilla de asesor no se nota al
+// guardarlo: se nota semanas después, cuando a esa persona le aparece en su lista
+// trabajo de procesamiento que no le toca — y para entonces hay que buscarlo a
+// mano entre noventa clientes por varias áreas cada uno.
+//
+// Solo se reportan los casos inequívocos, para que la lista sirva y no se ignore
+// por ruidosa.
+const ROLES_ASESOR = ['Asesor', 'Coordinador', 'Administrador'];
+const ROLES_EJECUTOR = ['Auxiliar', ...ROLES_ASESOR];
+
+adminRouter.get('/asignaciones/revision', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+
+  const [asigs, usuarios] = await Promise.all([
+    prisma.asignacionClienteArea.findMany({
+      where: { organizacionId: id, empresa: { activo: true }, OR: [{ asesorId: { not: null } }, { auxiliarId: { not: null } }] },
+      select: {
+        empresaId: true, areaId: true, asesorId: true, auxiliarId: true,
+        empresa: { select: { nombre: true } }, area: { select: { nombre: true } },
+      },
+    }),
+    prisma.usuario.findMany({
+      where: { organizacionId: id },
+      select: { id: true, nombre: true, esRootPlataforma: true, roles: { select: { rol: { select: { nombre: true } } } } },
+    }),
+  ]);
+  const porId = new Map(usuarios.map((u) => [u.id, { nombre: u.nombre, esRoot: u.esRootPlataforma, roles: u.roles.map((r) => r.rol.nombre) }]));
+  const tiene = (uid: string, roles: string[]) => {
+    const u = porId.get(uid);
+    return !u || u.esRoot || u.roles.some((r) => roles.includes(r));
+  };
+
+  const casos: any[] = [];
+  for (const a of asigs) {
+    const base = { empresa: a.empresa?.nombre ?? '—', area: a.area?.nombre ?? '—', empresaId: a.empresaId, areaId: a.areaId };
+    if (a.asesorId && !tiene(a.asesorId, ROLES_ASESOR)) {
+      const u = porId.get(a.asesorId);
+      casos.push({ ...base, campo: 'asesor', persona: u?.nombre ?? '(usuario eliminado)', roles: u?.roles ?? [],
+        motivo: 'Está puesto como ASESOR y no tiene el rol Asesor. Todo el procesamiento de esta área le va a aparecer como suyo.' });
+    }
+    if (a.auxiliarId && !tiene(a.auxiliarId, ROLES_EJECUTOR)) {
+      const u = porId.get(a.auxiliarId);
+      casos.push({ ...base, campo: 'auxiliar', persona: u?.nombre ?? '(usuario eliminado)', roles: u?.roles ?? [],
+        motivo: 'Está puesto como AUXILIAR y no tiene un rol que ejecute trabajo.' });
+    }
+    // La misma persona en las dos casillas rompe el circuito de captura y
+    // liberación: se estaría liberando el insumo a sí misma.
+    if (a.asesorId && a.asesorId === a.auxiliarId) {
+      const u = porId.get(a.asesorId);
+      casos.push({ ...base, campo: 'ambos', persona: u?.nombre ?? '—', roles: u?.roles ?? [],
+        motivo: 'Es asesor Y auxiliar de la misma área: se liberaría el insumo a sí misma.' });
+    }
+  }
+  casos.sort((x, y) => x.empresa.localeCompare(y.empresa, 'es'));
+  res.json({ total: casos.length, casos });
+});
+
 // GET /admin/asignaciones/:empresaId — todas las áreas con su asignación actual.
 adminRouter.get('/asignaciones/:empresaId', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId(req);

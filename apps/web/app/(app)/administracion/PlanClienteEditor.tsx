@@ -8,9 +8,10 @@ import ImportarAsignacionesModal from './ImportarAsignacionesModal';
 import LiberarPeriodo from './LiberarPeriodo';
 import RecalcularFechas from './RecalcularFechas';
 import GenerarPeriodo from './GenerarPeriodo';
+import RevisionResponsables from './RevisionResponsables';
 
 type Empresa = { id: string; nombre: string };
-type Usuario = { id: string; nombre: string };
+type Usuario = { id: string; nombre: string; roles: string[] };
 type Act = { id: string; codigo: string; nombre: string; periodicidadCatalogo: string | null; enPlan: boolean; periodicidad: string | null };
 type AreaGrupo = { area: string; areaId: string | null; actividades: Act[] };
 type Asig = { asesorId: string | null; auxiliarId: string | null; talla: string | null; insumoCliente: boolean };
@@ -20,6 +21,52 @@ type Entregas = { general: { entregado: boolean; por?: string | null; origen?: s
 const PERIODICIDADES = ['Mensual', 'Bimestral', 'Trimestral', 'Cuatrimestral', 'Semestral', 'Anual'];
 const TALLAS = ['', 'S', 'M', 'L', 'XL'];
 const input: React.CSSProperties = { padding: '7px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
+
+// De la asignación cliente×área heredan asesor y auxiliar TODAS las tareas y los
+// vencimientos. Antes las dos casillas ofrecían la misma lista completa de
+// usuarios: poner un auxiliar como asesor era un clic, y el error no se veía al
+// guardarlo — se veía semanas después, cuando a esa persona le aparecía trabajo
+// de procesamiento que no le tocaba.
+//
+// No se bloquea: a veces un asesor cubre como auxiliar, y prohibirlo obligaría a
+// pelear con la herramienta. Se separa en dos grupos y se avisa cuando la persona
+// elegida no es de las esperadas.
+const ROLES_ASESOR = ['Asesor', 'Coordinador', 'Administrador'];
+const ROLES_EJECUTOR = ['Auxiliar', ...ROLES_ASESOR];
+
+function SelectPersona({ etiqueta, usuarios, rolesEsperados, valor, onChange }: {
+  etiqueta: string; usuarios: Usuario[]; rolesEsperados: string[]; valor: string; onChange: (v: string) => void;
+}) {
+  const cumple = (u: Usuario) => u.roles.some((r) => rolesEsperados.includes(r));
+  const propios = usuarios.filter(cumple);
+  const otros = usuarios.filter((u) => !cumple(u));
+  const elegido = usuarios.find((u) => u.id === valor);
+  const desubicado = !!elegido && !cumple(elegido);
+
+  return (
+    <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
+      <select value={valor} onChange={(e) => onChange(e.target.value)}
+        style={{ ...input, padding: '5px 8px', fontSize: 12, minWidth: 150, ...(desubicado ? { borderColor: 'var(--alerta-solido)', background: 'var(--alerta-suave)' } : {}) }}>
+        <option value="">— {etiqueta} —</option>
+        {propios.length > 0 && (
+          <optgroup label={etiqueta}>
+            {propios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+          </optgroup>
+        )}
+        {otros.length > 0 && (
+          <optgroup label="Otros (revisar)">
+            {otros.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+          </optgroup>
+        )}
+      </select>
+      {desubicado && (
+        <span style={{ fontSize: 10.5, color: 'var(--alerta-fuerte)', fontWeight: 700, maxWidth: 170, lineHeight: 1.3 }}>
+          ⚠ {elegido!.nombre.split(' ')[0]} no tiene rol {etiqueta}
+        </span>
+      )}
+    </span>
+  );
+}
 
 export default function PlanClienteEditor() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -42,7 +89,7 @@ export default function PlanClienteEditor() {
 
   useEffect(() => {
     fetch('/api/admin/empresas', { cache: 'no-store' }).then((r) => r.json()).then((d) => setEmpresas((d.items ?? []).map((e: any) => ({ id: e.id, nombre: e.nombre })))).catch(() => {});
-    fetch('/api/admin/usuarios', { cache: 'no-store' }).then((r) => r.json()).then((d) => setUsuarios((d.usuarios ?? []).filter((u: any) => u.activo !== false).map((u: any) => ({ id: u.id, nombre: u.nombre })))).catch(() => {});
+    fetch('/api/admin/usuarios', { cache: 'no-store' }).then((r) => r.json()).then((d) => setUsuarios((d.usuarios ?? []).filter((u: any) => u.activo !== false).map((u: any) => ({ id: u.id, nombre: u.nombre, roles: (u.roles ?? []).map((r: any) => r.nombre) })))).catch(() => {});
   }, []);
 
   const cargarPlan = useCallback(async (eid: string) => {
@@ -183,6 +230,9 @@ export default function PlanClienteEditor() {
     <>
       {/* El orden es el del mes: primero se genera el período para todos,
           después se ajustan plazos si cambió el catálogo, y al final se libera. */}
+      {/* Va primero: si un responsable está mal puesto, generar el período
+          replica el error en todas las tareas del mes. */}
+      <RevisionResponsables onIr={(id) => { setEmpresaId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
       <GenerarPeriodo />
       <RecalcularFechas />
       <LiberarPeriodo />
@@ -234,14 +284,10 @@ export default function PlanClienteEditor() {
                 {g.areaId && (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10, paddingBottom: 10, borderBottom: '1px dashed var(--edge-strong)' }}>
                     <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: 'var(--muted)' }}>Responsables</span>
-                    <select value={asig[g.areaId]?.asesorId ?? ''} onChange={(e) => setAsigCampo(g.areaId!, 'asesorId', e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 12, minWidth: 150 }}>
-                      <option value="">— Asesor —</option>
-                      {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
-                    </select>
-                    <select value={asig[g.areaId]?.auxiliarId ?? ''} onChange={(e) => setAsigCampo(g.areaId!, 'auxiliarId', e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 12, minWidth: 150 }}>
-                      <option value="">— Auxiliar —</option>
-                      {usuarios.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
-                    </select>
+                    <SelectPersona etiqueta="Asesor" usuarios={usuarios} rolesEsperados={ROLES_ASESOR}
+                      valor={asig[g.areaId]?.asesorId ?? ''} onChange={(v) => setAsigCampo(g.areaId!, 'asesorId', v)} />
+                    <SelectPersona etiqueta="Auxiliar" usuarios={usuarios} rolesEsperados={ROLES_EJECUTOR}
+                      valor={asig[g.areaId]?.auxiliarId ?? ''} onChange={(v) => setAsigCampo(g.areaId!, 'auxiliarId', v)} />
                     <select value={asig[g.areaId]?.talla ?? ''} onChange={(e) => setAsigCampo(g.areaId!, 'talla', e.target.value)} style={{ ...input, padding: '5px 8px', fontSize: 12, width: 76 }} title="Talla del cliente en esta área">
                       {TALLAS.map((t) => <option key={t} value={t}>{t || 'Talla'}</option>)}
                     </select>
