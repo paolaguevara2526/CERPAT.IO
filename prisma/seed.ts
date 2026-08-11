@@ -67,6 +67,19 @@ async function main() {
     });
   }
 
+  // ---------- Tipos de novedad (causas de lo que impide trabajar) ----------
+  // En las organizaciones que ya existen los siembra la migración
+  // 20260811180000_novedades.
+  const tiposNovedad = ['Internet', 'Acceso al sistema', 'Equipo lento', 'Energía',
+    'Portal de la DIAN / entidad', 'Información del cliente', 'Otra'];
+  for (const [i, nombre] of tiposNovedad.entries()) {
+    await prisma.tipoNovedad.upsert({
+      where: { organizacionId_nombre: { organizacionId: ORG_ID, nombre } },
+      update: {},
+      create: { organizacionId: ORG_ID, nombre, orden: nombre === 'Otra' ? 99 : i + 1 },
+    });
+  }
+
   // ---------- Administrador de la organización ----------
   await prisma.usuario.upsert({
     where: { organizacionId_email: { organizacionId: ORG_ID, email: 'admin@cerpat.io' } },

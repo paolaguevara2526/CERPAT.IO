@@ -73,6 +73,19 @@ Todas (salvo `Organizacion` y el root) pertenecen a una organización vía
   consecutivo `desde`–`hasta`, `cantidad`, `fecha`. Registro diario del auxiliar
   dentro de la tarea mensual.
 
+### Novedades del día
+
+- **`TipoNovedad`** — catálogo de causas (Internet, Acceso al sistema, Equipo
+  lento, …), administrable en *Administración → Tipos de novedad*. Único por
+  (`organizacionId`, `nombre`). Catálogo y no texto libre, para que la suma por
+  causa dé un número y no tres variantes de la misma palabra.
+- **`Novedad`** — lo que impidió trabajar: `usuarioId` (quien reporta), `tipoId`,
+  `fecha`, `descripcion`, **`planAccion` (obligatorio)**, `horaDesde`/`horaHasta`
+  (`"HH:MM"`, opcionales) y `minutos` (calculado en el backend al guardar),
+  `empresaId?`/`areaId?` (contexto opcional), `estado` (`abierta`/`resuelta`) y
+  el registro del cierre: `cerradaEn`, `cerradaPorId`. **Sin FK a `Tarea` a
+  propósito**: una novedad nunca cambia el estado de una tarea.
+
 ### Visitas a clientes (asesor / auditor)
 
 - **`Visita`** — visita de un asesor o auditor a un cliente, con su **acta** hecha

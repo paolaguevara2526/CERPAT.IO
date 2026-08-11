@@ -19,7 +19,7 @@ const PUBLICAS = [
   { archivo: 'health.ts', ruta: "'/'" },
 ];
 
-const ROUTERS = ['auth.ts', 'empresas.ts', 'usuarios.ts', 'tareas.ts', 'plan.ts', 'admin.ts', 'vencimientos.ts', 'visitas.ts', 'hallazgos.ts', 'ficha.ts'];
+const ROUTERS = ['auth.ts', 'empresas.ts', 'usuarios.ts', 'tareas.ts', 'plan.ts', 'admin.ts', 'vencimientos.ts', 'visitas.ts', 'hallazgos.ts', 'ficha.ts', 'novedades.ts'];
 
 for (const archivo of ROUTERS) {
   test(`${archivo}: toda ruta exige sesión (salvo las públicas declaradas)`, () => {

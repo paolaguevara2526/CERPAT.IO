@@ -394,6 +394,7 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
     select: {
       id: true, empresaId: true, obligacion: true, periodo: true, fechaVencimiento: true,
       estadoRevision: true, observacionRevision: true, enviadoRevisionEn: true, valorPago: true,
+      soporteLink: true,
       empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
       revisor: { select: { nombre: true } },
       subtareas: { select: { estado: true } },
@@ -433,6 +434,10 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
       estadoRevision: v.estadoRevision, observacionRevision: v.observacionRevision,
       enviadoRevisionEn: v.enviadoRevisionEn, revisor: v.revisor?.nombre ?? null,
       valorPago: v.valorPago != null ? Number(v.valorPago) : null,
+      // Dónde quedó guardado el trabajo. Va en la misma fila y no en otra
+      // pantalla: el asesor que acaba de liquidar es quien tiene el link a mano,
+      // y si tiene que ir a buscarlo a otro lado no lo pega.
+      soporteLink: v.soporteLink,
       sinPago: obligacionSinPago(v.obligacion),
       checklistTotal: subs.length,
       checklistHechas: subs.filter((s) => s.estado === 'realizada').length,
