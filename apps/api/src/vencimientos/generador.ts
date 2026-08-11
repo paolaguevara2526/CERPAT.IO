@@ -105,19 +105,28 @@ function festivosColombia(y: number): Set<string> {
   return s;
 }
 // n-ésimo día hábil del mes (salta sábados, domingos y festivos de Colombia).
-function nthDiaHabil(anio: number, mes1a12: number, n: number): Date {
+//
+// Si `n` se pasa de los días hábiles que tiene el mes, devuelve el ÚLTIMO. El
+// número lo digita una persona en el catálogo, y un mes con festivos puede
+// quedarse en 19 o 20 hábiles: antes esto devolvía el día 1, o sea que pedir
+// "día hábil 22" ponía el plazo al principio del mes en vez de al final. Fallar
+// hacia el final es lo seguro — un plazo tarde se nota; uno adelantado hace que
+// todo aparezca vencido sin motivo.
+export function nthDiaHabil(anio: number, mes1a12: number, n: number): Date {
   const fest = festivosColombia(anio);
   const d = new Date(Date.UTC(anio, mes1a12 - 1, 1));
   let cuenta = 0;
+  let ultimoHabil = new Date(d);
   while (d.getUTCMonth() === mes1a12 - 1) {
     const dow = d.getUTCDay();
     if (dow !== 0 && dow !== 6 && !fest.has(isoUTC(d))) {
       cuenta++;
+      ultimoHabil = new Date(d);
       if (cuenta === n) return new Date(d);
     }
     d.setUTCDate(d.getUTCDate() + 1);
   }
-  return new Date(Date.UTC(anio, mes1a12 - 1, 1)); // fallback (no debería ocurrir)
+  return ultimoHabil;
 }
 
 // RUB (Registro Único de Beneficiarios): actualización TRIMESTRAL de solo
