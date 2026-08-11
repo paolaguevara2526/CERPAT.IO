@@ -33,13 +33,26 @@ type Resp = { periodo: string | null; hoy: string | null; total: number; totalOb
 type NuevoLote = { tipoDocumento: string; prefijo: string; desde: string; hasta: string; cantidad: string; fecha: string };
 type Lote = { id: string; tipoDocumento: string; prefijo: string | null; desde: string | null; hasta: string | null; cantidad: number | null; fecha: string };
 
-const hoyISO = () => new Date().toISOString().slice(0, 10);
+// El día de HOY según el reloj de quien captura, no según UTC. Con
+// toISOString() el formulario proponía el día siguiente a partir de las 7 p. m.
+// en Colombia, porque a esa hora en UTC ya es mañana.
+const hoyISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 const loteVacio = (): NuevoLote => ({ tipoDocumento: '', prefijo: '', desde: '', hasta: '', cantidad: '', fecha: hoyISO() });
 
+// La fecha del lote es un DÍA DEL CALENDARIO y se guarda a medianoche UTC, así
+// que se muestra en UTC. Sin el timeZone, el navegador la pasaba a la hora local
+// (Colombia, UTC−5): medianoche del 11 son las 7 p. m. del 10, y lo capturado
+// hoy aparecía con la fecha de ayer.
 function fmtFecha(iso: string | null): string {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return '—'; }
+  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', timeZone: 'UTC' }); } catch { return '—'; }
 }
+// "2026-08-11" para el <input type="date"> al editar: la misma fecha guardada,
+// sin pasar por la zona horaria.
+const isoDeFecha = (iso: string) => (iso ?? '').slice(0, 10);
 
 export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: boolean }) {
   const [data, setData] = useState<Resp | null>(null);
@@ -51,6 +64,8 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
   const [viendo, setViendo] = useState<string | null>(null);
   const [lotes, setLotes] = useState<Lote[]>([]);
   const [cargandoLotes, setCargandoLotes] = useState(false);
+  // Lote que se está corrigiendo (solo uno a la vez).
+  const [edit, setEdit] = useState<(NuevoLote & { id: string }) | null>(null);
   const [nl, setNl] = useState<NuevoLote>(loteVacio());
   // La cantidad se calcula del rango, pero se puede corregir: hay lotes con
   // consecutivos anulados en medio, y ahí el conteo real no es el del rango.
@@ -95,6 +110,29 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
       if (r.ok) setLotes(d.lotes ?? []);
     } catch { /* el detalle es complementario */ }
     finally { setCargandoLotes(false); }
+  }
+
+  // Corregir un lote ya registrado: el consecutivo mal escrito o la fecha
+  // equivocada se arreglan donde se ven, sin borrar y volver a capturar.
+  async function guardarEdicion(tareaId: string) {
+    if (!edit) return;
+    if (!edit.tipoDocumento.trim()) { setMsg({ id: tareaId, texto: 'Indica el tipo de documento.', ok: false }); return; }
+    setGuardando(true);
+    try {
+      const r = await fetch(`/api/planeador/gestion/lotes/${edit.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipoDocumento: edit.tipoDocumento, prefijo: edit.prefijo,
+          desde: edit.desde, hasta: edit.hasta, cantidad: edit.cantidad, fecha: edit.fecha,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setMsg({ id: tareaId, texto: d?.error ?? 'No se pudo guardar el cambio.', ok: false }); return; }
+      setLotes((l) => l.map((x) => (x.id === edit.id ? d.lote : x)));
+      setEdit(null);
+      setMsg({ id: tareaId, texto: '✓ Lote corregido.', ok: true });
+      await cargar();
+    } finally { setGuardando(false); }
   }
 
   async function borrarLote(loteId: string, tareaId: string) {
@@ -228,22 +266,58 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
                                 ))}</tr>
                               </thead>
                               <tbody>
-                                {lotes.map((l) => (
-                                  <tr key={l.id}>
-                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fmtFecha(l.fecha)}</td>
-                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', fontWeight: 600 }}>{l.tipoDocumento}</td>
-                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', color: 'var(--muted)' }}>{l.prefijo ?? '—'}</td>
-                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)' }}>{l.desde ?? '—'}</td>
-                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)' }}>{l.hasta ?? '—'}</td>
-                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{l.cantidad ?? '—'}</td>
-                                    <td style={{ padding: '5px 8px', borderBottom: '1px solid var(--line)', textAlign: 'right' }}>
-                                      {puedeBorrar && (
-                                        <button onClick={() => borrarLote(l.id, t.id)} title="Eliminar este lote"
-                                          style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 14 }}>🗑</button>
-                                      )}
-                                    </td>
-                                  </tr>
-                                ))}
+                                {lotes.map((l) => {
+                                  const celda = { padding: '5px 8px', borderBottom: '1px solid var(--line)' } as React.CSSProperties;
+                                  const editando = edit?.id === l.id;
+                                  if (editando) {
+                                    const ie = { ...inp, width: '100%', padding: '3px 5px', fontSize: 12 } as React.CSSProperties;
+                                    return (
+                                      <tr key={l.id} style={{ background: 'var(--hover, #f6f8fb)' }}>
+                                        <td style={celda}><input type="date" value={edit.fecha} onChange={(e) => setEdit({ ...edit, fecha: e.target.value })} style={ie} /></td>
+                                        <td style={celda}>
+                                          <select value={edit.tipoDocumento} onChange={(e) => setEdit({ ...edit, tipoDocumento: e.target.value })} style={ie}>
+                                            {/* El tipo guardado se ofrece aunque ya no esté en el catálogo: si no,
+                                                corregir el consecutivo obligaría a cambiar también el tipo. */}
+                                            {!tipos.includes(edit.tipoDocumento) && edit.tipoDocumento && <option value={edit.tipoDocumento}>{edit.tipoDocumento}</option>}
+                                            {tipos.map((x) => <option key={x} value={x}>{x}</option>)}
+                                          </select>
+                                        </td>
+                                        <td style={celda}><input value={edit.prefijo} onChange={(e) => setEdit({ ...edit, prefijo: e.target.value })} placeholder="FE, CE…" style={{ ...ie, fontFamily: 'var(--mono)' }} /></td>
+                                        <td style={celda}><input value={edit.desde} onChange={(e) => setEdit({ ...edit, desde: e.target.value, cantidad: contarConsecutivos(e.target.value, edit.hasta) })} style={{ ...ie, fontFamily: 'var(--mono)', textAlign: 'right' }} /></td>
+                                        <td style={celda}><input value={edit.hasta} onChange={(e) => setEdit({ ...edit, hasta: e.target.value, cantidad: contarConsecutivos(edit.desde, e.target.value) })} style={{ ...ie, fontFamily: 'var(--mono)', textAlign: 'right' }} /></td>
+                                        <td style={celda}><input value={edit.cantidad} onChange={(e) => setEdit({ ...edit, cantidad: e.target.value })} style={{ ...ie, fontFamily: 'var(--mono)', textAlign: 'right' }} /></td>
+                                        <td style={{ ...celda, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                          <button className="dbtn primary" disabled={guardando} onClick={() => guardarEdicion(t.id)} style={{ fontSize: 11.5, padding: '3px 9px' }}>Guardar</button>{' '}
+                                          <button className="dbtn" disabled={guardando} onClick={() => setEdit(null)} style={{ fontSize: 11.5, padding: '3px 9px' }}>Cancelar</button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  }
+                                  return (
+                                    <tr key={l.id}>
+                                      <td style={{ ...celda, whiteSpace: 'nowrap', color: 'var(--muted)' }}>{fmtFecha(l.fecha)}</td>
+                                      <td style={{ ...celda, fontWeight: 600 }}>{l.tipoDocumento}</td>
+                                      <td style={{ ...celda, fontFamily: 'var(--mono)', color: 'var(--muted)' }}>{l.prefijo ?? '—'}</td>
+                                      <td style={{ ...celda, textAlign: 'right', fontFamily: 'var(--mono)' }}>{l.desde ?? '—'}</td>
+                                      <td style={{ ...celda, textAlign: 'right', fontFamily: 'var(--mono)' }}>{l.hasta ?? '—'}</td>
+                                      <td style={{ ...celda, textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700 }}>{l.cantidad ?? '—'}</td>
+                                      <td style={{ ...celda, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                        {/* Corregir lo propio no necesita permiso especial: quien registra el
+                                            lote es quien ve el error. Borrar sigue siendo de coordinación. */}
+                                        <button onClick={() => setEdit({
+                                          id: l.id, tipoDocumento: l.tipoDocumento, prefijo: l.prefijo ?? '',
+                                          desde: l.desde ?? '', hasta: l.hasta ?? '',
+                                          cantidad: l.cantidad != null ? String(l.cantidad) : '', fecha: isoDeFecha(l.fecha),
+                                        })} title="Corregir este lote"
+                                          style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--brand, #2E5090)', fontSize: 13 }}>✏️</button>
+                                        {puedeBorrar && (
+                                          <button onClick={() => borrarLote(l.id, t.id)} title="Eliminar este lote"
+                                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--peligro)', fontSize: 14 }}>🗑</button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           )}

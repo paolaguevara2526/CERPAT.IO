@@ -17,6 +17,7 @@ import { alcancePortal } from '../auth/alcance-db.js';
 import { esStaffAcotado } from '../auth/alcance.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
+import { diaDeCaptura } from '../plan/dia-captura.js';
 
 export const planRouter = Router();
 
@@ -632,12 +633,56 @@ planRouter.post('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res
   const txt = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
   const n = Number(req.body?.cantidad);
   const cantidad = req.body?.cantidad !== '' && req.body?.cantidad != null && Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : null;
-  const fecha = req.body?.fecha && !isNaN(new Date(req.body.fecha).getTime()) ? new Date(req.body.fecha) : new Date();
+  const fecha = diaDeCaptura(req.body?.fecha);
   const lote = await prisma.loteCaptura.create({
     data: { organizacionId: tarea.organizacionId, tareaId: tarea.id, tipoDocumento, prefijo: txt(req.body?.prefijo), desde: txt(req.body?.desde), hasta: txt(req.body?.hasta), cantidad, fecha },
     select: loteSelect,
   });
   res.json({ ok: true, lote });
+});
+
+// PATCH /plan/lotes/:id — corregir un lote ya registrado.
+//
+// Quien captura se equivoca en un consecutivo o en la fecha y hasta ahora no
+// tenía cómo arreglarlo: solo existía borrar, y borrar no lo podía hacer él.
+// Tenía que pedírselo a coordinación por cada dígito mal escrito.
+//
+// El permiso es el mismo con el que se registra: quien puede crear el lote
+// puede corregirlo. No se permite cambiar de tarea — para eso se borra y se
+// vuelve a registrar donde corresponde.
+planRouter.patch('/lotes/:id', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  const lote = await prisma.loteCaptura.findFirst({
+    where: { id: req.params.id, organizacionId: org?.id },
+    select: { id: true, tarea: { select: { asesorId: true, auxiliarId: true, auditoria: true } } },
+  });
+  if (!lote) return res.status(404).json({ error: 'Lote no encontrado.' });
+  const u = req.user!;
+  if (!(puedeGestionar(u) || lote.tarea.asesorId === u.sub || lote.tarea.auxiliarId === u.sub))
+    return res.status(403).json({ error: 'No puedes editar este lote (no eres su asesor/auxiliar ni tienes rol de coordinación).' });
+  // Misma regla que el resto de la tarea: lo aprobado en auditoría no se toca
+  // sin desbloquear. Si no, se podría cambiar la captura por debajo de un
+  // cierre ya aprobado.
+  if (lote.tarea.auditoria === 'aprobada') return res.status(403).json({ error: 'La tarea está bloqueada (aprobada en Auditoría). Debe desbloquearse primero.' });
+
+  const txt = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  const data: Record<string, any> = {};
+  if ('tipoDocumento' in (req.body ?? {})) {
+    const t = String(req.body.tipoDocumento ?? '').trim();
+    if (!t) return res.status(422).json({ error: 'Indica el tipo de documento.' });
+    data.tipoDocumento = t;
+  }
+  for (const c of ['prefijo', 'desde', 'hasta'] as const) if (c in (req.body ?? {})) data[c] = txt(req.body[c]);
+  if ('cantidad' in (req.body ?? {})) {
+    const v = req.body.cantidad;
+    if (v === null || v === '') data.cantidad = null;
+    else { const n = Number(v); if (!Number.isFinite(n) || n < 0) return res.status(422).json({ error: 'La cantidad debe ser un número ≥ 0.' }); data.cantidad = Math.trunc(n); }
+  }
+  if ('fecha' in (req.body ?? {})) data.fecha = diaDeCaptura(req.body.fecha);
+  if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+
+  const actualizado = await prisma.loteCaptura.update({ where: { id: lote.id }, data, select: loteSelect });
+  res.json({ ok: true, lote: actualizado });
 });
 
 // DELETE /plan/lotes/:id
