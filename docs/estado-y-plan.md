@@ -472,9 +472,19 @@ Decisiones que definen la funcionalidad:
 - Cerrar deja **quién y cuándo**; se puede reabrir (y ahí se limpia el sello, para que no
   quede una fecha de cierre que no fue). Eliminar es de quien lo creó o de coordinación.
 
-Hallazgo del camino: el botón **"+ Nueva tarea"** de la Lista creaba tareas sin actividad
-del plan, y **todas las listas filtran por tareas del plan** — se guardaban y no aparecían
-en ninguna parte. Queda pendiente decidir si ese botón se arregla o se retira.
+**Se retiró "＋ Nueva tarea" de la Lista** (12 ago 2026). Creaba tareas sin actividad del
+plan y **todas las listas filtran por tareas del plan**: se guardaban y no aparecían en
+ninguna parte. No se "arregló" haciéndolas visibles porque seguirían sin contar en ningún
+indicador —el plan se arma desde el catálogo y el plan por cliente— y lo que la gente
+quería hacer con ese botón vive ahora en Pendientes. La **edición** de una tarea del plan
+no se tocó: funciona y se queda.
+
+Nada se borró: si alguien alcanzó a usarlo, esas tareas siguen en la base y se pueden
+rescatar. Para contarlas:
+
+```sql
+SELECT COUNT(*) FROM tareas WHERE "actividadPlanId" IS NULL;
+```
 
 ## Sesión del 10–11 de agosto 2026 — 12 PR
 

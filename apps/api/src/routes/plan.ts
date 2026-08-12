@@ -1033,6 +1033,17 @@ planRouter.patch('/tareas/:id/soporte', requireAuth, async (req: AuthedRequest, 
   res.json({ ok: true, soporteLink: link });
 });
 
+// POST /plan/tareas — crear una tarea a mano.
+//
+// OJO antes de volver a poner un botón que llame aquí: una tarea creada así
+// queda SIN actividad del plan (`actividadPlanId` en null), y todas las listas
+// —Lista, Tablero, Mi Día, Calendario— filtran por tareas del plan. O sea que se
+// guarda y no aparece en ninguna parte. Por eso se retiró "＋ Nueva tarea" de la
+// Lista en agosto de 2026.
+//
+// El endpoint se conserva para no romper nada y porque las filas ya creadas hay
+// que poder rescatarlas, pero el camino correcto para una tarea suelta del día a
+// día es /pendientes, que sí tiene dónde verse y se mide por cliente.
 planRouter.post('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   if (!puedeGestionar(req.user!)) return res.status(403).json({ error: 'Solo coordinación puede crear tareas.' });
   const org = await orgDeSesion(req);
