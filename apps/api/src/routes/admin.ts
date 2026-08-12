@@ -90,6 +90,10 @@ const CATALOGOS: Record<string, CatCfg> = {
   // sumar por causa —"cuánto nos costó el internet este mes"— dé un número y no
   // tres variantes de la misma palabra.
   'tipos-novedad': { delegate: prisma.tipoNovedad, conOrden: true },
+  // El servicio del cliente (Outsourcing, Asesoría, Ocasional…). La tabla
+  // existía desde el principio pero nadie la administraba, y el campo del
+  // formulario era de texto libre: cada quien escribía lo suyo.
+  'tipos-servicio': { delegate: prisma.tipoServicio, conOrden: true },
 };
 
 adminRouter.get('/catalogos/:tipo', requireAuth, async (req, res) => {

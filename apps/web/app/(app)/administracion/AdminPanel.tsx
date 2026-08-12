@@ -36,6 +36,7 @@ const TABS: Tab[] = [
   { id: 'periodicidades', label: 'Periodicidades', tipo: 'periodicidades' },
   { id: 'tipos-documento', label: 'Tipos de documento', tipo: 'tipos-documento' },
   { id: 'tipos-novedad', label: 'Tipos de novedad', tipo: 'tipos-novedad' },
+  { id: 'tipos-servicio', label: 'Tipos de servicio', tipo: 'tipos-servicio' },
   { id: 'etiquetas', label: 'Etiquetas', tipo: 'etiquetas' },
   { id: 'grupos', label: 'Grupos', tipo: 'grupos' },
 ];
