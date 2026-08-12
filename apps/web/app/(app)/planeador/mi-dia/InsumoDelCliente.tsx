@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from 'react';
 import PanelPlegable from '@/app/_components/PanelPlegable';
+import { fmtDia } from '@/lib/fechas';
 
 type Fila = {
   empresaId: string; areaId: string; empresa: string; area: string;
@@ -21,7 +22,7 @@ type Resp = { periodo: string | null; total: number; pendientes: number; filas: 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const fmt = (iso: string | null) => {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return '—'; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return '—'; }
 };
 
 export default function InsumoDelCliente() {

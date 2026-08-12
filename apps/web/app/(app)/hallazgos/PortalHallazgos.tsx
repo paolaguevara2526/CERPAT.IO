@@ -9,6 +9,7 @@ import { toCSV, parseCSV, descargar, normRiesgo, normPrioridad, normEstado, norm
 
 import { tinte } from '@/app/_components/color';
 import { logoCerpat } from '@/app/_components/logo-impresion';
+import { fmtDia } from '@/lib/fechas';
 export type Empresa = { id: string; nombre: string; grupo: string | null };
 export type Hallazgo = {
   id: string; empresaId: string; empresa: string | null; area: string | null; titulo: string; descripcion: string | null;
@@ -32,7 +33,7 @@ const PROGRAMA_KEY = 'cerpat:hallazgos:programa'; // compañías con gestión de
 const textoCelda: React.CSSProperties = { color: 'var(--muted)', fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' };
 
 function colorPct(p: number) { return p >= 85 ? 'var(--exito)' : p >= 60 ? 'var(--alerta)' : 'var(--peligro)'; }
-function fmtFecha(iso: string | null) { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
+function fmtFecha(iso: string | null) { if (!iso) return '—'; try { return fmtDia(iso, { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
 
 export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
@@ -362,7 +363,7 @@ export default function PortalHallazgos({ esGestor }: { esGestor: boolean }) {
     const parr = (v: unknown) => esc(v).replace(/\n/g, '<br>');
     const cliente = empresaSel?.nombre ?? 'Cliente';
     const hoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
-    const fechaCorta = (iso: string | null) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } };
+    const fechaCorta = (iso: string | null) => { if (!iso) return '—'; try { return fmtDia(iso, { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } };
     const alcance = TABS.find((t) => t.id === filtro)?.label ?? 'Todos';
 
     const COLOR_RIESGO: Record<string, string> = { alto: '#b42318', medio: '#9a5b12', bajo: '#1a7f4b' };

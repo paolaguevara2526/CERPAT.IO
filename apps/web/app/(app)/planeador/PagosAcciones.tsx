@@ -3,6 +3,8 @@
 // por cliente los impuestos pendientes de pago. Trabaja sobre las filas ya
 // filtradas que le pasa la página (respeta el filtro de cliente/estado).
 
+import { fmtDia } from '@/lib/fechas';
+
 type Fila = {
   id: string; obligacion: string; empresa: string | null; municipio: string | null; periodo: string | null;
   anio: number | null; fechaVencimiento: string; estado: string; valorPago: number | null;
@@ -13,16 +15,23 @@ type Fila = {
 const pagado = (e: string) => e === 'presentado_pagado';
 const cop = (v: number) => (v ?? 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
 function fechaLarga(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch { return ''; }
+  return fmtDia(iso, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 const totalFila = (f: Fila) => (f.valorPago ?? 0) + (f.interesMora ?? 0) + (f.sancion ?? 0);
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 // ¿La fecha (solo día) ya pasó? Para marcar vencido y el límite de pago en rojo.
+//
+// Se comparan los DÍAS tal como vienen escritos, no como instantes: convertir
+// la medianoche UTC a hora local restaba cinco horas y pintaba de rojo desde el
+// día anterior. El mismo día del vencimiento NO está vencido: hay plazo hasta
+// que termine.
 function vencida(iso: string | null): boolean {
   if (!iso) return false;
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  const f = new Date(iso); f.setHours(0, 0, 0, 0);
-  return f.getTime() < hoy.getTime();
+  const dia = String(iso).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return false;
+  const h = new Date();
+  const hoyISO = `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`;
+  return dia < hoyISO;
 }
 
 export default function PagosAcciones({ filas, cliente }: { filas: Fila[]; cliente: string }) {

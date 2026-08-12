@@ -14,6 +14,7 @@ import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
 import { vinculoDeObligacion, VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
 import { transicion, puedePresentar, actorDe, EVENTO_DE, type EstadoRevision, type AccionRevision } from '../vencimientos/revision.js';
+import { estaVencido } from '../plan/dia-calendario.js';
 
 const ACCIONES_REVISION = ['iniciar', 'enviar', 'devolver', 'aprobar', 'reabrir'];
 
@@ -104,7 +105,7 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   let list = items.map((v) => ({
     ...v, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
     valorPago: v.valorPago != null ? Number(v.valorPago) : null,
-    vencido: v.estado === 'pendiente' && v.fechaVencimiento < hoy,
+    vencido: v.estado === 'pendiente' && estaVencido(v.fechaVencimiento),
   }));
   if (mes >= 1 && mes <= 12) list = list.filter((v) => v.fechaVencimiento.getMonth() + 1 === mes);
   res.json({ total: list.length, vencimientos: list });
@@ -129,7 +130,7 @@ vencimientosRouter.get('/resumen', requireAuth, async (req: AuthedRequest, res) 
     if (v.estado === 'no_obligado') continue;
     total++;
     const pres = PRESENTADOS.includes(v.estado);
-    const venc = v.estado === 'pendiente' && v.fechaVencimiento < hoy;
+    const venc = v.estado === 'pendiente' && estaVencido(v.fechaVencimiento);
     if (pres) presentados++; else if (venc) vencidos++; else pendientes++;
     const k = v.empresa.id;
     const a = emp.get(k) ?? { empresa: v.empresa.nombre, total: 0, presentados: 0, vencidos: 0 };
@@ -278,7 +279,7 @@ vencimientosRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) =
     vencimientos: items.map((v) => ({
       id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado,
       empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
-      vencido: !PRESENTADOS.includes(v.estado) && v.estado !== 'no_obligado' && v.fechaVencimiento < hoy,
+      vencido: !PRESENTADOS.includes(v.estado) && v.estado !== 'no_obligado' && estaVencido(v.fechaVencimiento),
     })),
   });
 });
@@ -445,7 +446,7 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
       // que solo tenía 2 puntos por hacer no puede medirse contra 13.
       checklistAplicables: subs.filter((s) => s.estado !== 'no_aplica').length,
       liberado, liberadoEn,
-      vencido: v.fechaVencimiento < hoy,
+      vencido: estaVencido(v.fechaVencimiento),
     };
   });
 
@@ -495,7 +496,7 @@ vencimientosRouter.get('/revision/cola', requireAuth, async (req: AuthedRequest,
       checklistTotal: v.subtareas.length,
       checklistHechas: v.subtareas.filter((s) => s.estado === 'realizada').length,
       checklistAplicables: v.subtareas.filter((s) => s.estado !== 'no_aplica').length,
-      vencido: v.fechaVencimiento < hoy,
+      vencido: estaVencido(v.fechaVencimiento),
       // Sobre lo suyo actúa como asesor, no como revisor: no puede aprobarlo.
       propio: v.asesorId === u.sub,
     })),

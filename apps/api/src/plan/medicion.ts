@@ -9,6 +9,8 @@
 // Es la misma regla que ya rige en los checklists de vencimientos: lo que no
 // aplica sale del denominador.
 
+import { estaVencido } from './dia-calendario.js';
+
 /** Estados que cuentan como trabajo hecho. */
 export const EJECUTADA = ['terminado', 'auditado'];
 
@@ -22,14 +24,13 @@ export const cuenta = (estado: string): boolean => estado !== NO_CUENTA;
 
 /** Cumplimiento del período: ejecutadas sobre las que sí aplicaban. */
 export function cumplimiento(tareas: TareaMedible[]): { total: number; ejecutadas: number; vencidas: number; pct: number } {
-  const hoy = new Date();
   let total = 0, ejecutadas = 0, vencidas = 0;
   for (const t of tareas) {
     if (!cuenta(t.estado)) continue;
     total++;
     const esEjec = EJECUTADA.includes(t.estado);
     if (esEjec) ejecutadas++;
-    else if (new Date(t.fechaVencimiento) < hoy) vencidas++;
+    else if (estaVencido(t.fechaVencimiento)) vencidas++;
   }
   // Sin actividades aplicables no hay nada que reprochar: 100%, no 0%. Un
   // cliente al que este mes no le aplicaba nada no está incumpliendo.
