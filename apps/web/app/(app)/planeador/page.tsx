@@ -7,6 +7,7 @@ import { fetchCumplimiento, colorPct } from './inicio';
 
 
 import { tinte } from '@/app/_components/color';
+import { fraseDelDia } from '@/lib/frase-del-dia';
 export const metadata = { title: 'Inicio' };
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +59,19 @@ export default async function InicioPage() {
     <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Hola{sesion ? `, ${primerNombre(sesion.nombre)}` : ''} 👋</h1>
     <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{periodo ? nombrePeriodo(periodo) : ''}</span>
   </div>
-  <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>Este es tu resumen del período. Guiamos a nuestros clientes a la cima.</p>
+  <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 14px' }}>Este es tu resumen del período. Guiamos a nuestros clientes a la cima.</p>
+
+  {/* La frase del día: la misma para todo el equipo, para que se pueda
+      comentar. Va antes de los números a propósito — es lo primero que se ve
+      al entrar, y los números vienen después. */}
+  <p style={{
+    display: 'flex', alignItems: 'baseline', gap: 10, margin: '0 0 20px',
+    padding: '11px 15px', borderLeft: '3px solid var(--green-edge, #34C98B)', borderRadius: '0 8px 8px 0',
+    background: 'var(--panel-2)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--ink)',
+  }}>
+    <span aria-hidden="true" style={{ flexShrink: 0, fontSize: 14 }}>⛰️</span>
+    <span style={{ fontStyle: 'italic' }}>{fraseDelDia()}</span>
+  </p>
 
   {/* KPIs personales */}
   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginBottom: 20 }}>
