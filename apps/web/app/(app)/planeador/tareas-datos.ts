@@ -24,6 +24,7 @@ export const ESTADO_META: Record<string, { label: string; color: string }> = {
   terminado: { label: 'Terminado', color: 'var(--exito)' },
   auditado: { label: 'Auditado', color: 'var(--green-edge)' },
   no_realizado: { label: 'No realizado', color: 'var(--peligro)' },
+  no_aplica: { label: 'No aplica', color: 'var(--neutro)' },
 };
 
 export const AREAS = ['Impuestos', 'Informes', 'Cumplimiento', 'Nómina', 'Tesorería'];

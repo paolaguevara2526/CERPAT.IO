@@ -22,6 +22,13 @@ enum EstadoTarea {
   terminado
   auditado
   no_realizado
+  // "No aplica" NO es lo mismo que "no realizado": no_realizado es trabajo que
+  // se debía hacer y no se hizo —cuenta en contra—, mientras que no_aplica es
+  // trabajo que ese cliente no tenía ese mes (una empresa sin movimiento no
+  // tiene anticipos que verificar). Por eso sale del denominador de la
+  // medición en vez de contar como incumplimiento. Misma regla que el "no
+  // aplica" de los checklists de vencimientos.
+  no_aplica
 }
 
 enum Prioridad {

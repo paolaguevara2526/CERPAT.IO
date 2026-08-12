@@ -15,6 +15,9 @@ const COLUMNAS: { estado: string; label: string; color: string }[] = [
   { estado: 'terminado', label: 'Terminado', color: 'var(--exito)' },
   { estado: 'auditado', label: 'Auditado', color: 'var(--green-edge)' },
   { estado: 'no_realizado', label: 'No realizado', color: 'var(--peligro)' },
+  // No aplica va de última y en gris: no es un logro ni una falta, es trabajo
+  // que ese cliente no tenía ese mes y que sale de la medición.
+  { estado: 'no_aplica', label: 'No aplica', color: 'var(--neutro)' },
 ];
 
 function fmtFecha(iso: string): string {

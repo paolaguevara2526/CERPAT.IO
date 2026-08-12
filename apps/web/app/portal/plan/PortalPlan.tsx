@@ -11,7 +11,7 @@ type Actividad = { titulo: string; area: string | null; periodo: string | null; 
 type Resp = { anio: number; kpis: { total: number; ejecutadas: number; cumplimiento: number } | null; matriz: Matriz[]; actividades: Actividad[] };
 
 const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-const EST_COLOR: Record<string, string> = { por_iniciar: 'var(--muted)', en_curso: 'var(--info)', en_revision: 'var(--alerta)', terminado: 'var(--exito)', auditado: 'var(--green-edge)', no_realizado: 'var(--peligro)' };
+const EST_COLOR: Record<string, string> = { por_iniciar: 'var(--muted)', en_curso: 'var(--info)', en_revision: 'var(--alerta)', terminado: 'var(--exito)', auditado: 'var(--green-edge)', no_realizado: 'var(--peligro)', no_aplica: 'var(--neutro)' };
 function colorPct(p: number): { fg: string; bg: string } {
   if (p >= 85) return { fg: 'var(--exito)', bg: 'rgba(34,166,112,0.16)' };
   if (p >= 60) return { fg: 'var(--alerta)', bg: 'rgba(198,124,0,0.16)' };

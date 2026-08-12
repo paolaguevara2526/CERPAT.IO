@@ -18,10 +18,13 @@ import { esStaffAcotado } from '../auth/alcance.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
 import { diaDeCaptura } from '../plan/dia-captura.js';
+import { EJECUTADA, cuenta } from '../plan/medicion.js';
 
 export const planRouter = Router();
 
-const EJECUTADA = ['terminado', 'auditado'];
+// La regla de qué cuenta y qué no vive en plan/medicion.ts, con sus pruebas:
+// "no aplica" sale de la medición entera (ni numerador ni denominador), y esa
+// es la diferencia con "no realizado", que sí cuenta en contra.
 // Un vencimiento cuenta como "ejecutado" cuando ya se presentó (con o sin pago).
 const EJECUTADA_VENC = ['presentado_sin_pago', 'presentado_pagado', 'presentado_cero'];
 
@@ -163,9 +166,14 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   });
 });
 
-const ESTADOS_VALIDOS = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'auditado', 'no_realizado'];
+const ESTADOS_VALIDOS = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'auditado', 'no_realizado', 'no_aplica'];
+// Terminar exige el checklist resuelto. "No aplica" NO: el checklist es de un
+// trabajo que este mes no existió — exigirlo obligaría a marcar como hechos
+// puntos que nadie hizo, que es justo lo que se quiere evitar.
 const REQUIEREN_SUBTAREAS = ['terminado', 'auditado'];
-const CAPTURA_LISTA = ['terminado', 'auditado'];
+// Una captura que no aplica tampoco puede dejar el insumo trabado: si el
+// cliente no tenía documentos de ese tipo, el asesor debe poder arrancar igual.
+const CAPTURA_LISTA = ['terminado', 'auditado', 'no_aplica'];
 
 // Auto-entrega (F1 — flujo del cierre): cuando TODA la captura del cliente queda
 // terminada, libera automáticamente el insumo de la firma hacia el procesamiento.
@@ -1220,7 +1228,7 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
 
 const TAREA_LABEL: Record<string, string> = {
   por_iniciar: 'Por iniciar', en_curso: 'En curso', en_revision: 'En revisión',
-  terminado: 'Terminado', auditado: 'Auditado', no_realizado: 'No realizado',
+  terminado: 'Terminado', auditado: 'Auditado', no_realizado: 'No realizado', no_aplica: 'No aplica',
 };
 
 // GET /plan/portal?anio= — Plan de Trabajo del cliente (solo lectura, aislado por
@@ -1245,6 +1253,8 @@ planRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
   for (const t of tareas) {
     const mes = Number((t.periodo ?? '').slice(5, 7));
     if (!(mes >= 1 && mes <= 12)) continue;
+    // Lo que no aplica no baja el porcentaje que ve el cliente en su portal.
+    if (!cuenta(t.estado)) continue;
     const esEjec = EJECUTADA.includes(t.estado);
     total++; if (esEjec) ejecutadas++;
     const an = t.area?.nombre ?? 'Sin área';
@@ -1257,7 +1267,9 @@ planRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
 
   const actividades = tareas.map((t) => {
     const esEjec = EJECUTADA.includes(t.estado);
-    return { titulo: t.titulo, area: t.area?.nombre ?? null, periodo: t.periodo, fechaVencimiento: t.fechaVencimiento, estado: t.estado, estadoLabel: TAREA_LABEL[t.estado] ?? t.estado, vencido: !esEjec && t.fechaVencimiento < hoy };
+    // Lo que no aplica nunca se muestra vencido: no había nada que entregar.
+    const vencido = cuenta(t.estado) && !esEjec && t.fechaVencimiento < hoy;
+    return { titulo: t.titulo, area: t.area?.nombre ?? null, periodo: t.periodo, fechaVencimiento: t.fechaVencimiento, estado: t.estado, estadoLabel: TAREA_LABEL[t.estado] ?? t.estado, vencido };
   });
 
   res.json({ anio, kpis: { total, ejecutadas, cumplimiento: total ? Math.round((ejecutadas / total) * 100) : 0 }, matriz, actividades });
@@ -1297,6 +1309,7 @@ planRouter.get('/cumplimiento', requireAuth, async (req, res) => {
   };
 
   for (const t of tareas) {
+    if (!cuenta(t.estado)) continue; // no entra ni al numerador ni al denominador
     const esEjec = EJECUTADA.includes(t.estado);
     const esVenc = !esEjec && t.fechaVencimiento < hoy;
     total++;
