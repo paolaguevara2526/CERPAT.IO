@@ -32,7 +32,9 @@ export default async function InicioPage() {
   const misTareas: Tarea[] = mias.data?.tareas ?? [];
   const periodo = mias.data?.periodo ?? glob.data?.periodo ?? null;
   const hoy = new Date();
-  const pendientes = misTareas.filter((t) => !EJECUTADA.includes(t.estado) && t.estado !== 'no_realizado');
+  // "No aplica" no es un pendiente: es trabajo que este mes no existió. Si
+  // contara aquí, saldría además como vencido al pasar la fecha.
+  const pendientes = misTareas.filter((t) => !EJECUTADA.includes(t.estado) && t.estado !== 'no_realizado' && t.estado !== 'no_aplica');
   const vencidas = pendientes.filter((t) => new Date(t.fechaVencimiento) < hoy);
   const ejecutadasMias = misTareas.filter((t) => EJECUTADA.includes(t.estado)).length;
   const proximas = [...pendientes].sort((a, b) => a.fechaVencimiento.localeCompare(b.fechaVencimiento)).slice(0, 8);

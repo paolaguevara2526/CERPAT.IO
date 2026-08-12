@@ -13,8 +13,9 @@ const ESTADOS: Record<string, { label: string; color: string }> = {
   en_revision: { label: 'En revisión', color: 'var(--alerta)' },
   terminado: { label: 'Terminado', color: 'var(--exito)' },
   no_realizado: { label: 'No realizado', color: 'var(--peligro)' },
+  no_aplica: { label: 'No aplica', color: 'var(--neutro)' },
 };
-const ESTADOS_EDIT = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'no_realizado'];
+const ESTADOS_EDIT = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'no_realizado', 'no_aplica'];
 
 type Fila = {
   id: string; titulo: string; estado: string; empresa: string; area: string | null;
