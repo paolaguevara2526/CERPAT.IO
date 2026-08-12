@@ -444,6 +444,38 @@ entran **por migración** (el seed no corre en el despliegue).
 En la misma sesión: el asesor de impuestos ya tiene el campo **🔗 Soporte documental**
 también en *Mis impuestos* (era solo del modal del calendario, que su rol no abre).
 
+## Pendientes del día a día ✅ (12 ago 2026)
+
+Lo que sale por fuera del plan de trabajo: el cliente que pide un certificado, la
+corrección que hay que hacer, la llamada al banco. Vivía en cuadernos y en WhatsApp.
+Ahora se anota en **Mi Día → Mis pendientes**: qué hay que hacer, para cuándo,
+**cliente** y responsable.
+
+Decisiones que definen la funcionalidad:
+
+- **Tabla aparte, no una tarea del plan.** Una tarea del plan arrastra período, área,
+  checklist, auditoría y —sobre todo— **medición de cumplimiento**. Un pendiente es una
+  **agenda**, no una obligación del plan: no entra al calendario, ni al portal del
+  cliente, ni a ningún indicador. Si viviera en `tareas`, cada consulta futura tendría
+  que acordarse de excluirlo, y la que se olvidara ensuciaría un indicador sin que nadie
+  lo notara. Además `Tarea.empresaId` es obligatorio y aquí el cliente puede ir vacío
+  (pendientes internos de la firma).
+- **El cliente es el dato que da valor con el tiempo.** Con él se responde *"¿cuánto
+  trabajo fuera del plan nos genera cada cliente?"*, que hoy nadie sabe. El consolidado
+  por empresa está en **Coordinación → Pendientes fuera del plan**.
+- **Un responsable, elegido.** Al escoger el cliente, el formulario ofrece **sus asesores
+  con el área al lado** (una empresa tiene un asesor *por área*, no uno solo) y precarga
+  si hay uno único. Se decidió así —en vez de mostrárselo a todos los asesores del
+  cliente— para que nadie reciba en su agenda algo que no le toca.
+- **Asignarle trabajo a otra persona es de coordinación.** Cualquiera puede anotarse un
+  pendiente propio; poner trabajo en la agenda ajena, no.
+- Cerrar deja **quién y cuándo**; se puede reabrir (y ahí se limpia el sello, para que no
+  quede una fecha de cierre que no fue). Eliminar es de quien lo creó o de coordinación.
+
+Hallazgo del camino: el botón **"+ Nueva tarea"** de la Lista creaba tareas sin actividad
+del plan, y **todas las listas filtran por tareas del plan** — se guardaban y no aparecían
+en ninguna parte. Queda pendiente decidir si ese botón se arregla o se retira.
+
 ## Sesión del 10–11 de agosto 2026 — 12 PR
 
 Jornada larga con el equipo ya operando. El hilo conductor fue el **área de Impuestos**,
