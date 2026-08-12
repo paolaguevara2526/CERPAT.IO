@@ -492,6 +492,9 @@ model TipoServicio {
   orden          Int          @default(0)
   organizacion   Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
 
+  // Como el resto de los catálogos: sin esto se podría crear "Outsourcing" dos
+  // veces y volveríamos al problema que el catálogo viene a resolver.
+  @@unique([organizacionId, nombre])
   @@index([organizacionId])
   @@map("cat_tipos_servicio")
 }

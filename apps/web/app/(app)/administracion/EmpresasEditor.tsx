@@ -32,6 +32,7 @@ export default function EmpresasEditor() {
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [tipos, setTipos] = useState<Grupo[]>([]);
   const [regimenes, setRegimenes] = useState<Grupo[]>([]);
+  const [servicios, setServicios] = useState<Grupo[]>([]);
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export default function EmpresasEditor() {
     const cat = (t: string, set: (v: Grupo[]) => void) =>
       fetch(`/api/admin/catalogos/${t}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => set(d.items ?? [])).catch(() => {});
     cat('grupos', setGrupos); cat('tipos-empresa', setTipos); cat('regimenes', setRegimenes);
+    cat('tipos-servicio', setServicios);
   }, []);
 
   async function toggleActivo(e: Empresa) {
@@ -131,14 +133,14 @@ export default function EmpresasEditor() {
         </div>
       </div>
 
-      {editar && <Editor empresa={editar} grupos={grupos} tipos={tipos} regimenes={regimenes} onClose={() => { setEditar(null); cargar(); }} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
+      {editar && <Editor empresa={editar} grupos={grupos} tipos={tipos} regimenes={regimenes} servicios={servicios} onClose={() => { setEditar(null); cargar(); }} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
     </div>
   );
 }
 
 const ic = (color: string): React.CSSProperties => ({ border: 'none', background: 'none', cursor: 'pointer', color, fontSize: 14, padding: '2px 5px' });
 
-function Editor({ empresa, grupos, tipos, regimenes, onClose, onGuardado, onError }: { empresa: Empresa | 'nuevo'; grupos: Grupo[]; tipos: Grupo[]; regimenes: Grupo[]; onClose: () => void; onGuardado: () => void; onError: (m: string) => void }) {
+function Editor({ empresa, grupos, tipos, regimenes, servicios, onClose, onGuardado, onError }: { empresa: Empresa | 'nuevo'; grupos: Grupo[]; tipos: Grupo[]; regimenes: Grupo[]; servicios: Grupo[]; onClose: () => void; onGuardado: () => void; onError: (m: string) => void }) {
   const nuevo = empresa === 'nuevo';
   const [form, setForm] = useState<Form>(nuevo ? vacio() : {
     nombre: empresa.nombre, nit: empresa.nit ?? '', servicio: empresa.servicio ?? '', asesorNombre: empresa.asesorNombre ?? '', activo: empresa.activo, grupoId: empresa.grupoId ?? '',
@@ -170,7 +172,18 @@ function Editor({ empresa, grupos, tipos, regimenes, onClose, onGuardado, onErro
           <label><span style={lbl}>Nombre *</span><input style={input} value={form.nombre} onChange={(e) => set('nombre', e.target.value)} /></label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <label><span style={lbl}>NIT</span><input style={input} value={form.nit ?? ''} onChange={(e) => set('nit', e.target.value)} /></label>
-            <label><span style={lbl}>Servicio</span><input style={input} value={form.servicio ?? ''} onChange={(e) => set('servicio', e.target.value)} placeholder="Outsourcing…" /></label>
+            <label><span style={lbl}>Servicio</span>
+              <select style={input} value={form.servicio ?? ''} onChange={(e) => set('servicio', e.target.value)}>
+                <option value="">— Sin servicio —</option>
+                {/* El servicio que ya tiene el cliente se ofrece aunque no esté
+                    en el catálogo: si no, abrir la ficha para corregir el NIT le
+                    cambiaría el servicio sin que nadie lo pidiera. */}
+                {form.servicio && !servicios.some((x) => x.nombre === form.servicio) && (
+                  <option value={form.servicio}>{form.servicio} (fuera del catálogo)</option>
+                )}
+                {servicios.map((x) => <option key={x.id} value={x.nombre}>{x.nombre}</option>)}
+              </select>
+            </label>
           </div>
           {/* El tipo de empresa no es un dato descriptivo: de él salen el RUB,
               el revisor fiscal y el 368-2. Sin él esas reglas no se evalúan. */}
