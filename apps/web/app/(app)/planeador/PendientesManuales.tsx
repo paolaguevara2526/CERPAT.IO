@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import VencimientoPagoEditor, { VENC_PAGO_META } from './VencimientoPagoEditor';
+import { fmtDia } from '@/lib/fechas';
 
 type Empresa = { id: string; nombre: string };
 type Municipio = { id: string; nombre: string; departamento: string | null };
@@ -27,7 +28,7 @@ const BIMESTRES = [['Bimestre 1', 'ene-feb'], ['Bimestre 2', 'mar-abr'], ['Bimes
 const CUATRIMESTRES = [['Cuatrimestre 1', 'ene-abr'], ['Cuatrimestre 2', 'may-ago'], ['Cuatrimestre 3', 'sep-dic']];
 
 function fmtFecha(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return ''; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return ''; }
 }
 const fmtCOP = (v: number) => v.toLocaleString('es-CO', { maximumFractionDigits: 0 });
 

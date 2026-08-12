@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { fmtDia } from '@/lib/fechas';
 
 export type TareaAuditoria = {
   id: string; titulo: string; empresa: string | null; area: string | null;
@@ -13,7 +14,7 @@ export type TareaAuditoria = {
 };
 
 function fmtFecha(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return ''; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return ''; }
 }
 
 function Tarjeta({ t }: { t: TareaAuditoria }) {

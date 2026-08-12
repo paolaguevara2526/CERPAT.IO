@@ -7,6 +7,7 @@
 // respuesta — con fechas, no con recuerdos.
 
 import { apiFetch } from '@/lib/session';
+import { fmtDia } from '@/lib/fechas';
 
 type Fila = {
   empresaId: string; areaId: string; empresa: string; area: string;
@@ -16,7 +17,7 @@ type Fila = {
 
 const fmt = (iso: string | null) => {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return '—'; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return '—'; }
 };
 
 export default async function SinEntregarCliente({ periodo }: { periodo?: string }) {

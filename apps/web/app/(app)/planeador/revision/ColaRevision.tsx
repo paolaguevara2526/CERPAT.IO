@@ -8,6 +8,7 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import { etiquetaDeConteos } from '@/lib/checklist';
+import { fmtDia } from '@/lib/fechas';
 
 type Fila = {
   id: string; obligacion: string; periodo: string | null; fechaVencimiento: string;
@@ -19,7 +20,7 @@ type Sub = { id: string; texto: string; estado: string };
 
 const fmt = (iso: string | null) => {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return '—'; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return '—'; }
 };
 const pesos = (n: number | null) => (n == null ? 'sin valor' : n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }));
 function espera(iso: string | null): string {

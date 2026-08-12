@@ -8,13 +8,14 @@ import { fetchCumplimiento, colorPct } from './inicio';
 
 import { tinte } from '@/app/_components/color';
 import { fraseDelDia } from '@/lib/frase-del-dia';
+import { fmtDia } from '@/lib/fechas';
 export const metadata = { title: 'Inicio' };
 export const dynamic = 'force-dynamic';
 
 const EJECUTADA = ['terminado', 'auditado'];
 
 function fmtFecha(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return ''; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return ''; }
 }
 function primerNombre(nombre: string): string {
   return nombre.trim().split(/\s+/)[0] || nombre;

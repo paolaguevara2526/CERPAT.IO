@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 import { formatoMinutos } from '@/lib/tiempo-novedad';
+import { fmtDia } from '@/lib/fechas';
 
 type Opcion = { id: string; nombre: string };
 type Novedad = {
@@ -25,7 +26,7 @@ type Resp = { total: number; abiertas: number; minutos: number; novedades: Noved
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const fmtFecha = (iso: string) => {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', timeZone: 'UTC' }); } catch { return '—'; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return '—'; }
 };
 
 export default function NovedadesDelDia() {

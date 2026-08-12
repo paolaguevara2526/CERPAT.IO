@@ -6,6 +6,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { contarConsecutivos } from '../consecutivos';
 import PanelPlegable from '@/app/_components/PanelPlegable';
+import { fmtDia } from '@/lib/fechas';
 
 // Los tipos vienen del catálogo (Administración → Tipos de documento). Estaban
 // escritos acá: agregar uno exigía un despliegue, y como el campo era de texto
@@ -49,7 +50,7 @@ const loteVacio = (): NuevoLote => ({ tipoDocumento: '', prefijo: '', desde: '',
 // hoy aparecía con la fecha de ayer.
 function fmtFecha(iso: string | null): string {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', timeZone: 'UTC' }); } catch { return '—'; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return '—'; }
 }
 // "2026-08-11" para el <input type="date"> al editar: la misma fecha guardada,
 // sin pasar por la zona horaria.

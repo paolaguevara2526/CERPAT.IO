@@ -13,9 +13,10 @@ import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 import EstadoSelect from './EstadoSelect';
 import { EditarTareaBoton } from './TareaModal';
 import { ESTADO_META, type Tarea } from './tareas-datos';
+import { fmtDia } from '@/lib/fechas';
 
 function fmtFecha(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return ''; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return ''; }
 }
 
 const guion = (v: string | null | undefined) => (v && v.trim() ? v : '—');

@@ -17,8 +17,9 @@ import { alcancePortal } from '../auth/alcance-db.js';
 import { esStaffAcotado } from '../auth/alcance.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
-import { diaDeCaptura } from '../plan/dia-captura.js';
+import { diaCalendario } from '../plan/dia-calendario.js';
 import { EJECUTADA, cuenta } from '../plan/medicion.js';
+import { estaVencido, hoyEnColombia } from '../plan/dia-calendario.js';
 
 export const planRouter = Router();
 
@@ -245,7 +246,10 @@ async function evaluarAutoEntrega(orgId: string, empresaId: string, periodo: str
   for (const areaId of objetivo) {
     const existe = await prisma.entregaInsumo.findFirst({ where: { organizacionId: orgId, empresaId, periodo, areaId } });
     if (!existe) {
-      await prisma.entregaInsumo.create({ data: { organizacionId: orgId, empresaId, periodo, areaId, origen: 'auto', entregadoPorId: usuarioId } });
+      // El día de liberación se guarda como día del calendario COLOMBIANO: con
+      // now() a secas, una captura terminada a las 8 p. m. quedaba registrada al
+      // día siguiente, porque en UTC ya lo es.
+      await prisma.entregaInsumo.create({ data: { organizacionId: orgId, empresaId, periodo, areaId, origen: 'auto', entregadoPorId: usuarioId, entregadoEn: diaCalendario(hoyEnColombia()) } });
       creadas++;
     }
   }
@@ -641,7 +645,7 @@ planRouter.post('/tareas/:id/lotes', requireAuth, async (req: AuthedRequest, res
   const txt = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
   const n = Number(req.body?.cantidad);
   const cantidad = req.body?.cantidad !== '' && req.body?.cantidad != null && Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : null;
-  const fecha = diaDeCaptura(req.body?.fecha);
+  const fecha = diaCalendario(req.body?.fecha);
   const lote = await prisma.loteCaptura.create({
     data: { organizacionId: tarea.organizacionId, tareaId: tarea.id, tipoDocumento, prefijo: txt(req.body?.prefijo), desde: txt(req.body?.desde), hasta: txt(req.body?.hasta), cantidad, fecha },
     select: loteSelect,
@@ -686,7 +690,7 @@ planRouter.patch('/lotes/:id', requireAuth, async (req: AuthedRequest, res) => {
     if (v === null || v === '') data.cantidad = null;
     else { const n = Number(v); if (!Number.isFinite(n) || n < 0) return res.status(422).json({ error: 'La cantidad debe ser un número ≥ 0.' }); data.cantidad = Math.trunc(n); }
   }
-  if ('fecha' in (req.body ?? {})) data.fecha = diaDeCaptura(req.body.fecha);
+  if ('fecha' in (req.body ?? {})) data.fecha = diaCalendario(req.body.fecha);
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
 
   const actualizado = await prisma.loteCaptura.update({ where: { id: lote.id }, data, select: loteSelect });
@@ -876,8 +880,10 @@ planRouter.post('/insumo-cliente', requireAuth, async (req: AuthedRequest, res) 
 
   // La fecha la digita quien recibe, y es lo que después se le atribuye al
   // cliente como demora. Se valida que no sea futura: nadie recibió mañana.
-  const fecha = req.body?.fecha ? new Date(req.body.fecha) : new Date();
-  if (isNaN(fecha.getTime())) return res.status(422).json({ error: 'Fecha de entrega inválida.' });
+  // Día del calendario, no instante: es la fecha en que LLEGÓ el insumo y es la
+  // que se le atribuye al cliente como demora. Con hora, se corría un día al
+  // mostrarla (marcadoEn queda aparte como sello de auditoría).
+  const fecha = diaCalendario(req.body?.fecha);
   const finDeHoy = new Date(); finDeHoy.setHours(23, 59, 59, 999);
   if (fecha > finDeHoy) return res.status(422).json({ error: 'La fecha de entrega no puede ser futura.' });
 
@@ -1157,7 +1163,7 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
     const c = map.get(t.empresa.id) ?? { empresaId: t.empresa.id, empresa: t.empresa.nombre, cap: nuevaFase(), proc: nuevaFase(), rev: nuevaFase(), total: 0, hechas: 0, vencidas: 0 };
     const ejec = EJECUTADA.includes(t.estado);
     const curso = t.estado === 'en_curso' || t.estado === 'en_revision';
-    const venc = !ejec && t.fechaVencimiento < now;
+    const venc = !ejec && estaVencido(t.fechaVencimiento);
     c.total++; if (ejec) c.hechas++; if (venc) c.vencidas++;
     const f = t.actividadPlan?.fase;
     const b = f === 'captura' ? c.cap : f === 'procesamiento' ? c.proc : f === 'revision' ? c.rev : null;
@@ -1268,7 +1274,7 @@ planRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
   const actividades = tareas.map((t) => {
     const esEjec = EJECUTADA.includes(t.estado);
     // Lo que no aplica nunca se muestra vencido: no había nada que entregar.
-    const vencido = cuenta(t.estado) && !esEjec && t.fechaVencimiento < hoy;
+    const vencido = cuenta(t.estado) && !esEjec && estaVencido(t.fechaVencimiento);
     return { titulo: t.titulo, area: t.area?.nombre ?? null, periodo: t.periodo, fechaVencimiento: t.fechaVencimiento, estado: t.estado, estadoLabel: TAREA_LABEL[t.estado] ?? t.estado, vencido };
   });
 
@@ -1311,7 +1317,7 @@ planRouter.get('/cumplimiento', requireAuth, async (req, res) => {
   for (const t of tareas) {
     if (!cuenta(t.estado)) continue; // no entra ni al numerador ni al denominador
     const esEjec = EJECUTADA.includes(t.estado);
-    const esVenc = !esEjec && t.fechaVencimiento < hoy;
+    const esVenc = !esEjec && estaVencido(t.fechaVencimiento);
     total++;
     if (esEjec) ejecutadas++;
     if (esVenc) vencidas++;

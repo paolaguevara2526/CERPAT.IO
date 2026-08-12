@@ -13,7 +13,7 @@
 // Así el día que se escribe es el día que se ve, esté quien esté mirando.
 
 /** Medianoche UTC del día indicado ("YYYY-MM-DD"). Hoy si no viene o no sirve. */
-export function diaDeCaptura(v: unknown): Date {
+export function diaCalendario(v: unknown): Date {
   if (typeof v === 'string') {
     // Se lee el día TAL COMO VIENE ESCRITO, sin dejar que Date lo interprete.
     // Si el texto trae hora y huso ("…T20:30:00-05:00"), el día que vale es el
@@ -34,3 +34,29 @@ export function diaDeCaptura(v: unknown): Date {
 }
 
 const aMedianocheUTC = (d: Date) => new Date(`${d.toISOString().slice(0, 10)}T00:00:00.000Z`);
+
+/** Hoy ("YYYY-MM-DD") en Colombia, no en el reloj del servidor. */
+export function hoyEnColombia(ahora: Date = new Date()): string {
+  // en-CA da el formato ISO directo; el huso hace el trabajo de restar horas.
+  return ahora.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+}
+
+/**
+ * ¿Ya pasó la fecha? Se comparan DÍAS, no instantes.
+ *
+ * Antes esto era `fechaVencimiento < new Date()`, y ahí estaba el error: una
+ * obligación que vence el 13 se guarda como el 13 a medianoche UTC, y a las
+ * 7 p. m. del 12 en Colombia el reloj UTC ya pasó esa marca. Resultado: desde
+ * la tarde del día anterior la aplicación decía "vencido" sobre algo que
+ * todavía tenía un día entero de plazo. Nada peor que darle una alarma falsa a
+ * quien está corriendo contra un vencimiento real.
+ *
+ * Vencido = el día de vencimiento es ANTERIOR a hoy. El mismo día no está
+ * vencido: se tiene hasta que termine.
+ */
+export function estaVencido(fecha: Date | string | null | undefined, ahora: Date = new Date()): boolean {
+  if (!fecha) return false;
+  const d = fecha instanceof Date ? fecha : new Date(fecha);
+  if (isNaN(d.getTime())) return false;
+  return d.toISOString().slice(0, 10) < hoyEnColombia(ahora);
+}

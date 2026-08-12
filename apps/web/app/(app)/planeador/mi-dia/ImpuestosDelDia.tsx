@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 import { etiquetaDeConteos, siguienteEstado, ASPECTO } from '@/lib/checklist';
+import { fmtDia } from '@/lib/fechas';
 
 type Fila = {
   id: string; obligacion: string; periodo: string | null; fechaVencimiento: string;
@@ -56,7 +57,7 @@ const ESTADOS_VENC = [
 
 const fmt = (iso: string | null) => {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return '—'; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return '—'; }
 };
 const pesos = (n: number | null) => (n == null ? '—' : n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }));
 

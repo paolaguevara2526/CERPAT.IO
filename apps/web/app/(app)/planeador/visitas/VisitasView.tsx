@@ -8,6 +8,7 @@ import FiltroColumna from '@/app/_components/FiltroColumna';
 import SeguimientoVisitas from './SeguimientoVisitas';
 
 import { tinte } from '@/app/_components/color';
+import { fmtDia } from '@/lib/fechas';
 type Visita = {
   id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null;
   objetivo: string | null; estado: string; compromisosTotal: number; compromisosPendientes: number; compromisosCumplidos: number;
@@ -17,7 +18,7 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 const pad = (n: number) => String(n).padStart(2, '0');
 function mesActual() { const n = new Date(); return `${n.getFullYear()}-${pad(n.getMonth() + 1)}`; }
 function desplazar(mes: string, delta: number) { const [y, m] = mes.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + delta, 1)); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}`; }
-function fFecha(iso: string) { try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return iso.slice(0, 10); } }
+function fFecha(iso: string) { try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return iso.slice(0, 10); } }
 const estadoMeta = (k: string) => VISITA_ESTADOS.find((s) => s.k === k) ?? { label: k, color: 'var(--muted)' };
 
 // Columnas filtrables y el valor por el que se filtra cada una.

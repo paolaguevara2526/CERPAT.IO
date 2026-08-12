@@ -13,6 +13,7 @@ import BorrarPendiente from '../BorrarPendiente';
 import PagosAcciones from '../PagosAcciones';
 import AbonosBoton from '../AbonosBoton';
 import FormFiltros from './FormFiltros';
+import { fmtDia } from '@/lib/fechas';
 
 
 export const metadata = { title: 'Pagos' };
@@ -64,7 +65,7 @@ async function fetchEmpresas(): Promise<EmpresaLite[]> {
 }
 
 function fmtFecha(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return ''; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return ''; }
 }
 function fmtCOP(v: number): string {
   return v.toLocaleString('es-CO', { maximumFractionDigits: 0 });

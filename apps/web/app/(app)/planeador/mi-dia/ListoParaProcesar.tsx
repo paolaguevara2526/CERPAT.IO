@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import PanelPlegable from '@/app/_components/PanelPlegable';
+import { fmtDia } from '@/lib/fechas';
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
   por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
@@ -25,7 +26,7 @@ type Resp = { periodo: string | null; total: number; tareas: Fila[] };
 
 function fmtFecha(iso: string | null): string {
   if (!iso) return '—';
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return '—'; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return '—'; }
 }
 function listoRel(iso: string): string {
   try {

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import type { Tarea } from './tareas';
 
 import { tinte } from '@/app/_components/color';
+import { fmtDia } from '@/lib/fechas';
 const COLUMNAS: { estado: string; label: string; color: string }[] = [
   { estado: 'por_iniciar', label: 'Por iniciar', color: 'var(--muted)' },
   { estado: 'en_curso', label: 'En curso', color: 'var(--info)' },
@@ -21,7 +22,7 @@ const COLUMNAS: { estado: string; label: string; color: string }[] = [
 ];
 
 function fmtFecha(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }); } catch { return ''; }
+  try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return ''; }
 }
 
 export default function Tablero({ tareas: iniciales }: { tareas: Tarea[] }) {
