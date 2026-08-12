@@ -223,15 +223,18 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
 
 const chk: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' };
 
-export default function NuevaTareaBoton() {
-  const [abierto, setAbierto] = useState(false);
-  return (
-    <>
-      <button className="dbtn primary" onClick={() => setAbierto(true)} style={{ fontSize: 13 }}>＋ Nueva tarea</button>
-      {abierto && <Modal id={null} onClose={() => setAbierto(false)} />}
-    </>
-  );
-}
+// Aquí vivía "＋ Nueva tarea", y se retiró porque era una trampa: creaba tareas
+// SIN actividad del plan, y todas las listas (Lista, Tablero, Mi Día,
+// Calendario) filtran por tareas del plan. Lo que se creaba ahí se guardaba y
+// no aparecía en ninguna parte.
+//
+// No se "arregló" haciéndolas visibles a propósito: seguirían siendo tareas que
+// no cuentan en ningún indicador, y el plan de trabajo se arma desde el catálogo
+// y el plan por cliente — ese es el diseño, y este botón lo esquivaba. Lo que la
+// gente quería hacer con él (una tarea suelta del día a día) vive ahora en
+// Pendientes, que sí tiene dónde verse y se mide por cliente.
+//
+// El modal se queda: la EDICIÓN de una tarea del plan lo usa y funciona bien.
 
 export function EditarTareaBoton({ id }: { id: string }) {
   const [abierto, setAbierto] = useState(false);

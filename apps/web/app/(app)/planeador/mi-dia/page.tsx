@@ -9,6 +9,7 @@ import ListoParaProcesar from './ListoParaProcesar';
 import ImpuestosDelDia from './ImpuestosDelDia';
 import InsumoDelCliente from './InsumoDelCliente';
 import NovedadesDelDia from './NovedadesDelDia';
+import PendientesDelDia from './PendientesDelDia';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 
 
@@ -41,6 +42,9 @@ export default async function MiDiaPage() {
         <InsumoDelCliente />
         <ListoParaProcesar />
         <ImpuestosDelDia />
+        {/* Los pendientes van con lo demás de Mi Día, pero NO son del plan: no
+            entran al calendario ni al cumplimiento. Es la agenda del día a día. */}
+        <PendientesDelDia />
         <NovedadesDelDia />
       </div>
 

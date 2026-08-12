@@ -178,6 +178,7 @@ model Organizacion {
   eventosInsumo      EventoInsumo[]
   tiposNovedad       TipoNovedad[]
   novedades          Novedad[]
+  pendientes         Pendiente[]
 
   // Visitas a clientes (asesor/auditor) y sus compromisos
   visitas           Visita[]
@@ -241,6 +242,9 @@ model Usuario {
   camarasACargo              RegistroCamara[]        @relation("RegistroCamaraResponsable")
   novedadesReportadas        Novedad[]               @relation("NovedadReporta")
   novedadesCerradas          Novedad[]               @relation("NovedadCierra")
+  pendientesACargo           Pendiente[]             @relation("PendienteResponsable")
+  pendientesCreados          Pendiente[]             @relation("PendienteCreadoPor")
+  pendientesCerrados         Pendiente[]             @relation("PendienteHechoPor")
 
   // Email único por organización (dos firmas distintas pueden repetir email).
   @@unique([organizacionId, email])
@@ -344,6 +348,7 @@ model Empresa {
   cifrasFiscales          CifrasFiscales[]
   eventosInsumo           EventoInsumo[]
   novedades               Novedad[]
+  pendientes              Pendiente[]
 
   @@index([organizacionId])
   @@map("empresas")
@@ -1030,6 +1035,61 @@ model Novedad {
   @@index([organizacionId, estado])
   @@index([usuarioId])
   @@map("novedades")
+}
+
+// ---------- PENDIENTES DEL DÍA A DÍA ----------
+//
+// Lo que sale por fuera del plan de trabajo: el cliente que pide un certificado,
+// la corrección que hay que hacer, la llamada al banco. Hasta ahora vivía en
+// cuadernos y en WhatsApp.
+//
+// NO es una tarea del plan, y por eso es una tabla aparte y no un campo más en
+// `Tarea`:
+//
+//  - Una tarea del plan arrastra período, área, actividad, checklist, auditoría
+//    y, sobre todo, MEDICIÓN de cumplimiento. Un pendiente no debe tocar ese
+//    porcentaje: es una agenda, no una obligación del plan. Si viviera en la
+//    misma tabla, cada consulta futura tendría que acordarse de excluirlo — y
+//    la que se olvide ensucia un indicador sin que nadie lo note.
+//  - `Tarea.empresaId` es obligatorio. Aquí la empresa puede ir vacía: hay
+//    pendientes internos de la firma que no son de ningún cliente.
+//
+// Tampoco entra al calendario ni al portal del cliente. Es de uso interno.
+//
+// La empresa es el dato que le da valor con el tiempo: con ella se puede
+// responder "¿cuánto trabajo fuera del plan nos genera cada cliente?", que hoy
+// nadie sabe.
+model Pendiente {
+  id             String    @id @default(uuid())
+  organizacionId String
+  titulo         String
+  detalle        String?
+  // Día en que se debe atender. Se guarda a medianoche UTC: es un día del
+  // calendario, no un instante (ver apps/api/src/plan/dia-calendario.ts).
+  fecha          DateTime
+  // Cliente al que corresponde. Opcional a propósito: los pendientes internos
+  // de la firma no son de ninguno.
+  empresaId      String?
+  // A quién le aparece. Vacío = solo lo ve quien lo creó (y la coordinación).
+  responsableId  String?
+  creadoPorId    String
+  estado         String    @default("pendiente") // "pendiente" | "hecho"
+  // Quién lo cerró y cuándo: sin eso no se sabe cuánto estuvo abierto.
+  hechoEn        DateTime?
+  hechoPorId     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organizacion Organizacion @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
+  empresa      Empresa?     @relation(fields: [empresaId], references: [id])
+  responsable  Usuario?     @relation("PendienteResponsable", fields: [responsableId], references: [id])
+  creadoPor    Usuario      @relation("PendienteCreadoPor", fields: [creadoPorId], references: [id])
+  hechoPor     Usuario?     @relation("PendienteHechoPor", fields: [hechoPorId], references: [id])
+
+  @@index([organizacionId, fecha])
+  @@index([responsableId, estado])
+  @@index([empresaId])
+  @@map("pendientes")
 }
 
 // ---------- Parametrización de vencimientos tributarios ----------

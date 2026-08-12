@@ -2,7 +2,6 @@
 
 import { fetchTareas, TareasTabla, ESTADO_META, AREAS, nombrePeriodo } from '../tareas';
 import { getSessionUser, apiFetch } from '@/lib/session';
-import NuevaTareaBoton from '../TareaModal';
 
 
 export const metadata = { title: 'Lista' };
@@ -63,7 +62,6 @@ export default async function ListaPage({ searchParams }: { searchParams?: Recor
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Lista de tareas</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{data?.periodo ? nombrePeriodo(data.periodo) : ''} · {total} tareas</span>
-          {gestionable && <NuevaTareaBoton />}
         </div>
       </div>
 
