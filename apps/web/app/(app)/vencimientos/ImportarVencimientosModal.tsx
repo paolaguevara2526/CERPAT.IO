@@ -6,6 +6,7 @@
 // exógena municipal / medios magnéticos).
 
 import { useState } from 'react';
+import { useCierreDeFondo } from '@/app/_components/ModalMarco';
 
 type Fila = { nit: string; empresa: string; municipio: string; departamento: string; fecha: string };
 type Previo = { crear: number; duplicados: number; problemas: string[]; preview: string[]; totalFilas: number };
@@ -86,8 +87,13 @@ export default function ImportarVencimientosModal({ onClose, onImported }: { onC
     setTrabajando(false);
   }
 
+  // No cerrar si el clic empezó DENTRO de la ventana: arrastrar para
+  // seleccionar el texto de una casilla y soltar afuera cerraba el modal y
+  // se perdía lo escrito.
+  const cierreDeFondo = useCierreDeFondo(onClose);
+
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
+    <div {...cierreDeFondo} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 600, maxHeight: '92vh', overflow: 'auto' }}>
         <div className="win-bar">
           <span className="win-title">Importar vencimientos desde Excel</span>

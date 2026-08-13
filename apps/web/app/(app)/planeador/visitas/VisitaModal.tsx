@@ -6,6 +6,7 @@
 // de Visitas y en el Calendario.
 
 import { useEffect, useState, useCallback } from 'react';
+import ModalMarco from '@/app/_components/ModalMarco';
 import { logoCerpat } from '@/app/_components/logo-impresion';
 
 type Opcion = { id: string; nombre: string };
@@ -65,6 +66,16 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  // Foto del acta tal como se cargó. Cerrar sin guardar cuesta el trabajo de
+  // media hora, así que antes de cerrar hay que saber si hay algo que perder.
+  const [base, setBase] = useState<string | null>(null);
+  const foto = JSON.stringify({ form, actividades, recomendaciones, observaciones, compromisos });
+  // Se toma cuando termina de cargar, no antes: si se tomara al montar, todo lo
+  // que llega del servidor contaría como "cambios del usuario".
+  useEffect(() => { if (!cargando) setBase(foto); }, [cargando]); // eslint-disable-line react-hooks/exhaustive-deps
+  const haycambios = base !== null && base !== foto;
+  const cerrar = () => { if (haycambios && !confirm('El acta tiene cambios sin guardar. ¿Salir y perderlos?')) return; onClose(); };
+
   const cargarDetalle = useCallback(async (vid: string) => {
     const r = await fetch(`/api/visitas/${vid}`, { cache: 'no-store' });
     const d = await r.json();
@@ -85,9 +96,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
       if (id) await cargarDetalle(id);
       setCargando(false);
     })();
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', h); return () => document.removeEventListener('keydown', h);
-  }, [id, cargarDetalle, onClose]);
+  }, [id, cargarDetalle]);
 
   // ----- Compromisos -----
   function setCompromiso(i: number, campo: keyof Compromiso, v: string) {
@@ -227,11 +236,12 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 660, maxHeight: '92vh', overflow: 'auto' }}>
+    <ModalMarco onClose={onClose} zIndex={60} haycambios={haycambios}
+      aviso="El acta tiene cambios sin guardar. ¿Salir y perderlos?"
+      style={{ width: '100%', maxWidth: 660, maxHeight: '92vh', overflow: 'auto' }}>
         <div className="win-bar">
           <span className="win-title">{editar ? 'Acta de visita' : 'Agendar visita'}</span>
-          <div className="win-ctl"><button className="close" onClick={onClose} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
+          <div className="win-ctl"><button className="close" onClick={cerrar} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
         </div>
         <div className="win-body" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
           {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600 }}>{error}</div>}
@@ -325,7 +335,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
               <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
                 {editar ? <button className="dbtn" onClick={eliminarVisita} disabled={guardando} style={{ fontSize: 13, color: 'var(--peligro)', borderColor: 'var(--peligro-suave)' }}>Eliminar</button> : <span />}
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button className="dbtn" onClick={onClose} style={{ fontSize: 13 }}>Cancelar</button>
+                  <button className="dbtn" onClick={cerrar} style={{ fontSize: 13 }}>Cancelar</button>
                   <button className="dbtn" onClick={imprimirActa} style={{ fontSize: 13 }}>🖨 Imprimir acta</button>
                   <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13 }}>{guardando ? 'Guardando…' : editar ? 'Guardar acta' : 'Agendar visita'}</button>
                 </div>
@@ -334,7 +344,6 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
             </>
           )}
         </div>
-      </div>
-    </div>
+    </ModalMarco>
   );
 }

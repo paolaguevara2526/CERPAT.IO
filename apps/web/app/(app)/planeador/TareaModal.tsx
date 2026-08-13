@@ -6,6 +6,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { contarConsecutivos } from './consecutivos';
+import { useCierreDeFondo } from '@/app/_components/ModalMarco';
 
 type Opcion = { id: string; nombre: string };
 type Sub = { id: string; texto: string; estado: string };
@@ -115,8 +116,13 @@ function Modal({ id, onClose }: { id: string | null; onClose: () => void }) {
     if (r.ok) setSubs((p) => p.filter((x) => x.id !== s.id));
   }
 
+  // No cerrar si el clic empezó DENTRO de la ventana: arrastrar para
+  // seleccionar el texto de una casilla y soltar afuera cerraba el modal y
+  // se perdía lo escrito.
+  const cierreDeFondo = useCierreDeFondo(onClose);
+
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}>
+    <div {...cierreDeFondo} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 50, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} className="win" style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto' }}>
         <div className="win-bar"><span className="win-title">{editar ? 'Editar tarea' : 'Nueva tarea'}</span>
           <div className="win-ctl"><button className="close" onClick={onClose} aria-label="Cerrar"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={1.4}><path d="M2 2l8 8M10 2l-8 8" /></svg></button></div>
