@@ -20,6 +20,7 @@ import { vinculoDeObligacion } from '../vencimientos/vinculos.js';
 import { diaCalendario } from '../plan/dia-calendario.js';
 import { EJECUTADA, cuenta } from '../plan/medicion.js';
 import { estaVencido, hoyEnColombia } from '../plan/dia-calendario.js';
+import { puedeAuditar } from '../plan/auditoria.js';
 
 export const planRouter = Router();
 
@@ -355,11 +356,12 @@ planRouter.patch('/tareas/:id/auditoria', requireAuth, async (req: AuthedRequest
   const tarea = await prisma.tarea.findFirst({ where: { id: req.params.id, organizacionId: org?.id } });
   if (!tarea) return res.status(404).json({ error: 'Tarea no encontrada.' });
 
-  // Permiso: root, Administrador/Coordinador, o el asesor de la tarea (aprueba lo de
-  // sus auxiliares). El auxiliar no puede auditar su propia tarea.
+  // Quién audita: ver plan/auditoria.ts, con sus pruebas. Incluye el rol
+  // Auditor, que estaba faltando: veía la cola y el botón le devolvía un 403.
   const u = req.user!;
-  const puede = u.esRoot || u.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)) || tarea.asesorId === u.sub;
-  if (!puede) return res.status(403).json({ error: 'Solo coordinación o el asesor del área puede auditar esta tarea.' });
+  if (!puedeAuditar(u, tarea)) {
+    return res.status(403).json({ error: 'Solo coordinación, auditoría o el asesor del área puede auditar esta tarea.' });
+  }
 
   if (tarea.auditoria === 'aprobada') return res.status(409).json({ error: 'La tarea ya fue aprobada en auditoría.' });
 
