@@ -11,6 +11,7 @@
 
 import { useEffect, useState } from 'react';
 import PanelPlegable from '@/app/_components/PanelPlegable';
+import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 import { fmtDia } from '@/lib/fechas';
 
 type Fila = {
@@ -71,8 +72,48 @@ export default function InsumoDelCliente() {
   // Se oculta solo si el usuario no tiene áreas de insumo del cliente.
   if (cargando || !data || data.total === 0) return null;
 
-  const th: React.CSSProperties = { textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '8px 10px', borderBottom: '1px solid var(--line)', whiteSpace: 'nowrap' };
-  const td: React.CSSProperties = { padding: '9px 10px', fontSize: 13, borderBottom: '1px solid var(--line)', verticalAlign: 'middle' };
+
+  // El valor de cada columna es TAMBIÉN por lo que se filtra: si el embudo
+  // ofreciera algo distinto de lo que se ve, filtrar dejaría fuera filas que sí
+  // cumplen.
+  const columnas: Columna<Fila>[] = [
+    { clave: 'empresa', label: 'Cliente', valor: (f) => f.empresa, buscar: true, estiloCelda: { fontWeight: 600 } },
+    { clave: 'area', label: 'Área', valor: (f) => f.area, estiloCelda: { color: 'var(--muted)' } },
+    // Se filtra por "recibido"/"sin recibir", que es el corte que sirve: la
+    // coordinadora quiere ver lo que falta, no ordenar por fecha.
+    { clave: 'recepcion', label: 'Recepción', valor: (f) => (f.recibido ? 'recibido' : 'sin recibir'),
+      orden: (f) => (f.recibido ? `1-${f.fechaEntrega ?? ''}` : `0-${String(f.diasEsperando).padStart(4, '0')}`),
+      render: (f) => (f.recibido ? (
+        <span style={{ fontSize: 12.5, color: 'var(--exito-fuerte)', fontWeight: 700, whiteSpace: 'nowrap' }} title={f.marcadoPor ? `Marcado por ${f.marcadoPor}` : undefined}>
+          ✓ {fmt(f.fechaEntrega)}
+        </span>
+      ) : (
+        <span style={{ fontSize: 12.5, color: 'var(--alerta-fuerte)', fontWeight: 700 }}>
+          sin recibir{f.diasEsperando > 0 && <span style={{ color: 'var(--muted)', fontWeight: 500 }}> · {f.diasEsperando} día(s) del período</span>}
+        </span>
+      )) },
+    { clave: 'accion', label: '', filtrable: false, ordenable: false, valor: () => '',
+      estiloCelda: { textAlign: 'right', whiteSpace: 'nowrap' },
+      render: (f) => {
+        const clave = `${f.empresaId}|${f.areaId}`;
+        if (f.recibido) return <button className="dbtn" disabled={trabajando} onClick={() => deshacer(f)} style={{ fontSize: 12, padding: '5px 10px' }}>Deshacer</button>;
+        if (abierta === clave) {
+          // La fecha es la de ENTREGA, no la de hoy: el cliente manda el 3 y el
+          // asesor marca el 5. Grabar "hoy" le cargaría al cliente dos días de
+          // demora que no son suyos.
+          return (
+            <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+              <input type="date" value={fecha} max={hoyISO()} onChange={(e) => setFecha(e.target.value)}
+                title="Fecha en que el cliente entregó, no la de hoy"
+                style={{ padding: '5px 7px', border: '1px solid var(--edge-strong)', borderRadius: 6, fontSize: 12.5, background: 'var(--panel)', color: 'var(--ink)' }} />
+              <button className="dbtn primary" disabled={trabajando} onClick={() => marcar(f)} style={{ fontSize: 12, padding: '5px 10px' }}>Confirmar</button>
+              <button className="dbtn" onClick={() => setAbierta(null)} style={{ fontSize: 12, padding: '5px 8px' }}>✕</button>
+            </span>
+          );
+        }
+        return <button className="dbtn" onClick={() => { setAbierta(clave); setFecha(hoyISO()); setMsg(null); }} style={{ fontSize: 12, padding: '5px 10px' }}>Ya entregó</button>;
+      } },
+  ];
 
   return (
     <PanelPlegable
@@ -87,59 +128,14 @@ export default function InsumoDelCliente() {
     >
       {msg && <div style={{ margin: '10px 14px 0', background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '7px 11px', fontSize: 12.5, fontWeight: 600 }}>{msg}</div>}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
-          <thead>
-            <tr>
-              <th style={th}>Cliente</th>
-              <th style={th}>Área</th>
-              <th style={th}>Recepción</th>
-              <th style={th}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.filas.map((f) => {
-              const clave = `${f.empresaId}|${f.areaId}`;
-              return (
-                <tr key={clave}>
-                  <td style={{ ...td, fontWeight: 600 }}>{f.empresa}</td>
-                  <td style={{ ...td, color: 'var(--muted)' }}>{f.area}</td>
-                  <td style={td}>
-                    {f.recibido ? (
-                      <span style={{ fontSize: 12.5, color: 'var(--exito-fuerte)', fontWeight: 700 }} title={f.marcadoPor ? `Marcado por ${f.marcadoPor}` : undefined}>
-                        ✓ {fmt(f.fechaEntrega)}
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: 12.5, color: 'var(--alerta-fuerte)', fontWeight: 700 }}>
-                        sin recibir{f.diasEsperando > 0 && <span style={{ color: 'var(--muted)', fontWeight: 500 }}> · {f.diasEsperando} día(s) del período</span>}
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    {f.recibido ? (
-                      <button className="dbtn" disabled={trabajando} onClick={() => deshacer(f)} style={{ fontSize: 12, padding: '5px 10px' }}>Deshacer</button>
-                    ) : abierta === clave ? (
-                      // La fecha es la de ENTREGA, no la de hoy: el cliente manda
-                      // el 3 y el asesor marca el 5. Grabar "hoy" le cargaría al
-                      // cliente dos días de demora que no son suyos.
-                      <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                        <input type="date" value={fecha} max={hoyISO()} onChange={(e) => setFecha(e.target.value)}
-                          title="Fecha en que el cliente entregó, no la de hoy"
-                          style={{ padding: '5px 7px', border: '1px solid var(--edge-strong)', borderRadius: 6, fontSize: 12.5, background: 'var(--panel)', color: 'var(--ink)' }} />
-                        <button className="dbtn primary" disabled={trabajando} onClick={() => marcar(f)} style={{ fontSize: 12, padding: '5px 10px' }}>Confirmar</button>
-                        <button className="dbtn" onClick={() => setAbierta(null)} style={{ fontSize: 12, padding: '5px 8px' }}>✕</button>
-                      </span>
-                    ) : (
-                      <button className="dbtn" onClick={() => { setAbierta(clave); setFecha(hoyISO()); setMsg(null); }} style={{ fontSize: 12, padding: '5px 10px' }}>
-                        Ya entregó
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div style={{ padding: '10px 14px 4px' }}>
+        <TablaDatos
+          filas={data.filas}
+          columnas={columnas}
+          idDe={(f) => `${f.empresaId}|${f.areaId}`}
+          vacio="No hay áreas esperando insumo del cliente."
+          sinCoincidencias="Ninguna cumple los filtros."
+        />
       </div>
     </PanelPlegable>
   );

@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import PanelPlegable from '@/app/_components/PanelPlegable';
+import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 import { fmtDia } from '@/lib/fechas';
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
@@ -70,9 +71,36 @@ export default function ListoParaProcesar() {
   // Silencioso mientras carga o si no hay nada listo (no aplica al rol del usuario).
   if (cargando || error || !data || data.total === 0) return null;
 
-  const th: React.CSSProperties = { textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '8px 10px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
-  const td: React.CSSProperties = { padding: '9px 10px', fontSize: 13, borderBottom: '1px solid var(--border)', verticalAlign: 'middle' };
   const inp: React.CSSProperties = { padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12.5, background: 'var(--card, #fff)', color: 'inherit' };
+
+  // El valor de cada columna es TAMBIÉN por lo que se filtra: si el embudo
+  // ofreciera algo distinto de lo que se ve, filtrar dejaría fuera filas que sí
+  // cumplen.
+  const columnas: Columna<Fila>[] = [
+    { clave: 'empresa', label: 'Cliente', valor: (t) => t.empresa, buscar: true, estiloCelda: { fontWeight: 600 } },
+    { clave: 'titulo', label: 'Actividad', valor: (t) => t.titulo, buscar: true, estiloCelda: { color: 'var(--muted)' } },
+    { clave: 'area', label: 'Área', valor: (t) => t.area ?? '—', estiloCelda: { color: 'var(--muted)' } },
+    // Se ordena por la fecha real y se filtra por el texto que se ve ("hace 4
+    // días"): ordenar por ese texto pondría "hace 10" antes que "hace 2".
+    { clave: 'listo', label: 'Listo', valor: (t) => listoRel(t.listoDesde), orden: (t) => t.listoDesde,
+      render: (t) => (
+        <span title={fmtFecha(t.listoDesde)} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--green-edge)', background: 'var(--exito-suave)', border: '1px solid #bfe8d2', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>✓ {listoRel(t.listoDesde)}</span>
+      ) },
+    { clave: 'vence', label: 'Vence', valor: (t) => fmtFecha(t.fechaVencimiento), orden: (t) => t.fechaVencimiento,
+      estiloCelda: { color: 'var(--muted)', whiteSpace: 'nowrap' } },
+    { clave: 'estado', label: 'Estado', valor: (t) => (ESTADOS[t.estado]?.label ?? t.estado),
+      render: (t) => {
+        const em = ESTADOS[t.estado] ?? { label: t.estado, color: 'var(--muted)' };
+        return (
+          <>
+            <select value={t.estado} onChange={(e) => cambiarEstado(t.id, e.target.value)} style={{ ...inp, fontWeight: 700, color: em.color, cursor: 'pointer' }}>
+              {ESTADOS_EDIT.map((e) => <option key={e} value={e}>{ESTADOS[e].label}</option>)}
+            </select>
+            {msg && msg.id === t.id && <div style={{ marginTop: 4, fontSize: 11.5, color: 'var(--peligro-fuerte)', fontWeight: 600 }}>{msg.texto}</div>}
+          </>
+        );
+      } },
+  ];
 
   return (
     // Abierto por defecto: para el asesor es su trabajo, no una consulta.
@@ -86,42 +114,14 @@ export default function ListoParaProcesar() {
         </span>
       }
     >
-
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
-          <thead>
-            <tr>
-              <th style={th}>Cliente</th>
-              <th style={th}>Actividad</th>
-              <th style={th}>Área</th>
-              <th style={th}>Listo</th>
-              <th style={th}>Vence</th>
-              <th style={th}>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.tareas.map((t) => {
-              const em = ESTADOS[t.estado] ?? { label: t.estado, color: 'var(--muted)' };
-              return (
-                <tr key={t.id}>
-                  <td style={{ ...td, fontWeight: 600 }}>{t.empresa}</td>
-                  <td style={{ ...td, color: 'var(--muted)' }}>{t.titulo}</td>
-                  <td style={{ ...td, color: 'var(--muted)' }}>{t.area ?? '—'}</td>
-                  <td style={{ ...td, whiteSpace: 'nowrap' }}>
-                    <span title={fmtFecha(t.listoDesde)} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--green-edge)', background: 'var(--exito-suave)', border: '1px solid #bfe8d2', borderRadius: 20, padding: '2px 8px' }}>✓ {listoRel(t.listoDesde)}</span>
-                  </td>
-                  <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtFecha(t.fechaVencimiento)}</td>
-                  <td style={td}>
-                    <select value={t.estado} onChange={(e) => cambiarEstado(t.id, e.target.value)} style={{ ...inp, fontWeight: 700, color: em.color, cursor: 'pointer' }}>
-                      {ESTADOS_EDIT.map((e) => <option key={e} value={e}>{ESTADOS[e].label}</option>)}
-                    </select>
-                    {msg && msg.id === t.id && <div style={{ marginTop: 4, fontSize: 11.5, color: 'var(--peligro-fuerte)', fontWeight: 600 }}>{msg.texto}</div>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div style={{ padding: '10px 14px 4px' }}>
+        <TablaDatos
+          filas={data.tareas}
+          columnas={columnas}
+          idDe={(t) => t.id}
+          vacio="No hay nada listo para procesar."
+          sinCoincidencias="Ninguna cumple los filtros."
+        />
       </div>
     </PanelPlegable>
   );
