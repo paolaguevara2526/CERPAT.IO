@@ -57,7 +57,9 @@ export default function ObligacionesCliente({ empresaId }: { empresaId: string }
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ anio: d.anioCifras, ...form }),
     });
-    if (!r.ok) { const x = await r.json().catch(() => ({})); setError(x.error || 'No se pudo guardar.'); return; }
+    // Si la respuesta no trae un motivo, se muestra el código: un "No se pudo
+    // guardar" a secas escondió durante semanas un 405 del proxy.
+    if (!r.ok) { const x = await r.json().catch(() => ({})); setError(x.error || `No se pudo guardar (la API respondió ${r.status}).`); return; }
     setOk(true); setTimeout(() => setOk(false), 1600);
     cargar();
   }
