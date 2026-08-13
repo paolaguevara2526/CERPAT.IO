@@ -10,6 +10,7 @@ import VisitaModal from '../visitas/VisitaModal';
 
 import { tinte } from '@/app/_components/color';
 import { progresoChecklist, etiquetaProgreso, siguienteEstado, ASPECTO } from '@/lib/checklist';
+import { useCierreDeFondo } from '@/app/_components/ModalMarco';
 // Estados de un VENCIMIENTO tributario (enum EstadoPago).
 const VENC_META: Record<string, { label: string; color: string }> = {
   pendiente: { label: 'Pendiente', color: 'var(--muted)' },
@@ -563,8 +564,13 @@ function DetalleModal({ ev, onClose, onChanged }: { ev: Evento; onClose: () => v
   const ec = ETIQUETA_COLOR['Vencimientos'];
   const lbl2: React.CSSProperties = { fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)' };
 
+  // No cerrar si el clic empezó DENTRO de la ventana: arrastrar para
+  // seleccionar el texto de una casilla y soltar afuera cerraba el modal y
+  // se perdía lo escrito.
+  const cierreDeFondo = useCierreDeFondo(onClose);
+
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
+    <div {...cierreDeFondo} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} className="panel" style={{ maxWidth: 430, width: '100%', maxHeight: '92vh', overflow: 'auto', padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
           <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: ec, background: `${tinte(ec, 12)}`, borderRadius: 20, padding: '3px 10px' }}>🧾 Vencimiento</span>
