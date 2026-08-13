@@ -23,5 +23,6 @@ async function forward(req: Request, path: string[], method: string) {
 type Ctx = { params: { path: string[] } };
 export async function GET(req: Request, { params }: Ctx) { return forward(req, params.path, 'GET'); }
 export async function POST(req: Request, { params }: Ctx) { return forward(req, params.path, 'POST'); }
+export async function PUT(req: Request, { params }: Ctx) { return forward(req, params.path, 'PUT'); }
 export async function PATCH(req: Request, { params }: Ctx) { return forward(req, params.path, 'PATCH'); }
 export async function DELETE(req: Request, { params }: Ctx) { return forward(req, params.path, 'DELETE'); }
