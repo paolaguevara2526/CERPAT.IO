@@ -15,6 +15,7 @@ import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.
 import { vinculoDeObligacion, VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
 import { transicion, puedePresentar, actorDe, EVENTO_DE, type EstadoRevision, type AccionRevision } from '../vencimientos/revision.js';
 import { estaVencido } from '../plan/dia-calendario.js';
+import { filtroAlcance, filtroMes } from '../vencimientos/alcance-lista.js';
 
 const ACCIONES_REVISION = ['iniciar', 'enviar', 'devolver', 'aprobar', 'reabrir'];
 
@@ -89,11 +90,17 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   const empresaId = typeof req.query.empresaId === 'string' && req.query.empresaId ? req.query.empresaId : undefined;
   const estado = typeof req.query.estado === 'string' && ESTADOS.includes(req.query.estado) ? req.query.estado : undefined;
   const mes = Number(req.query.mes);
-  // Alcance: un Asesor/Auxiliar solo ve los vencimientos de sus empresas asignadas.
+  // Alcance: un Asesor/Auxiliar ve los vencimientos de sus empresas asignadas
+  // Y los que están a su nombre (ver vencimientos/alcance-lista.ts).
   const idsAsignadas = esStaffAcotado(req.user) ? await empresasAsignadas(req.user!.sub, org.id) : null;
 
   const items = await prisma.vencimientoEmpresa.findMany({
-    where: { organizacionId: org.id, anio, ...(idsAsignadas ? { empresaId: { in: idsAsignadas } } : empresaId ? { empresaId } : {}), ...(estado ? { estado: estado as any } : {}) },
+    where: {
+      organizacionId: org.id,
+      ...filtroMes(anio, mes),
+      ...filtroAlcance(idsAsignadas, req.user!.sub, empresaId),
+      ...(estado ? { estado: estado as any } : {}),
+    },
     orderBy: [{ fechaVencimiento: 'asc' }],
     select: {
       id: true, empresaId: true, obligacion: true, periodicidad: true, periodo: true,
@@ -101,13 +108,11 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
       empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
     },
   });
-  const hoy = new Date();
-  let list = items.map((v) => ({
+  const list = items.map((v) => ({
     ...v, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
     valorPago: v.valorPago != null ? Number(v.valorPago) : null,
     vencido: v.estado === 'pendiente' && estaVencido(v.fechaVencimiento),
   }));
-  if (mes >= 1 && mes <= 12) list = list.filter((v) => v.fechaVencimiento.getMonth() + 1 === mes);
   res.json({ total: list.length, vencimientos: list });
 });
 
