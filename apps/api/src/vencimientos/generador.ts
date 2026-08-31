@@ -64,10 +64,26 @@ function sinSufijoDepto(muni: string, depto: string): string {
   if (m && normTxt(m[2]) === normTxt((depto || '').slice(0, 1))) return m[1];
   return muni;
 }
+// El catálogo de municipios y el calendario oficial no escriben igual la
+// capital: el calendario dice "Bogotá, D.C." y hay catálogos que dicen solo
+// "Bogotá". Normalizado, uno queda "bogota d c" y el otro "bogota", así que el
+// cruce fallaba en silencio: la empresa quedaba marcada con ReteICA en Bogotá,
+// se regeneraba, no salía ningún vencimiento y el calendario parecía estar sin
+// cargar. Por eso cada fila se indexa bajo TODAS sus formas: no hay municipio
+// que se llame "algo D C", así que quitar ese sufijo no puede chocar con otro.
+export function variantesMunicipio(muni: string): string[] {
+  const base = normTxt(muni);
+  const sinDC = base.replace(/\s+d\s*c$/, '').trim();
+  return sinDC && sinDC !== base ? [base, sinDC] : [base];
+}
+
 const icaIdx = new Map<string, typeof calendario.ica>();
 for (const r of calendario.ica) {
-  const k = `${normTxt(r.departamento)}|${normTxt(sinSufijoDepto(r.municipio, r.departamento))}`;
-  (icaIdx.get(k) ?? icaIdx.set(k, []).get(k)!).push(r);
+  const muni = sinSufijoDepto(r.municipio, r.departamento);
+  for (const v of variantesMunicipio(muni)) {
+    const k = `${normTxt(r.departamento)}|${v}`;
+    (icaIdx.get(k) ?? icaIdx.set(k, []).get(k)!).push(r);
+  }
 }
 
 // Último dígito (antes del de verificación) y últimos dos dígitos del NIT.

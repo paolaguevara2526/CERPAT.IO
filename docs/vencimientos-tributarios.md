@@ -96,6 +96,13 @@ lo nacional: por cada municipio marcado en Config. tributaria cruza lo que aplic
   ya no contempla.
 - **Cruce de municipios:** normaliza nombre + departamento y quita el sufijo de
   inicial del departamento del calendario ("San Martín M" en Meta → "San Martín").
+  Además indexa la capital **con y sin el "D.C."**: el calendario oficial escribe
+  "Bogotá, D.C." y hubo catálogos con "Bogotá" a secas — normalizados quedan
+  `bogota d c` y `bogota`, dos claves distintas. Con eso el ReteICA bimestral de
+  Bogotá **estaba en el calendario y aun así no se generaba**, sin error visible:
+  se marcaba el municipio, se regeneraba y no salía nada, con toda la pinta de
+  "falta cargar el calendario". El catálogo semilla (`prisma/seed.ts`) quedó
+  además escrito como el oficial, para no volver a crear dos Bogotás.
 
 **Fuente.** Los calendarios municipales los **transcribió el equipo** (Paola)
 municipio por municipio a una plantilla de Excel. Los PDF municipales varían

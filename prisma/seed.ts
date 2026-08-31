@@ -130,7 +130,11 @@ async function main() {
     { nombre: 'Villavicencio', departamento: 'Meta' },
     { nombre: 'Acacías', departamento: 'Meta' },
     { nombre: 'Granada', departamento: 'Meta' },
-    { nombre: 'Bogotá', departamento: 'Bogotá D.C.' },
+    // Como en el catálogo oficial (prisma/data/municipios-colombia.csv) y en el
+    // calendario de ICA: si aquí se escribe "Bogotá" a secas queda un municipio
+    // distinto del que trae el calendario y el cruce de ReteICA no encuentra
+    // nada.
+    { nombre: 'Bogotá, D.C.', departamento: 'Bogotá, D.C.' },
   ];
   for (const [i, m] of municipios.entries()) {
     await prisma.municipio.upsert({ where: { id: `seed-municipio-${i}` }, update: {}, create: { id: `seed-municipio-${i}`, organizacionId: ORG_ID, nombre: m.nombre, departamento: m.departamento, orden: i + 1 } });
