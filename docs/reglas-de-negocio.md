@@ -347,6 +347,14 @@ aplicación —**solo las empresas asignadas hoy**—, que es la fuente de verda
 pertenece un cliente. Para corregir el dato viejo está *Plan por cliente → Aplicar los
 responsables a un período ya generado*, que también actualiza vencimientos.
 
+**El mes del calendario se toma de la fecha, no de la columna `anio`.**
+`VencimientoEmpresa.anio` es el año del **período**, no el del vencimiento, y hay
+obligaciones que vencen al año siguiente: FOPAT, nómina electrónica y PILA del período
+de **diciembre** vencen en **enero**. El calendario pide un mes y se resuelve como
+ventana de fechas `[1 del mes, 1 del mes siguiente)`; antes se comparaba solo el número
+del mes dentro del año pedido y ese FOPAT de enero se pintaba **un año antes** de su
+fecha real y no aparecía en el enero que le correspondía.
+
 **Ventana de tiempo.** "Mis impuestos" llega **hasta el fin del mes en curso**, y el corte
 es **solo por arriba**: lo vencido de meses anteriores sigue apareciendo, marcado. Esconderlo
 al pasar de mes sería la peor forma de ordenar la vista — una retención de julio sin
@@ -492,8 +500,14 @@ y root ven todo. Un usuario con varios roles ve la **unión** de lo permitido.
 en las vistas internas — forzado en el backend (`esStaffAcotado`):
 - **Tablero, Lista y Calendario (tareas)** → solo tareas donde es **asesor o auxiliar**.
 - **Calendario (visitas)** → solo visitas donde es el **responsable**.
-- **Calendario (vencimientos)** y **Pagos** → solo vencimientos de sus **empresas
-  asignadas** (Asignación cliente × área, donde figura como asesor o auxiliar).
+- **Calendario (vencimientos)** → los de sus **empresas asignadas** (Asignación cliente ×
+  área, donde figura como asesor o auxiliar) **o** los que están **a su nombre**
+  (`asesorId`/`auxiliarId` del vencimiento). Es una unión a propósito: el responsable
+  del vencimiento se hereda al generarlo y sobrevive a que la asignación de esa empresa
+  falte o cambie, así que exigir las dos cosas dejaba obligaciones que la dirección veía
+  en su calendario y el asesor responsable no. La unión no abre nada ajeno — agrega
+  trabajo que el sistema ya tiene registrado a nombre de quien mira.
+- **Pagos** → solo vencimientos de sus **empresas asignadas**.
 - **Gestión › Clientes** → solo sus **empresas asignadas**. La cartera completa de la
   firma es información de la dirección: no hay razón para que un asesor vea los clientes
   de otro. La **descarga en Excel** del listado queda además reservada a Administración
