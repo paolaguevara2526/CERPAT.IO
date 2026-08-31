@@ -85,11 +85,15 @@ $0"), `no_presentado`, `no_obligado`. El Administrador los edita en línea.
 **`cerpat.io/planeador/calendario` — Calendario.** Reúne en un solo mes las
 **visitas** y los **vencimientos** (el **Plan de Trabajo NO va en el calendario**:
 es operación interna y vive en Lista · Mi día · Tablero). Filtros (etiquetas
-Vencimientos/Visitas, clientes, estado), interruptor para ocultar estados,
+Vencimientos/Visitas, clientes, **asignado**, estado), interruptor para ocultar estados,
 **arrastrar** para reprogramar, **imprimir** el mes, y **sábados/domingos/festivos**
 de Colombia marcados (festivos calculados en código: fijos + Ley Emiliani +
 Pascua). Clic en una **visita** abre su acta y clic en un **vencimiento** su
-detalle (con **Soporte Documental**, link editable Drive/OneDrive).
+detalle (con **Soporte Documental**, link editable Drive/OneDrive). El filtro
+**Asignado** es para el seguimiento de la coordinación: agrupa por responsable
+(el **asesor** del vencimiento, el **responsable** de la visita) y ofrece
+**"Sin asignar"** —solo si ese mes hay algo sin responsable—, que es la forma de
+encontrar lo que falta por asignar en vez de descubrirlo cuando ya se venció.
 
 **`cerpat.io/planeador/pagos` — Pagos.** Controla en **un solo listado "Por
 pagar"** todo lo pendiente de pago: los **vencimientos tributarios** ya marcados
