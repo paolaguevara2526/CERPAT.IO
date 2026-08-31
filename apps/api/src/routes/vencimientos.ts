@@ -16,6 +16,7 @@ import { vinculoDeObligacion, VINCULOS_VENCIMIENTO } from '../vencimientos/vincu
 import { transicion, puedePresentar, actorDe, EVENTO_DE, type EstadoRevision, type AccionRevision } from '../vencimientos/revision.js';
 import { estaVencido } from '../plan/dia-calendario.js';
 import { filtroAlcance, filtroMes } from '../vencimientos/alcance-lista.js';
+import { puedeRegistrarAbono, puedeEliminarAbono, abonoEnAlcance } from '../vencimientos/abonos.js';
 
 const ACCIONES_REVISION = ['iniciar', 'enviar', 'devolver', 'aprobar', 'reabrir'];
 
@@ -1092,12 +1093,19 @@ vencimientosRouter.get('/:id/abonos', requireAuth, async (req: AuthedRequest, re
 });
 
 // POST /vencimientos/:id/abonos { monto, fecha?, notas? } — registra un abono.
+// Administrador, Coordinador y Asesor (ver vencimientos/abonos.ts). El Asesor,
+// solo sobre las obligaciones de su alcance.
 vencimientosRouter.post('/:id/abonos', requireAuth, async (req: AuthedRequest, res) => {
-  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede registrar abonos.' });
+  if (!puedeRegistrarAbono(req.user)) return res.status(403).json({ error: 'Tu rol no puede registrar abonos.' });
   const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
-  const venc = await prisma.vencimientoEmpresa.findFirst({ where: { id: req.params.id, organizacionId: org.id }, select: { id: true, valorPago: true, estado: true } });
+  const venc = await prisma.vencimientoEmpresa.findFirst({ where: { id: req.params.id, organizacionId: org.id }, select: { id: true, valorPago: true, estado: true, empresaId: true, asesorId: true, auxiliarId: true } });
   if (!venc) return res.status(404).json({ error: 'Obligación no encontrada.' });
+  // El rol dice si puede abonar; esto, sobre cuáles.
+  const idsAsignadas = esStaffAcotado(req.user) ? await empresasAsignadas(req.user!.sub, org.id) : null;
+  if (!abonoEnAlcance(idsAsignadas, req.user!.sub, venc)) {
+    return res.status(403).json({ error: 'Esta obligación no es de tus clientes asignados.' });
+  }
   const monto = Number(req.body?.monto);
   if (!isFinite(monto) || monto <= 0) return res.status(422).json({ error: 'El abono debe ser un número mayor que 0.' });
   const fecha = req.body?.fecha ? new Date(req.body.fecha) : new Date();
@@ -1119,8 +1127,10 @@ vencimientosRouter.post('/:id/abonos', requireAuth, async (req: AuthedRequest, r
 });
 
 // DELETE /vencimientos/abonos/:abonoId — elimina un abono (Administrador / root).
+// No se abrió junto con el registro: borrar hace desaparecer el rastro de una
+// plata que alguien reportó, y eso se corrige donde se llevan las cifras.
 vencimientosRouter.delete('/abonos/:abonoId', requireAuth, async (req: AuthedRequest, res) => {
-  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede eliminar abonos.' });
+  if (!puedeEliminarAbono(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede eliminar abonos.' });
   const org = await orgActual(req);
   const abono = await prisma.abonoVencimiento.findFirst({ where: { id: req.params.abonoId, organizacionId: org?.id }, select: { id: true } });
   if (!abono) return res.status(404).json({ error: 'Abono no encontrado.' });

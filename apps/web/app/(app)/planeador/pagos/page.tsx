@@ -151,9 +151,17 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const [{ data: vencs, error }, pendientes, empresas, sesion] = await Promise.all([
     fetchVencPagos(anio), fetchPendientes(), fetchEmpresas(), getSessionUser(),
   ]);
-  // Solo el Administrador (o root) modifica el pago; los demás (Asesor, etc.) solo
-  // observan e imprimen. El backend ya valida esto; aquí evitamos mostrar controles.
+  // Solo el Administrador (o root) modifica el pago: el valor a pagar, el estado
+  // y los pendientes cargados a mano. El backend ya valida esto; aquí evitamos
+  // mostrar controles que devolverían un error.
   const esEditor = !!sesion && (sesion.esRoot || sesion.roles.includes('Administrador'));
+  // Los ABONOS van aparte y más abiertos: Asesor y Coordinador también los
+  // registran, porque son quienes hacen el seguimiento de cartera y quienes se
+  // enteran de que el cliente abonó (ver api vencimientos/abonos.ts). Eliminar
+  // un abono sigue siendo de Administración, así que la ventana recibe los dos
+  // permisos por separado: mostrar un botón que va a devolver 403 es peor que no
+  // mostrarlo.
+  const puedeAbonar = !!sesion && (sesion.esRoot || sesion.roles.some((r) => ['Administrador', 'Coordinador', 'Asesor'].includes(r)));
 
   // Listado unificado: vencimientos presentados + pagos pendientes manuales.
   const items: Item[] = [
@@ -239,7 +247,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Por pagar</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-        Vencimientos ya presentados {esEditor ? '(marca el pago)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se calcula a hoy y se actualiza solo.
+        Vencimientos ya presentados {esEditor ? '(marca el pago)' : puedeAbonar ? '(registra abonos)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se calcula a hoy y se actualiza solo.
       </p>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -309,7 +317,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                         {i.abonado > 0 && (
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>Abonado <b style={{ color: 'var(--exito-fuerte)' }}>${fmtCOP(i.abonado)}</b> · Saldo <b style={{ color: 'var(--navy)' }}>${fmtCOP(i.saldo ?? 0)}</b></div>
                         )}
-                        <AbonosBoton id={i.id} editable={esEditor} />
+                        <AbonosBoton id={i.id} puedeRegistrar={puedeAbonar} puedeEliminar={esEditor} />
                       </div>
                     </td>
                     <td>{i.manual && esEditor ? <BorrarPendiente id={i.id} /> : null}</td>
