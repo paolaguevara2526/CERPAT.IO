@@ -61,6 +61,11 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   const [filtros, setFiltros] = useState<Record<Col, Set<string> | null>>(sinFiltros);
   const { orden, alternar, ordenar } = useOrden<Col>();
   const [aEliminar, setAEliminar] = useState<Venc | null>(null);
+  // Cuántas filas se DIBUJAN. Con 3.133 vencimientos y tres controles por fila
+  // —fecha, estado y notas— el navegador tenía que sostener casi diez mil
+  // campos: por eso la pantalla iba pesada. Los filtros y el orden siguen
+  // trabajando sobre el año completo; lo que se limita es lo que se pinta.
+  const [pagina, setPagina] = useState(1);
   const [eliminando, setEliminando] = useState(false);
 
   const cargarBase = useCallback(async () => {
@@ -88,9 +93,10 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
     setItems((p) => p.map((x) => (x.id === v.id ? { ...x, [campo]: valor } : x)));
     const r = await fetch(`/api/vencimientos/${v.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [campo]: valor }) });
     if (!r.ok) { setItems(prev); const d = await r.json().catch(() => ({})); setError(d.error || 'No se pudo guardar.'); return; }
-    // Cambiar estado o fecha afecta KPIs y semáforo; la fecha además reordena la lista.
-    if (campo === 'estado') cargarBase();
-    else if (campo === 'fechaVencimiento') { cargarBase(); cargarLista(); }
+    // Cambiar estado o fecha mueve los KPIs, así que se refrescan. La LISTA no se
+    // recarga: traer 3.000 filas por una fecha corregida congelaba la pantalla y
+    // rehacía el campo que se acababa de tocar. La fila ya se actualizó arriba.
+    if (campo === 'estado' || campo === 'fechaVencimiento') cargarBase();
   }
 
   async function eliminar(v: Venc) {
@@ -127,7 +133,7 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
     [items, filtros, ordenar],
   );
   const hayFiltro = COLS.some((c) => filtros[c] != null);
-  const setFiltro = (c: Col, s: Set<string> | null) => setFiltros((f) => ({ ...f, [c]: s }));
+  const setFiltro = (c: Col, s: Set<string> | null) => { setFiltros((f) => ({ ...f, [c]: s })); setPagina(1); };
   // Cada encabezado ordena (clic en el texto) y filtra (embudo), sin estorbarse.
   const th = (c: Col, texto: string, buscar = false, estilo?: React.CSSProperties) => (
     <ThOrden col={c} orden={orden} alternar={alternar} style={estilo}
@@ -135,6 +141,11 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
       {texto}
     </ThOrden>
   );
+
+  const POR_PAGINA = 100;
+  const paginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const pag = Math.min(pagina, paginas);
+  const enPantalla = filtrados.slice((pag - 1) * POR_PAGINA, pag * POR_PAGINA);
 
   const k = resumen?.kpis;
 
@@ -160,7 +171,10 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
       )}
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{filtrados.length}{hayFiltro ? ` de ${items.length}` : ''} vencimiento(s)</span>
+        <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+          {filtrados.length}{hayFiltro ? ` de ${items.length}` : ''} vencimiento(s)
+          {paginas > 1 && <span> · mostrando {enPantalla.length} (página {pag} de {paginas})</span>}
+        </span>
         {hayFiltro && <button className="dbtn" onClick={() => setFiltros(sinFiltros())} style={{ fontSize: 12 }}>Limpiar filtros</button>}
         <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>Clic en el título de la columna para ordenar · embudo ▼ para filtrar.</span>
       </div>
@@ -170,8 +184,8 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
           <thead><tr>
             {th('compania', 'Compañía', true, { minWidth: 160 })}
             {th('obligacion', 'Obligación', true, { minWidth: 150 })}
-            {th('periodo', 'Período')}
-            {th('vence', 'Vence')}
+            {th('periodo', 'Período', true)}
+            {th('vence', 'Vence', true)}
             {th('estado', 'Estado')}
             {th('notas', 'Notas', true, { minWidth: 160 })}
             {esEditor && <th style={{ width: 44 }}></th>}
@@ -183,7 +197,7 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
               <tr><td colSpan={esEditor ? 7 : 6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin vencimientos. Si aún no corres el generador, no habrá datos.</td></tr>
             ) : filtrados.length === 0 ? (
               <tr><td colSpan={esEditor ? 7 : 6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Ninguno cumple los filtros.</td></tr>
-            ) : filtrados.map((v) => {
+            ) : enPantalla.map((v) => {
               const em = ESTADO_META[v.estado] ?? ESTADO_META.pendiente;
               return (
                 <tr key={v.id}>
@@ -191,9 +205,15 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
                   <td style={{ minWidth: 150 }}>{v.obligacion}{v.municipio && <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{v.municipio}</div>}{v.periodicidad && <div style={{ fontSize: 10.5, color: 'var(--muted)' }}>{v.periodicidad}</div>}</td>
                   <td style={{ color: 'var(--muted)' }}>{v.periodo ?? '—'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
+                    {/* Se guarda al SALIR del campo (o con Enter), no en cada tecla:
+                        un <input type="date"> dispara onChange mientras se escribe, y
+                        al completar el año salía el guardado, se recargaba la lista
+                        entera y el campo se rehacía debajo del cursor. Por eso "no
+                        dejaba digitar la fecha". */}
                     {esEditor ? (
                       <input type="date" defaultValue={v.fechaVencimiento.slice(0, 10)} key={v.fechaVencimiento}
-                        onChange={(e) => { if (e.target.value && e.target.value !== v.fechaVencimiento.slice(0, 10)) editar(v, 'fechaVencimiento', e.target.value); }}
+                        onBlur={(e) => { if (e.target.value && e.target.value !== v.fechaVencimiento.slice(0, 10)) editar(v, 'fechaVencimiento', e.target.value); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                         style={{ fontSize: 12, fontWeight: v.vencido ? 800 : 600, color: v.vencido ? 'var(--peligro)' : 'var(--ink)', background: 'var(--panel)', border: `1px solid ${v.vencido ? '#cf443666' : 'var(--edge-strong)'}`, borderRadius: 4, padding: '4px 6px', fontFamily: 'var(--ui)' }} />
                     ) : (
                       <span style={{ fontWeight: v.vencido ? 800 : 500, color: v.vencido ? 'var(--peligro)' : 'var(--muted)' }}>{fmtFecha(v.fechaVencimiento)}</span>
@@ -228,6 +248,15 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
           </tbody>
         </table>
       </div>
+
+      {paginas > 1 && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+          <button className="dbtn" disabled={pag <= 1} onClick={() => setPagina(pag - 1)} style={{ fontSize: 12.5 }}>← Anterior</button>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>Página {pag} de {paginas}</span>
+          <button className="dbtn" disabled={pag >= paginas} onClick={() => setPagina(pag + 1)} style={{ fontSize: 12.5 }}>Siguiente →</button>
+        </div>
+      )}
+
 
       {aEliminar && (
         <div onClick={() => !eliminando && setAEliminar(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,29,51,0.55)', display: 'grid', placeItems: 'center', zIndex: 60, padding: 16 }}>
