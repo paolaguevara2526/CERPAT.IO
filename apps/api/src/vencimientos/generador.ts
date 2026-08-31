@@ -319,24 +319,45 @@ export type IcaResultado = {
 //   municipio, no inventa nada: la reporta en `sinCalendario` para avisar.
 // - La `fechaInscripcion` (opcional) acota "de aquí en adelante": omite los
 //   vencimientos cuya fecha es anterior a la inscripción, sin afectar lo demás.
+// ¿La fila del calendario sirve para la periodicidad con que declara el cliente?
+// El calendario escribe "Bimestral" y la configuración guarda "bimestral".
+// Si el cliente NO tiene periodicidad marcada (ReteICA/AutoICA son casillas y
+// pueden quedar sin ella), no se exige nada: sirve cualquier fila, que es el
+// comportamiento que ya tenían.
+export function mismaPeriodicidad(delCalendario: string | null | undefined, delCliente: string | null | undefined): boolean {
+  if (!delCliente) return true;
+  return normTxt(delCalendario) === normTxt(delCliente);
+}
+
 export function vencimientosIca(municipios: MunicipioIcaInput[], nit: string): IcaResultado {
   const { uno } = digitos(nit);
   const vencimientos: VencimientoIca[] = [];
   const sinCalendario: IcaResultado['sinCalendario'] = [];
 
   for (const m of municipios) {
-    const marcadas: string[] = [];
-    if (m.icaPeriodicidad) marcadas.push('ICA');
-    if (m.reteica) marcadas.push('ReteICA');
-    if (m.autoica) marcadas.push('AutoICA');
+    // Cada obligación marcada con la periodicidad con que la marcó el cliente.
+    const marcadas: { obligacion: string; periodicidad: string | null }[] = [];
+    if (m.icaPeriodicidad) marcadas.push({ obligacion: 'ICA', periodicidad: m.icaPeriodicidad });
+    if (m.reteica) marcadas.push({ obligacion: 'ReteICA', periodicidad: m.reteicaPeriodicidad ?? null });
+    if (m.autoica) marcadas.push({ obligacion: 'AutoICA', periodicidad: m.autoicaPeriodicidad ?? null });
     if (!marcadas.length) continue;
 
     const filas = icaIdx.get(`${normTxt(m.departamento)}|${normTxt(m.municipio)}`) ?? [];
     const faltan: string[] = [];
 
-    for (const ob of marcadas) {
-      // Filas de la obligación aplicables al NIT (dígito '' = todos; o el suyo).
-      const aplic = filas.filter((f) => f.obligacion === ob && (f.ultimo_digito === '' || f.ultimo_digito === uno));
+    for (const { obligacion: ob, periodicidad: per } of marcadas) {
+      // Filas de la obligación aplicables al NIT (dígito '' = todos; o el suyo)
+      // Y a la periodicidad con que el cliente declara.
+      //
+      // La periodicidad no se cruzaba, y mientras cada municipio tuvo una sola
+      // no se notó. En Bogotá el ICA es BIMESTRAL en el régimen común y ANUAL
+      // en el preferencial: sin este filtro, a un cliente marcado "anual" se le
+      // habrían creado los cuatro vencimientos bimestrales, que no le aplican.
+      // Inventar una obligación es peor que reportar que falta: la de más se
+      // trabaja, se presenta y se paga; la que falta se ve en `sinCalendario`.
+      const aplic = filas.filter((f) => f.obligacion === ob
+        && (f.ultimo_digito === '' || f.ultimo_digito === uno)
+        && mismaPeriodicidad(f.periodicidad, per));
       if (!aplic.length) { faltan.push(ob); continue; }
       for (const f of aplic) {
         const fecha = new Date(f.fecha_vencimiento);

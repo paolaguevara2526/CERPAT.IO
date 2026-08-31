@@ -94,6 +94,15 @@ lo nacional: por cada municipio marcado en Config. tributaria cruza lo que aplic
   administra (p. ej. **Exógena de ICA**): solo da de baja las obligaciones de su
   propio conjunto (`OBLIGACIONES_NACIONALES` / `OBLIGACIONES_ICA`) que la config
   ya no contempla.
+- **Cruce por periodicidad.** Una fila del calendario solo aplica si su
+  periodicidad es la que el cliente tiene marcada (`Bimestral` ≡ `bimestral`). Si
+  el cliente no marcó ninguna —ReteICA y AutoICA son casillas y pueden quedar sin
+  ella— no se exige. Mientras cada municipio tuvo una sola periodicidad esto no
+  se notaba; al cargar **Bogotá**, donde el ICA es **bimestral** en el régimen
+  común y **anual** en el preferencial, sin este filtro a un cliente marcado
+  "anual" se le habrían creado los cuatro vencimientos bimestrales. Un
+  vencimiento de más se trabaja, se presenta y se paga; uno que falta se ve en
+  el aviso *sin calendario* al regenerar.
 - **Cruce de municipios:** normaliza nombre + departamento y quita el sufijo de
   inicial del departamento del calendario ("San Martín M" en Meta → "San Martín").
   Además indexa la capital **con y sin el "D.C."**: el calendario oficial escribe
