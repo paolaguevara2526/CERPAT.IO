@@ -3094,6 +3094,42 @@ export const CALENDARIO_2026: { anio: number; tributario: FilaTributario[]; rent
       "fecha_vencimiento": "2027-01-15"
     },
     {
+      "municipio": "Bogotá, D.C.",
+      "departamento": "Bogotá, D.C.",
+      "obligacion": "ICA",
+      "periodicidad": "Bimestral",
+      "periodo": "may-jun",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-08-21"
+    },
+    {
+      "municipio": "Bogotá, D.C.",
+      "departamento": "Bogotá, D.C.",
+      "obligacion": "ICA",
+      "periodicidad": "Bimestral",
+      "periodo": "jul-ago",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-10-09"
+    },
+    {
+      "municipio": "Bogotá, D.C.",
+      "departamento": "Bogotá, D.C.",
+      "obligacion": "ICA",
+      "periodicidad": "Bimestral",
+      "periodo": "sep-oct",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2026-12-11"
+    },
+    {
+      "municipio": "Bogotá, D.C.",
+      "departamento": "Bogotá, D.C.",
+      "obligacion": "ICA",
+      "periodicidad": "Bimestral",
+      "periodo": "nov-dic",
+      "ultimo_digito": "",
+      "fecha_vencimiento": "2027-02-12"
+    },
+    {
       "municipio": "Cabuyaro",
       "departamento": "Meta",
       "obligacion": "ReteICA",

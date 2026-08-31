@@ -231,7 +231,7 @@ export default function ConfigTributariaEditor() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
                 <button className="dbtn primary" onClick={guardar} disabled={guardando} style={{ fontSize: 13 }}>{guardando ? 'Guardando…' : ok ? '✓ Guardado' : 'Guardar'}</button>
-                <button className="dbtn" onClick={regenerar} disabled={regenerando || guardando} style={{ fontSize: 13 }} title="Rehace los vencimientos nacionales de este cliente según la config actual, sin tocar los pagos ni el ICA municipal">
+                <button className="dbtn" onClick={regenerar} disabled={regenerando || guardando} style={{ fontSize: 13 }} title="Rehace los vencimientos de este cliente según la config actual: los nacionales Y el ICA municipal (ICA / ReteICA / AutoICA). Primero simula y pide confirmación mostrando qué daría de baja; nunca da de baja una obligación que ya tenga movimiento.">
                   {regenerando ? 'Regenerando…' : '↻ Regenerar vencimientos'}
                 </button>
                 <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>Guarda los cambios y luego regenera para que los vencimientos reflejen la config nueva.</span>

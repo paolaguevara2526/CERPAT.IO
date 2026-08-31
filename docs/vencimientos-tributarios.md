@@ -94,8 +94,24 @@ lo nacional: por cada municipio marcado en Config. tributaria cruza lo que aplic
   administra (p. ej. **Exógena de ICA**): solo da de baja las obligaciones de su
   propio conjunto (`OBLIGACIONES_NACIONALES` / `OBLIGACIONES_ICA`) que la config
   ya no contempla.
+- **Cruce por periodicidad.** Una fila del calendario solo aplica si su
+  periodicidad es la que el cliente tiene marcada (`Bimestral` ≡ `bimestral`). Si
+  el cliente no marcó ninguna —ReteICA y AutoICA son casillas y pueden quedar sin
+  ella— no se exige. Mientras cada municipio tuvo una sola periodicidad esto no
+  se notaba; al cargar **Bogotá**, donde el ICA es **bimestral** en el régimen
+  común y **anual** en el preferencial, sin este filtro a un cliente marcado
+  "anual" se le habrían creado los cuatro vencimientos bimestrales. Un
+  vencimiento de más se trabaja, se presenta y se paga; uno que falta se ve en
+  el aviso *sin calendario* al regenerar.
 - **Cruce de municipios:** normaliza nombre + departamento y quita el sufijo de
   inicial del departamento del calendario ("San Martín M" en Meta → "San Martín").
+  Además indexa la capital **con y sin el "D.C."**: el calendario oficial escribe
+  "Bogotá, D.C." y hubo catálogos con "Bogotá" a secas — normalizados quedan
+  `bogota d c` y `bogota`, dos claves distintas. Con eso el ReteICA bimestral de
+  Bogotá **estaba en el calendario y aun así no se generaba**, sin error visible:
+  se marcaba el municipio, se regeneraba y no salía nada, con toda la pinta de
+  "falta cargar el calendario". El catálogo semilla (`prisma/seed.ts`) quedó
+  además escrito como el oficial, para no volver a crear dos Bogotás.
 
 **Fuente.** Los calendarios municipales los **transcribió el equipo** (Paola)
 municipio por municipio a una plantilla de Excel. Los PDF municipales varían
