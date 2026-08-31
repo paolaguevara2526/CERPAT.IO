@@ -508,6 +508,23 @@ en las vistas internas — forzado en el backend (`esStaffAcotado`):
   en su calendario y el asesor responsable no. La unión no abre nada ajeno — agrega
   trabajo que el sistema ya tiene registrado a nombre de quien mira.
 - **Pagos** → solo vencimientos de sus **empresas asignadas**.
+
+**Abonos (pagos parciales): quién los registra.** Registrar un abono lo pueden
+**Administrador, Coordinador y Asesor** — son quienes hacen el seguimiento de
+cartera y quienes se enteran de que el cliente abonó; tener que pedírselo a
+Administración atrasaba el dato justo donde más se usa. **Eliminar** un abono
+**no** se abrió: sigue siendo de Administración, porque registrar suma
+información y borrar la desaparece, junto con el rastro de una plata que alguien
+reportó. Auxiliar, Auditor y Revisor no registran abonos, y un cliente del portal
+nunca, tenga el rol que tenga.
+
+El permiso tiene **dos mitades**: el rol dice *si* puede abonar y el alcance
+*sobre cuáles*. Para el staff acotado rige la misma regla del calendario —sus
+empresas asignadas **o** lo que está a su nombre—, aplicada también **al
+escribir**: sin eso, la lista se acota en pantalla pero un id en la URL alcanzaría
+cualquier obligación de la firma. Y no es un campo más: un abono mueve el saldo,
+el **interés de mora**, la **sanción** y, si el saldo llega a cero, el **estado**
+de la obligación, que pasa a *presentado y pagado*.
 - **Gestión › Clientes** → solo sus **empresas asignadas**. La cartera completa de la
   firma es información de la dirección: no hay razón para que un asesor vea los clientes
   de otro. La **descarga en Excel** del listado queda además reservada a Administración

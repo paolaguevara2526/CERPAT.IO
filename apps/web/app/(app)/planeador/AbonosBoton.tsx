@@ -1,7 +1,14 @@
 'use client';
-// Abonos (pagos parciales) de una obligación. Abre un modal con el saldo, la lista
-// de abonos y —para el Administrador— el formulario para registrar uno nuevo y
-// eliminar. El saldo = valor − abonos; el interés de mora corre sobre el saldo.
+// Abonos (pagos parciales) de una obligación. Abre un modal con el saldo, la
+// lista de abonos y, según el rol, el formulario para registrar uno nuevo y el
+// botón de eliminar. El saldo = valor − abonos; el interés de mora corre sobre
+// el saldo.
+//
+// Los dos permisos van SEPARADOS porque en el backend son distintos: registrar
+// lo pueden Administrador, Coordinador y Asesor; eliminar, solo Administración
+// (ver api vencimientos/abonos.ts). Con un solo `editable` el asesor vería el
+// botón "Eliminar" y recibiría un 403 al usarlo — un control que existe y no
+// funciona es peor que uno que no está.
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,7 +20,7 @@ const fmtCOP = (v: number) => v.toLocaleString('es-CO', { maximumFractionDigits:
 function fmtFecha(iso: string) { try { const [y, m, d] = iso.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return '—'; } }
 const inp: React.CSSProperties = { padding: '7px 9px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
 
-export default function AbonosBoton({ id, editable }: { id: string; editable: boolean }) {
+export default function AbonosBoton({ id, puedeRegistrar, puedeEliminar }: { id: string; puedeRegistrar: boolean; puedeEliminar: boolean }) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [data, setData] = useState<Data | null>(null);
@@ -92,7 +99,7 @@ export default function AbonosBoton({ id, editable }: { id: string; editable: bo
                             <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12.5 }}>{fmtFecha(a.fecha)}</td>
                             <td style={{ fontWeight: 700 }}>${fmtCOP(a.monto)}</td>
                             <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{a.notas ?? ''}</td>
-                            {editable && <td style={{ textAlign: 'right' }}><button className="dbtn" onClick={() => eliminar(a.id)} style={{ fontSize: 11, color: 'var(--peligro)', padding: '2px 7px' }}>Eliminar</button></td>}
+                            {puedeEliminar && <td style={{ textAlign: 'right' }}><button className="dbtn" onClick={() => eliminar(a.id)} style={{ fontSize: 11, color: 'var(--peligro)', padding: '2px 7px' }}>Eliminar</button></td>}
                           </tr>
                         ))}
                       </tbody></table>
@@ -101,7 +108,7 @@ export default function AbonosBoton({ id, editable }: { id: string; editable: bo
                     <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Aún no hay abonos registrados.</div>
                   )}
 
-                  {editable ? (
+                  {puedeRegistrar ? (
                     <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>Registrar abono</div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
