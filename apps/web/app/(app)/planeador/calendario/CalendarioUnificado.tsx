@@ -35,10 +35,18 @@ const ETIQUETA_COLOR: Record<string, string> = {
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
+// Opción del filtro "Asignado" para lo que no tiene responsable. Va en el mismo
+// desplegable a propósito: un vencimiento sin asesor es justo lo que hay que
+// encontrar para asignarlo, y si no estuviera en la lista no habría forma de
+// pedirlo. El responsable de un vencimiento es su ASESOR; el de una visita, su
+// responsable.
+const SIN_ASIGNAR = '— Sin asignar —';
+
 type Evento = {
   key: string; tipo: 'vencimiento' | 'visita'; id: string; fecha: string;
   titulo: string; empresa: string | null; etiqueta: string;
   estado: string; estadoLabel: string; color: string; vencido: boolean;
+  asignado: string | null;
   // Extras de vencimiento (para su detalle):
   municipio?: string | null; periodo?: string | null; soporteLink?: string | null; createdAt?: string | null; valorPago?: number | null;
 };
@@ -96,6 +104,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
   const [mes, setMes] = useState(() => mesValido(mesInicial));
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
   const [clientesSel, setClientesSel] = useState<string[]>([]);
+  const [asignadosSel, setAsignadosSel] = useState<string[]>([]);
   const [cumpl, setCumpl] = useState('');
   const [mostrarEstados, setMostrarEstados] = useState(true);
   const [mostrarFinde, setMostrarFinde] = useState(true);
@@ -129,6 +138,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           key: `v-${v.id}`, tipo: 'vencimiento', id: v.id, fecha: (v.fechaVencimiento || '').slice(0, 10),
           titulo: v.obligacion, empresa: v.empresa ?? null, etiqueta: 'Vencimientos',
           estado: v.estado, estadoLabel: em.label, color: em.color, vencido: !!v.vencido,
+          asignado: v.asesor ?? null,
           municipio: v.municipio ?? null, periodo: v.periodo ?? null, soporteLink: v.soporteLink ?? null, createdAt: v.createdAt ?? null, valorPago: v.valorPago ?? null,
         });
       }
@@ -141,6 +151,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
           titulo: v.hora ? `${objetivo} · ${v.hora}` : objetivo,
           empresa: v.empresa ?? null, etiqueta: 'Visitas',
           estado: v.estado, estadoLabel: em.label, color: em.color, vencido: false,
+          asignado: v.responsable ?? null,
         });
       }
       setEventos(evs);
@@ -160,15 +171,26 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [eventos]);
 
+  // Responsables presentes en el mes (para el filtro "Asignado"). "Sin asignar"
+  // se ofrece solo si de verdad hay algo sin responsable ese mes.
+  const asignados = useMemo(() => {
+    const set = new Set<string>();
+    let huerfanos = false;
+    for (const e of eventos) { if (e.asignado) set.add(e.asignado); else huerfanos = true; }
+    const list = [...set].sort((a, b) => a.localeCompare(b));
+    return huerfanos ? [...list, SIN_ASIGNAR] : list;
+  }, [eventos]);
+
   const visibles = useMemo(
     () => eventos.filter((e) =>
       (etiquetas.length === 0 || etiquetas.includes(e.etiqueta)) &&
       (clientesSel.length === 0 || (e.empresa != null && clientesSel.includes(e.empresa))) &&
+      (asignadosSel.length === 0 || asignadosSel.includes(e.asignado ?? SIN_ASIGNAR)) &&
       (!cumpl || clasificar(e) === cumpl),
     ),
-    [eventos, etiquetas, clientesSel, cumpl],
+    [eventos, etiquetas, clientesSel, asignadosSel, cumpl],
   );
-  const hayFiltro = etiquetas.length > 0 || clientesSel.length > 0 || !!cumpl;
+  const hayFiltro = etiquetas.length > 0 || clientesSel.length > 0 || asignadosSel.length > 0 || !!cumpl;
   const porDia = useMemo(() => {
     const map = new Map<string, Evento[]>();
     for (const e of visibles) {
@@ -252,7 +274,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       .c .muni{font-weight:700;color:#334;}
       @media print{@page{size:landscape;margin:10mm;}}
     </style></head><body>
-      <h1>Calendario — ${titulo}${etiquetas.length ? ` · ${etiquetas.join(', ')}` : ''}</h1>
+      <h1>Calendario — ${escapar(titulo)}${etiquetas.length ? ` · ${escapar(etiquetas.join(', '))}` : ''}${asignadosSel.length ? ` · ${escapar(asignadosSel.join(', '))}` : ''}</h1>
       <div class="sub">Visitas y vencimientos tributarios · CERPAT</div>
       <table><thead><tr>${DIAS.slice(0, cols).map((d) => `<th>${d}</th>`).join('')}</tr></thead><tbody>${filas.join('')}</tbody></table>
     </body></html>`);
@@ -287,13 +309,14 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         <MultiSelect label="Etiquetas" opciones={['Vencimientos', 'Visitas']} sel={etiquetas} onChange={setEtiquetas}
           etiquetar={(o) => (o === 'Vencimientos' ? '🧾 ' : '🤝 ') + o} color={(o) => ETIQUETA_COLOR[o]} />
         <MultiSelect label="Clientes" opciones={clientes} sel={clientesSel} onChange={setClientesSel} anchoMenu={260} />
+        <MultiSelect label="Asignado" opciones={asignados} sel={asignadosSel} onChange={setAsignadosSel} anchoMenu={240} />
         <select value={cumpl} onChange={(e) => setCumpl(e.target.value)} style={selStyle} title="Filtrar por estado">
           <option value="">Todos los estados</option>
           <option value="pendiente">Pendientes</option>
           <option value="vencido">Vencidos</option>
           <option value="cumplido">Cumplidos</option>
         </select>
-        {hayFiltro && <button onClick={() => { setEtiquetas([]); setClientesSel([]); setCumpl(''); }} className="dbtn" style={{ fontSize: 12 }}>Limpiar</button>}
+        {hayFiltro && <button onClick={() => { setEtiquetas([]); setClientesSel([]); setAsignadosSel([]); setCumpl(''); }} className="dbtn" style={{ fontSize: 12 }}>Limpiar</button>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11, color: 'var(--muted)' }}>
           {(etiquetas.length ? etiquetas : ['Vencimientos', 'Visitas']).map((et) => (
             <span key={et} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -372,7 +395,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                           onDragStart={(e) => { setArrastrando(ev.key); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ev.key); }}
                           onDragEnd={() => { setArrastrando(null); setSobreDia(null); }}
                           onClick={() => (ev.tipo === 'visita' ? setVisitaId(ev.id) : setDetalle(ev))}
-                          title={`${ev.titulo}${ev.empresa ? ' · ' + ev.empresa : ''} · ${ev.estadoLabel}`}
+                          title={`${ev.titulo}${ev.empresa ? ' · ' + ev.empresa : ''} · ${ev.estadoLabel} · ${ev.asignado ?? 'sin asignar'}`}
                           style={{ borderLeft: `3px solid ${col}`, background: `${tinte(col, 8)}`, borderRadius: 4, padding: '3px 6px', cursor: 'grab' }}>
                           {ev.tipo === 'visita' && (
                             <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#fff', background: 'var(--peligro-solido)', borderRadius: 20, padding: '0 6px', marginBottom: 2, marginRight: 3 }}>

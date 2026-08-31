@@ -106,10 +106,14 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
       id: true, empresaId: true, obligacion: true, periodicidad: true, periodo: true,
       fechaVencimiento: true, estado: true, notas: true, soporteLink: true, valorPago: true, createdAt: true,
       empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
+      // El responsable viaja en la lista para que el calendario pueda filtrar
+      // por "Asignado" sin pedir el detalle de cada tarjeta.
+      asesorId: true, asesor: { select: { nombre: true } },
     },
   });
   const list = items.map((v) => ({
     ...v, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+    asesor: v.asesor?.nombre ?? null,
     valorPago: v.valorPago != null ? Number(v.valorPago) : null,
     vencido: v.estado === 'pendiente' && estaVencido(v.fechaVencimiento),
   }));
