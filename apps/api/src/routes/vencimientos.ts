@@ -107,7 +107,19 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
     select: {
       id: true, empresaId: true, obligacion: true, periodicidad: true, periodo: true,
       fechaVencimiento: true, estado: true, notas: true, soporteLink: true, valorPago: true, createdAt: true,
-      empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
+      // Datos del CLIENTE que viajan para el Excel. El NIT es la llave con la que
+      // la firma cruza este listado contra cualquier otro archivo (DIAN, bancos,
+      // el ERP del cliente); servicio, tipo y régimen son los cortes por los que
+      // la dirección mira la cartera. No se pintan en la tabla —no caben— pero
+      // fuera de la aplicación son la mitad del análisis.
+      empresa: {
+        select: {
+          nombre: true, nit: true, servicio: true,
+          tipo: { select: { nombre: true } },
+          regimen: { select: { nombre: true } },
+        },
+      },
+      municipio: { select: { nombre: true } },
       // El responsable viaja en la lista para que el calendario pueda filtrar
       // por "Asignado" sin pedir el detalle de cada tarjeta.
       asesorId: true, asesor: { select: { nombre: true } },
@@ -115,6 +127,10 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   });
   const list = items.map((v) => ({
     ...v, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+    nit: v.empresa?.nit ?? null,
+    servicio: v.empresa?.servicio ?? null,
+    tipoEmpresa: v.empresa?.tipo?.nombre ?? null,
+    regimen: v.empresa?.regimen?.nombre ?? null,
     asesor: v.asesor?.nombre ?? null,
     valorPago: v.valorPago != null ? Number(v.valorPago) : null,
     vencido: v.estado === 'pendiente' && estaVencido(v.fechaVencimiento),

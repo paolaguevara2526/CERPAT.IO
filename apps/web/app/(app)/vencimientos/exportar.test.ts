@@ -38,6 +38,14 @@ test('el botón dice cuántas filas va a bajar', () => {
   assert.match(fuente, /Exportar a Excel \(\$\{filtrados\.length\}\)/);
 });
 
+test('el NIT va como texto, no como número', () => {
+  // Como número, Excel le quita los ceros a la izquierda y un NIT con guión de
+  // verificación deja de ser el NIT. Es la llave con la que se cruza este
+  // listado contra los archivos de la DIAN y del banco: no puede llegar
+  // deformada.
+  assert.match(fuente, /\{ label: 'NIT', valor: \(v\) => v\.nit \?\? '' \}/);
+});
+
 test('la fecha va como Date, no como texto', () => {
   // Con la fecha formateada, la columna "Vence" del archivo no ordena ni filtra
   // por rango — que es lo primero que se hace con este listado.
@@ -48,7 +56,7 @@ test('la fecha va como Date, no como texto', () => {
 test('el archivo lleva las columnas que la tabla no muestra', () => {
   // Municipio, responsable, valor y soporte no caben en pantalla, pero fuera de
   // la aplicación son por las que se reparte y se revisa el trabajo.
-  for (const label of ['Compañía', 'Obligación', 'Período', 'Municipio', 'Vence', 'Estado', 'Responsable', 'Valor a pagar', 'Notas', 'Soporte']) {
+  for (const label of ['Compañía', 'NIT', 'Servicio', 'Tipo', 'Régimen', 'Obligación', 'Período', 'Municipio', 'Vence', 'Estado', 'Responsable', 'Valor a pagar', 'Notas', 'Soporte']) {
     assert.match(fuente, new RegExp(`label: '${label}'`), `falta la columna "${label}"`);
   }
 });

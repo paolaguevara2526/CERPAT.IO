@@ -17,6 +17,7 @@ type Venc = {
   periodo: string | null; municipio: string | null; fechaVencimiento: string; estado: string; notas: string | null; vencido: boolean;
   // Vienen del endpoint y no se pintan en la tabla (no cabrían), pero sí van al
   // Excel: son las columnas por las que se reparte y se cobra el trabajo.
+  nit?: string | null; servicio?: string | null; tipoEmpresa?: string | null; regimen?: string | null;
   asesor?: string | null; valorPago?: number | null; soporteLink?: string | null;
 };
 type Resumen = { kpis: { total: number; presentados: number; pendientes: number; vencidos: number } | null; porMes: number[] };
@@ -158,6 +159,15 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   // que se reparte y se revisa el trabajo.
   const COLUMNAS_XLSX: { label: string; valor: (v: Venc) => Celda }[] = [
     { label: 'Compañía', valor: (v) => v.empresa ?? '' },
+    // El NIT va como TEXTO, no como número: Excel le quitaría los ceros a la
+    // izquierda y un NIT con guión de verificación dejaría de ser el NIT.
+    { label: 'NIT', valor: (v) => v.nit ?? '' },
+    // Cortes del cliente: por aquí se mira la cartera (línea de servicio,
+    // naturaleza del contribuyente). En la tabla no caben; en el archivo son la
+    // mitad del análisis.
+    { label: 'Servicio', valor: (v) => v.servicio ?? '' },
+    { label: 'Tipo', valor: (v) => v.tipoEmpresa ?? '' },
+    { label: 'Régimen', valor: (v) => v.regimen ?? '' },
     { label: 'Obligación', valor: (v) => v.obligacion },
     { label: 'Periodicidad', valor: (v) => v.periodicidad ?? '' },
     { label: 'Período', valor: (v) => v.periodo ?? '' },

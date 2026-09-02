@@ -44,9 +44,11 @@ _Última actualización: 2026-08-11._
   edita **estado y fecha** de cada vencimiento en línea; el resto solo consulta.
   **Exportar a Excel** baja **lo filtrado** (no la página ni el año completo) y en
   el orden actual — el botón muestra el número de filas para que el recorte se
-  note antes de abrir el archivo. Lleva más columnas que la pantalla (municipio,
-  responsable, valor a pagar, soporte), y la fecha va como **fecha de verdad**,
-  no como texto, para que Excel ordene y filtre por rango.
+  note antes de abrir el archivo. Lleva más columnas que la pantalla: del cliente
+  (**NIT, servicio, tipo, régimen**) y de la obligación (**municipio, responsable,
+  valor a pagar, soporte**). La fecha va como **fecha de verdad**, no como texto,
+  para que Excel ordene y filtre por rango; el **NIT**, al revés, va como **texto**
+  —como número perdería los ceros a la izquierda y el dígito de verificación—.
 - **`cerpat.io/coordinacion`** — **Panel de Coordinación** (solo consulta): KPIs de
   cumplimiento del plan por área, asesor, auxiliar y clientes en riesgo
   (API `GET /plan/cumplimiento`). Los ejes asesor/auxiliar se llenan al cargar
