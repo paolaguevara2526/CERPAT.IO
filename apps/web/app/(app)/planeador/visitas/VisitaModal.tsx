@@ -8,6 +8,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import ModalMarco from '@/app/_components/ModalMarco';
 import { logoCerpat } from '@/app/_components/logo-impresion';
+import { duracionTexto } from '@/lib/duracion';
 
 type Opcion = { id: string; nombre: string };
 export const VISITA_ESTADOS: { k: string; label: string; color: string }[] = [
@@ -22,8 +23,8 @@ export const COMPROMISO_ESTADOS: { k: string; label: string; color: string }[] =
 ];
 
 type Compromiso = { id?: string; descripcion: string; fechaLimite: string; responsableTipo: 'firma' | 'cliente'; responsableId: string; responsableExterno: string; area: string; estado: string };
-type Form = { empresaId: string; responsableId: string; fecha: string; hora: string; lugar: string; area: string; objetivo: string; estado: string };
-const VACIO: Form = { empresaId: '', responsableId: '', fecha: '', hora: '', lugar: '', area: '', objetivo: '', estado: 'programada' };
+type Form = { empresaId: string; responsableId: string; fecha: string; hora: string; horaSalida: string; lugar: string; area: string; objetivo: string; estado: string };
+const VACIO: Form = { empresaId: '', responsableId: '', fecha: '', hora: '', horaSalida: '', lugar: '', area: '', objetivo: '', estado: 'programada' };
 const compromisoVacio = (): Compromiso => ({ descripcion: '', fechaLimite: '', responsableTipo: 'firma', responsableId: '', responsableExterno: '', area: '', estado: 'pendiente' });
 
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
@@ -56,6 +57,8 @@ function ListaEnumerada({ titulo, hint, icono, items, onChange, placeholder }: {
 export default function VisitaModal({ id, onClose, onSaved }: { id: string | null; onClose: () => void; onSaved?: () => void }) {
   const editar = !!id;
   const [form, setForm] = useState<Form>(VACIO);
+  // Se recalcula sola cada vez que cambian las horas.
+  const duracion = duracionTexto(form.hora, form.horaSalida);
   const [actividades, setActividades] = useState<string[]>([]);
   const [recomendaciones, setRecomendaciones] = useState<string[]>([]);
   const [observaciones, setObservaciones] = useState<string[]>([]);
@@ -81,7 +84,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
     const d = await r.json();
     if (!r.ok) { setError(d.error || 'No se pudo cargar la visita.'); return; }
     const v = d.visita;
-    setForm({ empresaId: v.empresaId ?? '', responsableId: v.responsableId ?? '', fecha: v.fecha ?? '', hora: v.hora ?? '', lugar: v.lugar ?? '', area: v.area ?? '', objetivo: v.objetivo ?? '', estado: v.estado ?? 'programada' });
+    setForm({ empresaId: v.empresaId ?? '', responsableId: v.responsableId ?? '', fecha: v.fecha ?? '', hora: v.hora ?? '', horaSalida: v.horaSalida ?? '', lugar: v.lugar ?? '', area: v.area ?? '', objetivo: v.objetivo ?? '', estado: v.estado ?? 'programada' });
     setActividades(v.actividades ?? []);
     setRecomendaciones(v.recomendaciones ?? []);
     setObservaciones(v.observaciones ?? []);
@@ -203,7 +206,10 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
       <div class="datos">
         <div><b>Cliente</b>${esc(cliente)}</div>
         <div><b>Responsable (asesor/auditor)</b>${esc(asesor)}</div>
-        <div><b>Fecha</b>${fechaLarga(form.fecha)}${form.hora ? ` · ${esc(form.hora)}` : ''}</div>
+        <div><b>Fecha</b>${fechaLarga(form.fecha)}</div>
+        <div><b>Horario</b>${form.hora || form.horaSalida
+          ? `${esc(form.hora) || '—'} a ${esc(form.horaSalida) || '—'}${duracion ? ` · <b style="color:#16294A">${esc(duracion)}</b>` : ''}`
+          : '—'}</div>
         <div><b>Estado</b>${esc(estadoLabel)}</div>
         <div><b>Área / proceso</b>${esc(form.area) || '—'}</div>
         <div><b>Lugar</b>${esc(form.lugar) || '—'}</div>
@@ -261,15 +267,29 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
                   </select>
                 </label>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr', gap: 10 }}>
                 <label><span style={lbl}>Fecha *</span><input type="date" style={input} value={form.fecha} onChange={(e) => set('fecha', e.target.value)} /></label>
-                <label><span style={lbl}>Hora</span><input type="time" style={input} value={form.hora} onChange={(e) => set('hora', e.target.value)} /></label>
+                <label><span style={lbl}>Hora de ingreso</span><input type="time" style={input} value={form.hora} onChange={(e) => set('hora', e.target.value)} /></label>
+                <label><span style={lbl}>Hora de salida</span><input type="time" style={input} value={form.horaSalida} onChange={(e) => set('horaSalida', e.target.value)} /></label>
                 <label><span style={lbl}>Estado</span>
                   <select style={input} value={form.estado} onChange={(e) => set('estado', e.target.value)}>
                     {VISITA_ESTADOS.map((s) => <option key={s.k} value={s.k}>{s.label}</option>)}
                   </select>
                 </label>
               </div>
+              {/* La duración se CALCULA, no se escribe: dos datos que digan lo
+                  mismo terminan contradiciéndose. Solo aparece cuando las dos
+                  horas están puestas; si la salida quedó antes de la entrada no
+                  se muestra nada (ver lib/duracion.ts) y el dedazo se ve. */}
+              {(form.hora || form.horaSalida) && (
+                <div style={{ fontSize: 12.5, color: duracion ? 'var(--ink)' : 'var(--muted)', marginTop: -2 }}>
+                  {duracion
+                    ? <>Duración de la visita: <b>{duracion}</b></>
+                    : form.hora && form.horaSalida
+                      ? <span style={{ color: 'var(--peligro-fuerte)', fontWeight: 600 }}>La hora de salida es anterior a la de ingreso: revisa cuál de las dos quedó mal.</span>
+                      : 'Marca las dos horas para calcular la duración.'}
+                </div>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <label><span style={lbl}>Área / proceso</span>
                   <input style={input} list="areas-acta" value={form.area} onChange={(e) => set('area', e.target.value)} placeholder="Ej. Contabilidad, Tesorería…" />

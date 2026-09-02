@@ -9,8 +9,9 @@ import SeguimientoVisitas from './SeguimientoVisitas';
 
 import { tinte } from '@/app/_components/color';
 import { fmtDia } from '@/lib/fechas';
+import { duracionTexto, duracionEnHoras } from '@/lib/duracion';
 type Visita = {
-  id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null;
+  id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null; horaSalida: string | null;
   objetivo: string | null; estado: string; compromisosTotal: number; compromisosPendientes: number; compromisosCumplidos: number;
 };
 
@@ -22,9 +23,9 @@ function fFecha(iso: string) { try { return fmtDia(iso, { day: '2-digit', month:
 const estadoMeta = (k: string) => VISITA_ESTADOS.find((s) => s.k === k) ?? { label: k, color: 'var(--muted)' };
 
 // Columnas filtrables y el valor por el que se filtra cada una.
-const COLS = ['fecha', 'cliente', 'responsable', 'objetivo', 'estado', 'compromisos'] as const;
+const COLS = ['fecha', 'cliente', 'responsable', 'objetivo', 'duracion', 'estado', 'compromisos'] as const;
 type Col = (typeof COLS)[number];
-const sinFiltros = (): Record<Col, Set<string> | null> => ({ fecha: null, cliente: null, responsable: null, objetivo: null, estado: null, compromisos: null });
+const sinFiltros = (): Record<Col, Set<string> | null> => ({ fecha: null, cliente: null, responsable: null, objetivo: null, duracion: null, estado: null, compromisos: null });
 const catCompromisos = (v: Visita) => v.compromisosTotal === 0 ? 'Sin compromisos' : v.compromisosCumplidos === v.compromisosTotal ? 'Todos cumplidos' : 'Con pendientes';
 function valorDe(v: Visita, c: Col): string {
   switch (c) {
@@ -34,6 +35,10 @@ function valorDe(v: Visita, c: Col): string {
     case 'objetivo': return v.objetivo ?? '';
     case 'estado': return estadoMeta(v.estado).label;
     case 'compromisos': return catCompromisos(v);
+    // "Sin registrar" es una categoría de filtro por derecho propio: es la lista
+    // de actas a las que les falta marcar la salida, y sin ella esas visitas no
+    // cuentan en las horas.
+    case 'duracion': return duracionTexto(v.hora, v.horaSalida) || 'Sin registrar';
   }
 }
 
@@ -80,6 +85,19 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
     () => visitas.filter((v) => COLS.every((c) => { const sel = filtros[c]; return sel == null || sel.has(valorDe(v, c)); })),
     [visitas, filtros],
   );
+  // Horas del recorte que se está viendo. Es el número por el que se pidió la
+  // hora de salida: no basta con registrarla acta por acta, hay que poder sumar.
+  // Se cuentan también las actas SIN salida, aparte, porque un total que ignora
+  // en silencio la mitad de las visitas es peor que no tener total.
+  const horas = useMemo(() => {
+    let total = 0, conDuracion = 0, sinRegistrar = 0;
+    for (const v of visitasFiltradas) {
+      const h = duracionEnHoras(v.hora, v.horaSalida);
+      if (h == null) sinRegistrar++; else { total += h; conDuracion++; }
+    }
+    return { total: Math.round(total * 100) / 100, conDuracion, sinRegistrar };
+  }, [visitasFiltradas]);
+
   const hayFiltro = COLS.some((c) => filtros[c] != null);
   const setFiltro = (c: Col, s: Set<string> | null) => setFiltros((f) => ({ ...f, [c]: s }));
 
@@ -123,6 +141,14 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{visitasFiltradas.length}{hayFiltro ? ` de ${visitas.length}` : ''} visita(s)</span>
+        {(horas.conDuracion > 0 || horas.sinRegistrar > 0) && (
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+            · <b style={{ color: 'var(--ink)' }}>{horas.total.toLocaleString('es-CO', { maximumFractionDigits: 2 })} h</b> en sitio
+            {horas.sinRegistrar > 0 && (
+              <span title="Actas sin hora de salida: no entran en el total" style={{ color: 'var(--peligro)', fontWeight: 600 }}> · {horas.sinRegistrar} sin registrar</span>
+            )}
+          </span>
+        )}
         {hayFiltro && <button className="dbtn" onClick={() => setFiltros(sinFiltros())} style={{ fontSize: 12 }}>Limpiar filtros</button>}
       </div>
 
@@ -134,16 +160,17 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
               {th('cliente', 'Cliente', true)}
               {th('responsable', 'Responsable', true)}
               {th('objetivo', 'Objetivo', true)}
+              {th('duracion', 'Duración', false, { width: 110 })}
               {th('estado', 'Estado', false, { width: 130 })}
               {th('compromisos', 'Compromisos', false, { width: 140 })}
             </tr></thead>
             <tbody>
               {cargando ? (
-                <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
+                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
               ) : visitas.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin visitas este mes.</td></tr>
+                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin visitas este mes.</td></tr>
               ) : visitasFiltradas.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Ninguna visita cumple los filtros.</td></tr>
+                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Ninguna visita cumple los filtros.</td></tr>
               ) : visitasFiltradas.map((v) => {
                 const em = estadoMeta(v.estado);
                 return (
@@ -152,6 +179,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
                     <td style={{ fontWeight: 600 }}>{v.empresa ?? '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{v.responsable ?? '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{v.objetivo ?? '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12.5 }} title={v.hora || v.horaSalida ? `${v.hora ?? '—'} a ${v.horaSalida ?? '—'}` : undefined}>{duracionTexto(v.hora, v.horaSalida) || '—'}</td>
                     <td><span style={{ fontSize: 11.5, fontWeight: 800, color: em.color, background: `${tinte(em.color, 12)}`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span></td>
                     <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{v.compromisosTotal === 0 ? '—' : `${v.compromisosCumplidos}/${v.compromisosTotal} cumplidos`}</td>
                   </tr>

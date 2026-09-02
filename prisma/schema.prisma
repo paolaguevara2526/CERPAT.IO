@@ -1305,7 +1305,12 @@ model Visita {
   empresaId       String
   responsableId   String? // asesor o auditor que realiza la visita
   fecha           DateTime // fecha de la visita
-  hora            String? // "HH:MM" opcional
+  hora            String? // "HH:MM" de INGRESO, opcional
+  // Hora de SALIDA. Con la de ingreso da las horas que se trabajaron en sitio,
+  // que es lo que la firma necesita para cobrar y para repartir la agenda. Va
+  // como texto "HH:MM" igual que la entrada: una visita ocurre a una hora local
+  // y convertirla a instante solo abre la puerta al corrimiento de un día.
+  horaSalida      String?
   lugar           String? // lugar de la visita (opcional)
   area            String? // área / proceso principal de la visita
   objetivo        String? // objetivo / motivo de la visita

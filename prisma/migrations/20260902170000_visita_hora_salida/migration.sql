@@ -1,0 +1,14 @@
+-- Hora de SALIDA en el acta de visita.
+--
+-- El acta registraba solo la hora de ingreso, así que no había forma de saber
+-- cuánto tiempo se le dedica en sitio a cada cliente — que es lo que la firma
+-- necesita para cobrar y para repartir la agenda.
+--
+-- Va como texto "HH:MM", igual que la hora de entrada: una visita ocurre a una
+-- hora LOCAL, y guardarla como instante solo abre la puerta al corrimiento de
+-- un día que ya nos costó correcciones en las fechas y en el Excel.
+--
+-- Nullable a propósito: las visitas ya registradas no tienen este dato y no se
+-- puede inventar, y durante la visita el acta se llena por partes (la salida se
+-- marca al final).
+ALTER TABLE "visitas" ADD COLUMN IF NOT EXISTS "horaSalida" TEXT;
