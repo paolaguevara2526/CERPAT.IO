@@ -11,11 +11,25 @@ type Empresa = {
   id: string; nombre: string; nit: string | null; servicio: string | null; asesorNombre: string | null; activo: boolean; grupoId: string | null;
   tipoId: string | null; regimenId: string | null;
   tipo?: { nombre: string } | null; regimen?: { nombre: string } | null;
+  // Asesor real, el de las asignaciones por área. `asesorNombre` es el texto
+  // viejo de la importación y solo se muestra como respaldo, marcado como tal.
+  asesores?: { area: string; asesor: string }[];
   emailRepresentante: string | null; emailAdministracion: string | null; emailContabilidad: string | null; emailTalentoHumano: string | null; emailTesoreria: string | null;
   almacenBytes?: number; almacenDocs?: number;
 };
 type Grupo = { id: string; nombre: string };
-type Form = Omit<Empresa, 'id' | 'activo' | 'tipo' | 'regimen'> & { activo: boolean };
+type Usuario = { id: string; nombre: string; roles: string[] };
+type Form = Omit<Empresa, 'id' | 'activo' | 'tipo' | 'regimen' | 'asesores'> & { activo: boolean; asesorId: string };
+
+// Los mismos que en Plan por cliente: de la asignación cliente×área heredan
+// asesor y auxiliar todas las tareas y los vencimientos, y un auxiliar puesto de
+// asesor no se nota al guardarlo — se nota semanas después.
+const ROLES_ASESOR = ['Asesor', 'Coordinador', 'Administrador'];
+
+/** Nombres de los asesores de un cliente, sin repetir, en el orden de las áreas. */
+function asesoresDe(e: Empresa): string[] {
+  return [...new Set((e.asesores ?? []).map((a) => a.asesor))];
+}
 
 const EMAILS: { k: keyof Form; label: string }[] = [
   { k: 'emailRepresentante', label: 'Representante' },
@@ -24,7 +38,7 @@ const EMAILS: { k: keyof Form; label: string }[] = [
   { k: 'emailTalentoHumano', label: 'Talento humano' },
   { k: 'emailTesoreria', label: 'Tesorería' },
 ];
-const vacio = (): Form => ({ nombre: '', nit: '', servicio: '', asesorNombre: '', activo: true, grupoId: '', tipoId: '', regimenId: '', emailRepresentante: '', emailAdministracion: '', emailContabilidad: '', emailTalentoHumano: '', emailTesoreria: '' });
+const vacio = (): Form => ({ nombre: '', nit: '', servicio: '', asesorNombre: '', asesorId: '', activo: true, grupoId: '', tipoId: '', regimenId: '', emailRepresentante: '', emailAdministracion: '', emailContabilidad: '', emailTalentoHumano: '', emailTesoreria: '' });
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 3 };
 
@@ -34,6 +48,7 @@ export default function EmpresasEditor() {
   const [tipos, setTipos] = useState<Grupo[]>([]);
   const [regimenes, setRegimenes] = useState<Grupo[]>([]);
   const [servicios, setServicios] = useState<Grupo[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [incluirInactivos, setIncluirInactivos] = useState(false);
   const [q, setQ] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +72,12 @@ export default function EmpresasEditor() {
       fetch(`/api/admin/catalogos/${t}`, { cache: 'no-store' }).then((r) => r.json()).then((d) => set(d.items ?? [])).catch(() => {});
     cat('grupos', setGrupos); cat('tipos-empresa', setTipos); cat('regimenes', setRegimenes);
     cat('tipos-servicio', setServicios);
+    // Los asesores salen de los usuarios de la firma, no de un texto escrito a
+    // mano: es la lista de la que se elige y la que reparte el trabajo.
+    fetch('/api/admin/usuarios', { cache: 'no-store' }).then((r) => r.json())
+      .then((d) => setUsuarios((d.usuarios ?? []).filter((u: any) => u.activo !== false)
+        .map((u: any) => ({ id: u.id, nombre: u.nombre, roles: (u.roles ?? []).map((r: any) => r.nombre) }))))
+      .catch(() => {});
   }, []);
 
   async function toggleActivo(e: Empresa) {
@@ -71,13 +92,15 @@ export default function EmpresasEditor() {
     else { const d = await res.json(); setError(d.error || 'No se pudo eliminar.'); }
   }
 
-  const filtrada = items.filter((e) => !q || `${e.nombre} ${e.nit ?? ''} ${e.asesorNombre ?? ''}`.toLowerCase().includes(q.toLowerCase()));
+  // Se busca por el asesor real (asignaciones) y también por el texto viejo:
+  // mientras queden clientes sin asignar, ese texto es lo único que hay.
+  const filtrada = items.filter((e) => !q || `${e.nombre} ${e.nit ?? ''} ${asesoresDe(e).join(' ')} ${e.asesorNombre ?? ''}`.toLowerCase().includes(q.toLowerCase()));
 
   async function descargar() {
     const encabezado = ['Cliente', 'NIT', 'Tipo', 'Servicio', 'Grupo', 'Asesor', 'Régimen', 'Activo',
       'Email representante', 'Email administración', 'Email contabilidad', 'Email talento humano', 'Email tesorería'];
     const filas = filtrada.map((e) => [
-      e.nombre, e.nit ?? '', e.tipo?.nombre ?? '', e.servicio ?? '', nombreGrupo(e.grupoId) ?? '', e.asesorNombre ?? '', e.regimen?.nombre ?? '', e.activo ? 'Sí' : 'No',
+      e.nombre, e.nit ?? '', e.tipo?.nombre ?? '', e.servicio ?? '', nombreGrupo(e.grupoId) ?? '', asesoresDe(e).join(', ') || (e.asesorNombre ? `${e.asesorNombre} (sin asignar)` : ''), e.regimen?.nombre ?? '', e.activo ? 'Sí' : 'No',
       e.emailRepresentante ?? '', e.emailAdministracion ?? '', e.emailContabilidad ?? '', e.emailTalentoHumano ?? '', e.emailTesoreria ?? '',
     ]);
     try {
@@ -119,7 +142,18 @@ export default function EmpresasEditor() {
                   </td>
                   <td style={{ color: 'var(--muted)' }}>{e.servicio ?? '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>{nombreGrupo(e.grupoId) ?? '—'}</td>
-                  <td style={{ color: 'var(--muted)' }}>{e.asesorNombre ?? '—'}</td>
+                  {/* El asesor de las asignaciones, que es el que recibe el
+                      trabajo. Si no hay ninguno se dice "sin asignar" aunque
+                      quede el texto viejo: dar por asignado a un cliente cuyo
+                      trabajo no le llega a nadie es justo el error que costó
+                      encontrar los vencimientos huérfanos. */}
+                  <td style={{ color: asesoresDe(e).length ? 'var(--muted)' : 'var(--alerta-fuerte)', fontWeight: asesoresDe(e).length ? 400 : 700 }}>
+                    {asesoresDe(e).length
+                      ? asesoresDe(e).join(', ')
+                      : <span title={e.asesorNombre ? `Solo figura "${e.asesorNombre}" en el texto de la importación, que no asigna trabajo.` : undefined}>
+                          sin asignar{e.asesorNombre ? ' *' : ''}
+                        </span>}
+                  </td>
                   <td style={{ color: 'var(--muted)' }}>{e.regimen?.nombre ?? '—'}</td>
                   <td style={{ whiteSpace: 'nowrap', color: (e.almacenBytes ?? 0) > 0 ? 'var(--ink)' : 'var(--muted)', fontSize: 12.5 }}>{(e.almacenBytes ?? 0) > 0 ? `${fmtBytes(e.almacenBytes ?? 0)} · ${e.almacenDocs ?? 0} doc` : '—'}</td>
                   <td><button onClick={() => toggleActivo(e)} title={e.activo ? 'Activo' : 'Inactivo'} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>{e.activo ? '🟢' : '⚪'}</button></td>
@@ -134,22 +168,31 @@ export default function EmpresasEditor() {
         </div>
       </div>
 
-      {editar && <Editor empresa={editar} grupos={grupos} tipos={tipos} regimenes={regimenes} servicios={servicios} onClose={() => { setEditar(null); cargar(); }} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
+      {editar && <Editor empresa={editar} grupos={grupos} tipos={tipos} regimenes={regimenes} servicios={servicios} usuarios={usuarios} onClose={() => { setEditar(null); cargar(); }} onGuardado={() => { setEditar(null); cargar(); }} onError={setError} />}
     </div>
   );
 }
 
 const ic = (color: string): React.CSSProperties => ({ border: 'none', background: 'none', cursor: 'pointer', color, fontSize: 14, padding: '2px 5px' });
 
-function Editor({ empresa, grupos, tipos, regimenes, servicios, onClose, onGuardado, onError }: { empresa: Empresa | 'nuevo'; grupos: Grupo[]; tipos: Grupo[]; regimenes: Grupo[]; servicios: Grupo[]; onClose: () => void; onGuardado: () => void; onError: (m: string) => void }) {
+function Editor({ empresa, grupos, tipos, regimenes, servicios, usuarios, onClose, onGuardado, onError }: { empresa: Empresa | 'nuevo'; grupos: Grupo[]; tipos: Grupo[]; regimenes: Grupo[]; servicios: Grupo[]; usuarios: Usuario[]; onClose: () => void; onGuardado: () => void; onError: (m: string) => void }) {
   const nuevo = empresa === 'nuevo';
   const [form, setForm] = useState<Form>(nuevo ? vacio() : {
-    nombre: empresa.nombre, nit: empresa.nit ?? '', servicio: empresa.servicio ?? '', asesorNombre: empresa.asesorNombre ?? '', activo: empresa.activo, grupoId: empresa.grupoId ?? '',
+    nombre: empresa.nombre, nit: empresa.nit ?? '', servicio: empresa.servicio ?? '', asesorNombre: empresa.asesorNombre ?? '', asesorId: '', activo: empresa.activo, grupoId: empresa.grupoId ?? '',
     tipoId: empresa.tipoId ?? '', regimenId: empresa.regimenId ?? '',
     emailRepresentante: empresa.emailRepresentante ?? '', emailAdministracion: empresa.emailAdministracion ?? '', emailContabilidad: empresa.emailContabilidad ?? '', emailTalentoHumano: empresa.emailTalentoHumano ?? '', emailTesoreria: empresa.emailTesoreria ?? '',
   });
   const [guardando, setGuardando] = useState(false);
   const set = (k: keyof Form, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  // La casilla ofrece primero a quienes tienen rol de asesor, pero no bloquea a
+  // los demás: a veces alguien cubre fuera de su rol, y prohibirlo obligaría a
+  // pelear con la herramienta.
+  const cumple = (u: Usuario) => u.roles.some((r) => ROLES_ASESOR.includes(r));
+  const asesores = usuarios.filter(cumple);
+  const otros = usuarios.filter((u) => !cumple(u));
+  const yaAsignado = nuevo ? [] : asesoresDe(empresa);
+  const porArea = nuevo ? [] : (empresa.asesores ?? []);
 
   async function guardar() {
     if (!form.nombre.trim()) { onError('El nombre del cliente es obligatorio.'); return; }
@@ -215,13 +258,47 @@ function Editor({ empresa, grupos, tipos, regimenes, servicios, onClose, onGuard
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <label><span style={lbl}>Asesor (nombre)</span><input style={input} value={form.asesorNombre ?? ''} onChange={(e) => set('asesorNombre', e.target.value)} /></label>
+            <label><span style={lbl}>Asesor</span>
+              {/* Se elige de la lista de la firma, no se escribe: lo que reparte
+                  el trabajo es la asignación por área, y un nombre tecleado no
+                  le pone dueño a nada. */}
+              <select style={input} value={form.asesorId} onChange={(e) => set('asesorId', e.target.value)}>
+                <option value="">{yaAsignado.length ? `— Sin cambios (${yaAsignado.join(', ')}) —` : '— Sin asesor —'}</option>
+                {asesores.length > 0 && (
+                  <optgroup label="Asesores">
+                    {asesores.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                  </optgroup>
+                )}
+                {otros.length > 0 && (
+                  <optgroup label="Otros (revisar)">
+                    {otros.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                  </optgroup>
+                )}
+              </select>
+            </label>
             <label><span style={lbl}>Grupo empresarial</span>
               <select style={input} value={form.grupoId ?? ''} onChange={(e) => set('grupoId', e.target.value)}>
                 <option value="">— Sin grupo —</option>
                 {grupos.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
               </select>
             </label>
+          </div>
+          {/* Qué hace exactamente elegir un asesor aquí. Sin decirlo, la casilla
+              parecería el reparto completo del cliente y no lo es: llena las
+              áreas huérfanas y respeta las que la coordinación ya repartió. */}
+          <div style={{ background: 'var(--panel-2)', border: '1px solid var(--edge)', borderRadius: 6, padding: '8px 11px', fontSize: 11.5, lineHeight: 1.55, color: 'var(--muted)', marginTop: -4 }}>
+            {porArea.length > 0 ? (
+              <>
+                <strong style={{ color: 'var(--ink)' }}>Asignado hoy:</strong>{' '}
+                {porArea.map((a) => `${a.area}: ${a.asesor}`).join(' · ')}.
+                {' '}Elegir un asesor aquí solo llena las áreas que <strong>no</strong> tienen ninguno; lo ya repartido no se toca.
+                Para cambiarlo, <em>Plan por cliente</em>.
+              </>
+            ) : (
+              <>El asesor queda asignado en <strong>todas las áreas</strong> del cliente, y de ahí lo heredan sus tareas
+              y vencimientos. Si cada área lleva un asesor distinto, se reparte en <em>Plan por cliente</em>.
+              {!nuevo && form.asesorNombre ? <> Hoy este cliente solo tiene el texto «{form.asesorNombre}» de la importación, que <strong>no asigna trabajo</strong>.</> : null}</>
+            )}
           </div>
           <div>
             <span style={lbl}>Correos de contacto</span>
