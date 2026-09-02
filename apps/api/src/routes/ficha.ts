@@ -24,7 +24,7 @@ import { CIIU_REV4_AC, SECCIONES_CIIU } from '../fiscal/ciiu-rev4-ac.js';
 // casar una fila con el cliente equivocado le escribe cifras ajenas y de ahí
 // salen mal sus obligaciones, sin que nada falle.
 import { indexar, emparejar, montoDe, anioValido } from '../fiscal/importar-cifras.js';
-import { horasPactadas } from '../fiscal/contrato.js';
+import { horasPactadas, mesesContrato } from '../fiscal/contrato.js';
 
 export const fichaRouter = Router();
 
@@ -215,7 +215,8 @@ fichaRouter.get('/:empresaId', requireAuth, async (req: AuthedRequest, res) => {
       id: true, nombre: true, nit: true, activo: true, servicio: true,
       direccion: true, emailDian: true, telefonoDian: true, emailCamara: true, telefonoCamara: true,
       fechaConstitucion: true,
-      contratoDesde: true, horasPactadasMes: true, alcanceServicio: true,
+      contratoDesde: true, mesesContrato: true, contratoHasta: true,
+      horasPactadasMes: true, alcanceServicio: true,
       tipoId: true, regimenId: true,
       tipo: { select: { nombre: true } },
       regimen: { select: { nombre: true } },
@@ -251,6 +252,11 @@ fichaRouter.patch('/:empresaId', requireAuth, async (req: AuthedRequest, res) =>
   }
   if ('fechaConstitucion' in b) data.fechaConstitucion = fecha(b.fechaConstitucion);
   if ('contratoDesde' in b) data.contratoDesde = fecha(b.contratoDesde);
+  if ('contratoHasta' in b) data.contratoHasta = fecha(b.contratoHasta);
+  // Los meses no se validan contra la fecha de terminación a propósito: una
+  // prórroga puede terminar en una fecha que no cuadre con el plazo, y ahí manda
+  // el papel. La pantalla avisa de la discrepancia; el backend no la impone.
+  if ('mesesContrato' in b) data.mesesContrato = mesesContrato(b.mesesContrato);
   // Las horas pactadas se miden contra las ejecutadas, así que un valor
   // imposible aquí desviaría el indicador en silencio (ver fiscal/contrato.ts).
   if ('horasPactadasMes' in b) data.horasPactadasMes = horasPactadas(b.horasPactadasMes);

@@ -32,6 +32,12 @@ Todas (salvo `Organizacion` y el root) pertenecen a una organización vía
 
 - **`Empresa`** (clientes) — nombre, NIT y FKs a catálogos (tipo, sector,
   régimen, periodicidad de IVA, municipio). Hoy ~60 empresas, proyectado a 200.
+  Contrato de servicio: `contratoDesde`, `mesesContrato`, `contratoHasta`,
+  `horasPactadasMes` (decimal, **por mes**) y `alcanceServicio`. Los tres datos
+  de vigencia se guardan **tal como los registre la firma**: el esquema no impone
+  que `contratoHasta` cuadre con `contratoDesde + mesesContrato`, porque una
+  prórroga puede no cuadrar; la ficha avisa de la discrepancia (ver
+  [reglas de negocio](./reglas-de-negocio.md)).
 - **`Usuario`** — nombre, email (único por organización), `passwordHash`,
   `activo`, `esRootPlataforma`. Roles vía `Rol` + `UsuarioRol` (muchos-a-muchos):
   Administrador, Asesor, Auditor, Auxiliar (roles definidos por organización).

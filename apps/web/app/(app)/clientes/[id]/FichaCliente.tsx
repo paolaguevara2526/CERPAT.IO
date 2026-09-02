@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import ObligacionesCliente from './ObligacionesCliente';
 import SituacionTributaria from './SituacionTributaria';
 import PickerCiiu from './PickerCiiu';
+import { finDeContrato, fechasCoherentes, estadoContrato, diasParaVencer } from '@/lib/contrato';
 
 type Actividad = { id: string; codigo: string; descripcion: string | null; principal: boolean; orden: number };
 type Representante = { id: string; nombre: string; documento: string | null; cargo: string | null; principal: boolean; desde: string | null; hasta: string | null; email: string | null; telefono: string | null };
@@ -22,7 +23,8 @@ type Ficha = {
   emailCamara: string | null; telefonoCamara: string | null; fechaConstitucion: string | null;
   // horasPactadasMes viaja como número del servidor y como texto mientras se
   // edita: el input entrega cadenas.
-  contratoDesde: string | null; horasPactadasMes: number | string | null; alcanceServicio: string | null;
+  contratoDesde: string | null; mesesContrato: number | string | null; contratoHasta: string | null;
+  horasPactadasMes: number | string | null; alcanceServicio: string | null;
   tipoId: string | null; regimenId: string | null;
   tipo: { nombre: string } | null; regimen: { nombre: string } | null;
   municipio: { nombre: string; departamento: string | null } | null;
@@ -35,6 +37,14 @@ const inp: React.CSSProperties = {
 };
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 4 };
 const soloFecha = (iso: string | null) => (iso ? iso.slice(0, 10) : '');
+// Hoy en día calendario local. No sirve toISOString(): en Colombia devolvería
+// el día siguiente después de las 7 p.m., y un contrato aparecería vencido una
+// tarde antes de tiempo.
+const hoyISO = () => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
 
 export default function FichaCliente({ empresaId }: { empresaId: string }) {
   const [f, setF] = useState<Ficha | null>(null);
@@ -69,6 +79,8 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
         emailCamara: f.emailCamara, telefonoCamara: f.telefonoCamara,
         fechaConstitucion: soloFecha(f.fechaConstitucion),
         contratoDesde: soloFecha(f.contratoDesde),
+        mesesContrato: f.mesesContrato ?? '',
+        contratoHasta: soloFecha(f.contratoHasta),
         horasPactadasMes: f.horasPactadasMes ?? '',
         alcanceServicio: f.alcanceServicio ?? '',
         tipoId: f.tipoId ?? '', regimenId: f.regimenId ?? '',
@@ -178,14 +190,64 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
             <input type="date" style={inp} disabled={!editable} value={soloFecha(f.contratoDesde)} onChange={(e) => set('contratoDesde', e.target.value)} />
           </div>
           <div>
+            <span style={lbl}>Meses del contrato</span>
+            <input type="number" min={1} step={1} inputMode="numeric" style={inp} disabled={!editable}
+              value={f.mesesContrato ?? ''} placeholder="Ej. 12"
+              onChange={(e) => {
+                const meses = e.target.value;
+                // La terminación se PROPONE a partir del plazo, y solo si está
+                // vacía: si ya hay una fecha guardada manda esa, porque una
+                // prórroga puede terminar donde no cuadra con la aritmética.
+                const propuesta = !soloFecha(f.contratoHasta) ? finDeContrato(soloFecha(f.contratoDesde), meses) : null;
+                setF((p) => (p ? { ...p, mesesContrato: meses, ...(propuesta ? { contratoHasta: propuesta } : {}) } : p));
+              }} />
+            <span style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginTop: 4 }}>
+              Al escribirlo se propone la fecha de terminación, si está vacía.
+            </span>
+          </div>
+          <div>
+            <span style={lbl}>Fecha de terminación</span>
+            <input type="date" style={inp} disabled={!editable} value={soloFecha(f.contratoHasta)} onChange={(e) => set('contratoHasta', e.target.value)} />
+          </div>
+          <div>
             <span style={lbl}>Horas pactadas al mes</span>
             <input type="number" min={0} step={0.5} inputMode="decimal" style={inp} disabled={!editable}
               value={f.horasPactadasMes ?? ''} onChange={(e) => set('horasPactadasMes', e.target.value)} placeholder="Ej. 8" />
             <span style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginTop: 4 }}>
-              Contra esto se comparan las horas de las visitas y reuniones del mes.
+              Son horas por mes. Contra esto se comparan las de las visitas y reuniones del mes.
             </span>
           </div>
         </div>
+
+        {/* Vigencia. Avisa antes de que se venza, que es cuando todavía se
+            puede renovar; después ya se está atendiendo sin papel vigente. */}
+        {(() => {
+          const hasta = soloFecha(f.contratoHasta);
+          const estado = estadoContrato(hasta, hoyISO());
+          const dias = diasParaVencer(hasta, hoyISO());
+          const coherente = fechasCoherentes(soloFecha(f.contratoDesde), f.mesesContrato, hasta);
+          const calculada = finDeContrato(soloFecha(f.contratoDesde), f.mesesContrato);
+          if (estado === 'sin_fecha' && coherente) return null;
+          const tono = estado === 'vencido'
+            ? { color: 'var(--peligro-fuerte)', background: 'var(--peligro-suave)', borderColor: 'var(--peligro-borde)' }
+            : estado === 'por_vencer'
+              ? { color: 'var(--alerta-fuerte)', background: 'var(--alerta-suave)', borderColor: 'var(--alerta-borde)' }
+              : { color: 'var(--muted)', background: 'var(--panel-2)', borderColor: 'var(--edge)' };
+          return (
+            <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 6, border: '1px solid', fontSize: 12.5, lineHeight: 1.6, ...tono }}>
+              {estado === 'vencido' && <div><strong>⚠ Contrato vencido</strong> hace {Math.abs(dias ?? 0)} día{Math.abs(dias ?? 0) === 1 ? '' : 's'}.</div>}
+              {estado === 'por_vencer' && <div><strong>⏳ Vence en {dias} día{dias === 1 ? '' : 's'}.</strong> Es el momento de renovar o prorrogar.</div>}
+              {estado === 'vigente' && <div>✓ Vigente. Faltan {dias} días para la terminación.</div>}
+              {!coherente && (
+                // No se corrige sola: si el papel dice otra cosa, manda el papel.
+                <div style={{ marginTop: estado === 'sin_fecha' ? 0 : 6 }}>
+                  La fecha de terminación no cuadra con el plazo: {f.mesesContrato} meses desde el inicio
+                  darían el <strong>{calculada}</strong>. Si es una prórroga, déjala como está.
+                </div>
+              )}
+            </div>
+          );
+        })()}
         <div style={{ marginTop: 12 }}>
           <span style={lbl}>Alcance del servicio</span>
           <textarea style={{ ...inp, minHeight: 92, resize: 'vertical', lineHeight: 1.5 }} disabled={!editable}
