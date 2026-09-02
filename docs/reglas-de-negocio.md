@@ -509,6 +509,26 @@ en las vistas internas — forzado en el backend (`esStaffAcotado`):
   trabajo que el sistema ya tiene registrado a nombre de quien mira.
 - **Pagos** → solo vencimientos de sus **empresas asignadas**.
 
+**Responsable de un vencimiento: cascada, no un solo camino.** Al crearse (y al
+rellenar uno viejo) el responsable se resuelve así, en orden:
+
+1. **El área de la obligación** — obligación → actividad del plan vinculada → su
+   área → asignación cliente×área. Es la respuesta precisa y manda siempre que
+   exista.
+2. **La empresa, si tiene un solo asesor** en todas sus áreas. Es el caso
+   corriente —un cliente que lleva una sola persona— y ahí no hay nada que
+   adivinar. El auxiliar sigue el mismo criterio: si hay varios, va vacío.
+3. **Sin dueño**, y se cuenta y se informa al regenerar.
+
+Antes solo existía el camino 1: cuatro eslabones, y si faltaba cualquiera el
+vencimiento nacía **sin responsable, en silencio** — no le aparece a nadie en
+*Mi Día* y se descubre cuando ya está vencido. Pasó con FOPAT, con PILA, y se vio
+de golpe al exportar los vencimientos a Excel.
+
+Con **varios asesores** en la empresa y el área sin resolver **no se reparte a
+dedo**: ahí el área es la única respuesta correcta. Un vencimiento sin dueño se ve
+y se reclama; uno con el dueño equivocado se trabaja mal.
+
 **Abonos (pagos parciales): quién los registra.** Registrar un abono lo pueden
 **Administrador, Coordinador y Asesor** — son quienes hacen el seguimiento de
 cartera y quienes se enteran de que el cliente abonó; tener que pedírselo a
