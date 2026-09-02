@@ -17,6 +17,7 @@ import { transicion, puedePresentar, actorDe, EVENTO_DE, type EstadoRevision, ty
 import { estaVencido } from '../plan/dia-calendario.js';
 import { filtroAlcance, filtroMes } from '../vencimientos/alcance-lista.js';
 import { puedeRegistrarAbono, puedeEliminarAbono, abonoEnAlcance } from '../vencimientos/abonos.js';
+import { resolverResponsable } from '../vencimientos/responsable.js';
 
 const ACCIONES_REVISION = ['iniciar', 'enviar', 'devolver', 'aprobar', 'reabrir'];
 
@@ -106,7 +107,19 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
     select: {
       id: true, empresaId: true, obligacion: true, periodicidad: true, periodo: true,
       fechaVencimiento: true, estado: true, notas: true, soporteLink: true, valorPago: true, createdAt: true,
-      empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
+      // Datos del CLIENTE que viajan para el Excel. El NIT es la llave con la que
+      // la firma cruza este listado contra cualquier otro archivo (DIAN, bancos,
+      // el ERP del cliente); servicio, tipo y régimen son los cortes por los que
+      // la dirección mira la cartera. No se pintan en la tabla —no caben— pero
+      // fuera de la aplicación son la mitad del análisis.
+      empresa: {
+        select: {
+          nombre: true, nit: true, servicio: true,
+          tipo: { select: { nombre: true } },
+          regimen: { select: { nombre: true } },
+        },
+      },
+      municipio: { select: { nombre: true } },
       // El responsable viaja en la lista para que el calendario pueda filtrar
       // por "Asignado" sin pedir el detalle de cada tarjeta.
       asesorId: true, asesor: { select: { nombre: true } },
@@ -114,6 +127,10 @@ vencimientosRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   });
   const list = items.map((v) => ({
     ...v, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null,
+    nit: v.empresa?.nit ?? null,
+    servicio: v.empresa?.servicio ?? null,
+    tipoEmpresa: v.empresa?.tipo?.nombre ?? null,
+    regimen: v.empresa?.regimen?.nombre ?? null,
     asesor: v.asesor?.nombre ?? null,
     valorPago: v.valorPago != null ? Number(v.valorPago) : null,
     vencido: v.estado === 'pendiente' && estaVencido(v.fechaVencimiento),
@@ -784,30 +801,42 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
   const asigAreas = await prisma.asignacionClienteArea.findMany({
     where: { empresaId: empresa.id }, select: { areaId: true, asesorId: true, auxiliarId: true },
   });
-  const respPorArea = new Map(asigAreas.map((x) => [x.areaId, { asesorId: x.asesorId, auxiliarId: x.auxiliarId }]));
-  // Extras de creación (responsable + checklist) según la obligación del vencimiento.
-  const extrasCreacion = (obligacion: string) => {
+  // Cuántos se crean SIN dueño. Se cuenta y se devuelve: que un vencimiento nazca
+  // sin responsable puede ser correcto (una empresa con varios asesores y el área
+  // sin parametrizar), pero tiene que verse al regenerar y no semanas después.
+  let sinResponsable = 0;
+  // El responsable sale de la cascada de vencimientos/responsable.ts: el área de
+  // la obligación y, si esa no se puede resolver, la empresa cuando tiene un
+  // solo asesor. Antes solo existía el primer camino y cualquier eslabón que
+  // faltara dejaba el vencimiento sin dueño, en silencio.
+  const responsableDe = (obligacion: string) => {
     const key = vinculoDeObligacion(obligacion);
     const vinc = key ? vincPorKey.get(key) : undefined;
-    const resp = vinc?.areaId ? respPorArea.get(vinc.areaId) : undefined;
+    return { vinc, resp: resolverResponsable(vinc?.areaId, asigAreas) };
+  };
+  // Extras de creación (responsable + checklist) según la obligación del vencimiento.
+  const extrasCreacion = (obligacion: string) => {
+    const { vinc, resp } = responsableDe(obligacion);
+    if (resp.origen === 'ninguno') sinResponsable++;
     return {
-      asesorId: resp?.asesorId ?? null,
-      auxiliarId: resp?.auxiliarId ?? null,
+      asesorId: resp.asesorId,
+      auxiliarId: resp.auxiliarId,
       ...(vinc?.subtareas.length ? { subtareas: { create: vinc.subtareas.map((s) => ({ texto: s.texto, orden: s.orden })) } } : {}),
     };
   };
-  // Relleno para un vencimiento EXISTENTE vinculado: responsable si está vacío y
-  // checklist si aún no tiene ninguna subtarea. Devuelve null si no hay nada que
-  // rellenar. No sobrescribe chulos ni un responsable ya asignado.
+  // Relleno para un vencimiento EXISTENTE: responsable si está vacío y checklist
+  // si aún no tiene ninguna subtarea. Devuelve null si no hay nada que rellenar.
+  // No sobrescribe chulos ni un responsable ya asignado.
+  //
+  // Ya no exige que la obligación esté vinculada a una actividad: sin vínculo no
+  // hay checklist que copiar, pero el responsable sí se puede resolver por la
+  // empresa — y es justo el caso de las obligaciones que quedaron huérfanas.
   const backfillData = (ex: (typeof existentes)[number]): Record<string, unknown> | null => {
-    const k = vinculoDeObligacion(ex.obligacion);
-    const vinc = k ? vincPorKey.get(k) : undefined;
-    if (!vinc) return null;
-    const resp = vinc.areaId ? respPorArea.get(vinc.areaId) : undefined;
+    const { vinc, resp } = responsableDe(ex.obligacion);
     const data: Record<string, unknown> = {};
-    if (ex.asesorId == null && resp?.asesorId) data.asesorId = resp.asesorId;
-    if (ex.auxiliarId == null && resp?.auxiliarId) data.auxiliarId = resp.auxiliarId;
-    if (ex._count.subtareas === 0 && vinc.subtareas.length)
+    if (ex.asesorId == null && resp.asesorId) data.asesorId = resp.asesorId;
+    if (ex.auxiliarId == null && resp.auxiliarId) data.auxiliarId = resp.auxiliarId;
+    if (ex._count.subtareas === 0 && vinc?.subtareas.length)
       data.subtareas = { create: vinc.subtareas.map((s) => ({ texto: s.texto, orden: s.orden })) };
     return Object.keys(data).length ? data : null;
   };
@@ -905,7 +934,7 @@ vencimientosRouter.post('/regenerar/:empresaId', requireAuth, async (req: Authed
 
   res.json({
     ok: true, empresa: empresa.nombre, anio,
-    resumen: { creados, actualizados, sinCambios, eliminados, conservadosConPago, enriquecidos },
+    resumen: { creados, actualizados, sinCambios, eliminados, conservadosConPago, enriquecidos, sinResponsable },
     seEliminaria: bajasPorObligacion, // qué se dio de baja, por obligación
     sinCalendario,
   });
@@ -1026,30 +1055,40 @@ vencimientosRouter.post('/checklist/rellenar', requireAuth, async (req: AuthedRe
   const asigs = await prisma.asignacionClienteArea.findMany({
     where: { organizacionId: org.id }, select: { empresaId: true, areaId: true, asesorId: true, auxiliarId: true },
   });
-  const respPorEmpresaArea = new Map(asigs.map((a) => [`${a.empresaId}|${a.areaId}`, a]));
+  // Agrupadas POR EMPRESA, no por empresa×área: la cascada necesita ver todas las
+  // áreas de la empresa para poder caer en "tiene un solo asesor".
+  const asigsPorEmpresa = new Map<string, { areaId: string; asesorId: string | null; auxiliarId: string | null }[]>();
+  for (const a of asigs) {
+    const arr = asigsPorEmpresa.get(a.empresaId);
+    const fila = { areaId: a.areaId, asesorId: a.asesorId, auxiliarId: a.auxiliarId };
+    if (arr) arr.push(fila); else asigsPorEmpresa.set(a.empresaId, [fila]);
+  }
 
   const vencs = await prisma.vencimientoEmpresa.findMany({
     where: { organizacionId: org.id, anio },
     select: { id: true, empresaId: true, obligacion: true, asesorId: true, auxiliarId: true, _count: { select: { subtareas: true } } },
   });
 
-  let conChecklist = 0, conResponsable = 0;
+  let conChecklist = 0, conResponsable = 0, sinDueno = 0;
   const detalle = new Map<string, number>();
 
   for (const v of vencs) {
     const k = vinculoDeObligacion(v.obligacion);
     const vinc = k ? vincPorKey.get(k) : undefined;
-    if (!vinc) continue;
-    const resp = vinc.areaId ? respPorEmpresaArea.get(`${v.empresaId}|${vinc.areaId}`) : undefined;
+    // Sin vínculo no hay checklist que copiar, pero el responsable SÍ se puede
+    // resolver por la empresa. Antes se saltaba la fila entera y por eso las
+    // obligaciones sin actividad vinculada se quedaban huérfanas para siempre.
+    const resp = resolverResponsable(vinc?.areaId, asigsPorEmpresa.get(v.empresaId) ?? []);
 
     const data: Record<string, unknown> = {};
-    if (v._count.subtareas === 0 && vinc.subtareas.length) {
+    if (v._count.subtareas === 0 && vinc?.subtareas.length) {
       data.subtareas = { create: vinc.subtareas.map((s) => ({ texto: s.texto, orden: s.orden })) };
       conChecklist++;
       detalle.set(v.obligacion, (detalle.get(v.obligacion) ?? 0) + 1);
     }
-    if (v.asesorId == null && resp?.asesorId) { data.asesorId = resp.asesorId; conResponsable++; }
-    if (v.auxiliarId == null && resp?.auxiliarId) data.auxiliarId = resp.auxiliarId;
+    if (v.asesorId == null && resp.asesorId) { data.asesorId = resp.asesorId; conResponsable++; }
+    if (v.auxiliarId == null && resp.auxiliarId) data.auxiliarId = resp.auxiliarId;
+    if (v.asesorId == null && !resp.asesorId) sinDueno++;
 
     if (Object.keys(data).length && !dryRun) {
       await prisma.vencimientoEmpresa.update({ where: { id: v.id }, data });
@@ -1058,7 +1097,7 @@ vencimientosRouter.post('/checklist/rellenar', requireAuth, async (req: AuthedRe
 
   res.json({
     ok: true, dryRun, anio,
-    resumen: { revisados: vencs.length, conChecklist, conResponsable },
+    resumen: { revisados: vencs.length, conChecklist, conResponsable, sinDueno },
     porObligacion: [...detalle.entries()].map(([obligacion, n]) => ({ obligacion, n })).sort((a, b) => b.n - a.n),
   });
 });

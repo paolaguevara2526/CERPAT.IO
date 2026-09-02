@@ -8,12 +8,17 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import ImportarVencimientosModal from './ImportarVencimientosModal';
 import FiltroColumna from '@/app/_components/FiltroColumna';
 import { useOrden, ThOrden } from '@/app/_components/orden';
+import { descargarXlsx, hoyISO, diaComoFecha, type Celda } from '@/app/_components/exportar';
 
 import { tinte } from '@/app/_components/color';
 const ANIO = 2026;
 type Venc = {
   id: string; empresaId: string; empresa: string | null; obligacion: string; periodicidad: string | null;
   periodo: string | null; municipio: string | null; fechaVencimiento: string; estado: string; notas: string | null; vencido: boolean;
+  // Vienen del endpoint y no se pintan en la tabla (no cabrían), pero sí van al
+  // Excel: son las columnas por las que se reparte y se cobra el trabajo.
+  nit?: string | null; servicio?: string | null; tipoEmpresa?: string | null; regimen?: string | null;
+  asesor?: string | null; valorPago?: number | null; soporteLink?: string | null;
 };
 type Resumen = { kpis: { total: number; presentados: number; pendientes: number; vencidos: number } | null; porMes: number[] };
 
@@ -67,6 +72,7 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
   // trabajando sobre el año completo; lo que se limita es lo que se pinta.
   const [pagina, setPagina] = useState(1);
   const [eliminando, setEliminando] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   const cargarBase = useCallback(async () => {
     try {
@@ -142,6 +148,58 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
     </ThOrden>
   );
 
+  // ---------- Exportar a Excel ----------
+  // Se baja LO FILTRADO y en el orden actual, no la página ni el año completo:
+  // quien acaba de filtrar por un cliente espera ese recorte, y la diferencia no
+  // se nota hasta que alguien trabaja sobre el archivo equivocado. Por eso el
+  // botón dice cuántas filas va a bajar.
+  //
+  // El archivo lleva MÁS columnas que la pantalla (municipio, responsable, valor,
+  // soporte): en la tabla no caben, pero fuera de la aplicación son justo por las
+  // que se reparte y se revisa el trabajo.
+  const COLUMNAS_XLSX: { label: string; valor: (v: Venc) => Celda }[] = [
+    { label: 'Compañía', valor: (v) => v.empresa ?? '' },
+    // El NIT va como TEXTO, no como número: Excel le quitaría los ceros a la
+    // izquierda y un NIT con guión de verificación dejaría de ser el NIT.
+    { label: 'NIT', valor: (v) => v.nit ?? '' },
+    // Cortes del cliente: por aquí se mira la cartera (línea de servicio,
+    // naturaleza del contribuyente). En la tabla no caben; en el archivo son la
+    // mitad del análisis.
+    { label: 'Servicio', valor: (v) => v.servicio ?? '' },
+    { label: 'Tipo', valor: (v) => v.tipoEmpresa ?? '' },
+    { label: 'Régimen', valor: (v) => v.regimen ?? '' },
+    { label: 'Obligación', valor: (v) => v.obligacion },
+    { label: 'Periodicidad', valor: (v) => v.periodicidad ?? '' },
+    { label: 'Período', valor: (v) => v.periodo ?? '' },
+    { label: 'Municipio', valor: (v) => v.municipio ?? '' },
+    // Fecha real (no texto) para que Excel ordene y filtre por rango. Se arma
+    // desde las partes para que no se corra un día por zona horaria, igual que
+    // fmtFecha.
+    { label: 'Vence', valor: (v) => diaComoFecha(v.fechaVencimiento) },
+    { label: 'Estado', valor: (v) => ESTADO_META[v.estado]?.label ?? v.estado },
+    { label: 'Vencido', valor: (v) => (v.vencido ? 'Sí' : 'No') },
+    { label: 'Responsable', valor: (v) => v.asesor ?? '' },
+    { label: 'Valor a pagar', valor: (v) => (v.valorPago != null ? v.valorPago : null) },
+    { label: 'Notas', valor: (v) => v.notas ?? '' },
+    { label: 'Soporte', valor: (v) => v.soporteLink ?? '' },
+  ];
+
+  async function exportar() {
+    if (!filtrados.length) return;
+    setExportando(true);
+    try {
+      const filas: Celda[][] = [
+        COLUMNAS_XLSX.map((c) => c.label),
+        ...filtrados.map((v) => COLUMNAS_XLSX.map((c) => c.valor(v))),
+      ];
+      await descargarXlsx(`vencimientos-${ANIO}-${hoyISO()}.xlsx`, [{ nombre: `Vencimientos ${ANIO}`, filas }]);
+    } catch {
+      setError('No se pudo generar el archivo.');
+    } finally {
+      setExportando(false);
+    }
+  }
+
   const POR_PAGINA = 100;
   const paginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
   const pag = Math.min(pagina, paginas);
@@ -153,7 +211,15 @@ export default function VencimientosView({ esEditor }: { esEditor: boolean }) {
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px' }}>Vencimientos {ANIO}</h1>
-        {esEditor && <button className="dbtn" onClick={() => setImportar(true)} style={{ fontSize: 13 }}>⬆ Importar Excel</button>}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {/* Dice cuántas filas va a bajar: es la única forma de que se note, antes
+              de abrir el archivo, que lo que se baja es lo FILTRADO y no el año. */}
+          <button className="dbtn" onClick={exportar} disabled={exportando || !filtrados.length} style={{ fontSize: 13 }}
+            title={hayFiltro ? 'Baja los vencimientos que pasan los filtros puestos, en el orden actual' : 'Baja todos los vencimientos del año, en el orden actual'}>
+            {exportando ? 'Generando…' : `⬇ Exportar a Excel (${filtrados.length})`}
+          </button>
+          {esEditor && <button className="dbtn" onClick={() => setImportar(true)} style={{ fontSize: 13 }}>⬆ Importar Excel</button>}
+        </div>
       </div>
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 18px' }}>Obligaciones tributarias generadas por cliente según su configuración y el calendario DIAN. {esEditor ? 'Marca presentado/pagado y ajusta la fecha si un calendario municipal cambió.' : 'Solo consulta.'}</p>
 

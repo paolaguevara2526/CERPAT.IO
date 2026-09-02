@@ -56,13 +56,25 @@ export default function ChecklistVencimientos() {
       });
       const d = await r.json();
       if (!r.ok) { setError(d.error || 'No se pudo aplicar.'); setTrabajando(false); return; }
+      // El botón hace DOS cosas —checklist y responsable— y antes solo contaba
+      // el checklist: cuando lo único que faltaba era el responsable, decía "no
+      // hay nada pendiente" y quien lo usaba se iba creyendo que ya estaba.
       const n = d.resumen?.conChecklist ?? 0;
+      const r2 = d.resumen?.conResponsable ?? 0;
+      const huerfanos = d.resumen?.sinDueno ?? 0;
+      const partes = [
+        n ? `checklist a ${n}` : '',
+        r2 ? `responsable a ${r2}` : '',
+      ].filter(Boolean).join(' y ');
+      // Los que quedan sin dueño se dicen SIEMPRE, aunque no se haya cambiado
+      // nada: es el trabajo que hoy no le aparece a nadie en Mi Día.
+      const aviso = huerfanos ? ` Quedan ${huerfanos} sin responsable: son empresas con varios asesores y el área de esa obligación sin asignar.` : '';
       setResultado(
-        n === 0
-          ? 'No hay vencimientos pendientes de checklist.'
+        (!n && !r2
+          ? 'No hay vencimientos pendientes de checklist ni de responsable.'
           : dryRun
-            ? `Se le aplicaría el checklist a ${n} vencimiento(s).`
-            : `Listo: checklist aplicado a ${n} vencimiento(s)${d.resumen?.conResponsable ? ` y responsable a ${d.resumen.conResponsable}` : ''}.`,
+            ? `Se aplicaría ${partes}.`
+            : `Listo: aplicado ${partes}.`) + aviso,
       );
       if (!dryRun) cargar();
     } catch { setError('Error de red.'); }
