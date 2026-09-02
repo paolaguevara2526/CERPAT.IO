@@ -16,7 +16,7 @@ import { fmtDia } from '@/lib/fechas';
 import { duracionTexto, duracionEnHoras } from '@/lib/duracion';
 import { MODALIDADES, metaModalidad, nombreModalidad, type Modalidad } from '@/lib/modalidad';
 type Visita = {
-  id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null; horaSalida: string | null; modalidad: string | null;
+  id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null; horaSalida: string | null; almuerzoMinutos: number | null; modalidad: string | null;
   objetivo: string | null; estado: string; compromisosTotal: number; compromisosPendientes: number; compromisosCumplidos: number;
 };
 
@@ -43,7 +43,7 @@ function valorDe(v: Visita, c: Col): string {
     // "Sin registrar" es una categoría de filtro por derecho propio: es la lista
     // de actas a las que les falta marcar la salida, y sin ella esas visitas no
     // cuentan en las horas.
-    case 'duracion': return duracionTexto(v.hora, v.horaSalida) || 'Sin registrar';
+    case 'duracion': return duracionTexto(v.hora, v.horaSalida, v.almuerzoMinutos) || 'Sin registrar';
     case 'modalidad': return nombreModalidad(v.modalidad);
   }
 }
@@ -101,7 +101,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
   const horas = useMemo(() => {
     let total = 0, conDuracion = 0, sinRegistrar = 0;
     for (const v of visitasFiltradas) {
-      const h = duracionEnHoras(v.hora, v.horaSalida);
+      const h = duracionEnHoras(v.hora, v.horaSalida, v.almuerzoMinutos);
       if (h == null) sinRegistrar++; else { total += h; conDuracion++; }
     }
     return { total: Math.round(total * 100) / 100, conDuracion, sinRegistrar };
@@ -198,7 +198,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
                     <td style={{ fontWeight: 600 }}>{v.empresa ?? '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{v.responsable ?? '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{v.objetivo ?? '—'}</td>
-                    <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12.5 }} title={v.hora || v.horaSalida ? `${v.hora ?? '—'} a ${v.horaSalida ?? '—'}` : undefined}>{duracionTexto(v.hora, v.horaSalida) || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12.5 }} title={v.hora || v.horaSalida ? `${v.hora ?? '—'} a ${v.horaSalida ?? '—'}${v.almuerzoMinutos ? ` · menos ${v.almuerzoMinutos} min de almuerzo` : ''}` : undefined}>{duracionTexto(v.hora, v.horaSalida, v.almuerzoMinutos) || '—'}</td>
                     <td><span style={{ fontSize: 11.5, fontWeight: 800, color: em.color, background: `${tinte(em.color, 12)}`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span></td>
                     <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{v.compromisosTotal === 0 ? '—' : `${v.compromisosCumplidos}/${v.compromisosTotal} cumplidos`}</td>
                   </tr>

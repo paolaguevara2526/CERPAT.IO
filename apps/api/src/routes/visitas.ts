@@ -20,6 +20,13 @@ const ESTADOS_VISITA = ['programada', 'realizada', 'cancelada'];
 // cliente no puede convertirle una visita en reunión.
 const MODALIDADES_VISITA = ['presencial', 'virtual'] as const;
 const modalidadValida = (v: unknown) => (v === 'virtual' ? 'virtual' : 'presencial') as (typeof MODALIDADES_VISITA)[number];
+// Minutos de almuerzo. Null si no hay pausa; nunca negativo: un negativo
+// ALARGARÍA el tiempo trabajado, y ese número se factura.
+function minutosPositivos(v: unknown): number | null {
+  const n = typeof v === 'string' ? Number(v.trim()) : v;
+  if (typeof n !== 'number' || !isFinite(n) || n <= 0) return null;
+  return Math.min(Math.floor(n), 24 * 60);
+}
 const ESTADOS_COMPROMISO = ['pendiente', 'cumplido', 'cancelado'];
 const TIPOS_ITEM = ['actividad', 'recomendacion', 'observacion'] as const;
 type TipoItem = (typeof TIPOS_ITEM)[number];
@@ -111,6 +118,7 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
       hora: v.hora,
       horaSalida: v.horaSalida,
       modalidad: v.modalidad,
+      almuerzoMinutos: v.almuerzoMinutos,
       area: v.area,
       objetivo: v.objetivo,
       estado: v.estado,
@@ -159,6 +167,7 @@ visitasRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
         hora: v.hora,
         horaSalida: v.horaSalida,
         modalidad: v.modalidad,
+        almuerzoMinutos: v.almuerzoMinutos,
         lugar: v.lugar,
         area: v.area,
         objetivo: v.objetivo,
@@ -256,6 +265,7 @@ visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
       hora: v.hora,
       horaSalida: v.horaSalida,
       modalidad: v.modalidad,
+      almuerzoMinutos: v.almuerzoMinutos,
       lugar: v.lugar,
       area: v.area,
       objetivo: v.objetivo,
@@ -307,6 +317,7 @@ visitasRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
       hora: limpiarTexto(b.hora),
       horaSalida: limpiarTexto(b.horaSalida),
       modalidad: modalidadValida(b.modalidad),
+      almuerzoMinutos: minutosPositivos(b.almuerzoMinutos),
       lugar: limpiarTexto(b.lugar),
       area: limpiarTexto(b.area),
       objetivo: limpiarTexto(b.objetivo),
@@ -349,6 +360,7 @@ visitasRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if ('hora' in b) data.hora = limpiarTexto(b.hora);
   if ('horaSalida' in b) data.horaSalida = limpiarTexto(b.horaSalida);
   if ('modalidad' in b) data.modalidad = modalidadValida(b.modalidad);
+  if ('almuerzoMinutos' in b) data.almuerzoMinutos = minutosPositivos(b.almuerzoMinutos);
   if ('lugar' in b) data.lugar = limpiarTexto(b.lugar);
   if ('area' in b) data.area = limpiarTexto(b.area);
   if ('objetivo' in b) data.objetivo = limpiarTexto(b.objetivo);

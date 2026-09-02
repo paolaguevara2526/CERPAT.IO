@@ -1327,6 +1327,10 @@ model Visita {
   // todas las actas que ya existen lo son, y el valor nuevo no puede cambiarles
   // la naturaleza al histórico.
   modalidad       ModalidadVisita @default(presencial)
+  // Minutos de almuerzo que se DESCUENTAN del tiempo trabajado. En una visita de
+  // todo el día son 8 horas de presencia contra 7 de trabajo, y esa hora se
+  // factura. Null / 0 = no hubo pausa (las visitas cortas no la llevan).
+  almuerzoMinutos Int?
   lugar           String? // dirección si es presencial; enlace si es virtual
   area            String? // área / proceso principal de la visita
   objetivo        String? // objetivo / motivo de la visita

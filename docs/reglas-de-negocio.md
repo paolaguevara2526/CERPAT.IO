@@ -533,6 +533,13 @@ convertirla a UTC solo abre la puerta al corrimiento de un día). La **duración
 calcula**, nunca se escribe — dos datos que digan lo mismo terminan
 contradiciéndose.
 
+**El almuerzo se descuenta.** Una visita de todo el día son **8 horas de
+presencia contra 7 de trabajo**, y esa hora se factura: sin descontarla el
+indicador queda inflado justo en las visitas más largas, que son las que más
+pesan. El acta guarda los **minutos de almuerzo** (`almuerzoMinutos`, vacío en
+las visitas cortas) y la duración que se muestra, se suma y se cobra es la
+**neta**. En el acta se ven las dos cosas: cuánto estuvo y cuánto trabajó.
+
 Reglas del cálculo (`apps/web/lib/duracion.ts`):
 - Falta una de las dos horas → **sin duración**. El acta se llena por partes y la
   salida se marca al final.
@@ -540,6 +547,11 @@ Reglas del cálculo (`apps/web/lib/duracion.ts`):
   se da la vuelta al día: un dedazo ("15:00" a "09:00") mostrado como 18 horas se
   puede facturar, y en blanco se corrige.
 - Entrada y salida iguales → **0 min**, que no es lo mismo que "sin registrar".
+- Almuerzo **negativo o mal escrito** → cuenta como 0. Un negativo *alargaría* el
+  tiempo trabajado, y ese número se factura.
+- Almuerzo **más largo que la visita entera** → **sin duración**, no cero:
+  mostrarlo como cero escondería el dedazo. Igual a la visita entera sí es cero,
+  porque es coherente.
 
 En **Visitas** la lista muestra la duración por acta y el **total de horas en
 sitio** del recorte filtrado, contando aparte las actas **sin salida**: un total
