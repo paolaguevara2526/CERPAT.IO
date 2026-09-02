@@ -336,6 +336,12 @@ model Empresa {
   // Lo pactado con el cliente, que es contra lo que se mide lo ejecutado. Cada
   // cliente tiene lo suyo, así que vive en la ficha y no en un catálogo.
   contratoDesde       DateTime? // fecha inicial del contrato (día calendario)
+  mesesContrato       Int? // plazo pactado, en meses
+  // Fecha de terminación. Normalmente sale de `contratoDesde + mesesContrato`,
+  // pero se guarda aparte porque una prórroga puede terminar en una fecha que
+  // no cuadre con esa cuenta y ahí manda el papel. La pantalla la propone y
+  // avisa si discrepan (ver web lib/contrato.ts); no la pisa sola.
+  contratoHasta       DateTime?
   horasPactadasMes    Decimal?  @db.Decimal(6, 2) // horas de acompañamiento al mes
   alcanceServicio     String? // qué cubre el servicio, en palabras de la firma
   createdAt           DateTime  @default(now())

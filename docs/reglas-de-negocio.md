@@ -533,11 +533,39 @@ convertirla a UTC solo abre la puerta al corrimiento de un día). La **duración
 calcula**, nunca se escribe — dos datos que digan lo mismo terminan
 contradiciéndose.
 
-**Contrato de servicio del cliente.** La ficha guarda **fecha inicial del
-contrato**, **horas pactadas al mes** y **alcance del servicio**. Es el *otro
-lado* de la medición: el acta de cada visita dice cuántas horas se ejecutaron,
-pero sin lo pactado no se puede decir si se cumple. **Cada cliente tiene sus
-propias horas**, así que vive en su ficha y no en un catálogo por servicio.
+**Contrato de servicio del cliente.** La ficha guarda **fecha inicial**,
+**meses del contrato**, **fecha de terminación**, **horas pactadas al mes** y
+**alcance del servicio**. Es el *otro lado* de la medición: el acta de cada
+visita dice cuántas horas se ejecutaron, pero sin lo pactado no se puede decir
+si se cumple. **Cada cliente tiene sus propias horas**, así que vive en su ficha
+y no en un catálogo por servicio. Las horas son **por mes**, y el plazo dice
+cuántos meses cubre ese pacto.
+
+**Vigencia: los tres datos no son independientes.** La terminación sale de la
+fecha inicial más los meses, y por eso pueden contradecirse; el día que
+discrepen, nadie sabría cuál creer. La regla (`apps/web/lib/contrato.ts`):
+
+- La terminación se **propone** al escribir los meses, y **solo si está vacía**.
+  Convención de lectura de contratos: 12 meses desde el 1 de febrero de 2026
+  terminan el **31 de enero de 2027** — el día *antes* de cumplirse el plazo. Si
+  el día no existe en el mes destino se ajusta al último (31 de enero + 1 mes es
+  el 28 de febrero), porque inventar un día del mes siguiente **alargaría el
+  contrato en silencio**.
+- Una fecha ya guardada **nunca se pisa**. Una prórroga puede terminar donde no
+  cuadra con la aritmética —"hasta fin de año", por ejemplo— y ahí **manda el
+  papel**, no el sistema.
+- Cuando la guardada y la calculada discrepan, la ficha **avisa** y nombra la
+  fecha que daría la cuenta, pero **no corrige**. El backend tampoco impone la
+  coherencia: acepta los tres datos como vengan.
+- La ficha marca el estado del contrato: **vencido**, **por vencer** (60 días o
+  menos) o **vigente**. El aviso llega *antes* del vencimiento, que es cuando
+  todavía se puede renovar; después ya se está atendiendo sin papel vigente, que
+  es justo lo que la fecha existe para evitar. El "hoy" se toma del **día
+  calendario local**: con `toISOString()` un contrato aparecería vencido desde
+  las 7 p.m. del día anterior.
+
+Los meses se filtran como entero positivo (`fiscal/contrato.ts`), con tope de
+600 (cincuenta años): más que eso es un dedazo, no un contrato.
 
 Las horas pactadas se filtran estricto (`fiscal/contrato.ts`): vacío, texto,
 **cero** o negativo se guardan como **sin dato**. De ahí sale el denominador del

@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { horasPactadas, MAX_HORAS_MES } from './contrato.js';
+import { horasPactadas, MAX_HORAS_MES, mesesContrato, MAX_MESES_CONTRATO } from './contrato.js';
 
 test('un número de horas normal', () => {
   assert.equal(horasPactadas(8), 8);
@@ -56,4 +56,25 @@ test('hay un tope de sensatez', () => {
   // Un dedazo de mil horas al mes daría un cumplimiento del 1 % en un cliente
   // que se está atendiendo bien.
   assert.equal(horasPactadas(999999), MAX_HORAS_MES);
+});
+
+// ---- Plazo del contrato ----
+
+test('el plazo es un entero positivo de meses', () => {
+  assert.equal(mesesContrato(12), 12);
+  assert.equal(mesesContrato('12'), 12);
+  assert.equal(mesesContrato(6.9), 6, 'no hay medio mes de contrato');
+});
+
+test('sin plazo, cero o negativo se guardan como sin dato', () => {
+  assert.equal(mesesContrato(''), null);
+  assert.equal(mesesContrato(null), null);
+  assert.equal(mesesContrato(undefined), null);
+  assert.equal(mesesContrato(0), null);
+  assert.equal(mesesContrato(-6), null);
+  assert.equal(mesesContrato('un año'), null);
+});
+
+test('el plazo también tiene tope', () => {
+  assert.equal(mesesContrato(99999), MAX_MESES_CONTRATO);
 });

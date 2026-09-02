@@ -30,3 +30,22 @@ export function horasPactadas(v: unknown): number | null {
   // arrastran fracciones que después no cuadran con lo que muestra la ficha.
   return Math.min(Math.round(n * 100) / 100, MAX_HORAS_MES);
 }
+
+/** Tope de sensatez para el plazo: 600 meses son cincuenta años. */
+export const MAX_MESES_CONTRATO = 600;
+
+/**
+ * Plazo del contrato en meses. null si no es un entero positivo.
+ *
+ * No se valida contra la fecha de terminación: una prórroga puede terminar en
+ * una fecha que no cuadre con el plazo, y ahí manda el papel. La pantalla avisa
+ * de la discrepancia; el backend no la impone.
+ */
+export function mesesContrato(v: unknown): number | null {
+  if (v == null) return null;
+  const crudo = typeof v === 'string' ? v.trim() : v;
+  if (crudo === '') return null;
+  const n = Number(crudo);
+  if (!isFinite(n) || n <= 0) return null;
+  return Math.min(Math.floor(n), MAX_MESES_CONTRATO);
+}
