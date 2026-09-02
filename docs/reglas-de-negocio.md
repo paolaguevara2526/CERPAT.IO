@@ -171,6 +171,18 @@ no le corresponde.
   2. alguien como **auxiliar** sin ningún rol que ejecute trabajo;
   3. **la misma persona como asesor y auxiliar** de la misma área — se estaría liberando
      el insumo a sí misma, que rompe el circuito de captura y liberación.
+- **El asesor de la ficha del cliente escribe asignaciones, no un texto.** La casilla
+  *Asesor* del formulario de clientes es un desplegable de los usuarios de la firma —no
+  un campo de texto— y lo que guarda es la **asignación cliente × área**. Escribir un
+  nombre suelto (`Empresa.asesorNombre`, que vino de la importación y nadie mantiene) no
+  le pone dueño a nada: el cliente figuraba con asesor y su trabajo no le aparecía a
+  nadie. Es la misma raíz de los vencimientos huérfanos, vista desde el alta.
+- **Esa casilla llena vacíos y no pisa reparto.** Se asigna a las áreas que **no** tienen
+  asesor y solo a esas. En un cliente nuevo son todas, y nace con dueño desde el primer
+  día; en uno ya repartido —un asesor por área, decidido por la coordinación— no se
+  deshace nada sin que nadie se entere. El reparto fino sigue en *Plan por cliente*.
+  La lista de clientes muestra el asesor **de las asignaciones**: un cliente sin ninguna
+  aparece como **sin asignar** aunque conserve el texto viejo.
 - **Corregir la asignación no reasigna lo ya generado:** las tareas nacen con el asesor y
   el auxiliar que tenía la asignación *en ese momento*. Para ponerlas al día está
   *Plan por cliente → **Aplicar los responsables a un período ya generado***, que
@@ -204,6 +216,32 @@ terminó su trabajo.
   mismo checklist.
 - En la **cola de revisión** los puntos marcados "no aplica" se señalan: validar que de
   verdad no aplicaban es parte de lo que el revisor debe mirar antes de aprobar.
+
+## Catálogos: la misma palabra escrita distinto es la misma opción
+
+Vale para **todos** los catálogos administrables (áreas, tipos de tarea, servicios,
+etiquetas, tipos de documento, tipos de novedad…). El índice único de la base compara
+**texto exacto**, así que *"Asesoría Contable"* y *"Asesoria Contable"* convivían sin
+chistar: para Postgres son distintos; en el desplegable son **la misma opción repetida**.
+Y un catálogo con la misma opción dos veces es **peor que no tenerlo**: la gente escoge
+cualquiera de las variantes y todo corte por esa columna queda partido en pedazos que
+nadie suma — que es justo el problema que el catálogo venía a resolver.
+
+- Al crear o renombrar, dos nombres son **el mismo** si coinciden ignorando **tildes,
+  mayúsculas y espacios de más** (`apps/api/src/catalogos/nombre.ts`). Se rechaza con el
+  nombre del que ya existe, para poder usarlo en vez de duplicarlo.
+- **Se compara normalizado, se guarda tal cual.** El nombre queda como lo escribió la
+  firma; la normalización solo sirve para comparar.
+- **Un elemento no es duplicado de sí mismo:** sin esa excepción no se le podría corregir
+  la tilde a una opción ya guardada, y el catálogo se quedaría con la falta de ortografía.
+- **Servicios de verdad distintos siguen distintos.** *"Asesoría"* y *"Asesoría Contable"*
+  no son el mismo servicio; solo se juntan las variantes de escritura.
+- La migración `20260902240000_servicios_duplicados` junta las que ya existían —el
+  catálogo de servicios se había sembrado desde el texto libre viejo, *tal como estaba
+  escrito*, con todas las variantes de cada quien— y **repunta a los clientes** a la
+  superviviente. Gana **la mejor escrita** (con tildes, luego con iniciales en mayúscula),
+  no la más repetida: reescribir clientes es una sola sentencia, pero la que sobreviva es
+  la que la firma va a ver de aquí en adelante.
 
 ## Tipos de documento de la captura
 

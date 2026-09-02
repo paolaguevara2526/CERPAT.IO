@@ -14,6 +14,8 @@ import { responderError } from '../errores.js';
 import { nthDiaHabil } from '../vencimientos/generador.js';
 import { aplicaEnMesPlan } from '../plan/periodicidad.js';
 import { VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
+import { duplicadoDe } from '../catalogos/nombre.js';
+import { areasSinAsesor } from '../empresas/asesor-inicial.js';
 
 export const adminRouter = Router();
 
@@ -116,6 +118,13 @@ adminRouter.post('/catalogos/:tipo', requireAuth, soloAdmin, async (req, res) =>
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const nombre = String(req.body?.nombre ?? '').trim();
   if (!nombre) return res.status(422).json({ error: 'El nombre es obligatorio.' });
+  // El índice único de la base compara texto exacto, así que "Asesoría Contable"
+  // y "Asesoria Contable" conviven sin chistar: para Postgres son distintos, en
+  // el desplegable son la misma opción repetida. Es lo que pasó con los tipos de
+  // servicio, y un catálogo con la misma opción dos veces es peor que no tenerlo.
+  const yaEstan = await cfg.delegate.findMany({ where: { organizacionId: id }, select: { id: true, nombre: true } });
+  const igual = duplicadoDe(nombre, yaEstan);
+  if (igual) return res.status(409).json({ error: `Ya existe "${igual.nombre}", que es lo mismo escrito distinto.` });
   try {
     const item = await cfg.delegate.create({
       data: { organizacionId: id, nombre, ...(cfg.conOrden ? { orden: Number(req.body?.orden) || 0 } : {}) },
@@ -137,6 +146,13 @@ adminRouter.patch('/catalogos/:tipo/:id', requireAuth, soloAdmin, async (req, re
   if (typeof req.body?.nombre === 'string' && req.body.nombre.trim()) data.nombre = req.body.nombre.trim();
   if (cfg.conOrden && req.body?.orden !== undefined && req.body.orden !== null && req.body.orden !== '') data.orden = Number(req.body.orden) || 0;
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
+  if (data.nombre) {
+    // Excluyendo el propio: si no, corregirle la tilde a una opción sería
+    // imposible y el catálogo se quedaría con la falta de ortografía.
+    const yaEstan = await cfg.delegate.findMany({ where: { organizacionId: id }, select: { id: true, nombre: true } });
+    const igual = duplicadoDe(data.nombre, yaEstan, req.params.id);
+    if (igual) return res.status(409).json({ error: `Ya existe "${igual.nombre}", que es lo mismo escrito distinto.` });
+  }
   try {
     const r = await cfg.delegate.updateMany({ where: { id: req.params.id, organizacionId: id }, data });
     if (r.count === 0) return res.status(404).json({ error: 'Elemento no encontrado.' });
@@ -523,26 +539,98 @@ adminRouter.get('/empresas', requireAuth, soloCoordinacion, async (req, res) => 
   // Almacenamiento (bytes y nº de documentos) por cliente, para mostrar el consumo.
   const almacen = await prisma.documentoCliente.groupBy({ by: ['empresaId'], where: { organizacionId: id }, _sum: { tamanoBytes: true }, _count: { _all: true } });
   const alMap = new Map(almacen.map((a) => [a.empresaId, { bytes: Number(a._sum.tamanoBytes ?? 0), docs: a._count._all }]));
-  res.json({ total: items.length, items: items.map((e) => ({ ...e, almacenBytes: alMap.get(e.id)?.bytes ?? 0, almacenDocs: alMap.get(e.id)?.docs ?? 0 })) });
+
+  // Asesor REAL: el de las asignaciones por área, que es de donde heredan las
+  // tareas y los vencimientos. `asesorNombre` es texto de la importación que
+  // nadie mantiene: mostrarlo como si fuera el responsable hacía ver con dueño a
+  // clientes cuyo trabajo no le aparecía a nadie.
+  const asigs = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: id, asesorId: { not: null } },
+    select: { empresaId: true, area: { select: { nombre: true, orden: true } }, asesor: { select: { nombre: true } } },
+  });
+  const porEmpresa = new Map<string, { area: string; asesor: string }[]>();
+  for (const a of asigs) {
+    if (!a.asesor?.nombre) continue;
+    const lista = porEmpresa.get(a.empresaId) ?? [];
+    lista.push({ area: a.area?.nombre ?? '—', asesor: a.asesor.nombre });
+    porEmpresa.set(a.empresaId, lista);
+  }
+  for (const l of porEmpresa.values()) l.sort((x, y) => x.area.localeCompare(y.area, 'es'));
+
+  res.json({
+    total: items.length,
+    items: items.map((e) => ({
+      ...e,
+      asesores: porEmpresa.get(e.id) ?? [],
+      almacenBytes: alMap.get(e.id)?.bytes ?? 0,
+      almacenDocs: alMap.get(e.id)?.docs ?? 0,
+    })),
+  });
 });
+
+/**
+ * Pone al asesor elegido en la ficha en las áreas del cliente QUE NO TIENEN
+ * NINGUNO, y solo en esas.
+ *
+ * Elegir un asesor tiene que escribir asignaciones y no un texto: el responsable
+ * de verdad vive en la asignación cliente×área, y de ahí heredan asesor y
+ * auxiliar todas las tareas del plan y los vencimientos. Un nombre suelto en la
+ * ficha no le pone dueño a nada — de ahí salieron los vencimientos huérfanos.
+ *
+ * No pisa lo ya repartido porque un cliente puede tener asesores distintos por
+ * área y eso lo decidió la coordinación a mano: una casilla de la ficha no puede
+ * deshacerlo sin que nadie se entere. El reparto fino sigue en Plan por cliente.
+ */
+async function asignarAsesorEnAreasVacias(orgIdent: string, empresaId: string, asesorId: string) {
+  const [areas, asign] = await Promise.all([
+    prisma.area.findMany({ where: { organizacionId: orgIdent }, select: { id: true } }),
+    prisma.asignacionClienteArea.findMany({ where: { organizacionId: orgIdent, empresaId }, select: { areaId: true, asesorId: true } }),
+  ]);
+  const porLlenar = areasSinAsesor(areas.map((a) => a.id), asign);
+  for (const areaId of porLlenar) {
+    await prisma.asignacionClienteArea.upsert({
+      where: { empresaId_areaId: { empresaId, areaId } },
+      create: { organizacionId: orgIdent, empresaId, areaId, asesorId },
+      update: { asesorId },
+    });
+  }
+  return porLlenar.length;
+}
+
+/** El asesor del cuerpo, si es un usuario real de la organización. */
+async function asesorElegido(orgIdent: string, body: any): Promise<{ id: string; nombre: string } | null> {
+  const asesorId = typeof body?.asesorId === 'string' ? body.asesorId.trim() : '';
+  if (!asesorId) return null;
+  return prisma.usuario.findFirst({ where: { id: asesorId, organizacionId: orgIdent }, select: { id: true, nombre: true } });
+}
 
 adminRouter.post('/empresas', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data = datosEmpresa(req.body);
   if (!data.nombre) return res.status(422).json({ error: 'El nombre del cliente es obligatorio.' });
+  const asesor = await asesorElegido(id, req.body);
+  if (req.body?.asesorId && !asesor) return res.status(422).json({ error: 'El asesor elegido no existe.' });
+  // El texto de la ficha se mantiene como etiqueta, pero lo que reparte trabajo
+  // son las asignaciones de abajo.
+  if (asesor) data.asesorNombre = asesor.nombre;
   const e = await prisma.empresa.create({ data: { organizacionId: id, activo: true, ...data } as any, select: { id: true } });
-  res.status(201).json({ ok: true, id: e.id });
+  const areasAsignadas = asesor ? await asignarAsesorEnAreasVacias(id, e.id, asesor.id) : 0;
+  res.status(201).json({ ok: true, id: e.id, areasAsignadas });
 });
 
 adminRouter.patch('/empresas/:id', requireAuth, soloCoordinacion, async (req, res) => {
   const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const data = datosEmpresa(req.body);
+  const asesor = await asesorElegido(id, req.body);
+  if (req.body?.asesorId && !asesor) return res.status(422).json({ error: 'El asesor elegido no existe.' });
+  if (asesor) data.asesorNombre = asesor.nombre;
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
   const r = await prisma.empresa.updateMany({ where: { id: req.params.id, organizacionId: id }, data });
   if (r.count === 0) return res.status(404).json({ error: 'Cliente no encontrado.' });
-  res.json({ ok: true });
+  const areasAsignadas = asesor ? await asignarAsesorEnAreasVacias(id, req.params.id, asesor.id) : 0;
+  res.json({ ok: true, areasAsignadas });
 });
 
 adminRouter.delete('/empresas/:id', requireAuth, soloCoordinacion, async (req, res) => {
