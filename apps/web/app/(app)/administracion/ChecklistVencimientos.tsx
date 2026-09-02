@@ -11,9 +11,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 type Fila = {
   key: string; obligacion: string; actividad: string | null;
-  subtareasPlantilla: number; vencimientos: number; sinChecklist: number;
+  subtareasPlantilla: number; vencimientos: number; sinChecklist: number; sinResponsable: number;
   diagnostico: 'sin_actividad_vinculada' | 'actividad_sin_checklist' | 'pendiente_de_rellenar' | 'ok';
 };
+type Totales = { sinChecklist: number; sinResponsable: number; porAplicar: number };
 
 const DIAG: Record<Fila['diagnostico'], { texto: string; color: string; queHacer: string }> = {
   ok: { texto: 'Al día', color: 'var(--exito)', queHacer: '—' },
@@ -33,6 +34,7 @@ const DIAG: Record<Fila['diagnostico'], { texto: string; color: string; queHacer
 
 export default function ChecklistVencimientos() {
   const [filas, setFilas] = useState<Fila[]>([]);
+  const [totales, setTotales] = useState<Totales | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
@@ -42,7 +44,7 @@ export default function ChecklistVencimientos() {
     setCargando(true);
     try {
       const d = await fetch('/api/vencimientos/checklist/diagnostico', { cache: 'no-store' }).then((r) => r.json());
-      if (d.error) setError(d.error); else { setFilas(d.filas ?? []); setError(null); }
+      if (d.error) setError(d.error); else { setFilas(d.filas ?? []); setTotales(d.totales ?? null); setError(null); }
     } catch { setError('Error de red.'); }
     setCargando(false);
   }, []);
@@ -81,8 +83,13 @@ export default function ChecklistVencimientos() {
     setTrabajando(false);
   }
 
-  const porAplicar = filas.reduce((s, f) => s + (f.diagnostico === 'pendiente_de_rellenar' ? f.sinChecklist : 0), 0);
+  const porAplicar = totales?.porAplicar ?? filas.reduce((s, f) => s + (f.diagnostico === 'pendiente_de_rellenar' ? f.sinChecklist : 0), 0);
+  const sinResponsable = totales?.sinResponsable ?? filas.reduce((s, f) => s + f.sinResponsable, 0);
   const porParametrizar = filas.filter((f) => f.diagnostico === 'sin_actividad_vinculada' || f.diagnostico === 'actividad_sin_checklist').length;
+  // El botón aplica DOS cosas. Habilitarlo solo por el checklist dejaba sin
+  // arreglo el caso en que lo único que falta es el responsable — que es el que
+  // deja trabajo sin aparecer en el Mi Día de nadie.
+  const hayAlgoQueAplicar = porAplicar > 0 || sinResponsable > 0;
 
   return (
     <div>
@@ -103,12 +110,13 @@ export default function ChecklistVencimientos() {
                 <th style={{ textAlign: 'right' }}>Subtareas</th>
                 <th style={{ textAlign: 'right' }}>Vencimientos</th>
                 <th style={{ textAlign: 'right' }}>Sin checklist</th>
+                <th style={{ textAlign: 'right' }} title="Vencimientos sin asesor responsable: no le aparecen a nadie en Mi Día">Sin responsable</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
               {cargando ? (
-                <tr><td colSpan={6} style={{ padding: 26, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
+                <tr><td colSpan={7} style={{ padding: 26, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
               ) : filas.map((f) => {
                 const d = DIAG[f.diagnostico];
                 return (
@@ -118,6 +126,8 @@ export default function ChecklistVencimientos() {
                     <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{f.subtareasPlantilla || '—'}</td>
                     <td style={{ textAlign: 'right', color: 'var(--muted)' }}>{f.vencimientos || '—'}</td>
                     <td style={{ textAlign: 'right', fontWeight: f.sinChecklist ? 800 : 400, color: f.sinChecklist ? d.color : 'var(--muted)' }}>{f.sinChecklist || '—'}</td>
+                    <td style={{ textAlign: 'right', fontWeight: f.sinResponsable ? 800 : 400, color: f.sinResponsable ? 'var(--peligro)' : 'var(--muted)' }}
+                      title={f.sinResponsable ? 'Estos vencimientos no le aparecen a nadie en Mi Día' : undefined}>{f.sinResponsable || '—'}</td>
                     <td><span className="chip" style={{ color: d.color, borderColor: d.color }} title={d.queHacer}>{d.texto}</span></td>
                   </tr>
                 );
@@ -141,12 +151,26 @@ export default function ChecklistVencimientos() {
               ? <>Hay <strong>{porAplicar} vencimiento(s)</strong> que ya tienen su checklist definido pero se crearon antes de configurarlo.</>
               : <>Todos los vencimientos con checklist definido ya lo tienen aplicado.</>}
           </p>
+          {/* El responsable se informa aparte del checklist: son problemas
+              distintos y el de arriba es el cosmético. Un vencimiento sin dueño
+              no le aparece a nadie en Mi Día — eso es trabajo que nadie está
+              viendo, y hay obligaciones (FOPAT, PILA, AutoICA) que no tienen
+              actividad vinculada y aun así SÍ se les puede resolver el
+              responsable por la empresa. */}
+          {sinResponsable > 0 && (
+            <p style={{ fontSize: 13, margin: '0 0 12px', lineHeight: 1.6, color: 'var(--peligro-fuerte)' }}>
+              Hay <strong>{sinResponsable} vencimiento(s) sin responsable</strong>: hoy no le aparecen a nadie en <em>Mi Día</em>.
+              El botón les asigna el asesor del área de la obligación y, si esa no se puede resolver, el de la empresa cuando
+              tiene uno solo. Los que queden son empresas con <strong>varios asesores</strong> y esa área sin asignar: se
+              arreglan en <em>Asignaciones</em>.
+            </p>
+          )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <button className="dbtn" onClick={() => rellenar(true)} disabled={trabajando} style={{ fontSize: 13 }}>
               Simular
             </button>
-            <button className="dbtn green" onClick={() => rellenar(false)} disabled={trabajando || porAplicar === 0} style={{ fontSize: 13 }}>
-              {trabajando ? 'Aplicando…' : 'Aplicar checklist a los pendientes'}
+            <button className="dbtn green" onClick={() => rellenar(false)} disabled={trabajando || !hayAlgoQueAplicar} style={{ fontSize: 13 }}>
+              {trabajando ? 'Aplicando…' : 'Aplicar checklist y responsables'}
             </button>
             {resultado && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{resultado}</span>}
           </div>
