@@ -509,11 +509,36 @@ en las vistas internas — forzado en el backend (`esStaffAcotado`):
   trabajo que el sistema ya tiene registrado a nombre de quien mira.
 - **Pagos** → solo vencimientos de sus **empresas asignadas**.
 
+**Visita presencial o reunión virtual: la misma entidad.** Además de las visitas
+en sitio, la firma programa **reuniones virtuales** mensuales con los clientes
+para temas puntuales. Se programan, se les levanta **acta**, dejan
+**compromisos** y se les hace seguimiento **exactamente igual**, así que **no se
+duplicó la entidad**: una `Visita` lleva `modalidad` (`presencial` | `virtual`).
+
+Lo único que cambia es el nombre —**Visita** / **Reunión**— y qué se pregunta en
+`lugar`: una **dirección** si es presencial, un **enlace** (Meet/Teams/Zoom) si es
+virtual, que además se vuelve clicable cuando de verdad es una URL. El acta
+impresa se titula según la modalidad, y el calendario las separa en dos
+etiquetas filtrables (**Visitas** · **Reuniones**).
+
+Se distinguen porque la dirección necesita saber **cuánto del acompañamiento se
+hace en sitio y cuánto a distancia**; con un solo nombre esa cuenta no existe.
+El valor por defecto es **presencial**, y ante cualquier valor desconocido
+también: las actas ya cargadas son todas visitas, y un dato nuevo no puede
+cambiarle la naturaleza al histórico.
+
 **Horas en sitio de una visita.** El acta registra **hora de ingreso** y **hora de
 salida** (texto `HH:MM`, no instantes: una visita ocurre a una hora local y
 convertirla a UTC solo abre la puerta al corrimiento de un día). La **duración se
 calcula**, nunca se escribe — dos datos que digan lo mismo terminan
 contradiciéndose.
+
+**El almuerzo se descuenta.** Una visita de todo el día son **8 horas de
+presencia contra 7 de trabajo**, y esa hora se factura: sin descontarla el
+indicador queda inflado justo en las visitas más largas, que son las que más
+pesan. El acta guarda los **minutos de almuerzo** (`almuerzoMinutos`, vacío en
+las visitas cortas) y la duración que se muestra, se suma y se cobra es la
+**neta**. En el acta se ven las dos cosas: cuánto estuvo y cuánto trabajó.
 
 Reglas del cálculo (`apps/web/lib/duracion.ts`):
 - Falta una de las dos horas → **sin duración**. El acta se llena por partes y la
@@ -522,6 +547,11 @@ Reglas del cálculo (`apps/web/lib/duracion.ts`):
   se da la vuelta al día: un dedazo ("15:00" a "09:00") mostrado como 18 horas se
   puede facturar, y en blanco se corrige.
 - Entrada y salida iguales → **0 min**, que no es lo mismo que "sin registrar".
+- Almuerzo **negativo o mal escrito** → cuenta como 0. Un negativo *alargaría* el
+  tiempo trabajado, y ese número se factura.
+- Almuerzo **más largo que la visita entera** → **sin duración**, no cero:
+  mostrarlo como cero escondería el dedazo. Igual a la visita entera sí es cero,
+  porque es coherente.
 
 En **Visitas** la lista muestra la duración por acta y el **total de horas en
 sitio** del recorte filtrado, contando aparte las actas **sin salida**: un total

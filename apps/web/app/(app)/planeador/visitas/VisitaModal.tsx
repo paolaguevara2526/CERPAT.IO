@@ -8,7 +8,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import ModalMarco from '@/app/_components/ModalMarco';
 import { logoCerpat } from '@/app/_components/logo-impresion';
-import { duracionTexto } from '@/lib/duracion';
+import { duracionTexto, almuerzoTexto, minutosDeAlmuerzo, duracionBrutaEnMinutos } from '@/lib/duracion';
+import { tinte } from '@/app/_components/color';
+import { MODALIDADES, metaModalidad, etiquetaLugar, ayudaLugar, esEnlace, type Modalidad } from '@/lib/modalidad';
 
 type Opcion = { id: string; nombre: string };
 export const VISITA_ESTADOS: { k: string; label: string; color: string }[] = [
@@ -23,8 +25,8 @@ export const COMPROMISO_ESTADOS: { k: string; label: string; color: string }[] =
 ];
 
 type Compromiso = { id?: string; descripcion: string; fechaLimite: string; responsableTipo: 'firma' | 'cliente'; responsableId: string; responsableExterno: string; area: string; estado: string };
-type Form = { empresaId: string; responsableId: string; fecha: string; hora: string; horaSalida: string; lugar: string; area: string; objetivo: string; estado: string };
-const VACIO: Form = { empresaId: '', responsableId: '', fecha: '', hora: '', horaSalida: '', lugar: '', area: '', objetivo: '', estado: 'programada' };
+type Form = { empresaId: string; responsableId: string; fecha: string; hora: string; horaSalida: string; almuerzoMinutos: string; modalidad: string; lugar: string; area: string; objetivo: string; estado: string };
+const VACIO: Form = { empresaId: '', responsableId: '', fecha: '', hora: '', horaSalida: '', almuerzoMinutos: '', modalidad: 'presencial', lugar: '', area: '', objetivo: '', estado: 'programada' };
 const compromisoVacio = (): Compromiso => ({ descripcion: '', fechaLimite: '', responsableTipo: 'firma', responsableId: '', responsableExterno: '', area: '', estado: 'pendiente' });
 
 const input: React.CSSProperties = { padding: '8px 10px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)', width: '100%' };
@@ -54,11 +56,16 @@ function ListaEnumerada({ titulo, hint, icono, items, onChange, placeholder }: {
   );
 }
 
-export default function VisitaModal({ id, onClose, onSaved }: { id: string | null; onClose: () => void; onSaved?: () => void }) {
+export default function VisitaModal({ id, modalidadInicial, onClose, onSaved }: { id: string | null; modalidadInicial?: Modalidad; onClose: () => void; onSaved?: () => void }) {
   const editar = !!id;
-  const [form, setForm] = useState<Form>(VACIO);
+  // Un acta NUEVA nace con la modalidad que se eligió al agendar; una existente
+  // trae la suya del servidor.
+  const [form, setForm] = useState<Form>({ ...VACIO, modalidad: modalidadInicial ?? 'presencial' });
   // Se recalcula sola cada vez que cambian las horas.
-  const duracion = duracionTexto(form.hora, form.horaSalida);
+  const duracion = duracionTexto(form.hora, form.horaSalida, form.almuerzoMinutos);
+  const pausa = minutosDeAlmuerzo(form.almuerzoMinutos);
+  const presencia = duracionBrutaEnMinutos(form.hora, form.horaSalida);
+  const mod = metaModalidad(form.modalidad);
   const [actividades, setActividades] = useState<string[]>([]);
   const [recomendaciones, setRecomendaciones] = useState<string[]>([]);
   const [observaciones, setObservaciones] = useState<string[]>([]);
@@ -84,7 +91,7 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
     const d = await r.json();
     if (!r.ok) { setError(d.error || 'No se pudo cargar la visita.'); return; }
     const v = d.visita;
-    setForm({ empresaId: v.empresaId ?? '', responsableId: v.responsableId ?? '', fecha: v.fecha ?? '', hora: v.hora ?? '', horaSalida: v.horaSalida ?? '', lugar: v.lugar ?? '', area: v.area ?? '', objetivo: v.objetivo ?? '', estado: v.estado ?? 'programada' });
+    setForm({ empresaId: v.empresaId ?? '', responsableId: v.responsableId ?? '', fecha: v.fecha ?? '', hora: v.hora ?? '', horaSalida: v.horaSalida ?? '', almuerzoMinutos: v.almuerzoMinutos != null ? String(v.almuerzoMinutos) : '', modalidad: v.modalidad ?? 'presencial', lugar: v.lugar ?? '', area: v.area ?? '', objetivo: v.objetivo ?? '', estado: v.estado ?? 'programada' });
     setActividades(v.actividades ?? []);
     setRecomendaciones(v.recomendaciones ?? []);
     setObservaciones(v.observaciones ?? []);
@@ -201,18 +208,18 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
     </style></head><body><div class="doc">
       <div class="head">
         <div class="brand">${logoCerpat(30)}<small>Planeador contable</small></div>
-        <h1>ACTA DE VISITA<small>${fechaLarga(form.fecha)}</small></h1>
+        <h1>ACTA DE ${esc(mod.label.toUpperCase())}${form.modalidad === 'virtual' ? ' VIRTUAL' : ''}<small>${fechaLarga(form.fecha)}</small></h1>
       </div>
       <div class="datos">
         <div><b>Cliente</b>${esc(cliente)}</div>
         <div><b>Responsable (asesor/auditor)</b>${esc(asesor)}</div>
         <div><b>Fecha</b>${fechaLarga(form.fecha)}</div>
         <div><b>Horario</b>${form.hora || form.horaSalida
-          ? `${esc(form.hora) || '—'} a ${esc(form.horaSalida) || '—'}${duracion ? ` · <b style="color:#16294A">${esc(duracion)}</b>` : ''}`
+          ? `${esc(form.hora) || '—'} a ${esc(form.horaSalida) || '—'}${pausa > 0 ? ` · almuerzo ${esc(almuerzoTexto(form.almuerzoMinutos))}` : ''}${duracion ? ` · <b style="color:#16294A">${esc(duracion)}</b> de trabajo` : ''}`
           : '—'}</div>
         <div><b>Estado</b>${esc(estadoLabel)}</div>
         <div><b>Área / proceso</b>${esc(form.area) || '—'}</div>
-        <div><b>Lugar</b>${esc(form.lugar) || '—'}</div>
+        <div><b>${esc(etiquetaLugar(form.modalidad))}</b>${esc(form.lugar) || '—'}</div>
       </div>
       <div style="font-size:12px;padding:6px 0;"><b style="color:#5b6a82;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;display:block;">Objetivo / motivo</b>${esc(form.objetivo) || '—'}</div>
 
@@ -267,10 +274,39 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
                   </select>
                 </label>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1fr', gap: 10 }}>
+              {/* Presencial o virtual. Es lo primero que se decide porque cambia
+                  cómo se llama el acta y qué se pide más abajo (dirección o
+                  enlace). Botones y no un desplegable: son dos, y así se ve cuál
+                  está puesta sin abrir nada. */}
+              <div>
+                <span style={lbl}>Modalidad</span>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  {MODALIDADES.map((m) => {
+                    const activa = form.modalidad === m.k;
+                    return (
+                      <button key={m.k} type="button" onClick={() => set('modalidad', m.k)}
+                        style={{
+                          flex: 1, padding: '9px 12px', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--ui)', fontSize: 13,
+                          fontWeight: activa ? 800 : 500,
+                          color: activa ? m.color : 'var(--muted)',
+                          background: activa ? tinte(m.color, 12) : 'var(--panel)',
+                          border: `1px solid ${activa ? tinte(m.color, 45) : 'var(--edge-strong)'}`,
+                        }}>
+                        {m.icono} {m.label} <span style={{ fontWeight: 500, fontSize: 11.5 }}>· {m.k === 'virtual' ? 'a distancia' : 'en sitio'}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr 0.8fr 1fr', gap: 10 }}>
                 <label><span style={lbl}>Fecha *</span><input type="date" style={input} value={form.fecha} onChange={(e) => set('fecha', e.target.value)} /></label>
                 <label><span style={lbl}>Hora de ingreso</span><input type="time" style={input} value={form.hora} onChange={(e) => set('hora', e.target.value)} /></label>
                 <label><span style={lbl}>Hora de salida</span><input type="time" style={input} value={form.horaSalida} onChange={(e) => set('horaSalida', e.target.value)} /></label>
+                <label><span style={lbl}>Almuerzo (min)</span>
+                  <input type="number" min={0} step={15} inputMode="numeric" style={input} value={form.almuerzoMinutos}
+                    onChange={(e) => set('almuerzoMinutos', e.target.value)} placeholder="0"
+                    title="Minutos de almuerzo que se descuentan del tiempo trabajado" />
+                </label>
                 <label><span style={lbl}>Estado</span>
                   <select style={input} value={form.estado} onChange={(e) => set('estado', e.target.value)}>
                     {VISITA_ESTADOS.map((s) => <option key={s.k} value={s.k}>{s.label}</option>)}
@@ -284,9 +320,17 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
               {(form.hora || form.horaSalida) && (
                 <div style={{ fontSize: 12.5, color: duracion ? 'var(--ink)' : 'var(--muted)', marginTop: -2 }}>
                   {duracion
-                    ? <>Duración de la visita: <b>{duracion}</b></>
+                    ? <>Duración de la {mod.label.toLowerCase()}: <b>{duracion}</b>
+                        {pausa > 0 && presencia != null && (
+                          <span style={{ color: 'var(--muted)' }}> · estuvo {Math.floor(presencia / 60)} h {presencia % 60 ? `${presencia % 60} min ` : ''}y se descontó {almuerzoTexto(form.almuerzoMinutos)} de almuerzo</span>
+                        )}
+                      </>
                     : form.hora && form.horaSalida
-                      ? <span style={{ color: 'var(--peligro-fuerte)', fontWeight: 600 }}>La hora de salida es anterior a la de ingreso: revisa cuál de las dos quedó mal.</span>
+                      ? <span style={{ color: 'var(--peligro-fuerte)', fontWeight: 600 }}>
+                          {presencia == null
+                            ? 'La hora de salida es anterior a la de ingreso: revisa cuál de las dos quedó mal.'
+                            : 'El almuerzo es más largo que la visita entera: revisa los minutos.'}
+                        </span>
                       : 'Marca las dos horas para calcular la duración.'}
                 </div>
               )}
@@ -295,7 +339,12 @@ export default function VisitaModal({ id, onClose, onSaved }: { id: string | nul
                   <input style={input} list="areas-acta" value={form.area} onChange={(e) => set('area', e.target.value)} placeholder="Ej. Contabilidad, Tesorería…" />
                   <datalist id="areas-acta">{datos.areas.map((a) => <option key={a.id} value={a.nombre} />)}</datalist>
                 </label>
-                <label><span style={lbl}>Lugar</span><input style={input} value={form.lugar} onChange={(e) => set('lugar', e.target.value)} placeholder="Oficina del cliente, virtual…" /></label>
+                <label><span style={lbl}>{etiquetaLugar(form.modalidad)}</span>
+                  <input style={input} value={form.lugar} onChange={(e) => set('lugar', e.target.value)} placeholder={ayudaLugar(form.modalidad)} />
+                  {esEnlace(form.lugar) && (
+                    <a href={form.lugar.trim()} target="_blank" rel="noreferrer" style={{ fontSize: 11.5, color: 'var(--brand, #2E5090)', display: 'inline-block', marginTop: 4 }}>↗ Abrir enlace</a>
+                  )}
+                </label>
               </div>
               <label><span style={lbl}>Objetivo / motivo</span><input style={input} value={form.objetivo} onChange={(e) => set('objetivo', e.target.value)} placeholder="Motivo de la visita…" /></label>
 

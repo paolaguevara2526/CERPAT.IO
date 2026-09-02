@@ -1,5 +1,9 @@
 'use client';
-// Vista de Visitas: lista por mes, agendar nueva y abrir el acta de cada una.
+// Vista de Visitas y REUNIONES: lista por mes, agendar y abrir el acta de cada
+// una. Presencial y virtual son la misma entidad con distinta modalidad (ver
+// lib/modalidad.ts): se programan, se les levanta acta, dejan compromisos y se
+// les hace seguimiento igual. Se distinguen porque la dirección necesita saber
+// cuánto del acompañamiento se hace en sitio y cuánto a distancia.
 // Filtros tipo Excel (embudo) por columna, combinables. Fase 2 (seguimiento).
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -10,8 +14,9 @@ import SeguimientoVisitas from './SeguimientoVisitas';
 import { tinte } from '@/app/_components/color';
 import { fmtDia } from '@/lib/fechas';
 import { duracionTexto, duracionEnHoras } from '@/lib/duracion';
+import { MODALIDADES, metaModalidad, nombreModalidad, type Modalidad } from '@/lib/modalidad';
 type Visita = {
-  id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null; horaSalida: string | null;
+  id: string; empresa: string | null; responsable: string | null; fecha: string; hora: string | null; horaSalida: string | null; almuerzoMinutos: number | null; modalidad: string | null;
   objetivo: string | null; estado: string; compromisosTotal: number; compromisosPendientes: number; compromisosCumplidos: number;
 };
 
@@ -23,9 +28,9 @@ function fFecha(iso: string) { try { return fmtDia(iso, { day: '2-digit', month:
 const estadoMeta = (k: string) => VISITA_ESTADOS.find((s) => s.k === k) ?? { label: k, color: 'var(--muted)' };
 
 // Columnas filtrables y el valor por el que se filtra cada una.
-const COLS = ['fecha', 'cliente', 'responsable', 'objetivo', 'duracion', 'estado', 'compromisos'] as const;
+const COLS = ['fecha', 'modalidad', 'cliente', 'responsable', 'objetivo', 'duracion', 'estado', 'compromisos'] as const;
 type Col = (typeof COLS)[number];
-const sinFiltros = (): Record<Col, Set<string> | null> => ({ fecha: null, cliente: null, responsable: null, objetivo: null, duracion: null, estado: null, compromisos: null });
+const sinFiltros = (): Record<Col, Set<string> | null> => ({ fecha: null, modalidad: null, cliente: null, responsable: null, objetivo: null, duracion: null, estado: null, compromisos: null });
 const catCompromisos = (v: Visita) => v.compromisosTotal === 0 ? 'Sin compromisos' : v.compromisosCumplidos === v.compromisosTotal ? 'Todos cumplidos' : 'Con pendientes';
 function valorDe(v: Visita, c: Col): string {
   switch (c) {
@@ -38,7 +43,8 @@ function valorDe(v: Visita, c: Col): string {
     // "Sin registrar" es una categoría de filtro por derecho propio: es la lista
     // de actas a las que les falta marcar la salida, y sin ella esas visitas no
     // cuentan en las horas.
-    case 'duracion': return duracionTexto(v.hora, v.horaSalida) || 'Sin registrar';
+    case 'duracion': return duracionTexto(v.hora, v.horaSalida, v.almuerzoMinutos) || 'Sin registrar';
+    case 'modalidad': return nombreModalidad(v.modalidad);
   }
 }
 
@@ -48,6 +54,9 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editar, setEditar] = useState<string | 'nueva' | null>(null);
+  // Con qué modalidad se abre el acta NUEVA. Se elige al agendar, no después:
+  // cambia cómo se llama y qué se pregunta (dirección o enlace).
+  const [modalidadNueva, setModalidadNueva] = useState<Modalidad>('presencial');
   const [filtros, setFiltros] = useState<Record<Col, Set<string> | null>>(sinFiltros);
   const [tab, setTab] = useState<'lista' | 'seguimiento'>('lista');
 
@@ -92,7 +101,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
   const horas = useMemo(() => {
     let total = 0, conDuracion = 0, sinRegistrar = 0;
     for (const v of visitasFiltradas) {
-      const h = duracionEnHoras(v.hora, v.horaSalida);
+      const h = duracionEnHoras(v.hora, v.horaSalida, v.almuerzoMinutos);
       if (h == null) sinRegistrar++; else { total += h; conDuracion++; }
     }
     return { total: Math.round(total * 100) / 100, conDuracion, sinRegistrar };
@@ -117,7 +126,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Visitas</h1>
+        <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Visitas y reuniones</h1>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <a href="/portal/visitas" title="Ver el portal como lo ve el cliente" className="dbtn" style={{ textDecoration: 'none', fontSize: 12.5, marginRight: 4 }}>👁 Portal del cliente</a>
           <button onClick={() => setTab('lista')} style={tabBtn('lista', 'Lista')}>📋 Lista</button>
@@ -136,14 +145,20 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
           <button onClick={() => setMes(desplazar(mes, 1))} className="dbtn" style={{ fontSize: 13 }}>›</button>
           <button onClick={() => setMes(mesActual())} className="dbtn" style={{ fontSize: 12.5 }}>Hoy</button>
         </div>
-        {puedeAgendar && <button className="dbtn primary" onClick={() => setEditar('nueva')} style={{ fontSize: 13 }}>＋ Agendar visita</button>}
+        {puedeAgendar && MODALIDADES.map((m) => (
+          <button key={m.k} className={m.k === 'presencial' ? 'dbtn primary' : 'dbtn'} style={{ fontSize: 13 }}
+            onClick={() => { setModalidadNueva(m.k); setEditar('nueva'); }}
+            title={m.k === 'virtual' ? 'Reunión virtual: se programa y se levanta acta igual que una visita' : 'Visita en sitio'}>
+            ＋ {m.icono} {m.label}
+          </button>
+        ))}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{visitasFiltradas.length}{hayFiltro ? ` de ${visitas.length}` : ''} visita(s)</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{visitasFiltradas.length}{hayFiltro ? ` de ${visitas.length}` : ''} programada(s)</span>
         {(horas.conDuracion > 0 || horas.sinRegistrar > 0) && (
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-            · <b style={{ color: 'var(--ink)' }}>{horas.total.toLocaleString('es-CO', { maximumFractionDigits: 2 })} h</b> en sitio
+            · <b style={{ color: 'var(--ink)' }}>{horas.total.toLocaleString('es-CO', { maximumFractionDigits: 2 })} h</b> registradas
             {horas.sinRegistrar > 0 && (
               <span title="Actas sin hora de salida: no entran en el total" style={{ color: 'var(--peligro)', fontWeight: 600 }}> · {horas.sinRegistrar} sin registrar</span>
             )}
@@ -157,6 +172,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
           <table className="dt">
             <thead><tr>
               {th('fecha', 'Fecha', false, { width: 96 })}
+              {th('modalidad', 'Tipo', false, { width: 108 })}
               {th('cliente', 'Cliente', true)}
               {th('responsable', 'Responsable', true)}
               {th('objetivo', 'Objetivo', true)}
@@ -166,20 +182,23 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
             </tr></thead>
             <tbody>
               {cargando ? (
-                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
+                <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando…</td></tr>
               ) : visitas.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin visitas este mes.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Sin visitas ni reuniones este mes.</td></tr>
               ) : visitasFiltradas.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Ninguna visita cumple los filtros.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Ninguna cumple los filtros.</td></tr>
               ) : visitasFiltradas.map((v) => {
                 const em = estadoMeta(v.estado);
                 return (
                   <tr key={v.id} onClick={() => setEditar(v.id)} style={{ cursor: 'pointer' }}>
                     <td style={{ whiteSpace: 'nowrap' }}>{fFecha(v.fecha)}{v.hora ? <span style={{ color: 'var(--muted)', fontSize: 11 }}> · {v.hora}</span> : null}</td>
+                    <td>{(() => { const m = metaModalidad(v.modalidad); return (
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: m.color, background: `${tinte(m.color, 10)}`, borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{m.icono} {m.label}</span>
+                    ); })()}</td>
                     <td style={{ fontWeight: 600 }}>{v.empresa ?? '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{v.responsable ?? '—'}</td>
                     <td style={{ color: 'var(--muted)' }}>{v.objetivo ?? '—'}</td>
-                    <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12.5 }} title={v.hora || v.horaSalida ? `${v.hora ?? '—'} a ${v.horaSalida ?? '—'}` : undefined}>{duracionTexto(v.hora, v.horaSalida) || '—'}</td>
+                    <td style={{ whiteSpace: 'nowrap', color: 'var(--muted)', fontSize: 12.5 }} title={v.hora || v.horaSalida ? `${v.hora ?? '—'} a ${v.horaSalida ?? '—'}${v.almuerzoMinutos ? ` · menos ${v.almuerzoMinutos} min de almuerzo` : ''}` : undefined}>{duracionTexto(v.hora, v.horaSalida, v.almuerzoMinutos) || '—'}</td>
                     <td><span style={{ fontSize: 11.5, fontWeight: 800, color: em.color, background: `${tinte(em.color, 12)}`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span></td>
                     <td style={{ color: 'var(--muted)', fontSize: 12.5 }}>{v.compromisosTotal === 0 ? '—' : `${v.compromisosCumplidos}/${v.compromisosTotal} cumplidos`}</td>
                   </tr>
@@ -193,7 +212,7 @@ export default function VisitasView({ puedeAgendar }: { puedeAgendar: boolean })
       </>
       )}
 
-      {editar && <VisitaModal id={editar === 'nueva' ? null : editar} onClose={() => setEditar(null)} onSaved={() => cargar(mes)} />}
+      {editar && <VisitaModal id={editar === 'nueva' ? null : editar} modalidadInicial={editar === 'nueva' ? modalidadNueva : undefined} onClose={() => setEditar(null)} onSaved={() => cargar(mes)} />}
     </>
   );
 }
