@@ -103,6 +103,7 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
       responsable: v.responsable?.nombre ?? null,
       fecha: v.fecha.toISOString(),
       hora: v.hora,
+      horaSalida: v.horaSalida,
       area: v.area,
       objetivo: v.objetivo,
       estado: v.estado,
@@ -149,6 +150,7 @@ visitasRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
         empresaId: v.empresa?.id ?? null,
         fecha: v.fecha.toISOString().slice(0, 10),
         hora: v.hora,
+        horaSalida: v.horaSalida,
         lugar: v.lugar,
         area: v.area,
         objetivo: v.objetivo,
@@ -244,6 +246,7 @@ visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
       responsable: v.responsable,
       fecha: v.fecha.toISOString().slice(0, 10),
       hora: v.hora,
+      horaSalida: v.horaSalida,
       lugar: v.lugar,
       area: v.area,
       objetivo: v.objetivo,
@@ -293,6 +296,7 @@ visitasRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
       responsableId: typeof b.responsableId === 'string' && b.responsableId ? b.responsableId : null,
       fecha,
       hora: limpiarTexto(b.hora),
+      horaSalida: limpiarTexto(b.horaSalida),
       lugar: limpiarTexto(b.lugar),
       area: limpiarTexto(b.area),
       objetivo: limpiarTexto(b.objetivo),
@@ -333,6 +337,7 @@ visitasRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if ('responsableId' in b) data.responsableId = typeof b.responsableId === 'string' && b.responsableId ? b.responsableId : null;
   if ('fecha' in b) { const f = fechaSolo(b.fecha); if (!f) return res.status(400).json({ error: 'Fecha inválida.' }); data.fecha = f; }
   if ('hora' in b) data.hora = limpiarTexto(b.hora);
+  if ('horaSalida' in b) data.horaSalida = limpiarTexto(b.horaSalida);
   if ('lugar' in b) data.lugar = limpiarTexto(b.lugar);
   if ('area' in b) data.area = limpiarTexto(b.area);
   if ('objetivo' in b) data.objetivo = limpiarTexto(b.objetivo);

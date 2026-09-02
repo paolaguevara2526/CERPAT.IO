@@ -6,9 +6,10 @@
 import { useEffect, useState } from 'react';
 
 import { tinte } from '@/app/_components/color';
+import { duracionTexto } from '@/lib/duracion';
 type Compromiso = { descripcion: string; responsableTipo: 'firma' | 'cliente'; responsable: string; area: string | null; fechaLimite: string | null; estado: string };
 type Visita = {
-  id: string; empresa: string | null; fecha: string; hora: string | null; lugar: string | null; area: string | null;
+  id: string; empresa: string | null; fecha: string; hora: string | null; horaSalida: string | null; lugar: string | null; area: string | null;
   objetivo: string | null; estado: string; asesor: string | null;
   actividades: string[]; recomendaciones: string[]; observaciones: string[]; compromisos: Compromiso[];
 };
@@ -72,7 +73,7 @@ export default function PortalVisitas() {
                       <b style={{ fontSize: 14 }}>{v.objetivo || 'Visita'}</b>
                       <span style={{ fontSize: 11, fontWeight: 800, color: em.color, background: `${tinte(em.color, 12)}`, borderRadius: 20, padding: '2px 9px' }}>{em.label}</span>
                     </div>
-                    <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{fFecha(v.fecha)}{v.hora ? ` · ${v.hora}` : ''}{esFirma && v.empresa ? ` · ${v.empresa}` : ''}{v.asesor ? ` · ${v.asesor}` : ''}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{fFecha(v.fecha)}{v.hora ? ` · ${v.hora}` : ''}{v.horaSalida ? ` a ${v.horaSalida}` : ''}{duracionTexto(v.hora, v.horaSalida) ? ` · ${duracionTexto(v.hora, v.horaSalida)}` : ''}{esFirma && v.empresa ? ` · ${v.empresa}` : ''}{v.asesor ? ` · ${v.asesor}` : ''}</div>
                   </div>
                   {v.compromisos.length > 0 && <span style={{ fontSize: 12, color: pend ? 'var(--alerta)' : 'var(--exito)', fontWeight: 700, whiteSpace: 'nowrap' }}>{pend ? `${pend} pendiente(s)` : 'Al día'}</span>}
                   <span style={{ color: 'var(--muted)', fontSize: 12 }}>{open ? '▲' : '▼'}</span>

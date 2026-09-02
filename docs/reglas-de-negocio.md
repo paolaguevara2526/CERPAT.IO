@@ -509,6 +509,24 @@ en las vistas internas — forzado en el backend (`esStaffAcotado`):
   trabajo que el sistema ya tiene registrado a nombre de quien mira.
 - **Pagos** → solo vencimientos de sus **empresas asignadas**.
 
+**Horas en sitio de una visita.** El acta registra **hora de ingreso** y **hora de
+salida** (texto `HH:MM`, no instantes: una visita ocurre a una hora local y
+convertirla a UTC solo abre la puerta al corrimiento de un día). La **duración se
+calcula**, nunca se escribe — dos datos que digan lo mismo terminan
+contradiciéndose.
+
+Reglas del cálculo (`apps/web/lib/duracion.ts`):
+- Falta una de las dos horas → **sin duración**. El acta se llena por partes y la
+  salida se marca al final.
+- Salida **anterior** a la entrada → **sin duración**, y el acta lo advierte. No
+  se da la vuelta al día: un dedazo ("15:00" a "09:00") mostrado como 18 horas se
+  puede facturar, y en blanco se corrige.
+- Entrada y salida iguales → **0 min**, que no es lo mismo que "sin registrar".
+
+En **Visitas** la lista muestra la duración por acta y el **total de horas en
+sitio** del recorte filtrado, contando aparte las actas **sin salida**: un total
+que ignora en silencio la mitad de las visitas es peor que no tener total.
+
 **Las obligaciones de SOLO PRESENTACIÓN no pasan por revisión.** El circuito de
 revisión existe para que un segundo par de ojos verifique una **liquidación**
 antes de presentarla. Seguridad social (PILA), nómina electrónica, RUB y las
