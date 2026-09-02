@@ -15,6 +15,11 @@ import { esStaffAcotado } from '../auth/alcance.js';
 export const visitasRouter = Router();
 
 const ESTADOS_VISITA = ['programada', 'realizada', 'cancelada'];
+// presencial (visita en sitio) · virtual (reunión). Cualquier otro valor cae en
+// presencial: es lo que son todas las actas ya cargadas, y un dato raro del
+// cliente no puede convertirle una visita en reunión.
+const MODALIDADES_VISITA = ['presencial', 'virtual'] as const;
+const modalidadValida = (v: unknown) => (v === 'virtual' ? 'virtual' : 'presencial') as (typeof MODALIDADES_VISITA)[number];
 const ESTADOS_COMPROMISO = ['pendiente', 'cumplido', 'cancelado'];
 const TIPOS_ITEM = ['actividad', 'recomendacion', 'observacion'] as const;
 type TipoItem = (typeof TIPOS_ITEM)[number];
@@ -81,6 +86,7 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   if (typeof req.query.empresaId === 'string' && req.query.empresaId) where.empresaId = req.query.empresaId;
   if (typeof req.query.responsableId === 'string' && req.query.responsableId) where.responsableId = req.query.responsableId;
   if (typeof req.query.estado === 'string' && ESTADOS_VISITA.includes(req.query.estado)) where.estado = req.query.estado;
+  if (typeof req.query.modalidad === 'string' && (MODALIDADES_VISITA as readonly string[]).includes(req.query.modalidad)) where.modalidad = req.query.modalidad;
   // Alcance: un Asesor/Auxiliar solo ve las visitas donde es el responsable.
   if (esStaffAcotado(req.user)) where.responsableId = req.user!.sub;
 
@@ -104,6 +110,7 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
       fecha: v.fecha.toISOString(),
       hora: v.hora,
       horaSalida: v.horaSalida,
+      modalidad: v.modalidad,
       area: v.area,
       objetivo: v.objetivo,
       estado: v.estado,
@@ -151,6 +158,7 @@ visitasRouter.get('/portal', requireAuth, async (req: AuthedRequest, res) => {
         fecha: v.fecha.toISOString().slice(0, 10),
         hora: v.hora,
         horaSalida: v.horaSalida,
+        modalidad: v.modalidad,
         lugar: v.lugar,
         area: v.area,
         objetivo: v.objetivo,
@@ -247,6 +255,7 @@ visitasRouter.get('/:id', requireAuth, async (req: AuthedRequest, res) => {
       fecha: v.fecha.toISOString().slice(0, 10),
       hora: v.hora,
       horaSalida: v.horaSalida,
+      modalidad: v.modalidad,
       lugar: v.lugar,
       area: v.area,
       objetivo: v.objetivo,
@@ -297,6 +306,7 @@ visitasRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
       fecha,
       hora: limpiarTexto(b.hora),
       horaSalida: limpiarTexto(b.horaSalida),
+      modalidad: modalidadValida(b.modalidad),
       lugar: limpiarTexto(b.lugar),
       area: limpiarTexto(b.area),
       objetivo: limpiarTexto(b.objetivo),
@@ -338,6 +348,7 @@ visitasRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) => {
   if ('fecha' in b) { const f = fechaSolo(b.fecha); if (!f) return res.status(400).json({ error: 'Fecha inválida.' }); data.fecha = f; }
   if ('hora' in b) data.hora = limpiarTexto(b.hora);
   if ('horaSalida' in b) data.horaSalida = limpiarTexto(b.horaSalida);
+  if ('modalidad' in b) data.modalidad = modalidadValida(b.modalidad);
   if ('lugar' in b) data.lugar = limpiarTexto(b.lugar);
   if ('area' in b) data.area = limpiarTexto(b.area);
   if ('objetivo' in b) data.objetivo = limpiarTexto(b.objetivo);

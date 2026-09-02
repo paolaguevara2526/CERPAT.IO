@@ -98,6 +98,18 @@ enum EstadoRevisionVenc {
   aprobado
 }
 
+// ¿La visita es en sitio o es una reunión virtual? Es la MISMA entidad —se
+// programa, se levanta acta, deja compromisos y se le hace seguimiento—; lo
+// único que cambia es si hay que desplazarse y, con eso, cómo se llama y qué se
+// pregunta en "lugar" (una dirección o un enlace de Meet/Teams/Zoom).
+//
+// Se separan porque la dirección necesita saber cuánto del acompañamiento se
+// hace en sitio y cuánto a distancia, y con un solo nombre esa cuenta no existe.
+enum ModalidadVisita {
+  presencial
+  virtual
+}
+
 // Estado de una visita del asesor/auditor al cliente.
 enum EstadoVisita {
   programada
@@ -1300,7 +1312,7 @@ model SubtareaVencimiento {
 // objetivo, recomendaciones y una lista de compromisos (cada uno con su fecha
 // límite y responsable) para el seguimiento por cliente y asesor.
 model Visita {
-  id              String       @id @default(uuid())
+  id              String          @id @default(uuid())
   organizacionId  String
   empresaId       String
   responsableId   String? // asesor o auditor que realiza la visita
@@ -1311,19 +1323,23 @@ model Visita {
   // como texto "HH:MM" igual que la entrada: una visita ocurre a una hora local
   // y convertirla a instante solo abre la puerta al corrimiento de un día.
   horaSalida      String?
-  lugar           String? // lugar de la visita (opcional)
+  // presencial = visita en sitio · virtual = reunión. Por defecto presencial:
+  // todas las actas que ya existen lo son, y el valor nuevo no puede cambiarles
+  // la naturaleza al histórico.
+  modalidad       ModalidadVisita @default(presencial)
+  lugar           String? // dirección si es presencial; enlace si es virtual
   area            String? // área / proceso principal de la visita
   objetivo        String? // objetivo / motivo de la visita
   recomendaciones String? // (legado) recomendaciones en texto; ahora se usan ItemActa
-  estado          EstadoVisita @default(programada)
+  estado          EstadoVisita    @default(programada)
   observaciones   String? // (legado) observaciones en texto; ahora se usan ItemActa
   // Vínculo al Plan de Trabajo (las visitas recurrentes del plan lo llevan; Fase 3).
   // Se guarda como referencia simple (sin FK) hasta implementar la generación.
   actividadPlanId String?
   periodo         String? // "YYYY-MM" del período del plan (visitas recurrentes)
   creadoPorId     String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   organizacion Organizacion       @relation(fields: [organizacionId], references: [id], onDelete: Cascade)
   empresa      Empresa            @relation(fields: [empresaId], references: [id])

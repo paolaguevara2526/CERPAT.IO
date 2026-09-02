@@ -1,8 +1,10 @@
 'use client';
 // Calendario del planeador: reúne VISITAS y VENCIMIENTOS tributarios en un solo
-// mes. El Plan de Trabajo NO va en el calendario (vive en Lista · Mi día ·
-// Tablero, que son operación interna). Filtro por etiqueta (Vencimientos /
-// Visitas) y cliente, arrastrar una tarjeta a otro día para reprogramar su fecha,
+// mes (las visitas pueden ser presenciales o REUNIONES virtuales: misma entidad,
+// distinta modalidad — ver lib/modalidad.ts). El Plan de Trabajo NO va en el
+// calendario (vive en Lista · Mi día · Tablero, que son operación interna).
+// Filtro por etiqueta (Vencimientos / Visitas / Reuniones), cliente y asignado,
+// arrastrar una tarjeta a otro día para reprogramar su fecha,
 // clic para ver el detalle e imprimir el mes. Todo contra los proxies /api.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,6 +13,7 @@ import VisitaModal from '../visitas/VisitaModal';
 import { tinte } from '@/app/_components/color';
 import { progresoChecklist, etiquetaProgreso, siguienteEstado, ASPECTO } from '@/lib/checklist';
 import { useCierreDeFondo } from '@/app/_components/ModalMarco';
+import { metaModalidad, etiquetaCalendario } from '@/lib/modalidad';
 // Estados de un VENCIMIENTO tributario (enum EstadoPago).
 const VENC_META: Record<string, { label: string; color: string }> = {
   pendiente: { label: 'Pendiente', color: 'var(--muted)' },
@@ -30,7 +33,11 @@ const VISITA_META: Record<string, { label: string; color: string }> = {
 const ETIQUETA_COLOR: Record<string, string> = {
   Vencimientos: '#7a5bd0',
   Visitas: 'var(--peligro)',
+  Reuniones: '#2E5090',
 };
+// Las tres fuentes del mes, en el orden del filtro.
+const ETIQUETAS = ['Vencimientos', 'Visitas', 'Reuniones'];
+const ICONO_ETIQUETA: Record<string, string> = { Vencimientos: '🧾', Visitas: '🤝', Reuniones: '💻' };
 
 const DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -47,6 +54,7 @@ type Evento = {
   titulo: string; empresa: string | null; etiqueta: string;
   estado: string; estadoLabel: string; color: string; vencido: boolean;
   asignado: string | null;
+  modalidad?: string | null;
   // Extras de vencimiento (para su detalle):
   municipio?: string | null; periodo?: string | null; soporteLink?: string | null; createdAt?: string | null; valorPago?: number | null;
 };
@@ -149,7 +157,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         evs.push({
           key: `vi-${v.id}`, tipo: 'visita', id: v.id, fecha: f,
           titulo: v.hora ? `${objetivo} · ${v.hora}` : objetivo,
-          empresa: v.empresa ?? null, etiqueta: 'Visitas',
+          empresa: v.empresa ?? null, etiqueta: etiquetaCalendario(v.modalidad), modalidad: v.modalidad ?? 'presencial',
           estado: v.estado, estadoLabel: em.label, color: em.color, vencido: false,
           asignado: v.responsable ?? null,
         });
@@ -254,7 +262,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         const diaISO = `${mes}-${pad(dia)}`;
         const esFestivo = festivosImp.has(diaISO);
         const items = porDia.get(diaISO) ?? [];
-        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}">${e.tipo === 'visita' ? '<i style="color:#e11900;font-weight:800;text-transform:uppercase">🤝 Visita</i>' : ''}<b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}${e.municipio ? `<span class="muni">📍 ${escapar(e.municipio)}</span>` : ''}${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
+        const cards = items.map((e) => `<div class="c" style="border-left:3px solid ${e.color}">${e.tipo === 'visita' ? `<i style="color:${metaModalidad(e.modalidad).color === '#2E5090' ? '#2E5090' : '#e11900'};font-weight:800;text-transform:uppercase">${metaModalidad(e.modalidad).icono} ${escapar(metaModalidad(e.modalidad).label)}</i>` : ''}<b>${escapar(e.titulo)}</b>${e.empresa ? `<span>${escapar(e.empresa)}</span>` : ''}${e.municipio ? `<span class="muni">📍 ${escapar(e.municipio)}</span>` : ''}${mostrarEstados ? `<i style="color:${e.color}">${escapar(e.vencido ? 'Vencido' : e.estadoLabel)}</i>` : ''}</div>`).join('');
         return `<td${esFestivo ? ' class="fest"' : ''}><div class="dn${esFestivo ? ' festdn' : ''}">${dia}${esFestivo ? ' <span class="ftag">Festivo</span>' : ''}</div>${cards}</td>`;
       }).join('');
       filas.push(`<tr>${semana}</tr>`);
@@ -275,7 +283,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       @media print{@page{size:landscape;margin:10mm;}}
     </style></head><body>
       <h1>Calendario — ${escapar(titulo)}${etiquetas.length ? ` · ${escapar(etiquetas.join(', '))}` : ''}${asignadosSel.length ? ` · ${escapar(asignadosSel.join(', '))}` : ''}</h1>
-      <div class="sub">Visitas y vencimientos tributarios · CERPAT</div>
+      <div class="sub">Visitas, reuniones y vencimientos tributarios · CERPAT</div>
       <table><thead><tr>${DIAS.slice(0, cols).map((d) => `<th>${d}</th>`).join('')}</tr></thead><tbody>${filas.join('')}</tbody></table>
     </body></html>`);
     w.document.close();
@@ -306,8 +314,8 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
-        <MultiSelect label="Etiquetas" opciones={['Vencimientos', 'Visitas']} sel={etiquetas} onChange={setEtiquetas}
-          etiquetar={(o) => (o === 'Vencimientos' ? '🧾 ' : '🤝 ') + o} color={(o) => ETIQUETA_COLOR[o]} />
+        <MultiSelect label="Etiquetas" opciones={ETIQUETAS} sel={etiquetas} onChange={setEtiquetas}
+          etiquetar={(o) => `${ICONO_ETIQUETA[o] ?? ''} ${o}`} color={(o) => ETIQUETA_COLOR[o]} />
         <MultiSelect label="Clientes" opciones={clientes} sel={clientesSel} onChange={setClientesSel} anchoMenu={260} />
         <MultiSelect label="Asignado" opciones={asignados} sel={asignadosSel} onChange={setAsignadosSel} anchoMenu={240} />
         <select value={cumpl} onChange={(e) => setCumpl(e.target.value)} style={selStyle} title="Filtrar por estado">
@@ -318,7 +326,7 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
         </select>
         {hayFiltro && <button onClick={() => { setEtiquetas([]); setClientesSel([]); setAsignadosSel([]); setCumpl(''); }} className="dbtn" style={{ fontSize: 12 }}>Limpiar</button>}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 11, color: 'var(--muted)' }}>
-          {(etiquetas.length ? etiquetas : ['Vencimientos', 'Visitas']).map((et) => (
+          {(etiquetas.length ? etiquetas : ETIQUETAS).map((et) => (
             <span key={et} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <span style={{ width: 9, height: 9, borderRadius: 3, background: ETIQUETA_COLOR[et] ?? 'var(--neutro)' }} /> {et}
             </span>
@@ -398,8 +406,8 @@ export default function CalendarioUnificado({ mesInicial }: { mesInicial?: strin
                           title={`${ev.titulo}${ev.empresa ? ' · ' + ev.empresa : ''} · ${ev.estadoLabel} · ${ev.asignado ?? 'sin asignar'}`}
                           style={{ borderLeft: `3px solid ${col}`, background: `${tinte(col, 8)}`, borderRadius: 4, padding: '3px 6px', cursor: 'grab' }}>
                           {ev.tipo === 'visita' && (
-                            <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#fff', background: 'var(--peligro-solido)', borderRadius: 20, padding: '0 6px', marginBottom: 2, marginRight: 3 }}>
-                              🤝 Visita
+                            <span style={{ display: 'inline-block', fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.3, color: '#fff', background: metaModalidad(ev.modalidad).color, borderRadius: 20, padding: '0 6px', marginBottom: 2, marginRight: 3 }}>
+                              {metaModalidad(ev.modalidad).icono} {metaModalidad(ev.modalidad).label}
                             </span>
                           )}
                           {mostrarEstados && (
