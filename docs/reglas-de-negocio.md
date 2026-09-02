@@ -537,7 +537,16 @@ y root ven todo. Un usuario con varios roles ve la **unión** de lo permitido.
 **Auxiliar** *sin* rol elevado (Administrador/Coordinador/Auditor) solo ve **lo suyo**
 en las vistas internas — forzado en el backend (`esStaffAcotado`):
 - **Tablero, Lista y Calendario (tareas)** → solo tareas donde es **asesor o auxiliar**.
-- **Calendario (visitas)** → solo visitas donde es el **responsable**.
+- **Visitas y reuniones** → las de sus **empresas asignadas** **o** las que están **a su
+  nombre**: la misma unión que los vencimientos, y por la misma razón. Antes era solo lo
+  suyo, y el calendario del asesor salía **partido por la mitad**: todos los vencimientos
+  del cliente, pero apenas una parte de sus visitas —la de un compañero o la reunión que
+  programó la coordinación no aparecían—. Ese calendario no sirve para lo que existe:
+  hacerle seguimiento al cliente y **mandárselo**; le falta media agenda del mes y no se
+  nota que falta. El segundo término del "o" no sobra: una visita puede estar a su nombre
+  en un cliente que no tiene asignado (un reemplazo, un apoyo), y omitirla le escondería
+  trabajo propio. **Ver no es editar**: el acta la sigue editando la coordinación o el
+  responsable de esa visita.
 - **Calendario (vencimientos)** → los de sus **empresas asignadas** (Asignación cliente ×
   área, donde figura como asesor o auxiliar) **o** los que están **a su nombre**
   (`asesorId`/`auxiliarId` del vencimiento). Es una unión a propósito: el responsable

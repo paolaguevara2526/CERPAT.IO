@@ -9,8 +9,9 @@ import { Router } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, type AuthedRequest } from '../auth/middleware.js';
 import { orgDeSesion } from '../auth/tenant.js';
-import { alcancePortal } from '../auth/alcance-db.js';
+import { alcancePortal, empresasAsignadas } from '../auth/alcance-db.js';
 import { esStaffAcotado } from '../auth/alcance.js';
+import { filtroAlcanceVisitas } from '../visitas/alcance-lista.js';
 
 export const visitasRouter = Router();
 
@@ -94,8 +95,12 @@ visitasRouter.get('/', requireAuth, async (req: AuthedRequest, res) => {
   if (typeof req.query.responsableId === 'string' && req.query.responsableId) where.responsableId = req.query.responsableId;
   if (typeof req.query.estado === 'string' && ESTADOS_VISITA.includes(req.query.estado)) where.estado = req.query.estado;
   if (typeof req.query.modalidad === 'string' && (MODALIDADES_VISITA as readonly string[]).includes(req.query.modalidad)) where.modalidad = req.query.modalidad;
-  // Alcance: un Asesor/Auxiliar solo ve las visitas donde es el responsable.
-  if (esStaffAcotado(req.user)) where.responsableId = req.user!.sub;
+  // Alcance: las visitas y reuniones de SUS clientes, más lo que esté a su
+  // nombre. Antes era solo lo suyo, y el calendario del asesor mostraba todos
+  // los vencimientos del cliente pero apenas una parte de sus visitas — con eso
+  // no se le puede hacer seguimiento al cliente ni mandarle el calendario.
+  const idsAsignadas = esStaffAcotado(req.user) ? await empresasAsignadas(req.user!.sub, org.id) : null;
+  Object.assign(where, filtroAlcanceVisitas(idsAsignadas, req.user!.sub));
 
   const visitas = await prisma.visita.findMany({
     where,
