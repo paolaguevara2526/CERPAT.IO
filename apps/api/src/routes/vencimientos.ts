@@ -1010,13 +1010,19 @@ vencimientosRouter.get('/checklist/diagnostico', requireAuth, async (req: Authed
 
   const vencs = await prisma.vencimientoEmpresa.findMany({
     where: { organizacionId: org.id, anio },
-    select: { obligacion: true, _count: { select: { subtareas: true } } },
+    select: { obligacion: true, asesorId: true, _count: { select: { subtareas: true } } },
   });
 
   const filas = VINCULOS_VENCIMIENTO.map((v) => {
     const act = porKey.get(v.key);
     const propios = vencs.filter((x) => vinculoDeObligacion(x.obligacion) === v.key);
     const sinChecklist = propios.filter((x) => x._count.subtareas === 0).length;
+    // Sin responsable es un problema DISTINTO del checklist y más grave: un
+    // vencimiento sin dueño no le aparece a nadie en Mi Día. Se cuenta aparte
+    // porque se arregla por otro camino (la asignación cliente×área) y porque
+    // hay obligaciones sin actividad vinculada —que nunca tendrán checklist—
+    // cuyo responsable sí se puede resolver.
+    const sinResponsable = propios.filter((x) => x.asesorId == null).length;
     return {
       key: v.key,
       obligacion: v.label,
@@ -1024,6 +1030,7 @@ vencimientosRouter.get('/checklist/diagnostico', requireAuth, async (req: Authed
       subtareasPlantilla: act?._count.subtareas ?? 0,
       vencimientos: propios.length,
       sinChecklist,
+      sinResponsable,
       // Qué hay que hacer, en el idioma del equipo.
       diagnostico: !act ? 'sin_actividad_vinculada'
         : (act._count.subtareas === 0 ? 'actividad_sin_checklist'
@@ -1031,7 +1038,17 @@ vencimientosRouter.get('/checklist/diagnostico', requireAuth, async (req: Authed
     };
   });
 
-  res.json({ anio, filas });
+  // Totales: el botón de aplicar se habilita con CUALQUIERA de los dos, no solo
+  // con el checklist. Antes se habilitaba solo por checklist pendiente, así que
+  // en una firma donde lo único que faltaba era el responsable el botón quedaba
+  // apagado y no había forma de arreglarlo desde la pantalla.
+  const totales = {
+    sinChecklist: filas.reduce((n, f) => n + f.sinChecklist, 0),
+    sinResponsable: filas.reduce((n, f) => n + f.sinResponsable, 0),
+    porAplicar: filas.reduce((n, f) => n + (f.diagnostico === 'pendiente_de_rellenar' ? f.sinChecklist : 0), 0),
+  };
+
+  res.json({ anio, filas, totales });
 });
 
 // POST /vencimientos/checklist/rellenar { anio?, dryRun? }
