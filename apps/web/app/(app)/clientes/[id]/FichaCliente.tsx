@@ -20,6 +20,9 @@ type Ficha = {
   id: string; nombre: string; nit: string | null; activo: boolean; servicio: string | null;
   direccion: string | null; emailDian: string | null; telefonoDian: string | null;
   emailCamara: string | null; telefonoCamara: string | null; fechaConstitucion: string | null;
+  // horasPactadasMes viaja como número del servidor y como texto mientras se
+  // edita: el input entrega cadenas.
+  contratoDesde: string | null; horasPactadasMes: number | string | null; alcanceServicio: string | null;
   tipoId: string | null; regimenId: string | null;
   tipo: { nombre: string } | null; regimen: { nombre: string } | null;
   municipio: { nombre: string; departamento: string | null } | null;
@@ -65,6 +68,9 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
         direccion: f.direccion, emailDian: f.emailDian, telefonoDian: f.telefonoDian,
         emailCamara: f.emailCamara, telefonoCamara: f.telefonoCamara,
         fechaConstitucion: soloFecha(f.fechaConstitucion),
+        contratoDesde: soloFecha(f.contratoDesde),
+        horasPactadasMes: f.horasPactadasMes ?? '',
+        alcanceServicio: f.alcanceServicio ?? '',
         tipoId: f.tipoId ?? '', regimenId: f.regimenId ?? '',
       }),
     });
@@ -151,6 +157,40 @@ export default function FichaCliente({ empresaId }: { empresaId: string }) {
           <div><span style={lbl}>Teléfono DIAN</span><input style={inp} disabled={!editable} value={f.telefonoDian ?? ''} onChange={(e) => set('telefonoDian', e.target.value)} /></div>
           <div><span style={lbl}>Correo notificación cámara</span><input style={inp} disabled={!editable} value={f.emailCamara ?? ''} onChange={(e) => set('emailCamara', e.target.value)} /></div>
           <div><span style={lbl}>Teléfono cámara</span><input style={inp} disabled={!editable} value={f.telefonoCamara ?? ''} onChange={(e) => set('telefonoCamara', e.target.value)} /></div>
+        </div>
+        {editable && (
+          <div style={{ marginTop: 14 }}>
+            <button className="dbtn primary" onClick={guardarDatos} style={{ fontSize: 13 }}>{ok ? '✓ Guardado' : 'Guardar'}</button>
+          </div>
+        )}
+      </div>
+
+      {/* Contrato de servicio. Es el OTRO LADO de la medición de horas: el acta
+          de cada visita dice cuántas se ejecutaron, pero sin lo pactado no se
+          puede decir si se cumple. Cada cliente tiene lo suyo, por eso vive en
+          su ficha y no en un catálogo por servicio.
+          Se guarda con el mismo botón de arriba: es la misma ficha. */}
+      <div className="panel" style={{ padding: '16px 18px', marginBottom: 16 }}>
+        <div className="panel-head" style={{ margin: '-16px -18px 14px', borderRadius: '10px 10px 0 0' }}>Contrato de servicio</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
+          <div>
+            <span style={lbl}>Fecha inicial del contrato</span>
+            <input type="date" style={inp} disabled={!editable} value={soloFecha(f.contratoDesde)} onChange={(e) => set('contratoDesde', e.target.value)} />
+          </div>
+          <div>
+            <span style={lbl}>Horas pactadas al mes</span>
+            <input type="number" min={0} step={0.5} inputMode="decimal" style={inp} disabled={!editable}
+              value={f.horasPactadasMes ?? ''} onChange={(e) => set('horasPactadasMes', e.target.value)} placeholder="Ej. 8" />
+            <span style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginTop: 4 }}>
+              Contra esto se comparan las horas de las visitas y reuniones del mes.
+            </span>
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <span style={lbl}>Alcance del servicio</span>
+          <textarea style={{ ...inp, minHeight: 92, resize: 'vertical', lineHeight: 1.5 }} disabled={!editable}
+            value={f.alcanceServicio ?? ''} onChange={(e) => set('alcanceServicio', e.target.value)}
+            placeholder="Qué cubre el acompañamiento: áreas, entregables, periodicidad, lo que queda por fuera…" />
         </div>
         {editable && (
           <div style={{ marginTop: 14 }}>

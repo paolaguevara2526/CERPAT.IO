@@ -332,6 +332,12 @@ model Empresa {
   emailCamara         String? // correo de notificación en la cámara de comercio
   telefonoCamara      String?
   fechaConstitucion   DateTime?
+  // ---- Contrato de servicio ----
+  // Lo pactado con el cliente, que es contra lo que se mide lo ejecutado. Cada
+  // cliente tiene lo suyo, así que vive en la ficha y no en un catálogo.
+  contratoDesde       DateTime? // fecha inicial del contrato (día calendario)
+  horasPactadasMes    Decimal?  @db.Decimal(6, 2) // horas de acompañamiento al mes
+  alcanceServicio     String? // qué cubre el servicio, en palabras de la firma
   createdAt           DateTime  @default(now())
 
   organizacion    Organizacion       @relation(fields: [organizacionId], references: [id], onDelete: Cascade)

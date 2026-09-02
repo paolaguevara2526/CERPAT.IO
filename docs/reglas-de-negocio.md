@@ -533,6 +533,19 @@ convertirla a UTC solo abre la puerta al corrimiento de un día). La **duración
 calcula**, nunca se escribe — dos datos que digan lo mismo terminan
 contradiciéndose.
 
+**Contrato de servicio del cliente.** La ficha guarda **fecha inicial del
+contrato**, **horas pactadas al mes** y **alcance del servicio**. Es el *otro
+lado* de la medición: el acta de cada visita dice cuántas horas se ejecutaron,
+pero sin lo pactado no se puede decir si se cumple. **Cada cliente tiene sus
+propias horas**, así que vive en su ficha y no en un catálogo por servicio.
+
+Las horas pactadas se filtran estricto (`fiscal/contrato.ts`): vacío, texto,
+**cero** o negativo se guardan como **sin dato**. De ahí sale el denominador del
+cumplimiento, y un cero volvería a ese cliente un cumplimiento infinito o una
+división por cero según quién haga la cuenta — un valor imposible ahí no falla,
+**desvía el indicador en silencio**, que es peor. Se acepta la coma decimal
+("7,5") porque así se escribe acá.
+
 **El almuerzo se descuenta.** Una visita de todo el día son **8 horas de
 presencia contra 7 de trabajo**, y esa hora se factura: sin descontarla el
 indicador queda inflado justo en las visitas más largas, que son las que más

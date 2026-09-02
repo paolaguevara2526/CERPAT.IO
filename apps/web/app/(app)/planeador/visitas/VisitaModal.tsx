@@ -292,7 +292,7 @@ export default function VisitaModal({ id, modalidadInicial, onClose, onSaved }: 
                           background: activa ? tinte(m.color, 12) : 'var(--panel)',
                           border: `1px solid ${activa ? tinte(m.color, 45) : 'var(--edge-strong)'}`,
                         }}>
-                        {m.icono} {m.label} <span style={{ fontWeight: 500, fontSize: 11.5 }}>· {m.k === 'virtual' ? 'a distancia' : 'en sitio'}</span>
+                        {m.icono} {m.label}
                       </button>
                     );
                   })}
