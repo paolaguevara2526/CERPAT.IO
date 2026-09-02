@@ -100,9 +100,22 @@ export const EVENTO_DE: Record<AccionRevision, string> = {
  * La coordinación sí puede saltársela — un revisor enfermo el día del
  * vencimiento no puede ser motivo para no presentar. Queda registrado con su
  * nombre, que es la diferencia entre una excepción y un agujero.
+ *
+ * EXCEPCIÓN: las obligaciones de SOLO PRESENTACIÓN (seguridad social/PILA,
+ * nómina electrónica, RUB, exógenas) no pasan por revisión. El revisor existe
+ * para verificar una LIQUIDACIÓN antes de presentarla; estas no liquidan nada
+ * —no llevan valor a pagar, la propia pantalla lo dice— así que no hay cifra
+ * que revisar. Exigirla no agregaba control: solo dejaba a quien lleva nómina
+ * mirando su vencimiento sin poder marcarlo, y le metía a los revisores más de
+ * mil obligaciones de trámite en una cola que existe para las declaraciones.
  */
-export function puedePresentar(estadoRevision: EstadoRevision, actor: ActorRevision): { ok: boolean; motivo?: string } {
+export function puedePresentar(
+  estadoRevision: EstadoRevision,
+  actor: ActorRevision,
+  sinPago = false,
+): { ok: boolean; motivo?: string } {
   if (actor === 'coordinacion') return { ok: true };
+  if (sinPago) return { ok: true };
   if (estadoRevision === 'aprobado') return { ok: true };
   return { ok: false, motivo: 'El impuesto todavía no está aprobado por el revisor. Envíalo a revisión primero.' };
 }

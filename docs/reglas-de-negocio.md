@@ -509,6 +509,16 @@ en las vistas internas — forzado en el backend (`esStaffAcotado`):
   trabajo que el sistema ya tiene registrado a nombre de quien mira.
 - **Pagos** → solo vencimientos de sus **empresas asignadas**.
 
+**Las obligaciones de SOLO PRESENTACIÓN no pasan por revisión.** El circuito de
+revisión existe para que un segundo par de ojos verifique una **liquidación**
+antes de presentarla. Seguridad social (PILA), nómina electrónica, RUB y las
+exógenas **no liquidan nada** —no llevan valor a pagar— así que no hay cifra que
+revisar: el asesor las marca como presentadas sin esperar aprobación. Exigirla no
+agregaba control; dejaba a quien lleva nómina mirando su vencimiento sin poder
+marcarlo el día que había que cumplirlo, y le metía a los revisores más de mil
+obligaciones de trámite en una cola que existe para las declaraciones. Las que sí
+liquidan (IVA, retención, renta, ICA…) siguen exigiendo la aprobación.
+
 **Responsable de un vencimiento: cascada, no un solo camino.** Al crearse (y al
 rellenar uno viejo) el responsable se resuelve así, en orden:
 
