@@ -18,13 +18,46 @@ function nombreHojaValido(nombre: string): string {
   return (nombre || 'Hoja').replace(/[:\\/?*[\]]/g, ' ').slice(0, 31) || 'Hoja';
 }
 
+// Día "cero" del calendario de Excel: sus números de serie cuentan días desde el
+// 30 de diciembre de 1899.
+const EPOCA_EXCEL = Date.UTC(1899, 11, 30);
+/** Formato con el que Excel pinta las celdas de fecha del archivo. */
+export const FORMATO_FECHA_XLSX = 'dd/mm/yyyy';
+
+/**
+ * Un día calendario como número de serie de Excel.
+ *
+ * Se toman las partes LOCALES de la fecha y se rearman en UTC. Así el resultado
+ * es un entero exacto y no depende de la zona horaria de quien baja el archivo,
+ * que es justo donde estaba el error: pasarle el `Date` a la librería la hacía
+ * convertirlo con el huso del navegador y en Colombia (UTC-5) todas las fechas
+ * salían **un día antes** — el 7 de septiembre se veía como el 6. En pantalla
+ * estaba bien; solo el archivo mentía, que es la peor forma de fallar porque el
+ * archivo es el que se manda al cliente.
+ */
+export function serialExcel(f: Date): number {
+  const utc = Date.UTC(f.getFullYear(), f.getMonth(), f.getDate());
+  return Math.round((utc - EPOCA_EXCEL) / 86400000);
+}
+
 export async function descargarXlsx(archivo: string, hojas: Hoja[]): Promise<void> {
   const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
   for (const h of hojas) {
-    // cellDates: sin esto las fechas se escribirían como número de serie y el
-    // archivo abriría con "45890" donde debía ir un día.
-    const ws = XLSX.utils.aoa_to_sheet(h.filas, { cellDates: true });
+    // Las fechas NO viajan como Date: se convierten aquí a número de serie y se
+    // les pone el formato de fecha. Dejar que la librería convierta el Date es
+    // lo que corría el día (ver serialExcel).
+    const esFecha: [number, number][] = [];
+    const filas = h.filas.map((fila, r) => fila.map((celda, c) => {
+      if (celda instanceof Date) { esFecha.push([r, c]); return serialExcel(celda); }
+      return celda;
+    }));
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    for (const [r, c] of esFecha) {
+      const ref = XLSX.utils.encode_cell({ r, c });
+      const cell = ws[ref];
+      if (cell) { cell.t = 'n'; cell.z = FORMATO_FECHA_XLSX; }
+    }
     XLSX.utils.book_append_sheet(wb, ws, nombreHojaValido(h.nombre));
   }
   XLSX.writeFile(wb, archivo);

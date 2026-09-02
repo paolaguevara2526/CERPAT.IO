@@ -107,3 +107,30 @@ test('los mensajes de error se entienden sin saber de programación', () => {
     assert.doesNotMatch(r.motivo, /transici[oó]n|inv[aá]lid|state|null|undefined/i);
   }
 });
+
+// ---- Obligaciones de SOLO PRESENTACIÓN ----
+// El asesor de nómina no podía marcar una PILA como presentada: le salía "El
+// impuesto todavía no está aprobado por el revisor". Pero PILA no lleva valor a
+// pagar — la propia ventana lo dice— así que no hay liquidación que revisar. El
+// revisor existe para verificar una cifra antes de presentarla; sin cifra, el
+// paso solo estorba y bloquea un vencimiento el día que hay que cumplirlo.
+
+test('una obligación de solo presentación no espera al revisor', () => {
+  for (const e of ESTADOS) {
+    assert.ok(puedePresentar(e, 'asesor', true).ok, `el asesor quedó bloqueado en ${e}`);
+  }
+});
+
+test('las que SÍ liquidan siguen exigiendo la aprobación', () => {
+  // La excepción es por el tipo de obligación, no una puerta abierta: si esto
+  // cediera, la revisión de IVA o retención dejaría de ser un control.
+  for (const e of ESTADOS.filter((x) => x !== 'aprobado')) {
+    assert.equal(puedePresentar(e, 'asesor', false).ok, false, `presentó un impuesto ${e} sin aprobar`);
+    assert.equal(puedePresentar(e, 'asesor').ok, false, `por defecto (sin el parámetro) tampoco debe dejar: ${e}`);
+  }
+  assert.ok(puedePresentar('aprobado', 'asesor', false).ok);
+});
+
+test('el revisor tampoco necesita aprobarse las de solo presentación', () => {
+  assert.ok(puedePresentar('sin_iniciar', 'revisor', true).ok);
+});

@@ -1225,7 +1225,9 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
     // aprobación del revisor. Sin esta línea la revisión sería decorativa.
     if (req.body.estado !== 'pendiente' && req.body.estado !== actual.estado) {
       const actor = actorDe({ esCoordinacion: coordinacion, esAsesorDelVencimiento: actual.asesorId === u.sub, tieneRolRevisor: tieneRolRevisor(u) });
-      const p = puedePresentar(actual.estadoRevision as EstadoRevision, actor ?? 'asesor');
+      // Las de solo presentación no pasan por revisión: no hay liquidación que
+      // revisar (ver vencimientos/revision.ts).
+      const p = puedePresentar(actual.estadoRevision as EstadoRevision, actor ?? 'asesor', obligacionSinPago(actual.obligacion));
       if (!p.ok) return res.status(409).json({ error: p.motivo });
       if (PRESENTADOS.includes(req.body.estado)) { data.fechaPresentacion = new Date(); data.presentadoPorId = u.sub; }
     }
