@@ -24,6 +24,7 @@ import { CIIU_REV4_AC, SECCIONES_CIIU } from '../fiscal/ciiu-rev4-ac.js';
 // casar una fila con el cliente equivocado le escribe cifras ajenas y de ahí
 // salen mal sus obligaciones, sin que nada falle.
 import { indexar, emparejar, montoDe, anioValido } from '../fiscal/importar-cifras.js';
+import { horasPactadas } from '../fiscal/contrato.js';
 
 export const fichaRouter = Router();
 
@@ -214,6 +215,7 @@ fichaRouter.get('/:empresaId', requireAuth, async (req: AuthedRequest, res) => {
       id: true, nombre: true, nit: true, activo: true, servicio: true,
       direccion: true, emailDian: true, telefonoDian: true, emailCamara: true, telefonoCamara: true,
       fechaConstitucion: true,
+      contratoDesde: true, horasPactadasMes: true, alcanceServicio: true,
       tipoId: true, regimenId: true,
       tipo: { select: { nombre: true } },
       regimen: { select: { nombre: true } },
@@ -228,7 +230,12 @@ fichaRouter.get('/:empresaId', requireAuth, async (req: AuthedRequest, res) => {
   });
   if (!e) return res.status(404).json({ error: 'Cliente no encontrado.' });
 
-  res.json({ ficha: e, editable: !esCliente && puedeEditarFicha(u) });
+  res.json({
+    // El Decimal de Prisma no viaja como número en JSON: sin esto llega como
+    // texto y cualquier suma del lado del cliente lo concatena.
+    ficha: { ...e, horasPactadasMes: e.horasPactadasMes != null ? Number(e.horasPactadasMes) : null },
+    editable: !esCliente && puedeEditarFicha(u),
+  });
 });
 
 // PATCH /ficha/:empresaId — datos de identificación y notificación.
@@ -239,10 +246,14 @@ fichaRouter.patch('/:empresaId', requireAuth, async (req: AuthedRequest, res) =>
 
   const b = req.body ?? {};
   const data: Record<string, unknown> = {};
-  for (const campo of ['direccion', 'emailDian', 'telefonoDian', 'emailCamara', 'telefonoCamara'] as const) {
+  for (const campo of ['direccion', 'emailDian', 'telefonoDian', 'emailCamara', 'telefonoCamara', 'alcanceServicio'] as const) {
     if (campo in b) data[campo] = texto(b[campo]);
   }
   if ('fechaConstitucion' in b) data.fechaConstitucion = fecha(b.fechaConstitucion);
+  if ('contratoDesde' in b) data.contratoDesde = fecha(b.contratoDesde);
+  // Las horas pactadas se miden contra las ejecutadas, así que un valor
+  // imposible aquí desviaría el indicador en silencio (ver fiscal/contrato.ts).
+  if ('horasPactadasMes' in b) data.horasPactadasMes = horasPactadas(b.horasPactadasMes);
   // El tipo de empresa decide la naturaleza jurídica, y de ella salen el RUB, el
   // revisor fiscal y el 368-2. Se edita aquí, junto al resto de la identificación
   // del cliente, y no solo en Administración: quien ve el hueco es quien está
