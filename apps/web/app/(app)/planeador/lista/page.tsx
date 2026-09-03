@@ -1,6 +1,8 @@
 // apps/web/app/planeador/lista/page.tsx — Lista de tareas reales del plan.
 
-import { fetchTareas, TareasTabla, ESTADO_META, AREAS, nombrePeriodo } from '../tareas';
+import { fetchTareas, TareasTabla, ESTADO_META, AREAS } from '../tareas';
+import NavegadorPeriodo from '@/app/_components/NavegadorPeriodo';
+import { nombrePeriodo } from '@/lib/periodo';
 import { getSessionUser, apiFetch } from '@/lib/session';
 
 
@@ -27,7 +29,7 @@ const PAGE_SIZE = 50;
 
 export default async function ListaPage({ searchParams }: { searchParams?: Record<string, string> }) {
   const p = searchParams ?? {};
-  const claves = ['q', 'area', 'estado', 'prioridad', 'asesorId', 'auxiliarId', 'estadoPago', 'venceDesde', 'venceHasta', 'periodo'] as const;
+  const claves = ['q', 'area', 'fase', 'estado', 'prioridad', 'asesorId', 'auxiliarId', 'estadoPago', 'venceDesde', 'venceHasta', 'periodo'] as const;
   const pagina = Math.max(1, parseInt(p.page ?? '1', 10) || 1);
   const qs = new URLSearchParams();
   for (const k of claves) if (p[k]) qs.set(k, p[k]!);
@@ -61,9 +63,10 @@ export default async function ListaPage({ searchParams }: { searchParams?: Recor
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Lista de tareas</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{data?.periodo ? nombrePeriodo(data.periodo) : ''} · {total} tareas</span>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{nombrePeriodo(data?.periodo)} · {total} tareas</span>
         </div>
       </div>
+      <div style={{ marginBottom: 12 }}><NavegadorPeriodo /></div>
 
       <form method="get" className="panel" style={{ padding: '12px 14px', marginBottom: 14 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10 }}>
@@ -98,7 +101,17 @@ export default async function ListaPage({ searchParams }: { searchParams?: Recor
               <option value="">Todos</option>{personas.map((u) => <option key={u.id} value={u.id}>{u.nombre}</option>)}
             </select>
           </label>
-          <label><span style={lbl}>Período</span><input name="periodo" defaultValue={p.periodo ?? ''} placeholder="YYYY-MM" style={{ ...sel, width: '100%' }} /></label>
+          {/* El período ya no se escribe a mano: lo maneja el navegador de mes
+              de arriba. Viaja oculto para que filtrar no devuelva al mes en curso. */}
+          <input type="hidden" name="periodo" value={p.periodo ?? ''} />
+          <label><span style={lbl}>Fase</span>
+            <select name="fase" defaultValue={p.fase ?? ''} style={{ ...sel, width: '100%' }}>
+              <option value="">Todas</option>
+              <option value="captura">Captura</option>
+              <option value="procesamiento">Procesamiento</option>
+              <option value="revision">Revisión</option>
+            </select>
+          </label>
           <label><span style={lbl}>Vence desde</span><input type="date" name="venceDesde" defaultValue={p.venceDesde ?? ''} style={{ ...sel, width: '100%' }} /></label>
           <label><span style={lbl}>Vence hasta</span><input type="date" name="venceHasta" defaultValue={p.venceHasta ?? ''} style={{ ...sel, width: '100%' }} /></label>
         </div>

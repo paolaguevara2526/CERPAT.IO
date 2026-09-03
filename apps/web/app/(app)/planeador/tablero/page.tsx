@@ -1,7 +1,9 @@
 // apps/web/app/planeador/tablero/page.tsx — Tablero (kanban) por estado.
 
-import { fetchTareas, AREAS, nombrePeriodo } from '../tareas';
+import { fetchTareas, AREAS } from '../tareas';
 import Tablero from '../Tablero';
+import NavegadorPeriodo from '@/app/_components/NavegadorPeriodo';
+import { nombrePeriodo, periodoAMostrar } from '@/lib/periodo';
 
 
 export const metadata = { title: 'Tablero' };
@@ -11,10 +13,14 @@ export default async function TableroPage({ searchParams }: { searchParams?: Rec
   const area = searchParams?.area || '';
   const q = searchParams?.q || '';
   const mias = searchParams?.mias === '1';
+  // El período viaja en la URL: el mes que se está viendo se puede compartir y
+  // marcar, y al recargar no se vuelve solo al mes en curso.
+  const periodo = periodoAMostrar(searchParams?.periodo);
   const qs = new URLSearchParams();
   if (area) qs.set('area', area);
   if (q) qs.set('q', q);
   if (mias) qs.set('mias', '1');
+  qs.set('periodo', periodo);
   const { data, error } = await fetchTareas(qs.toString());
   const tareas = data?.tareas ?? [];
 
@@ -24,10 +30,12 @@ export default async function TableroPage({ searchParams }: { searchParams?: Rec
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Tablero</h1>
-        <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{data?.periodo ? nombrePeriodo(data.periodo) : ''} · {tareas.length} tareas</span>
+        <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{nombrePeriodo(data?.periodo)} · {tareas.length} tareas</span>
       </div>
+      <div style={{ marginBottom: 12 }}><NavegadorPeriodo /></div>
 
       <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, alignItems: 'center' }}>
+        <input type="hidden" name="periodo" value={periodo} />
         <input name="q" defaultValue={q} placeholder="Buscar cliente o actividad…" style={{ ...sel, minWidth: 220, flex: 1 }} />
         <select name="area" defaultValue={area} style={sel}>
           <option value="">Todas las áreas</option>

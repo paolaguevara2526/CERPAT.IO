@@ -151,6 +151,36 @@ no contempla — por eso una casilla mal puesta puede llevarse obligaciones real
 - Para **solo agregar** sin riesgo de baja —p. ej. aplicar un checklist nuevo a lo
   ya cargado— está *Administración → Checklist vencimientos*, que nunca borra.
 
+## El plan se recorre mes a mes
+
+El plan de trabajo es **mensual** (`periodo` = `YYYY-MM`), y revisar un mes cerrado
+—qué se capturó, qué quedó pendiente, quién iba atrasado— es parte de cerrar el mes
+siguiente. La API siempre supo servir cualquier período: casi todos los endpoints de
+`/plan` aceptan `?periodo=`. Lo que faltaba era **cómo pedirlo**: ninguna pantalla
+tenía un control de mes, salvo una casilla donde había que escribir `2026-08` a mano.
+Generado septiembre, agosto quedaba fuera de alcance aunque estuviera completo.
+
+- **Un solo navegador de mes** (`NavegadorPeriodo`) en Tablero, Lista, Flujo del
+  cierre, Auditoría y Coordinación. Escribe el período **en la URL** (`?periodo=`),
+  no en un estado interno: el mes que se está viendo se puede compartir, marcar y
+  recargar.
+- **Los filtros conservan el mes.** Van por GET, así que el período viaja oculto en
+  cada formulario; sin eso, filtrar por área devolvía al mes en curso.
+- **Se avisa cuando no es el mes en curso**, diciendo cuál es y hace cuánto. Sin ese
+  aviso, la pantalla de un mes cerrado se confunde con la de hoy — y ahí se toman
+  decisiones sobre trabajo que ya pasó.
+- **"Sin plan" y "sin datos" son cosas distintas.** `/plan/periodos` dice qué meses
+  tienen plan generado, y la pantalla lo declara: *"agosto 2026 no tiene plan
+  generado"* en vez de una pantalla vacía que se lee como una falla del sistema. En
+  Coordinación el navegador va **fuera** del condicional de datos: si viviera dentro,
+  caer en un mes sin plan dejaría sin manera de devolverse.
+- **La Lista filtra por fase** (captura · procesamiento · revisión), que es lo que
+  permite pedir *"las capturas de agosto"* sin reconocerlas una por una por el nombre
+  de la actividad.
+- **Mi Día no navega: es hoy.** Es la superficie de ejecución —registrar lotes, marcar
+  estados— y mostrar ahí un mes cerrado invitaría a registrar el trabajo de hoy en el
+  mes pasado. La historia se consulta en las pantallas del período.
+
 ## Responsables por área: quién puede ir en cada casilla
 
 De la **asignación cliente × área** heredan asesor y auxiliar **todas** las tareas del

@@ -6,6 +6,7 @@
 import { apiFetch } from '@/lib/session';
 import { exigirRuta } from '@/lib/acceso-server';
 import { nombrePeriodo } from '../tareas';
+import NavegadorPeriodo from '@/app/_components/NavegadorPeriodo';
 
 
 export const metadata = { title: 'Flujo del cierre' };
@@ -75,7 +76,6 @@ export default async function FlujoPage({ searchParams }: { searchParams?: Recor
   const r = data?.resumen;
   const clientes = data?.clientes ?? [];
 
-  const sel: React.CSSProperties = { padding: '8px 11px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' };
   const th: React.CSSProperties = { textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '10px 12px', whiteSpace: 'nowrap' };
   const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, borderTop: '1px solid var(--border)', verticalAlign: 'middle' };
 
@@ -87,11 +87,7 @@ export default async function FlujoPage({ searchParams }: { searchParams?: Recor
       </div>
       <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 13 }}>En qué etapa va cada cliente, dónde está el cuello y quién está en riesgo — sobre la misma cadena que ven el auxiliar y el asesor.</p>
 
-      <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, alignItems: 'center' }}>
-        <label style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 600 }}>Período</label>
-        <input name="periodo" defaultValue={data?.periodo ?? ''} placeholder="YYYY-MM" style={{ ...sel, width: 120 }} />
-        <button className="dbtn" style={{ fontSize: 13 }}>Ver</button>
-      </form>
+      <div style={{ marginBottom: 14 }}><NavegadorPeriodo /></div>
 
       {error ? (
         <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudo cargar el flujo: {error}.</div>
