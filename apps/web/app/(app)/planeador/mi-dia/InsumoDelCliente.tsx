@@ -16,6 +16,11 @@ import { fmtDia } from '@/lib/fechas';
 
 type Fila = {
   empresaId: string; areaId: string; empresa: string; area: string;
+  // Quién responde por esta fila. El API ya los mandaba; la tabla no los
+  // mostraba, y sin ellos la pregunta "¿por qué me aparece este cliente?" no
+  // tiene respuesta en pantalla — que es justo lo que se preguntó al ver un
+  // cliente ajeno en la propia bandeja.
+  asesor: string | null; auxiliar: string | null;
   recibido: boolean; fechaEntrega: string | null; marcadoPor: string | null; diasEsperando: number;
 };
 type Resp = { periodo: string | null; total: number; pendientes: number; filas: Fila[] };
@@ -79,6 +84,15 @@ export default function InsumoDelCliente() {
   const columnas: Columna<Fila>[] = [
     { clave: 'empresa', label: 'Cliente', valor: (f) => f.empresa, buscar: true, estiloCelda: { fontWeight: 600 } },
     { clave: 'area', label: 'Área', valor: (f) => f.area, estiloCelda: { color: 'var(--muted)' } },
+    // Aparece por ser asesor O auxiliar de ESA área. Sin decir cuál de los dos,
+    // ver un cliente que "es de otro" se lee como un error de asignación.
+    { clave: 'responsables', label: 'Responsables', valor: (f) => `${f.asesor ?? ''} ${f.auxiliar ?? ''}`.trim() || 'sin asignar',
+      render: (f) => (
+        <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, fontSize: 11.5, lineHeight: 1.4 }}>
+          <span><span style={{ color: 'var(--muted)' }}>Asesor </span>{f.asesor ?? <span style={{ color: 'var(--alerta-fuerte)', fontWeight: 700 }}>sin asignar</span>}</span>
+          <span><span style={{ color: 'var(--muted)' }}>Auxiliar </span>{f.auxiliar ?? <span style={{ color: 'var(--muted)' }}>—</span>}</span>
+        </span>
+      ) },
     // Se filtra por "recibido"/"sin recibir", que es el corte que sirve: la
     // coordinadora quiere ver lo que falta, no ordenar por fecha.
     { clave: 'recepcion', label: 'Recepción', valor: (f) => (f.recibido ? 'recibido' : 'sin recibir'),
@@ -118,7 +132,7 @@ export default function InsumoDelCliente() {
   return (
     <PanelPlegable
       id="insumo-del-cliente" titulo="📥 Esperando al cliente"
-      nota="Áreas donde el insumo lo manda el cliente. Al marcar la recepción, el trabajo de esa área se destraba."
+      nota="Áreas donde el insumo lo manda el cliente. Te aparecen aquellas donde eres asesor o auxiliar de esa área. Al marcar la recepción, el trabajo de esa área se destraba."
       resumen={
         <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: data.pendientes > 0 ? 'var(--alerta-suave)' : 'var(--exito-suave)', border: `1px solid ${data.pendientes > 0 ? 'var(--alerta-borde)' : 'var(--exito-borde)'}`, borderRadius: 20, padding: '4px 12px' }}>
           <b style={{ fontSize: 14, color: data.pendientes > 0 ? 'var(--alerta-fuerte)' : 'var(--exito-fuerte)' }}>{data.pendientes}</b>

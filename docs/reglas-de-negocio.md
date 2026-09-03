@@ -233,6 +233,32 @@ Generado septiembre, agosto quedaba fuera de alcance aunque estuviera completo.
   estados— y mostrar ahí un mes cerrado invitaría a registrar el trabajo de hoy en el
   mes pasado. La historia se consulta en las pantallas del período.
 
+## Dos fuentes de "quién responde", y hay que saber cuál mira cada pantalla
+
+Es la confusión que más cuesta rastrear, porque **las dos son correctas** y dan
+respuestas distintas:
+
+| Fuente | Qué es | Cuándo cambia | Quién la mira |
+|---|---|---|---|
+| **Asignación cliente × área** | El reparto de hoy | **Al instante**, al guardar en *Plan por cliente* o en la ficha del cliente | *Esperando al cliente*, *Liberar insumo a asesores*, Calendario, Vencimientos, Visitas, Novedades, Pendientes |
+| **Responsable de la tarea / del vencimiento** | Quien lo tenía **cuando se generó** | Solo al correr *Plan por cliente → **Aplicar los responsables a un período ya generado*** | Lista, Tablero, *Mis tareas del período*, *Captura del día*, *Listo para procesar* |
+
+De ahí salen dos síntomas que parecen errores y no lo son:
+
+- **«Cambié la asignación y la Lista sigue mostrando a la persona anterior.»** Correcto:
+  la tarea guarda el responsable que tenía al generarse. Hay que **aplicar** los
+  responsables al período — **simular no aplica nada**.
+- **«Me aparece un cliente que no es mío.»** Casi siempre es una de dos: se es el
+  **auxiliar** de esa área (no el asesor), o se figura en **otra área** del mismo
+  cliente — `empresasAsignadas` da acceso al cliente **completo** en Calendario,
+  Vencimientos y Visitas cuando se figura en cualquiera de sus áreas.
+
+**Por eso cada bandeja dice a nombre de quién aparece cada fila.** *Esperando al
+cliente* muestra el **asesor** y el **auxiliar** de esa área; *Liberar insumo a
+asesores* muestra a quién le llega la liberación. Sin ese dato, ver un cliente ajeno
+en la propia bandeja se lee como un error de asignación, y se termina buscando un
+problema donde no lo hay.
+
 ## Responsables por área: quién puede ir en cada casilla
 
 De la **asignación cliente × área** heredan asesor y auxiliar **todas** las tareas del
