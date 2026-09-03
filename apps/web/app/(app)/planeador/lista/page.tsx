@@ -29,7 +29,7 @@ const PAGE_SIZE = 50;
 
 export default async function ListaPage({ searchParams }: { searchParams?: Record<string, string> }) {
   const p = searchParams ?? {};
-  const claves = ['q', 'area', 'fase', 'estado', 'prioridad', 'asesorId', 'auxiliarId', 'estadoPago', 'venceDesde', 'venceHasta', 'periodo'] as const;
+  const claves = ['q', 'empresaId', 'area', 'fase', 'estado', 'prioridad', 'asesorId', 'auxiliarId', 'estadoPago', 'venceDesde', 'venceHasta', 'periodo'] as const;
   const pagina = Math.max(1, parseInt(p.page ?? '1', 10) || 1);
   const qs = new URLSearchParams();
   for (const k of claves) if (p[k]) qs.set(k, p[k]!);
@@ -104,6 +104,9 @@ export default async function ListaPage({ searchParams }: { searchParams?: Recor
           {/* El período ya no se escribe a mano: lo maneja el navegador de mes
               de arriba. Viaja oculto para que filtrar no devuelva al mes en curso. */}
           <input type="hidden" name="periodo" value={p.periodo ?? ''} />
+          {/* Llega de un enlace del Flujo del cierre; sin esto, el primer filtro
+              que se aplique lo pierde y la lista se abre a todos los clientes. */}
+          <input type="hidden" name="empresaId" value={p.empresaId ?? ''} />
           <label><span style={lbl}>Fase</span>
             <select name="fase" defaultValue={p.fase ?? ''} style={{ ...sel, width: '100%' }}>
               <option value="">Todas</option>

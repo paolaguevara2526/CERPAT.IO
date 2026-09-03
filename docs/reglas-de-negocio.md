@@ -151,6 +151,31 @@ no contempla — por eso una casilla mal puesta puede llevarse obligaciones real
 - Para **solo agregar** sin riesgo de baja —p. ej. aplicar un checklist nuevo a lo
   ya cargado— está *Administración → Checklist vencimientos*, que nunca borra.
 
+## Flujo del cierre: diagnostica, y tiene salida
+
+Es la vista del coordinador y de gerencia: por cliente, en qué **etapa** de la cadena
+va, dónde está el **cuello** y quién está **en riesgo**. **No es una superficie de
+trabajo** —los estados se cambian en la Lista y en Mi Día—, pero eso no la excusa de
+tener salida.
+
+- **Todo lo que señala un problema es un enlace** a la Lista ya filtrada: el nombre del
+  cliente (sus tareas del mes), cada etapa (esas tareas, filtradas por fase), la
+  insignia de vencidas y la tarjeta del **cuello del período**. Un diagnóstico como
+  *"64 clientes detenidos en Captura"* sin manera de ver cuáles asusta y no deja hacer
+  nada con el dato — y quien lo mira concluye, con razón, que la pantalla está
+  incompleta.
+- **El enlace conserva el mes** que se está viendo. Sin eso, entrar desde agosto abría
+  la lista de septiembre, y el error no se nota: la lista se ve normal, solo que es de
+  otro mes.
+- **Una etapa sin tareas no se enlaza.** Un enlace que abre una lista vacía enseña a
+  desconfiar de los demás.
+- **La entrega dice CÓMO llegó el insumo**, no solo que llegó: *al terminar captura*
+  (automática), *liberado a mano* (`Liberar período`) o *lo mandó el cliente*. Decir
+  "Entregado" a secas hacía ver que la cadena avanzó sola cuando lo que hubo fue una
+  liberación en bloque con la captura sin terminar. Son dos situaciones muy distintas y
+  se leían igual: la primera es el circuito funcionando, la segunda es la coordinación
+  destrabando a mano un cierre que no avanzó.
+
 ## El plan se recorre mes a mes
 
 El plan de trabajo es **mensual** (`periodo` = `YYYY-MM`), y revisar un mes cerrado
