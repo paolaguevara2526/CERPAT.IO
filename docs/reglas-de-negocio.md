@@ -185,6 +185,24 @@ tener salida.
   se leían igual: la primera es el circuito funcionando, la segunda es la coordinación
   destrabando a mano un cierre que no avanzó.
 
+## La bandeja de liberación no puede contradecir su propia pantalla
+
+En la Lista conviven la bandeja **Liberar insumo a asesores** (arriba) y las tareas
+(abajo). El auxiliar marca la captura de Nómina como **Terminado** abajo, mira arriba y
+la bandeja sigue diciendo *"falta captura"*. La pantalla se contradice a sí misma, y
+quien la mira concluye —con razón— que el sistema no registró lo que acaba de marcar.
+
+- **Quien cambia un estado avisa** (`lib/eventos.ts` → `avisarTareaCambiada`), y la
+  bandeja escucha. `router.refresh()` **no alcanza**: rehace los componentes de
+  *servidor*, y la bandeja es de cliente con su propio `fetch` — no se remonta, así que
+  su efecto no se vuelve a ejecutar.
+- **Avisan los cuatro sitios** donde se cambia estado: la Lista/detalle
+  (`EstadoSelect`), el Tablero, *Captura del día* y *Listo para procesar*. Si uno se
+  queda callado, la bandeja se desactualiza **solo desde esa pantalla** — el peor tipo
+  de error, el que aparece a veces.
+- **La bandeja mira el mes de la URL**, igual que el resto de la pantalla. Antes pedía
+  siempre el mes en curso: parada en agosto abajo, arriba se veía septiembre.
+
 ## El plan se recorre mes a mes
 
 El plan de trabajo es **mensual** (`periodo` = `YYYY-MM`), y revisar un mes cerrado

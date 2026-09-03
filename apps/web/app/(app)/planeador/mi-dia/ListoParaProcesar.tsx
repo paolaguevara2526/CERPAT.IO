@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 import { fmtDia } from '@/lib/fechas';
+import { avisarTareaCambiada } from '@/lib/eventos';
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
   por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
@@ -64,6 +65,7 @@ export default function ListoParaProcesar() {
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg({ id, texto: d?.error ?? 'No se pudo cambiar el estado.' }); return; }
+      avisarTareaCambiada();
       setMsg(null); await cargar();
     } catch { setMsg({ id, texto: 'Error de red al cambiar el estado.' }); }
   }

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { tinte } from '@/app/_components/color';
+import { avisarTareaCambiada } from '@/lib/eventos';
 const META: Record<string, { label: string; color: string }> = {
   por_iniciar: { label: 'Por iniciar', color: 'var(--muted)' },
   en_curso: { label: 'En curso', color: 'var(--info)' },
@@ -36,6 +37,10 @@ export default function EstadoSelect({ id, estado }: { id: string; estado: strin
       const data = await res.json();
       if (!res.ok) { setValor(anterior); setError(data.error || 'No se pudo cambiar.'); setGuardando(false); return; }
       setGuardando(false);
+      // La Lista muestra arriba la bandeja de liberación, que es de cliente:
+      // router.refresh() no la toca. Sin este aviso, se queda diciendo "falta
+      // captura" de algo que se acaba de terminar.
+      avisarTareaCambiada();
       router.refresh();
     } catch {
       setValor(anterior); setError('Error de red.'); setGuardando(false);
