@@ -2,8 +2,9 @@
 
 import { apiFetch } from '@/lib/session';
 import { exigirRuta } from '@/lib/acceso-server';
-import { nombrePeriodo } from '../tareas';
 import AuditoriaCola, { type TareaAuditoria } from '../AuditoriaCola';
+import NavegadorPeriodo from '@/app/_components/NavegadorPeriodo';
+import { nombrePeriodo, periodoAMostrar } from '@/lib/periodo';
 
 
 export const metadata = { title: 'Auditoría' };
@@ -11,9 +12,9 @@ export const dynamic = 'force-dynamic';
 
 type Resp = { periodo: string | null; total: number; tareas: TareaAuditoria[] };
 
-async function fetchAuditoria(): Promise<{ data: Resp | null; error: string | null }> {
+async function fetchAuditoria(periodo: string): Promise<{ data: Resp | null; error: string | null }> {
   try {
-    const res = await apiFetch('/plan/auditoria');
+    const res = await apiFetch(`/plan/auditoria?periodo=${encodeURIComponent(periodo)}`);
     if (!res.ok) return { data: null, error: `La API respondió ${res.status}` };
     return { data: (await res.json()) as Resp, error: null };
   } catch (e) {
@@ -21,17 +22,18 @@ async function fetchAuditoria(): Promise<{ data: Resp | null; error: string | nu
   }
 }
 
-export default async function AuditoriaPage() {
+export default async function AuditoriaPage({ searchParams }: { searchParams?: Record<string, string> }) {
   await exigirRuta('/planeador/auditoria'); // solo Coordinador / Auditor (y Admin)
-  const { data, error } = await fetchAuditoria();
+  const { data, error } = await fetchAuditoria(periodoAMostrar(searchParams?.periodo));
   const tareas = data?.tareas ?? [];
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 4 }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>Auditoría</h1>
-        <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{data?.periodo ? nombrePeriodo(data.periodo) : ''} · {tareas.length} por revisar</span>
+        <span style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{nombrePeriodo(data?.periodo)} · {tareas.length} por revisar</span>
       </div>
+      <div style={{ margin: '10px 0 4px' }}><NavegadorPeriodo /></div>
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 16px' }}>
         Tareas enviadas a revisión (estado <strong>En revisión</strong>). Aprueba para darlas por terminadas (quedan bloqueadas como <strong>Auditado</strong>) o devuélvelas con observaciones para que el auxiliar corrija.
       </p>

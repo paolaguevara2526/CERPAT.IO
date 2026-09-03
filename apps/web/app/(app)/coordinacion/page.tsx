@@ -9,6 +9,7 @@ import { apiFetch } from '@/lib/session';
 import SinEntregarCliente from './SinEntregarCliente';
 import NovedadesConsolidado from './NovedadesConsolidado';
 import PendientesConsolidado from './PendientesConsolidado';
+import NavegadorPeriodo from '@/app/_components/NavegadorPeriodo';
 
 
 export const metadata = { title: 'Coordinación' };
@@ -96,6 +97,9 @@ export default async function CoordinacionPage({ searchParams }: { searchParams?
 
   return (
     <>
+      {/* El navegador va fuera del condicional: si el mes no tiene plan, hace
+          falta justamente para poder devolverse a uno que sí lo tenga. */}
+      <div style={{ marginBottom: 16 }}><NavegadorPeriodo /></div>
       {error ? (
         <div className="panel" style={{ padding: '18px 20px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>
           No se pudo cargar el panel: {error}.

@@ -50,6 +50,10 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   // de actividad (la captura la hace el auxiliar; el resto, el asesor).
   const miDia = req.query.miDia === '1' || req.query.miDia === 'true';
   const prioridad = typeof req.query.prioridad === 'string' && ['alta', 'media', 'baja'].includes(req.query.prioridad) ? req.query.prioridad : undefined;
+  // Fase de la cadena del cierre: captura · procesamiento · revisión. Sin este
+  // filtro, "las capturas de agosto" no se podía pedir — había que reconocerlas
+  // una por una por el nombre de la actividad.
+  const fase = typeof req.query.fase === 'string' && FASES_PLAN.includes(req.query.fase) ? req.query.fase : undefined;
   const asesorId = typeof req.query.asesorId === 'string' && req.query.asesorId ? req.query.asesorId : undefined;
   const auxiliarId = typeof req.query.auxiliarId === 'string' && req.query.auxiliarId ? req.query.auxiliarId : undefined;
   const estadoPago = typeof req.query.estadoPago === 'string' && ESTADOS_PAGO.includes(req.query.estadoPago) ? req.query.estadoPago : undefined;
@@ -72,6 +76,7 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
     ...(estado ? { estado: estado as any } : {}),
     ...(area ? { area: { nombre: area } } : {}),
     ...(prioridad ? { prioridad: prioridad as any } : {}),
+    ...(fase ? { actividadPlan: { fase } } : {}),
     ...(asesorId ? { asesorId } : {}),
     ...(auxiliarId ? { auxiliarId } : {}),
     ...(estadoPago ? { estadoPago: estadoPago as any } : {}),
@@ -169,6 +174,8 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
 });
 
 const ESTADOS_VALIDOS = ['por_iniciar', 'en_curso', 'en_revision', 'terminado', 'auditado', 'no_realizado', 'no_aplica'];
+// Las fases de la cadena del cierre (ActividadPlan.fase).
+const FASES_PLAN = ['captura', 'procesamiento', 'revision'];
 // Terminar exige el checklist resuelto. "No aplica" NO: el checklist es de un
 // trabajo que este mes no existió — exigirlo obligaría a marcar como hechos
 // puntos que nadie hizo, que es justo lo que se quiere evitar.
@@ -303,6 +310,28 @@ planRouter.patch('/tareas/:id/estado', requireAuth, async (req: AuthedRequest, r
 
 // GET /plan/auditoria — cola de tareas enviadas a auditoría (estado en_revision,
 // sin aprobar aún) del período. Autenticado.
+// GET /plan/periodos — los meses que tienen plan generado, del más reciente al
+// más antiguo.
+//
+// Es lo que le permite al navegador de mes ofrecer solo meses con contenido. Sin
+// esto, devolverse de septiembre a agosto puede caer en una pantalla vacía que
+// no distingue "este mes no se generó" de "el planeador está fallando" — y la
+// segunda lectura es la que hace que se deje de confiar en la herramienta.
+planRouter.get('/periodos', requireAuth, async (req, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.json({ periodos: [] });
+  const filas = await prisma.tarea.groupBy({
+    by: ['periodo'],
+    where: { organizacionId: org.id, actividadPlanId: { not: null }, periodo: { not: null } },
+    _count: { _all: true },
+  });
+  const periodos = filas
+    .filter((f) => f.periodo)
+    .map((f) => ({ periodo: f.periodo as string, tareas: f._count._all }))
+    .sort((a, b) => b.periodo.localeCompare(a.periodo));
+  res.json({ periodos });
+});
+
 planRouter.get('/auditoria', requireAuth, async (req: AuthedRequest, res) => {
   const org = await orgDeSesion(req);
   if (!org) return res.json({ periodo: null, total: 0, tareas: [] });
