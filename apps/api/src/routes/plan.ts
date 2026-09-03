@@ -1187,7 +1187,7 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
     ? req.query.periodo
     : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  const [tareas, entregas] = await Promise.all([
+  const [tareas, entregas, asignaciones] = await Promise.all([
     prisma.tarea.findMany({
       where: { organizacionId: org.id, periodo, actividadPlanId: { not: null } },
       select: {
@@ -1197,8 +1197,33 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
       },
     }),
     prisma.entregaInsumo.findMany({ where: { organizacionId: org.id, periodo }, select: { empresaId: true, origen: true, entregadoEn: true } }),
+    // QUIÉN responde por cada cliente. El tablero mostraba clientes y etapas, y
+    // nunca una persona: con 67 filas iguales, la pregunta que sigue a "65
+    // detenidos en captura" es "¿de quién son?", y no estaba en pantalla. La
+    // firma se coordina con personas, no con filas.
+    prisma.asignacionClienteArea.findMany({
+      where: { organizacionId: org.id, OR: [{ asesorId: { not: null } }, { auxiliarId: { not: null } }] },
+      select: {
+        empresaId: true,
+        area: { select: { nombre: true } },
+        asesor: { select: { id: true, nombre: true } },
+        auxiliar: { select: { id: true, nombre: true } },
+      },
+    }),
   ]);
   const entregadoSet = new Set(entregas.map((e) => e.empresaId));
+
+  // Asesores y auxiliares por cliente, sin repetir. El auxiliar va aparte porque
+  // es quien EJECUTA la captura, que es justo donde se atasca el cierre: decir
+  // solo el asesor mandaría a preguntarle a quien no lo está haciendo.
+  type Persona = { id: string; nombre: string };
+  const unicos = (xs: Persona[]) => Array.from(new Map(xs.map((x) => [x.id, x])).values());
+  const asesoresPorEmpresa = new Map<string, Persona[]>();
+  const auxiliaresPorEmpresa = new Map<string, Persona[]>();
+  for (const a of asignaciones) {
+    if (a.asesor) asesoresPorEmpresa.set(a.empresaId, [...(asesoresPorEmpresa.get(a.empresaId) ?? []), a.asesor]);
+    if (a.auxiliar) auxiliaresPorEmpresa.set(a.empresaId, [...(auxiliaresPorEmpresa.get(a.empresaId) ?? []), a.auxiliar]);
+  }
 
   // CÓMO se entregó, no solo que se entregó. "Entregado" a secas hace ver que la
   // cadena avanzó sola cuando muchas veces lo que hubo fue un "Liberar período"
@@ -1275,6 +1300,8 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
       },
       etapaActual, avance: pct(c.hechas, c.total),
       enRiesgo, vencidas: c.vencidas,
+      asesores: unicos(asesoresPorEmpresa.get(c.empresaId) ?? []),
+      auxiliares: unicos(auxiliaresPorEmpresa.get(c.empresaId) ?? []),
     };
   });
 

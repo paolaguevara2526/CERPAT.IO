@@ -169,6 +169,15 @@ tener salida.
   otro mes.
 - **Una etapa sin tareas no se enlaza.** Un enlace que abre una lista vacía enseña a
   desconfiar de los demás.
+- **Cada fila dice quién responde**, con el **asesor** y el **auxiliar** separados: el
+  auxiliar es quien *ejecuta* la captura, que es donde se atasca el cierre, y decir solo
+  el asesor manda a preguntarle a quien no lo está haciendo. Un cliente sin ninguna
+  asignación sale como **sin asignar**. Cada nombre acota el tablero a esa persona.
+- **Se puede acotar por persona y por cliente.** Con decenas de filas casi idénticas, es
+  lo que vuelve el tablero utilizable: el desplegable solo ofrece gente **con clientes en
+  ese período** —escoger a alguien sin nada daría una lista vacía sin explicación— y
+  *"no hay plan generado"* se dice distinto de *"el filtro no encontró nada"*, porque
+  confundirlos manda a generar un plan que ya existe.
 - **La entrega dice CÓMO llegó el insumo**, no solo que llegó: *al terminar captura*
   (automática), *liberado a mano* (`Liberar período`) o *lo mandó el cliente*. Decir
   "Entregado" a secas hacía ver que la cadena avanzó sola cuando lo que hubo fue una

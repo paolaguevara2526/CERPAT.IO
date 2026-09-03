@@ -54,3 +54,38 @@ test('la pantalla dice para qué sirve y que se puede entrar', () => {
   assert.match(fuente, /diagnostica, no se trabaja/);
   assert.match(fuente, /haz clic en el cliente o en cualquier etapa/);
 });
+
+// ---- Seguimiento por persona ----
+//
+// El tablero mostraba clientes y etapas, y nunca una persona. Con 67 filas
+// idénticas, la pregunta que sigue a "65 detenidos en captura" es "¿de quién
+// son?", y no estaba en pantalla. La firma se coordina con personas.
+
+test('cada fila dice quién responde, separando asesor de auxiliar', () => {
+  // El auxiliar es quien EJECUTA la captura, que es donde se atasca el cierre:
+  // decir solo el asesor manda a preguntarle a quien no lo está haciendo.
+  assert.match(fuente, /<PersonasCelda etiqueta="Asesor"/);
+  assert.match(fuente, /<PersonasCelda etiqueta="Auxiliar"/);
+  assert.match(fuente, /sin asignar/);
+});
+
+test('el tablero se puede acotar a una persona o a un cliente', () => {
+  assert.match(fuente, /name="persona"/);
+  assert.match(fuente, /name="q"/);
+  assert.match(fuente, /!persona \|\| gente\(c\)\.some\(\(u\) => u\.id === persona\)/);
+});
+
+test('el desplegable solo ofrece gente con clientes en el período', () => {
+  // Escoger a alguien sin nada este mes daría una lista vacía sin explicación.
+  assert.match(fuente, /const personas = Array\.from\(new Map\(todos\.flatMap\(gente\)/);
+});
+
+test('"sin plan" y "el filtro no encontró nada" se dicen distinto', () => {
+  // Decirlos igual manda a generar un plan que ya existe.
+  assert.match(fuente, /todos\.length === 0 \?/);
+  assert.match(fuente, /Ningún cliente coincide con el filtro/);
+});
+
+test('filtrar no devuelve al mes en curso', () => {
+  assert.match(fuente, /<input type="hidden" name="periodo" value=\{searchParams\?\.periodo \?\? ''\} \/>/);
+});
