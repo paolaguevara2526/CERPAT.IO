@@ -54,6 +54,9 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
   // filtro, "las capturas de agosto" no se podía pedir — había que reconocerlas
   // una por una por el nombre de la actividad.
   const fase = typeof req.query.fase === 'string' && FASES_PLAN.includes(req.query.fase) ? req.query.fase : undefined;
+  // Cliente exacto, por id. La búsqueda por texto (`q`) no sirve para enlazar
+  // desde otra pantalla: un nombre con comas o tildes no empareja de vuelta.
+  const empresaId = typeof req.query.empresaId === 'string' && req.query.empresaId ? req.query.empresaId : undefined;
   const asesorId = typeof req.query.asesorId === 'string' && req.query.asesorId ? req.query.asesorId : undefined;
   const auxiliarId = typeof req.query.auxiliarId === 'string' && req.query.auxiliarId ? req.query.auxiliarId : undefined;
   const estadoPago = typeof req.query.estadoPago === 'string' && ESTADOS_PAGO.includes(req.query.estadoPago) ? req.query.estadoPago : undefined;
@@ -76,6 +79,7 @@ planRouter.get('/tareas', requireAuth, async (req: AuthedRequest, res) => {
     ...(estado ? { estado: estado as any } : {}),
     ...(area ? { area: { nombre: area } } : {}),
     ...(prioridad ? { prioridad: prioridad as any } : {}),
+    ...(empresaId ? { empresaId } : {}),
     ...(fase ? { actividadPlan: { fase } } : {}),
     ...(asesorId ? { asesorId } : {}),
     ...(auxiliarId ? { auxiliarId } : {}),
@@ -1192,9 +1196,23 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
         actividadPlan: { select: { fase: true } },
       },
     }),
-    prisma.entregaInsumo.findMany({ where: { organizacionId: org.id, periodo }, select: { empresaId: true } }),
+    prisma.entregaInsumo.findMany({ where: { organizacionId: org.id, periodo }, select: { empresaId: true, origen: true, entregadoEn: true } }),
   ]);
   const entregadoSet = new Set(entregas.map((e) => e.empresaId));
+
+  // CÓMO se entregó, no solo que se entregó. "Entregado" a secas hace ver que la
+  // cadena avanzó sola cuando muchas veces lo que hubo fue un "Liberar período"
+  // en bloque para destrabar a los asesores — con la captura sin terminar. Son
+  // dos situaciones distintas y se estaban leyendo igual.
+  const origenPorEmpresa = new Map<string, { origen: string; fecha: Date | null }>();
+  for (const e of entregas) {
+    const prev = origenPorEmpresa.get(e.empresaId);
+    // Manual manda sobre lo demás: es la que hay que ver, porque es la que no se
+    // ganó terminando la captura.
+    const origen = !prev ? e.origen : prev.origen === e.origen ? e.origen : (prev.origen === 'manual' || e.origen === 'manual') ? 'manual' : 'mixto';
+    const fecha = !prev?.fecha || (e.entregadoEn && e.entregadoEn < prev.fecha) ? e.entregadoEn : prev.fecha;
+    origenPorEmpresa.set(e.empresaId, { origen, fecha });
+  }
 
   type Fase = { total: number; hechas: number; curso: number };
   type Cli = { empresaId: string; empresa: string; cap: Fase; proc: Fase; rev: Fase; total: number; hechas: number; vencidas: number };
@@ -1247,7 +1265,11 @@ planRouter.get('/flujo', requireAuth, async (req, res) => {
       empresaId: c.empresaId, empresa: c.empresa,
       etapas: {
         captura: { estado: estCap, total: c.cap.total, hechas: c.cap.hechas },
-        entrega: { estado: estEntrega },
+        entrega: {
+          estado: estEntrega,
+          origen: origenPorEmpresa.get(c.empresaId)?.origen ?? null,
+          fecha: origenPorEmpresa.get(c.empresaId)?.fecha?.toISOString() ?? null,
+        },
         procesamiento: { estado: estProc, total: c.proc.total, hechas: c.proc.hechas },
         revision: { estado: estRev, total: c.rev.total, hechas: c.rev.hechas },
       },
