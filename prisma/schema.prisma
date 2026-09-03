@@ -904,7 +904,7 @@ model EntregaInsumo {
   periodo        String // "YYYY-MM"
   areaId         String? // NULL = entrega general
   entregadoPorId String?
-  origen         String   @default("manual") // "auto" | "manual" | "cliente"
+  origen         String   @default("manual") // "auto" | "manual" | "cliente" | "auxiliar"
   // OJO: es la fecha en que llegó el insumo, NO en que alguien lo marcó. En las
   // áreas de insumo del cliente se digita: el cliente manda el 3 y el asesor
   // marca el 5, y grabar "hoy" le cargaría al cliente dos días de demora que no

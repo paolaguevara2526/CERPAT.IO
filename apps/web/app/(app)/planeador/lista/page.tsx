@@ -4,6 +4,7 @@ import { fetchTareas, TareasTabla, ESTADO_META, AREAS } from '../tareas';
 import NavegadorPeriodo from '@/app/_components/NavegadorPeriodo';
 import { nombrePeriodo } from '@/lib/periodo';
 import { getSessionUser, apiFetch } from '@/lib/session';
+import LiberarInsumo from '../mi-dia/LiberarInsumo';
 
 
 export const metadata = { title: 'Lista' };
@@ -123,6 +124,10 @@ export default async function ListaPage({ searchParams }: { searchParams?: Recor
           {hayFiltros && <a href="/planeador/lista" className="dbtn" style={{ fontSize: 13, textDecoration: 'none' }}>Limpiar</a>}
         </div>
       </form>
+
+      <div style={{ marginBottom: 14 }}>
+        <LiberarInsumo />
+      </div>
 
       {error ? (
         <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar las tareas: {error}.</div>

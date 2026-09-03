@@ -363,6 +363,7 @@ function EntregaChip({ label, e, onLiberar, onRevertir }: { label: string; e?: {
         <>
           <span style={{ fontSize: 11.5, color: verde, fontWeight: 700 }}>✓ Entregado{e?.por ? ` · ${e.por}` : ''}</span>
           {esAuto && <span title="Liberado automáticamente al terminar la captura" style={{ fontSize: 9.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--info)', background: 'var(--info-suave)', border: '1px solid #cfe0f7', borderRadius: 20, padding: '1px 6px' }}>auto</span>}
+          {e?.origen === 'auxiliar' && <span title="Liberado por el auxiliar, por área" style={{ fontSize: 9.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--navy)', background: 'var(--info-suave)', border: '1px solid #cfe0f7', borderRadius: 20, padding: '1px 6px' }}>auxiliar</span>}
           <button className="dbtn" onClick={onRevertir} title="Revertir la entrega" style={{ fontSize: 11, padding: '3px 7px' }}>↺</button>
         </>
       ) : (

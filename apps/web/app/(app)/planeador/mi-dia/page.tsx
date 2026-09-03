@@ -8,6 +8,7 @@ import CapturaDelDia from './CapturaDelDia';
 import ListoParaProcesar from './ListoParaProcesar';
 import ImpuestosDelDia from './ImpuestosDelDia';
 import InsumoDelCliente from './InsumoDelCliente';
+import LiberarInsumo from './LiberarInsumo';
 import NovedadesDelDia from './NovedadesDelDia';
 import PendientesDelDia from './PendientesDelDia';
 import PanelPlegable from '@/app/_components/PanelPlegable';
@@ -39,6 +40,7 @@ export default async function MiDiaPage() {
           sobre el vencimiento mismo, que es lo que ve el calendario. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
         <CapturaDelDia puedeBorrar={puedeBorrarLotes} />
+        <LiberarInsumo />
         <InsumoDelCliente />
         <ListoParaProcesar />
         <ImpuestosDelDia />

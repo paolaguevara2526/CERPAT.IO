@@ -21,6 +21,7 @@ import { diaCalendario } from '../plan/dia-calendario.js';
 import { EJECUTADA, cuenta } from '../plan/medicion.js';
 import { estaVencido, hoyEnColombia } from '../plan/dia-calendario.js';
 import { puedeAuditar } from '../plan/auditoria.js';
+import { decidirAutoEntrega, auxiliarPuedeLiberarArea } from '../plan/auto-entrega.js';
 
 export const planRouter = Router();
 
@@ -184,50 +185,63 @@ const FASES_PLAN = ['captura', 'procesamiento', 'revision'];
 // trabajo que este mes no existió — exigirlo obligaría a marcar como hechos
 // puntos que nadie hizo, que es justo lo que se quiere evitar.
 const REQUIEREN_SUBTAREAS = ['terminado', 'auditado'];
-// Una captura que no aplica tampoco puede dejar el insumo trabado: si el
-// cliente no tenía documentos de ese tipo, el asesor debe poder arrancar igual.
-const CAPTURA_LISTA = ['terminado', 'auditado', 'no_aplica'];
 
-// Auto-entrega (F1 — flujo del cierre): cuando TODA la captura del cliente queda
-// terminada, libera automáticamente el insumo de la firma hacia el procesamiento.
-// Se libera SIEMPRE POR ÁREA (nunca una entrega general), para que cada asesor
-// reciba solo lo de su área: Impuestos lo de impuestos, Informes lo suyo, y así
-// Nómina y Tesorería. El objetivo son las áreas con trabajo del cliente en el período
-// —tareas de procesamiento del plan y/o vencimientos (declaraciones) del área—,
-// EXCLUYENDO las marcadas como "insumo del cliente" (esas se marcan a mano al
-// recibirlas; su demora no la asume la firma). Ver docs/metodologia-operacion.md §F1.
-// Si la captura deja de estar terminada (se reabre), revierte solo lo 'auto' — nunca
-// una entrega 'manual' hecha por coordinación. Best-effort: no bloquea el cambio de estado.
+// Auto-entrega (F1 — flujo del cierre): se libera POR ÁREA, para que cada asesor
+// reciba solo lo suyo. La captura de Informes no espera a Nómina; Impuestos y
+// Tesorería (sin captura propia) se auto-liberan cuando ya no queda captura
+// pendiente en el cliente, o el auxiliar las suelta a mano. Reabrir una captura
+// revierte solo el 'auto' de ESA área — nunca una entrega 'manual'/'auxiliar'
+// ni el insumo de otra área. Ver docs/metodologia-operacion.md §F1 y
+// plan/auto-entrega.ts. Best-effort: no bloquea el cambio de estado.
 async function evaluarAutoEntrega(orgId: string, empresaId: string, periodo: string, tareaId: string, usuarioId: string | null): Promise<void> {
   const capturas = await prisma.tarea.findMany({
     where: { organizacionId: orgId, empresaId, periodo, actividadPlan: { fase: 'captura' } },
-    select: { estado: true },
+    select: { estado: true, areaId: true },
   });
   if (capturas.length === 0) return; // sin captura interna: no hay nada que auto-entregar
-  const capturaLista = capturas.every((t) => CAPTURA_LISTA.includes(t.estado));
 
-  if (!capturaLista) {
-    const r = await prisma.entregaInsumo.deleteMany({ where: { organizacionId: orgId, empresaId, periodo, origen: 'auto' } });
+  const objetivo = await areasObjetivoCliente(orgId, empresaId, periodo);
+  const { crear, revertir } = decidirAutoEntrega({ capturas, areasObjetivo: objetivo });
+
+  // Política por área: descarta una entrega GENERAL automática antigua si quedó de una
+  // versión anterior (nunca toca una general 'manual' de coordinación).
+  await prisma.entregaInsumo.deleteMany({ where: { organizacionId: orgId, empresaId, periodo, areaId: null, origen: 'auto' } });
+
+  if (revertir.length > 0) {
+    const r = await prisma.entregaInsumo.deleteMany({
+      where: { organizacionId: orgId, empresaId, periodo, origen: 'auto', areaId: { in: revertir } },
+    });
     if (r.count > 0) await prisma.eventoTarea.create({ data: { organizacionId: orgId, tareaId, tipo: 'entrega', estadoAnterior: 'entregado', estadoNuevo: 'revertido', usuarioId } });
-    return;
   }
 
-  // Áreas del cliente cuyo insumo lo provee el cliente (no se auto-liberan).
+  let creadas = 0;
+  for (const areaId of crear) {
+    const existe = await prisma.entregaInsumo.findFirst({ where: { organizacionId: orgId, empresaId, periodo, areaId } });
+    if (!existe) {
+      // El día de liberación se guarda como día del calendario COLOMBIANO: con
+      // now() a secas, una captura terminada a las 8 p. m. quedaba registrada al
+      // día siguiente, porque en UTC ya lo es.
+      await prisma.entregaInsumo.create({ data: { organizacionId: orgId, empresaId, periodo, areaId, origen: 'auto', entregadoPorId: usuarioId, entregadoEn: diaCalendario(hoyEnColombia()) } });
+      creadas++;
+    }
+  }
+  if (creadas > 0) await prisma.eventoTarea.create({ data: { organizacionId: orgId, tareaId, tipo: 'entrega', estadoAnterior: null, estadoNuevo: 'entregado', usuarioId } });
+}
+
+// Áreas del cliente que reciben insumo de la firma este período: procesamiento
+// del plan y/o vencimientos (declaraciones), excepto las de "insumo del cliente".
+async function areasObjetivoCliente(orgId: string, empresaId: string, periodo: string): Promise<string[]> {
   const asigs = await prisma.asignacionClienteArea.findMany({
     where: { organizacionId: orgId, empresaId, insumoCliente: true },
     select: { areaId: true },
   });
   const insumoClienteAreas = new Set(asigs.map((a) => a.areaId));
 
-  // Áreas con procesamiento pendiente para este cliente (tareas del plan).
   const areasProc = await prisma.tarea.findMany({
     where: { organizacionId: orgId, empresaId, periodo, actividadPlan: { fase: 'procesamiento' }, areaId: { not: null } },
     select: { areaId: true }, distinct: ['areaId'],
   });
 
-  // Áreas con vencimientos (declaraciones) del período: el trabajo del área de Impuestos
-  // son las declaraciones controladas en Vencimientos, no tareas del plan — así también
-  // se libera su área. Cada vencimiento se mapea a su área por la actividad vinculada.
   const [anioP, mesP] = periodo.split('-').map(Number);
   const desdeV = new Date(Date.UTC(anioP, mesP - 1, 1));
   const hastaV = new Date(Date.UTC(anioP, mesP, 1));
@@ -243,29 +257,10 @@ async function evaluarAutoEntrega(orgId: string, empresaId: string, periodo: str
     if (areaId) areasVenc.add(areaId);
   }
 
-  // Objetivo: unión de áreas con procesamiento y áreas con vencimientos, EXCLUYENDO
-  // las de "insumo del cliente".
-  const objetivo = Array.from(new Set([
+  return Array.from(new Set([
     ...areasProc.map((t) => t.areaId as string),
     ...areasVenc,
   ])).filter((id) => !insumoClienteAreas.has(id));
-
-  // Política por área: descarta una entrega GENERAL automática antigua si quedó de una
-  // versión anterior (nunca toca una general 'manual' de coordinación).
-  await prisma.entregaInsumo.deleteMany({ where: { organizacionId: orgId, empresaId, periodo, areaId: null, origen: 'auto' } });
-
-  let creadas = 0;
-  for (const areaId of objetivo) {
-    const existe = await prisma.entregaInsumo.findFirst({ where: { organizacionId: orgId, empresaId, periodo, areaId } });
-    if (!existe) {
-      // El día de liberación se guarda como día del calendario COLOMBIANO: con
-      // now() a secas, una captura terminada a las 8 p. m. quedaba registrada al
-      // día siguiente, porque en UTC ya lo es.
-      await prisma.entregaInsumo.create({ data: { organizacionId: orgId, empresaId, periodo, areaId, origen: 'auto', entregadoPorId: usuarioId, entregadoEn: diaCalendario(hoyEnColombia()) } });
-      creadas++;
-    }
-  }
-  if (creadas > 0) await prisma.eventoTarea.create({ data: { organizacionId: orgId, tareaId, tipo: 'entrega', estadoAnterior: null, estadoNuevo: 'entregado', usuarioId } });
 }
 
 // PATCH /plan/tareas/:id/estado  { estado }  — cambia el estado con reglas de negocio.
@@ -960,6 +955,168 @@ planRouter.delete('/insumo-cliente', requireAuth, async (req: AuthedRequest, res
   const r = await prisma.entregaInsumo.deleteMany({ where: { organizacionId: org.id, empresaId, areaId, periodo, origen: 'cliente' } });
   if (r.count === 0) return res.status(404).json({ error: 'No hay una marca de recepción que deshacer.' });
   await prisma.eventoInsumo.create({ data: { organizacionId: org.id, empresaId, areaId, periodo, tipo: 'desmarca', usuarioId: u.sub } });
+  res.json({ ok: true });
+});
+
+// ---------- Liberar insumo por área (auxiliar → cada asesor) ----------
+//
+// La Lista del auxiliar solo muestra captura de Informes/Nómina. Impuestos y
+// Tesorería no tienen esa fase, así que no había nada que "terminar" para
+// soltarle el insumo a esos asesores. Esta bandeja lista las áreas de los
+// clientes donde el usuario es auxiliar, con el asesor de cada una, y deja
+// liberar (o deshacer) sin esperar a que el resto de la captura esté lista.
+
+async function auxiliarDeCliente(orgId: string, empresaId: string, uid: string): Promise<boolean> {
+  const n = await prisma.asignacionClienteArea.count({
+    where: { organizacionId: orgId, empresaId, auxiliarId: uid },
+  });
+  return n > 0;
+}
+
+// GET /plan/liberar-insumo?periodo=YYYY-MM
+planRouter.get('/liberar-insumo', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.json({ periodo: null, total: 0, pendientes: 0, filas: [] });
+  const periodo = typeof req.query.periodo === 'string' && PERIODO_RE.test(req.query.periodo) ? req.query.periodo : periodoDeHoy();
+  const uid = req.user!.sub;
+
+  const misAsigs = await prisma.asignacionClienteArea.findMany({
+    where: { organizacionId: org.id, empresa: { activo: true }, auxiliarId: uid },
+    select: { empresaId: true },
+  });
+  const empresaIds = [...new Set(misAsigs.map((a) => a.empresaId))];
+  if (empresaIds.length === 0) return res.json({ periodo, total: 0, pendientes: 0, filas: [] });
+
+  const [asigs, capturas, entregas] = await Promise.all([
+    prisma.asignacionClienteArea.findMany({
+      where: { organizacionId: org.id, empresaId: { in: empresaIds }, insumoCliente: false },
+      select: {
+        empresaId: true, areaId: true,
+        empresa: { select: { nombre: true } },
+        area: { select: { nombre: true, orden: true } },
+        asesor: { select: { nombre: true } },
+      },
+    }),
+    prisma.tarea.findMany({
+      where: { organizacionId: org.id, empresaId: { in: empresaIds }, periodo, actividadPlan: { fase: 'captura' } },
+      select: { empresaId: true, areaId: true, estado: true },
+    }),
+    prisma.entregaInsumo.findMany({
+      where: { organizacionId: org.id, periodo, empresaId: { in: empresaIds } },
+      select: { empresaId: true, areaId: true, origen: true, entregadoEn: true, entregadoPor: { select: { nombre: true } } },
+    }),
+  ]);
+
+  const capsPor = new Map<string, { estado: string }[]>();
+  for (const c of capturas) {
+    const k = `${c.empresaId}|${c.areaId ?? ''}`;
+    const arr = capsPor.get(k) ?? [];
+    arr.push({ estado: c.estado });
+    capsPor.set(k, arr);
+  }
+  const entArea = new Map(entregas.filter((e) => e.areaId).map((e) => [`${e.empresaId}|${e.areaId}`, e]));
+  const entGen = new Map(entregas.filter((e) => !e.areaId).map((e) => [e.empresaId, e]));
+
+  const filas = asigs.map((a) => {
+    const caps = capsPor.get(`${a.empresaId}|${a.areaId}`) ?? [];
+    const puede = auxiliarPuedeLiberarArea(caps);
+    const e = entArea.get(`${a.empresaId}|${a.areaId}`) ?? entGen.get(a.empresaId);
+    const liberado = !!e;
+    return {
+      empresaId: a.empresaId,
+      areaId: a.areaId,
+      empresa: a.empresa?.nombre ?? '—',
+      area: a.area?.nombre ?? '—',
+      areaOrden: a.area?.orden ?? 99,
+      asesor: a.asesor?.nombre ?? null,
+      liberado,
+      origen: e?.origen ?? null,
+      fechaEntrega: e?.entregadoEn ?? null,
+      marcadoPor: e?.entregadoPor?.nombre ?? null,
+      capturaPendiente: !puede.ok,
+      puedeLiberar: !liberado && puede.ok,
+      motivoBloqueo: liberado ? null : (puede.motivo ?? null),
+    };
+  }).sort((x, y) => {
+    if (x.liberado !== y.liberado) return x.liberado ? 1 : -1;
+    const emp = x.empresa.localeCompare(y.empresa, 'es');
+    if (emp !== 0) return emp;
+    return x.areaOrden - y.areaOrden || x.area.localeCompare(y.area, 'es');
+  });
+
+  res.json({
+    periodo,
+    total: filas.length,
+    pendientes: filas.filter((f) => !f.liberado).length,
+    filas: filas.map(({ areaOrden: _o, ...f }) => f),
+  });
+});
+
+// POST /plan/liberar-insumo { empresaId, areaId, periodo }
+planRouter.post('/liberar-insumo', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const { empresaId, areaId } = req.body ?? {};
+  if (typeof empresaId !== 'string' || typeof areaId !== 'string') return res.status(422).json({ error: 'Faltan el cliente y el área.' });
+  const periodo = typeof req.body?.periodo === 'string' && PERIODO_RE.test(req.body.periodo) ? req.body.periodo : periodoDeHoy();
+  const u = req.user!;
+
+  const asig = await prisma.asignacionClienteArea.findFirst({
+    where: { organizacionId: org.id, empresaId, areaId },
+    select: { insumoCliente: true },
+  });
+  if (!asig) return res.status(404).json({ error: 'Ese cliente no tiene asignada esa área.' });
+  if (asig.insumoCliente) return res.status(422).json({ error: 'Esa área espera el insumo del cliente: márcalo en “Esperando al cliente”.' });
+  if (!puedeGestionar(u) && !(await auxiliarDeCliente(org.id, empresaId, u.sub))) {
+    return res.status(403).json({ error: 'Solo el auxiliar de este cliente puede liberarle el insumo a sus asesores.' });
+  }
+
+  const capturas = await prisma.tarea.findMany({
+    where: { organizacionId: org.id, empresaId, areaId, periodo, actividadPlan: { fase: 'captura' } },
+    select: { estado: true },
+  });
+  const puede = auxiliarPuedeLiberarArea(capturas);
+  if (!puede.ok) return res.status(422).json({ error: puede.motivo });
+
+  const existe = await prisma.entregaInsumo.findFirst({ where: { organizacionId: org.id, empresaId, periodo, areaId } });
+  if (!existe) {
+    const gen = await prisma.entregaInsumo.findFirst({ where: { organizacionId: org.id, empresaId, periodo, areaId: null } });
+    if (!gen) {
+      await prisma.entregaInsumo.create({
+        data: {
+          organizacionId: org.id, empresaId, periodo, areaId,
+          origen: 'auxiliar', entregadoPorId: u.sub, entregadoEn: diaCalendario(hoyEnColombia()),
+        },
+      });
+    }
+  }
+  res.json({ ok: true, periodo });
+});
+
+// DELETE /plan/liberar-insumo?empresaId=&areaId=&periodo= — deshace lo que el auxiliar soltó.
+planRouter.delete('/liberar-insumo', requireAuth, async (req: AuthedRequest, res) => {
+  const org = await orgDeSesion(req);
+  if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
+  const empresaId = String(req.query.empresaId ?? '');
+  const areaId = String(req.query.areaId ?? '');
+  if (!empresaId || !areaId) return res.status(422).json({ error: 'Faltan el cliente y el área.' });
+  const periodo = typeof req.query.periodo === 'string' && PERIODO_RE.test(req.query.periodo) ? req.query.periodo : periodoDeHoy();
+  const u = req.user!;
+
+  const asig = await prisma.asignacionClienteArea.findFirst({
+    where: { organizacionId: org.id, empresaId, areaId },
+    select: { id: true },
+  });
+  if (!asig) return res.status(404).json({ error: 'Ese cliente no tiene asignada esa área.' });
+  if (!puedeGestionar(u) && !(await auxiliarDeCliente(org.id, empresaId, u.sub))) {
+    return res.status(403).json({ error: 'Esa área de ese cliente no está a tu cargo.' });
+  }
+
+  // No se toca una entrega 'manual' de coordinación ni la recepción del cliente.
+  const r = await prisma.entregaInsumo.deleteMany({
+    where: { organizacionId: org.id, empresaId, areaId, periodo, origen: { in: ['auxiliar', 'auto'] } },
+  });
+  if (r.count === 0) return res.status(404).json({ error: 'No hay una liberación del auxiliar que deshacer.' });
   res.json({ ok: true });
 });
 
