@@ -23,7 +23,11 @@ type Fila = {
   asesor: string | null; auxiliar: string | null;
   recibido: boolean; fechaEntrega: string | null; marcadoPor: string | null; diasEsperando: number;
 };
-type Resp = { periodo: string | null; total: number; pendientes: number; filas: Fila[] };
+// Quien tiene rol de coordinación ve TODAS las áreas de la firma, no las suyas.
+// El panel tiene que decir cuál de los dos alcances está mostrando: con el texto
+// de "tus áreas" sobre la lista completa, ver ahí un cliente ajeno se lee como
+// un error de asignación y se sale a corregir algo que está bien.
+type Resp = { periodo: string | null; esCoordinacion?: boolean; total: number; pendientes: number; filas: Fila[] };
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const fmt = (iso: string | null) => {
@@ -132,7 +136,11 @@ export default function InsumoDelCliente() {
   return (
     <PanelPlegable
       id="insumo-del-cliente" titulo="📥 Esperando al cliente"
-      nota="Áreas donde el insumo lo manda el cliente. Te aparecen aquellas donde eres asesor o auxiliar de esa área. Al marcar la recepción, el trabajo de esa área se destraba."
+      nota={`Áreas donde el insumo lo manda el cliente. ${
+        data.esCoordinacion
+          ? 'Ves las de TODA la firma porque tienes rol de coordinación, no solo las tuyas.'
+          : 'Te aparecen aquellas donde eres asesor o auxiliar de esa área.'
+      } Al marcar la recepción, el trabajo de esa área se destraba.`}
       resumen={
         <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, background: data.pendientes > 0 ? 'var(--alerta-suave)' : 'var(--exito-suave)', border: `1px solid ${data.pendientes > 0 ? 'var(--alerta-borde)' : 'var(--exito-borde)'}`, borderRadius: 20, padding: '4px 12px' }}>
           <b style={{ fontSize: 14, color: data.pendientes > 0 ? 'var(--alerta-fuerte)' : 'var(--exito-fuerte)' }}>{data.pendientes}</b>

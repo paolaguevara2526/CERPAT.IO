@@ -248,16 +248,50 @@ De ahí salen dos síntomas que parecen errores y no lo son:
 - **«Cambié la asignación y la Lista sigue mostrando a la persona anterior.»** Correcto:
   la tarea guarda el responsable que tenía al generarse. Hay que **aplicar** los
   responsables al período — **simular no aplica nada**.
-- **«Me aparece un cliente que no es mío.»** Casi siempre es una de dos: se es el
-  **auxiliar** de esa área (no el asesor), o se figura en **otra área** del mismo
-  cliente — `empresasAsignadas` da acceso al cliente **completo** en Calendario,
-  Vencimientos y Visitas cuando se figura en cualquiera de sus áreas.
+- **«Me aparece un cliente que no es mío.»** *Esperando al cliente* lista un área
+  **solo** si uno es su asesor o su auxiliar, así que el dato nunca dice dos cosas a
+  la vez. Las explicaciones posibles son cuatro, en este orden:
+  1. Se es el **auxiliar** de esa área, no el asesor.
+  2. Se figura en **otra área** del mismo cliente — `empresasAsignadas` da acceso al
+     cliente **completo** en Calendario, Vencimientos y Visitas.
+  3. Se tiene **rol de coordinación** (Administrador o Coordinador): esas pantallas
+     no filtran por asignación, muestran **toda la firma**. Por eso el panel dice
+     cuál de los dos alcances está mostrando.
+  4. El cliente tiene **dos fichas** (ver abajo), y se está mirando la otra.
 
 **Por eso cada bandeja dice a nombre de quién aparece cada fila.** *Esperando al
 cliente* muestra el **asesor** y el **auxiliar** de esa área; *Liberar insumo a
 asesores* muestra a quién le llega la liberación. Sin ese dato, ver un cliente ajeno
 en la propia bandeja se lee como un error de asignación, y se termina buscando un
 problema donde no lo hay.
+
+## Un cliente, una ficha
+
+Nada en la base impide crear dos veces el mismo cliente: no hay índice único ni por
+nombre ni por NIT. Cuando pasa, el síntoma **no se parece a la causa**. Las áreas
+quedan repartidas entre las dos fichas, el desplegable de *Plan por cliente* muestra
+el mismo nombre dos veces sin manera de distinguirlas, y entonces:
+
+> Se corrige el asesor de un área, se guarda, y al asesor anterior le sigue
+> apareciendo el cliente. Se vuelve a corregir y vuelve a pasar. Parece que el
+> sistema no guarda; lo que pasa es que se está editando **la otra ficha**.
+
+Tres reglas para que no vuelva a crecer:
+
+- **El NIT bloquea.** No se puede crear (ni dejar en una edición) un cliente cuyo NIT
+  ya esté en otro. El mensaje dice en cuál está. Se comparan solo los dígitos y se
+  tolera el de verificación: `900.123.456-7` y `900123456` son el mismo NIT.
+- **El nombre no bloquea, avisa.** Dos clientes pueden llamarse parecido de verdad, así
+  que el nombre repetido no impide nada: aparece en *Plan de trabajo por cliente →
+  «clientes con la ficha repetida»*, con lo que le cuelga a cada ficha (áreas y con
+  quién, tareas, vencimientos, pagos) — que es lo que decide cuál se queda.
+- **El desplegable nunca ofrece dos opciones idénticas.** Los nombres repetidos se
+  marcan con su NIT (o el final del id). Elegir mal entre dos opciones iguales no es
+  un descuido: es la única jugada posible.
+
+Unificar dos fichas **no lo hace el sistema solo**: las tareas y los pagos ya
+registrados no se mueven, y perderlos de vista tiene consecuencias contables. Se deja
+una ficha, se le pasan las áreas de la otra y la sobrante se **desactiva**.
 
 ## Responsables por área: quién puede ir en cada casilla
 

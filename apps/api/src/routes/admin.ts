@@ -16,6 +16,7 @@ import { aplicaEnMesPlan } from '../plan/periodicidad.js';
 import { VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
 import { duplicadoDe } from '../catalogos/nombre.js';
 import { areasSinAsesor } from '../empresas/asesor-inicial.js';
+import { gruposDuplicados, choqueDeNit } from '../empresas/duplicados.js';
 
 export const adminRouter = Router();
 
@@ -611,6 +612,15 @@ adminRouter.post('/empresas', requireAuth, soloCoordinacion, async (req, res) =>
   if (!data.nombre) return res.status(422).json({ error: 'El nombre del cliente es obligatorio.' });
   const asesor = await asesorElegido(id, req.body);
   if (req.body?.asesorId && !asesor) return res.status(422).json({ error: 'El asesor elegido no existe.' });
+  // Dos fichas del mismo NIT parten al cliente en dos: la mitad de sus áreas
+  // queda en una y la mitad en la otra, y desde entonces corregir la asignación
+  // en la ficha que se abrió no cambia nada para quien está en la otra. Se
+  // bloquea aquí porque después solo se descubre por el síntoma.
+  if (data.nit) {
+    const conNit = await prisma.empresa.findMany({ where: { organizacionId: id, nit: { not: null } }, select: { id: true, nombre: true, nit: true } });
+    const choque = choqueDeNit(data.nit as string, conNit);
+    if (choque) return res.status(409).json({ error: `Ese NIT ya está en el cliente "${choque.nombre}". Si es el mismo cliente, edita esa ficha en vez de crear otra.` });
+  }
   // El texto de la ficha se mantiene como etiqueta, pero lo que reparte trabajo
   // son las asignaciones de abajo.
   if (asesor) data.asesorNombre = asesor.nombre;
@@ -626,6 +636,11 @@ adminRouter.patch('/empresas/:id', requireAuth, soloCoordinacion, async (req, re
   const asesor = await asesorElegido(id, req.body);
   if (req.body?.asesorId && !asesor) return res.status(422).json({ error: 'El asesor elegido no existe.' });
   if (asesor) data.asesorNombre = asesor.nombre;
+  if (data.nit) {
+    const conNit = await prisma.empresa.findMany({ where: { organizacionId: id, nit: { not: null } }, select: { id: true, nombre: true, nit: true } });
+    const choque = choqueDeNit(data.nit as string, conNit, req.params.id);
+    if (choque) return res.status(409).json({ error: `Ese NIT ya está en el cliente "${choque.nombre}". Si es el mismo cliente, unifica las dos fichas.` });
+  }
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
   const r = await prisma.empresa.updateMany({ where: { id: req.params.id, organizacionId: id }, data });
   if (r.count === 0) return res.status(404).json({ error: 'Cliente no encontrado.' });
@@ -1377,6 +1392,71 @@ adminRouter.get('/asignaciones/revision', requireAuth, soloCoordinacion, async (
   }
   casos.sort((x, y) => x.empresa.localeCompare(y.empresa, 'es'));
   res.json({ total: casos.length, casos });
+});
+
+// GET /admin/clientes-duplicados — fichas que parecen ser el mismo cliente.
+//
+// Nada en la base impide crear dos veces el mismo cliente, y cuando pasa el
+// síntoma no se parece a la causa: las áreas quedan repartidas entre las dos
+// fichas, así que a un asesor le sigue apareciendo un cliente que en "Plan por
+// cliente" figura a nombre de otro — y cambiarlo ahí no lo corrige, porque se
+// está editando la OTRA ficha. El desplegable muestra las dos con el mismo
+// nombre, sin manera de saber cuál se abrió.
+//
+// Por eso cada ficha viene con lo que le cuelga (áreas asignadas, con quién,
+// tareas, vencimientos, pagos): eso es lo que decide cuál es la buena y qué se
+// pierde al desactivar la otra.
+adminRouter.get('/clientes-duplicados', requireAuth, soloCoordinacion, async (req, res) => {
+  const id = await orgId(req);
+  if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
+
+  const empresas = await prisma.empresa.findMany({
+    where: { organizacionId: id },
+    select: { id: true, nombre: true, nit: true, activo: true, createdAt: true },
+  });
+  const grupos = gruposDuplicados(empresas);
+  if (grupos.length === 0) return res.json({ total: 0, grupos: [] });
+
+  // Solo se cuenta lo de las fichas señaladas: contar los noventa clientes para
+  // mostrar dos es trabajo que nadie ve.
+  const ids = [...new Set(grupos.flatMap((g) => g.ids))];
+  const [asigs, tareas, vencs, pagos] = await Promise.all([
+    prisma.asignacionClienteArea.findMany({
+      where: { organizacionId: id, empresaId: { in: ids } },
+      select: { empresaId: true, area: { select: { nombre: true } }, asesor: { select: { nombre: true } }, auxiliar: { select: { nombre: true } } },
+    }),
+    prisma.tarea.groupBy({ by: ['empresaId'], where: { organizacionId: id, empresaId: { in: ids } }, _count: { _all: true } }),
+    prisma.vencimientoEmpresa.groupBy({ by: ['empresaId'], where: { empresaId: { in: ids } }, _count: { _all: true } }),
+    prisma.pago.groupBy({ by: ['empresaId'], where: { organizacionId: id, empresaId: { in: ids } }, _count: { _all: true } }),
+  ]);
+  const cuenta = (g: { empresaId: string; _count: { _all: number } }[]) =>
+    new Map(g.map((x) => [x.empresaId, x._count._all]));
+  const nTareas = cuenta(tareas), nVencs = cuenta(vencs), nPagos = cuenta(pagos);
+
+  const areasPorEmpresa = new Map<string, { area: string; asesor: string | null; auxiliar: string | null }[]>();
+  for (const a of asigs) {
+    if (!a.asesor && !a.auxiliar) continue; // un área sin nadie no explica nada
+    const lista = areasPorEmpresa.get(a.empresaId) ?? [];
+    lista.push({ area: a.area?.nombre ?? '—', asesor: a.asesor?.nombre ?? null, auxiliar: a.auxiliar?.nombre ?? null });
+    areasPorEmpresa.set(a.empresaId, lista);
+  }
+  for (const l of areasPorEmpresa.values()) l.sort((x, y) => x.area.localeCompare(y.area, 'es'));
+
+  const porId = new Map(empresas.map((e) => [e.id, e]));
+  res.json({
+    total: grupos.length,
+    grupos: grupos.map((g) => ({
+      motivo: g.motivo,
+      fichas: g.ids.map((eid) => {
+        const e = porId.get(eid)!;
+        return {
+          id: e.id, nombre: e.nombre, nit: e.nit, activo: e.activo, creado: e.createdAt,
+          areas: areasPorEmpresa.get(eid) ?? [],
+          tareas: nTareas.get(eid) ?? 0, vencimientos: nVencs.get(eid) ?? 0, pagos: nPagos.get(eid) ?? 0,
+        };
+      }),
+    })),
+  });
 });
 
 // GET /admin/asignaciones/:empresaId — todas las áreas con su asignación actual.

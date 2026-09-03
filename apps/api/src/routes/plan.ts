@@ -842,12 +842,17 @@ const periodoDeHoy = () => { const d = new Date(); return `${d.getFullYear()}-${
 // Las áreas de insumo del cliente del usuario, marcadas y sin marcar.
 planRouter.get('/insumo-cliente', requireAuth, async (req: AuthedRequest, res) => {
   const org = await orgDeSesion(req);
-  if (!org) return res.json({ periodo: null, total: 0, pendientes: 0, filas: [] });
+  if (!org) return res.json({ periodo: null, esCoordinacion: false, total: 0, pendientes: 0, filas: [] });
   const periodo = typeof req.query.periodo === 'string' && PERIODO_RE.test(req.query.periodo) ? req.query.periodo : periodoDeHoy();
   const u = req.user!;
   const uid = u.sub;
   // Coordinación ve todo: de ahí sale la lista de clientes que no han entregado.
-  const scope = puedeGestionar(u) ? {} : { OR: [{ asesorId: uid }, { auxiliarId: uid }] };
+  // Se devuelve cuál de los dos alcances se aplicó, porque la pantalla tiene que
+  // decir por qué lista lo que lista: con el mismo texto para los dos, quien
+  // tiene rol de coordinación lee "son tus clientes" sobre la lista completa de
+  // la firma y sale a buscar un error de asignación que no existe.
+  const esCoordinacion = puedeGestionar(u);
+  const scope = esCoordinacion ? {} : { OR: [{ asesorId: uid }, { auxiliarId: uid }] };
 
   const asigs = await prisma.asignacionClienteArea.findMany({
     where: { organizacionId: org.id, insumoCliente: true, empresa: { activo: true }, ...scope },
@@ -857,7 +862,7 @@ planRouter.get('/insumo-cliente', requireAuth, async (req: AuthedRequest, res) =
       asesor: { select: { nombre: true } }, auxiliar: { select: { nombre: true } },
     },
   });
-  if (asigs.length === 0) return res.json({ periodo, total: 0, pendientes: 0, filas: [] });
+  if (asigs.length === 0) return res.json({ periodo, esCoordinacion, total: 0, pendientes: 0, filas: [] });
 
   const entregas = await prisma.entregaInsumo.findMany({
     where: { organizacionId: org.id, periodo, empresaId: { in: [...new Set(asigs.map((a) => a.empresaId))] } },
@@ -885,7 +890,7 @@ planRouter.get('/insumo-cliente', requireAuth, async (req: AuthedRequest, res) =
     };
   }).sort((x, y) => (x.recibido === y.recibido ? x.empresa.localeCompare(y.empresa, 'es') : x.recibido ? 1 : -1));
 
-  res.json({ periodo, total: filas.length, pendientes: filas.filter((f) => !f.recibido).length, filas });
+  res.json({ periodo, esCoordinacion, total: filas.length, pendientes: filas.filter((f) => !f.recibido).length, filas });
 });
 
 // POST /plan/insumo-cliente { empresaId, areaId, periodo, fecha }

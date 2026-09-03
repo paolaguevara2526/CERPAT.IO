@@ -10,8 +10,10 @@ import RecalcularFechas from './RecalcularFechas';
 import GenerarPeriodo from './GenerarPeriodo';
 import RevisionResponsables from './RevisionResponsables';
 import ResincronizarResponsables from './ResincronizarResponsables';
+import ClientesDuplicados from './ClientesDuplicados';
+import { etiquetasUnicas } from '@/lib/etiquetas';
 
-type Empresa = { id: string; nombre: string };
+type Empresa = { id: string; nombre: string; nit: string | null };
 type Usuario = { id: string; nombre: string; roles: string[] };
 type Act = { id: string; codigo: string; nombre: string; periodicidadCatalogo: string | null; enPlan: boolean; periodicidad: string | null };
 type AreaGrupo = { area: string; areaId: string | null; actividades: Act[] };
@@ -89,7 +91,7 @@ export default function PlanClienteEditor() {
   const [periodo, setPeriodo] = useState(() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`; });
 
   useEffect(() => {
-    fetch('/api/admin/empresas', { cache: 'no-store' }).then((r) => r.json()).then((d) => setEmpresas((d.items ?? []).map((e: any) => ({ id: e.id, nombre: e.nombre })))).catch(() => {});
+    fetch('/api/admin/empresas', { cache: 'no-store' }).then((r) => r.json()).then((d) => setEmpresas((d.items ?? []).map((e: any) => ({ id: e.id, nombre: e.nombre, nit: e.nit ?? null })))).catch(() => {});
     fetch('/api/admin/usuarios', { cache: 'no-store' }).then((r) => r.json()).then((d) => setUsuarios((d.usuarios ?? []).filter((u: any) => u.activo !== false).map((u: any) => ({ id: u.id, nombre: u.nombre, roles: (u.roles ?? []).map((r: any) => r.nombre) })))).catch(() => {});
   }, []);
 
@@ -179,6 +181,10 @@ export default function PlanClienteEditor() {
   }
 
   const totalActivas = Object.values(sel).filter((v) => v.activa).length;
+  // Etiquetas del desplegable de clientes: solo marca las repetidas (ver
+  // lib/etiquetas.ts). Elegir "el cliente equivocado" entre dos opciones
+  // idénticas no es un descuido, es la única jugada posible.
+  const etiquetas = etiquetasUnicas(empresas);
 
   // Descarga en Excel el plan de trabajo de TODOS los clientes: una fila por
   // (cliente, actividad en su plan), con periodicidad y responsables por área.
@@ -234,6 +240,10 @@ export default function PlanClienteEditor() {
       {/* Va primero: si un responsable está mal puesto, generar el período
           replica el error en todas las tareas del mes. */}
       <RevisionResponsables onIr={(id) => { setEmpresaId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
+      {/* Va con la revisión de responsables porque produce el mismo síntoma y
+          engaña más: aquí el responsable está bien puesto, solo que en la otra
+          ficha del mismo cliente. */}
+      <ClientesDuplicados onIr={(id) => { setEmpresaId(id); window.scrollTo({ top: 0, behavior: 'smooth' }); }} />
       <GenerarPeriodo />
       {/* Va junto al recálculo de fechas: los dos arreglan lo YA generado, que
           es lo que ni Guardar ni Generar tocan. */}
@@ -264,7 +274,9 @@ export default function PlanClienteEditor() {
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
         <select style={{ ...input, minWidth: 280 }} value={empresaId} onChange={(e) => setEmpresaId(e.target.value)}>
           <option value="">— Selecciona un cliente —</option>
-          {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+          {/* Dos clientes con el mismo nombre se distinguen en la etiqueta: sin
+              eso se edita uno creyendo que es el otro, y el cambio "no sirve". */}
+          {empresas.map((e) => <option key={e.id} value={e.id}>{etiquetas.get(e.id) ?? e.nombre}</option>)}
         </select>
         {empresaId && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{totalActivas} actividad(es) en el plan</span>}
       </div>
