@@ -6,7 +6,9 @@
 // soltarle el mes al asesor de esas áreas. Esta bandeja lista los clientes
 // del auxiliar con el asesor de cada área y deja liberar (o deshacer) ahí.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { alCambiarTarea } from '@/lib/eventos';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 import { fmtDia } from '@/lib/fechas';
@@ -37,15 +39,28 @@ export default function LiberarInsumo() {
   const [msg, setMsg] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
-  async function cargar() {
+  // El mes sale de la URL, igual que el resto de la pantalla. Sin esto la
+  // bandeja siempre mira el mes en curso: en la Lista parada en agosto, arriba
+  // se veía septiembre — dos meses distintos en la misma pantalla.
+  const params = useSearchParams();
+  const periodoURL = params.get('periodo') ?? '';
+
+  const cargar = useCallback(async () => {
     try {
-      const r = await fetch('/api/plan/liberar-insumo', { cache: 'no-store' });
+      const qs = /^\d{4}-\d{2}$/.test(periodoURL) ? `?periodo=${encodeURIComponent(periodoURL)}` : '';
+      const r = await fetch(`/api/plan/liberar-insumo${qs}`, { cache: 'no-store' });
       const d = await r.json();
       if (r.ok) setData(d as Resp);
     } catch { /* el panel se oculta si no aplica */ }
     finally { setCargando(false); }
-  }
-  useEffect(() => { cargar(); }, []);
+  }, [periodoURL]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  // Marcar la captura como Terminado pasa ABAJO, en la misma pantalla. Sin oír
+  // ese aviso, la bandeja se queda diciendo "falta captura" de algo que se
+  // acaba de terminar, y la pantalla se contradice a sí misma.
+  useEffect(() => alCambiarTarea(() => { cargar(); }), [cargar]);
 
   async function liberar(f: Fila) {
     setTrabajando(true); setMsg(null);

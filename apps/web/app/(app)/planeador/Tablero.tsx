@@ -9,6 +9,7 @@ import type { Tarea } from './tareas';
 
 import { tinte } from '@/app/_components/color';
 import { fmtDia } from '@/lib/fechas';
+import { avisarTareaCambiada } from '@/lib/eventos';
 const COLUMNAS: { estado: string; label: string; color: string }[] = [
   { estado: 'por_iniciar', label: 'Por iniciar', color: 'var(--muted)' },
   { estado: 'en_curso', label: 'En curso', color: 'var(--info)' },
@@ -55,6 +56,7 @@ export default function Tablero({ tareas: iniciales }: { tareas: Tarea[] }) {
         setTareas((prev) => prev.map((t) => (t.id === id ? { ...t, estado: anterior } : t)));
         setError(data.error || 'No se pudo cambiar el estado.');
       } else {
+        avisarTareaCambiada();
         router.refresh();
       }
     } catch {

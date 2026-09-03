@@ -7,6 +7,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { contarConsecutivos } from '../consecutivos';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 import { fmtDia } from '@/lib/fechas';
+import { avisarTareaCambiada } from '@/lib/eventos';
 
 // Los tipos vienen del catálogo (Administración → Tipos de documento). Estaban
 // escritos acá: agregar uno exigía un despliegue, y como el campo era de texto
@@ -173,6 +174,7 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { setMsg({ id, texto: d?.error ?? 'No se pudo cambiar el estado.', ok: false }); return; }
+      avisarTareaCambiada();
       await cargar();
     } catch { setMsg({ id, texto: 'Error de red al cambiar el estado.', ok: false }); }
   }
