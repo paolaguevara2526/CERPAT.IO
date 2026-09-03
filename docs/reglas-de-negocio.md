@@ -293,6 +293,33 @@ Unificar dos fichas **no lo hace el sistema solo**: las tareas y los pagos ya
 registrados no se mueven, y perderlos de vista tiene consecuencias contables. Se deja
 una ficha, se le pasan las áreas de la otra y la sobrante se **desactiva**.
 
+## Un relevo puntual: pasar UNA obligación a otro asesor
+
+Hay impuestos que no los liquida el asesor asignado sino otro que estaba disponible
+esa semana. Reflejarlo cambiando la **asignación del cliente** sería desproporcionado:
+movería todas sus obligaciones y todas sus tareas del plan, cuando lo que cambió fue
+una vez.
+
+En *Mi Día → Mis impuestos*, al abrir una obligación, la **coordinación**
+(Administrador, Coordinador o root) puede pasarla a otro asesor:
+
+- **Cambia solo esa obligación.** La asignación cliente × área queda intacta, así que
+  el mes entrante la obligación vuelve a generarse a nombre del titular. Es el
+  comportamiento buscado: fue un relevo, no una reasignación.
+- **Solo la coordinación.** Si cada quien pudiera soltar sus impuestos, *"quién
+  responde"* dejaría de significar algo. El backend lo rechaza aunque el control no se
+  dibuje.
+- **Solo a quien liquida.** Se ofrecen las personas activas con rol Asesor,
+  Coordinador o Administrador. Pasarle una declaración a un auxiliar o a alguien que ya
+  no está solo se descubre cuando le aparece trabajo que no sabe hacer.
+- **Queda el rastro.** Se registra un evento `reasignacion` con *de quién a quién* y
+  quién lo hizo. La liquidación se mide por persona: un cambio sin rastro le borra
+  trabajo hecho a alguien y se lo acredita a otro sin que nadie pueda revisarlo.
+- **Se confirma en dos pasos** (elegir y *Cambiar*), no al soltar un desplegable.
+
+Para la coordinación —que ve los impuestos de toda la firma— la lista trae además la
+columna **Responsable**, y marca en rojo los que están *sin asignar*.
+
 ## Responsables por área: quién puede ir en cada casilla
 
 De la **asignación cliente × área** heredan asesor y auxiliar **todas** las tareas del
