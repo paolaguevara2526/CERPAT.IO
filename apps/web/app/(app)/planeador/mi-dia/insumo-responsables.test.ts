@@ -38,3 +38,11 @@ test('un área sin asesor se marca en vez de quedar en blanco', () => {
 test('el panel explica el criterio por el que lista', () => {
   assert.match(panel, /eres asesor o auxiliar de esa área/);
 });
+
+test('a quien ve TODA la firma no se le dice que son sus áreas', () => {
+  // Coordinación no se filtra por asignación: ve la lista completa. Con el
+  // mismo texto para los dos, ver ahí un cliente ajeno se lee como un error de
+  // asignación y se sale a corregir algo que está bien.
+  assert.match(panel, /data\.esCoordinacion/);
+  assert.match(panel, /TODA la firma/);
+});

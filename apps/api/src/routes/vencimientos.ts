@@ -18,6 +18,7 @@ import { estaVencido } from '../plan/dia-calendario.js';
 import { filtroAlcance, filtroMes } from '../vencimientos/alcance-lista.js';
 import { puedeRegistrarAbono, puedeEliminarAbono, abonoEnAlcance } from '../vencimientos/abonos.js';
 import { resolverResponsable } from '../vencimientos/responsable.js';
+import { candidatosParaLiquidar, cambioDeAsesor, rastroDeReasignacion } from '../vencimientos/reasignar.js';
 
 const ACCIONES_REVISION = ['iniciar', 'enviar', 'devolver', 'aprobar', 'reabrir'];
 
@@ -425,12 +426,15 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
       soporteLink: true,
       empresa: { select: { nombre: true } }, municipio: { select: { nombre: true } },
       revisor: { select: { nombre: true } },
+      // Quién responde por esta obligación. Para la coordinación, que ve las de
+      // toda la firma, sin este dato la lista no dice de quién es nada.
+      asesor: { select: { id: true, nombre: true } },
       subtareas: { select: { estado: true } },
     },
     take: 300,
   });
   const mesVentana = `${anioV}-${String(mesV).padStart(2, '0')}`;
-  if (items.length === 0) return res.json({ mes: mesVentana, total: 0, listos: 0, esperando: 0, vencidos: 0, impuestos: [] });
+  if (items.length === 0) return res.json({ mes: mesVentana, esCoordinacion: esCoordinacion(u), asesores: [], total: 0, listos: 0, esperando: 0, vencidos: 0, impuestos: [] });
 
   // Insumo liberado por área: la entrega que crea el auxiliar al liberar el mes.
   const [areaDe, entregas] = await Promise.all([
@@ -461,6 +465,7 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
       empresa: v.empresa?.nombre ?? '—', municipio: v.municipio?.nombre ?? null,
       estadoRevision: v.estadoRevision, observacionRevision: v.observacionRevision,
       enviadoRevisionEn: v.enviadoRevisionEn, revisor: v.revisor?.nombre ?? null,
+      asesorId: v.asesor?.id ?? null, asesor: v.asesor?.nombre ?? null,
       valorPago: v.valorPago != null ? Number(v.valorPago) : null,
       // Dónde quedó guardado el trabajo. Va en la misma fila y no en otra
       // pantalla: el asesor que acaba de liquidar es quien tiene el link a mano,
@@ -477,8 +482,22 @@ vencimientosRouter.get('/mi-dia', requireAuth, async (req: AuthedRequest, res) =
     };
   });
 
+  // Los candidatos viajan con la lista y no en otra llamada: la coordinación
+  // los necesita solo si va a reasignar, y pedirlos aparte agrega una espera
+  // justo en el momento en que ya decidió qué cambiar.
+  const asesores = esCoordinacion(u)
+    ? candidatosParaLiquidar(
+        (await prisma.usuario.findMany({
+          where: { organizacionId: org.id },
+          select: { id: true, nombre: true, activo: true, roles: { select: { rol: { select: { nombre: true } } } } },
+        })).map((x) => ({ id: x.id, nombre: x.nombre, activo: x.activo, roles: x.roles.map((r) => r.rol.nombre) })),
+      ).map((x) => ({ id: x.id, nombre: x.nombre }))
+    : [];
+
   res.json({
     mes: mesVentana,
+    esCoordinacion: esCoordinacion(u),
+    asesores,
     total: filas.length,
     listos: filas.filter((f) => f.liberado).length,
     esperando: filas.filter((f) => !f.liberado).length,
@@ -1209,7 +1228,7 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const actual = await prisma.vencimientoEmpresa.findFirst({
     where: { id: req.params.id, organizacionId: org.id },
-    select: { id: true, asesorId: true, auxiliarId: true, estado: true, estadoRevision: true, obligacion: true },
+    select: { id: true, asesorId: true, auxiliarId: true, estado: true, estadoRevision: true, obligacion: true, asesor: { select: { nombre: true } } },
   });
   if (!actual) return res.status(404).json({ error: 'Vencimiento no encontrado.' });
 
@@ -1252,6 +1271,23 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
     if (isNaN(d.getTime())) return res.status(422).json({ error: 'Fecha inválida.' });
     data.fechaVencimiento = d;
   }
+  // Cambiar quién liquida ESTA obligación, sin tocar la asignación del cliente
+  // (ver vencimientos/reasignar.ts). El mes entrante vuelve a ser del titular.
+  let rastroResponsable: string | null = null;
+  if ('asesorId' in (req.body ?? {})) {
+    if (!coordinacion) return res.status(403).json({ error: 'Solo la coordinación puede cambiar quién liquida una obligación.' });
+    const c = cambioDeAsesor(actual.asesorId, req.body.asesorId);
+    if (!c.ok) return res.status(422).json({ error: c.error });
+    const nuevo = await prisma.usuario.findFirst({
+      where: { id: c.asesorId, organizacionId: org.id },
+      select: { id: true, nombre: true, activo: true, roles: { select: { rol: { select: { nombre: true } } } } },
+    });
+    if (!nuevo) return res.status(422).json({ error: 'Esa persona no está en la firma.' });
+    const puedeLiquidar = candidatosParaLiquidar([{ id: nuevo.id, nombre: nuevo.nombre, activo: nuevo.activo, roles: nuevo.roles.map((r) => r.rol.nombre) }]).length > 0;
+    if (!puedeLiquidar) return res.status(422).json({ error: `${nuevo.nombre} no tiene un rol que liquide impuestos.` });
+    data.asesorId = nuevo.id;
+    rastroResponsable = rastroDeReasignacion(actual.asesor?.nombre ?? null, nuevo.nombre);
+  }
   if (Object.keys(data).length === 0) return res.status(400).json({ error: 'No hay cambios que guardar.' });
   await prisma.vencimientoEmpresa.update({ where: { id: actual.id }, data });
   // La presentación entra al rastro: es el cierre del circuito y la fecha con la
@@ -1259,6 +1295,13 @@ vencimientosRouter.patch('/:id', requireAuth, async (req: AuthedRequest, res) =>
   if (data.fechaPresentacion) {
     await prisma.eventoVencimiento.create({
       data: { organizacionId: org.id, vencimientoId: actual.id, tipo: 'presentacion', observaciones: `Estado: ${data.estado}`, usuarioId: u.sub },
+    });
+  }
+  // La reasignación también: la liquidación se mide por persona, y un cambio de
+  // responsable sin rastro le borra trabajo a alguien y se lo acredita a otro.
+  if (rastroResponsable) {
+    await prisma.eventoVencimiento.create({
+      data: { organizacionId: org.id, vencimientoId: actual.id, tipo: 'reasignacion', observaciones: rastroResponsable, usuarioId: u.sub },
     });
   }
   res.json({ ok: true });

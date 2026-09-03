@@ -20,11 +20,20 @@ type Fila = {
   id: string; obligacion: string; periodo: string | null; fechaVencimiento: string;
   empresa: string; municipio: string | null;
   estadoRevision: string; observacionRevision: string | null; revisor: string | null;
+  // Quién liquida ESTA obligación. La coordinación ve las de toda la firma, así
+  // que sin este dato la lista no dice de quién es nada.
+  asesorId: string | null; asesor: string | null;
   valorPago: number | null; soporteLink: string | null;
   checklistTotal: number; checklistHechas: number; checklistAplicables: number;
   liberado: boolean; liberadoEn: string | null; vencido: boolean; sinPago: boolean;
 };
-type Resp = { mes: string; total: number; listos: number; esperando: number; vencidos: number; impuestos: Fila[] };
+type Persona = { id: string; nombre: string };
+type Resp = {
+  mes: string; total: number; listos: number; esperando: number; vencidos: number; impuestos: Fila[];
+  // Solo la coordinación puede pasar una obligación a otro asesor, y solo por
+  // eso viaja la lista de candidatos.
+  esCoordinacion?: boolean; asesores?: Persona[];
+};
 type Sub = { id: string; texto: string; estado: string };
 
 const REVISION: Record<string, { label: string; color: string; fondo: string }> = {
@@ -152,6 +161,22 @@ export default function ImpuestosDelDia() {
     } catch { setMsg('Error de red.'); } finally { setTrabajando(false); }
   }
 
+  // Cambia quién liquida ESTA obligación, sin tocar la asignación del cliente:
+  // el titular sigue siendo el titular y el mes entrante vuelve a ser suyo.
+  async function reasignar(id: string, asesorId: string) {
+    setTrabajando(true); setMsg(null);
+    try {
+      const r = await fetch(`/api/vencimientos/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ asesorId }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { setMsg(d.error ?? 'No se pudo cambiar el responsable.'); return; }
+      setMsg('✓ Responsable cambiado. Queda el registro de quién lo movió.');
+      await cargar();
+    } catch { setMsg('Error de red.'); } finally { setTrabajando(false); }
+  }
+
   async function presentar(id: string, estado: string) {
     setTrabajando(true); setMsg(null);
     try {
@@ -180,6 +205,15 @@ export default function ImpuestosDelDia() {
       valor: (f) => (f.municipio ? `${f.obligacion} · ${f.municipio}` : f.obligacion),
       estiloCelda: { color: 'var(--muted)' } },
     { clave: 'periodo', label: 'Período', valor: (f) => f.periodo ?? '—', estiloCelda: { color: 'var(--muted)', whiteSpace: 'nowrap' } },
+    // Solo para coordinación: al asesor todas las filas son suyas y la columna
+    // sería una que repite su propio nombre treinta veces.
+    ...(data.esCoordinacion ? [{
+      clave: 'responsable', label: 'Responsable',
+      valor: (f: Fila) => f.asesor ?? 'sin asignar',
+      render: (f: Fila) => (f.asesor
+        ? <span style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{f.asesor}</span>
+        : <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--alerta-fuerte)', whiteSpace: 'nowrap' }}>sin asignar</span>),
+    } as Columna<Fila>] : []),
     { clave: 'vence', label: 'Vence', valor: (f) => fmt(f.fechaVencimiento), orden: (f) => f.fechaVencimiento,
       render: (f) => <span style={{ whiteSpace: 'nowrap', color: f.vencido ? 'var(--peligro-fuerte)' : 'var(--muted)', fontWeight: f.vencido ? 700 : 400 }}>{fmt(f.fechaVencimiento)}</span> },
     // Decir "esperando" a secas no alcanza: lo que se espera es la liberación
@@ -238,6 +272,7 @@ export default function ImpuestosDelDia() {
           vacio="No tienes impuestos pendientes en esta ventana."
           sinCoincidencias="Ninguno cumple los filtros."
           detalle={(f) => <Detalle f={f} subs={subs} valor={valor} setValor={setValor} inp={inp}
+            asesores={data.esCoordinacion ? (data.asesores ?? []) : null} onReasignar={reasignar}
             link={link} setLink={setLink} linkOk={linkOk} setLinkOk={setLinkOk}
             onAbrir={() => abrir(f)} onSub={marcarSub} onAccion={accion}
             onGuardarValor={() => guardarValor(f.id)} onGuardarLink={() => guardarLink(f.id)}
@@ -248,10 +283,56 @@ export default function ImpuestosDelDia() {
   );
 }
 
+// Cambiar quién liquida UNA obligación (solo coordinación).
+//
+// Es deliberado que sea un cambio en dos pasos —elegir y confirmar— y no un
+// desplegable que guarda al soltarlo: mover un responsable le quita trabajo
+// medido a una persona y se lo acredita a otra, y eso no puede pasar por rozar
+// una lista sin querer. Por lo mismo queda el rastro de quién lo movió.
+function Responsable({ f, asesores, inp, onReasignar, trabajando }: {
+  f: Fila; asesores: Persona[]; inp: React.CSSProperties;
+  onReasignar: (id: string, asesorId: string) => void; trabajando: boolean;
+}) {
+  const [elegido, setElegido] = useState('');
+  // Al pasar a otra obligación, la elección a medias de la anterior no se
+  // arrastra: sería el candidato perfecto para reasignar el impuesto equivocado.
+  useEffect(() => { setElegido(''); }, [f.id]);
+  const cambia = !!elegido && elegido !== f.asesorId;
+
+  return (
+    <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
+      <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', marginBottom: 6 }}>
+        Quién liquida esta obligación
+      </div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+          {f.asesor ?? <span style={{ color: 'var(--alerta-fuerte)', fontWeight: 700 }}>sin asignar</span>}
+        </span>
+        <span style={{ color: 'var(--muted)' }}>→</span>
+        <select value={elegido} onChange={(e) => setElegido(e.target.value)} style={{ ...inp, minWidth: 180 }}>
+          <option value="">— pasar a —</option>
+          {asesores.filter((a) => a.id !== f.asesorId).map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+        </select>
+        <button className="dbtn primary" disabled={!cambia || trabajando} onClick={() => onReasignar(f.id, elegido)} style={{ fontSize: 12.5 }}>
+          Cambiar
+        </button>
+      </div>
+      {/* Sin decirlo, "cambiar el responsable" se lee como reasignar el cliente,
+          y quien lo usa espera que el mes entrante también cambie. */}
+      <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '7px 0 0', maxWidth: 620, lineHeight: 1.5 }}>
+        Cambia <b>solo esta obligación</b>. El cliente sigue asignado igual, así que el mes entrante vuelve
+        a ser del titular. Queda registrado quién hizo el cambio.
+      </p>
+    </div>
+  );
+}
+
 // Detalle de una obligación: checklist, valor a pagar, soporte documental y la
 // acción que corresponda al punto del circuito en que está.
-function Detalle({ f, subs, valor, setValor, inp, link, setLink, linkOk, setLinkOk, onAbrir, onSub, onAccion, onGuardarValor, onGuardarLink, onPresentar, trabajando }: {
+function Detalle({ f, subs, valor, setValor, inp, asesores, onReasignar, link, setLink, linkOk, setLinkOk, onAbrir, onSub, onAccion, onGuardarValor, onGuardarLink, onPresentar, trabajando }: {
   f: Fila; subs: Sub[]; valor: string; setValor: (v: string) => void; inp: React.CSSProperties;
+  // null = quien mira no es coordinación y no puede reasignar.
+  asesores: Persona[] | null; onReasignar: (id: string, asesorId: string) => void;
   link: string; setLink: (v: string) => void; linkOk: boolean; setLinkOk: (v: boolean) => void;
   onAbrir: () => void; onSub: (id: string, estado: string) => void; onAccion: (id: string, acc: string) => void;
   onGuardarValor: () => void; onGuardarLink: () => void; onPresentar: (estado: string) => void; trabajando: boolean;
@@ -352,6 +433,12 @@ function Detalle({ f, subs, valor, setValor, inp, link, setLink, linkOk, setLink
           </a>
         )}
       </div>
+
+      {/* Quién liquida ESTA obligación. Va aquí, en la obligación misma, porque
+          el caso es puntual: un asesor cubrió a otro esta vez. Cambiar la
+          asignación del cliente movería TODAS sus obligaciones y todas sus
+          tareas del plan, que es justo lo que no se quiere. */}
+      {asesores && <Responsable f={f} asesores={asesores} inp={inp} onReasignar={onReasignar} trabajando={trabajando} />}
 
       {/* Solo aparece la acción que corresponde: menos que decidir, menos que explicar. */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
