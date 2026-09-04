@@ -228,9 +228,20 @@ tenía un control de mes, salvo una casilla donde había que escribir `2026-08` 
 Generado septiembre, agosto quedaba fuera de alcance aunque estuviera completo.
 
 - **Un solo navegador de mes** (`NavegadorPeriodo`) en Tablero, Lista, Flujo del
-  cierre, Auditoría y Coordinación. Escribe el período **en la URL** (`?periodo=`),
-  no en un estado interno: el mes que se está viendo se puede compartir, marcar y
-  recargar.
+  cierre, Auditoría, Coordinación y **Mi Día**. Escribe el período **en la URL**
+  (`?periodo=`), no en un estado interno: el mes que se está viendo se puede
+  compartir, marcar y recargar.
+- **En Mi Día lo siguen todos los paneles del período**: *Captura del día*, *Listo
+  para procesar*, *Esperando al cliente*, *Liberar insumo* y *Mis tareas del período*.
+  Que uno solo se quedara en el mes en curso sería peor que no poder cambiar de mes:
+  el encabezado diría agosto y ese panel estaría mostrando septiembre, con datos que
+  se ven igual de bien en los dos.
+  - **Quedan fuera a propósito** los que no son del plan: *Mis impuestos* (su ventana
+    es "hasta fin de mes X" e incluye lo vencido de meses anteriores, que es otra
+    pregunta), *Pendientes* y *Novedades* (agenda del día, no del período).
+  - **En un mes que no es el actual no se habla de "hoy".** La columna *Hoy* y el
+    conteo *"con captura hoy"* desaparecen —en agosto siempre darían cero y se leerían
+    como que nadie capturó— y en su lugar va el acumulado del mes.
 - **Los filtros conservan el mes.** Van por GET, así que el período viaja oculto en
   cada formulario; sin eso, filtrar por área devolvía al mes en curso.
 - **Se avisa cuando no es el mes en curso**, diciendo cuál es y hace cuánto. Sin ese

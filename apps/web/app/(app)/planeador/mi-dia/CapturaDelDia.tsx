@@ -3,7 +3,8 @@
 // "Captura de documentos" del usuario (todos sus clientes del período) y permite
 // registrar lotes en línea, sin entrar cliente por cliente al calendario.
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { contarConsecutivos } from '../consecutivos';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 import { fmtDia } from '@/lib/fechas';
@@ -33,6 +34,9 @@ type Fila = {
   auxiliar: string | null;
 };
 type Resp = { periodo: string | null; hoy: string | null; total: number; totalObservadas: number; capturadosHoy: number; tareas: Fila[] };
+// El mes que se está viendo, tomado de la URL. El backend acepta ?periodo= desde
+// siempre; lo que faltaba era que la pantalla se lo pidiera.
+const PERIODO_RE = /^\d{4}-\d{2}$/;
 type NuevoLote = { tipoDocumento: string; prefijo: string; desde: string; hasta: string; cantidad: string; fecha: string };
 type Lote = { id: string; tipoDocumento: string; prefijo: string | null; desde: string | null; hasta: string | null; cantidad: number | null; fecha: string };
 
@@ -58,6 +62,11 @@ function fmtFecha(iso: string | null): string {
 const isoDeFecha = (iso: string) => (iso ?? '').slice(0, 10);
 
 export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: boolean }) {
+  const params = useSearchParams();
+  const periodoURL = params.get('periodo') ?? '';
+  // Un período roto en la URL (enlace copiado a medias) no rompe la consulta: se
+  // ignora y se pide el mes en curso.
+  const otroMes = PERIODO_RE.test(periodoURL) && periodoURL !== hoyISO().slice(0, 7);
   const [data, setData] = useState<Resp | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,17 +93,20 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
   const [msg, setMsg] = useState<{ id: string; texto: string; ok: boolean } | null>(null);
   const [guardando, setGuardando] = useState(false);
 
-  async function cargar() {
+  const cargar = useCallback(async () => {
     try {
-      const r = await fetch('/api/planeador/gestion/mi-dia/captura', { cache: 'no-store' });
+      const qs = PERIODO_RE.test(periodoURL) ? `?periodo=${encodeURIComponent(periodoURL)}` : '';
+      const r = await fetch(`/api/planeador/gestion/mi-dia/captura${qs}`, { cache: 'no-store' });
       const d = await r.json();
       if (!r.ok) { setError(d?.error ?? `La API respondió ${r.status}`); return; }
       setData(d as Resp); setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error de red');
     } finally { setCargando(false); }
-  }
-  useEffect(() => { cargar(); }, []);
+  }, [periodoURL]);
+  // Depende del mes: con [] se quedaría mostrando el primero que cargó y cambiar
+  // de mes no haría nada visible.
+  useEffect(() => { cargar(); }, [cargar]);
   useEffect(() => {
     fetch('/api/admin/catalogos/tipos-documento', { cache: 'no-store' })
       .then((r) => r.json())
@@ -192,12 +204,18 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
 
   return (
     <>
+    {/* Mirando un mes pasado, "hoy" no significa nada: siempre daría cero y
+        se leería como que nadie capturó. Lo que sirve ahí es el acumulado del
+        mes, así que la columna "Hoy" se cae y el chip cambia de cuenta. */}
     {mias.length > 0 && (
     <PanelPlegable
       id="captura-del-dia" titulo="📥 Captura del día"
+      nota={otroMes ? `Estás viendo ${data.periodo ?? periodoURL}. Los conteos son de ese mes, no de hoy.` : undefined}
       resumen={<>
         <Chip n={data.total} label="clientes por capturar" />
-        <Chip n={data.capturadosHoy} label="con captura hoy" tono="#22a670" />
+        {otroMes
+          ? <Chip n={data.tareas.filter((t) => t.rol === 'ejecuta' && t.totalLotes > 0).length} label="con lotes en el mes" tono="#22a670" />
+          : <Chip n={data.capturadosHoy} label="con captura hoy" tono="#22a670" />}
       </>}
     >
 
@@ -206,7 +224,7 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
           <thead>
             <tr>
               <th style={th}>Cliente</th>
-              <th style={{ ...th, textAlign: 'center' }}>Hoy</th>
+              {!otroMes && <th style={{ ...th, textAlign: 'center' }}>Hoy</th>}
               <th style={{ ...th, textAlign: 'center' }}>Lotes</th>
               <th style={th}>Última</th>
               <th style={th}>Estado</th>
@@ -224,11 +242,13 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
                       {t.empresa}
                       {t.area && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6, fontSize: 11.5 }}>· {t.area}</span>}
                     </td>
-                    <td style={{ ...td, textAlign: 'center' }}>
-                      {t.lotesHoy > 0
-                        ? <span style={{ fontWeight: 800, color: 'var(--exito)' }}>{t.lotesHoy}</span>
-                        : <span style={{ color: 'var(--muted)' }}>—</span>}
-                    </td>
+                    {!otroMes && (
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        {t.lotesHoy > 0
+                          ? <span style={{ fontWeight: 800, color: 'var(--exito)' }}>{t.lotesHoy}</span>
+                          : <span style={{ color: 'var(--muted)' }}>—</span>}
+                      </td>
+                    )}
                     <td style={{ ...td, textAlign: 'center' }}>
                       {t.totalLotes > 0 ? (
                         <button onClick={() => verLotes(t.id)} title="Ver los lotes registrados"
@@ -256,7 +276,7 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
                   </tr>
                   {viendo === t.id && (
                     <tr>
-                      <td colSpan={6} style={{ padding: '4px 12px 14px', background: 'var(--panel-2)', borderBottom: '1px solid var(--line)' }}>
+                      <td colSpan={otroMes ? 5 : 6} style={{ padding: '4px 12px 14px', background: 'var(--panel-2)', borderBottom: '1px solid var(--line)' }}>
                         <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', margin: '8px 0 6px' }}>
                           Lotes registrados
                         </div>
@@ -330,7 +350,7 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
                   )}
                   {abiertaAqui && (
                     <tr>
-                      <td colSpan={6} style={{ padding: '4px 10px 14px', background: 'var(--hover, #f6f8fb)', borderBottom: '1px solid var(--border)' }}>
+                      <td colSpan={otroMes ? 5 : 6} style={{ padding: '4px 10px 14px', background: 'var(--hover, #f6f8fb)', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                           <Campo label="Tipo de documento" w={200}>
                             <select value={nl.tipoDocumento} onChange={(e) => setNl({ ...nl, tipoDocumento: e.target.value })} style={{ ...inp, width: '100%' }}>
@@ -369,7 +389,7 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
     </PanelPlegable>
     )}
 
-    {deAuxiliares.length > 0 && <CapturaDeAuxiliares filas={deAuxiliares} />}
+    {deAuxiliares.length > 0 && <CapturaDeAuxiliares filas={deAuxiliares} otroMes={otroMes} periodo={data.periodo} />}
     </>
   );
 }
@@ -381,7 +401,7 @@ export default function CapturaDelDia({ puedeBorrar = false }: { puedeBorrar?: b
 // misma información le llegaba con botón de "Registrar lote" y selector de
 // estado — trabajo que no es suyo y que, si lo tocaba, tapaba que su auxiliar
 // no lo había hecho.
-function CapturaDeAuxiliares({ filas }: { filas: Fila[] }) {
+function CapturaDeAuxiliares({ filas, otroMes, periodo }: { filas: Fila[]; otroMes: boolean; periodo: string | null }) {
   const th: React.CSSProperties = { textAlign: 'left', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--muted)', fontWeight: 800, padding: '8px 10px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' };
   const td: React.CSSProperties = { padding: '9px 10px', fontSize: 13, borderBottom: '1px solid var(--border)', verticalAlign: 'middle' };
   const pendientes = filas.filter((f) => f.estado !== 'terminado' && f.estado !== 'auditado').length;
@@ -392,7 +412,7 @@ function CapturaDeAuxiliares({ filas }: { filas: Fila[] }) {
     // trabajo fuera de la pantalla.
     <PanelPlegable
       id="captura-auxiliares" titulo="👀 Captura de mis auxiliares" abiertoPorDefecto={false}
-      nota="Solo consulta — el insumo se libera cuando quede terminada."
+      nota={otroMes ? `Solo consulta · ${periodo ?? ''}. Los conteos son de ese mes, no de hoy.` : 'Solo consulta — el insumo se libera cuando quede terminada.'}
       resumen={<Chip n={pendientes} label="sin terminar" tono={pendientes ? 'var(--alerta-fuerte)' : undefined} />}
     >
       <div style={{ overflowX: 'auto' }}>
@@ -401,7 +421,7 @@ function CapturaDeAuxiliares({ filas }: { filas: Fila[] }) {
             <tr>
               <th style={th}>Cliente</th>
               <th style={th}>Auxiliar</th>
-              <th style={{ ...th, textAlign: 'center' }}>Hoy</th>
+              {!otroMes && <th style={{ ...th, textAlign: 'center' }}>Hoy</th>}
               <th style={{ ...th, textAlign: 'center' }}>Lotes</th>
               <th style={th}>Última</th>
               <th style={th}>Estado</th>
@@ -417,11 +437,13 @@ function CapturaDeAuxiliares({ filas }: { filas: Fila[] }) {
                     {t.area && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6, fontSize: 11.5 }}>· {t.area}</span>}
                   </td>
                   <td style={{ ...td, color: 'var(--muted)' }}>{t.auxiliar ?? '—'}</td>
-                  <td style={{ ...td, textAlign: 'center' }}>
-                    {t.lotesHoy > 0
-                      ? <span style={{ fontWeight: 800, color: 'var(--exito)' }}>{t.lotesHoy}</span>
-                      : <span style={{ color: 'var(--muted)' }}>—</span>}
-                  </td>
+                  {!otroMes && (
+                    <td style={{ ...td, textAlign: 'center' }}>
+                      {t.lotesHoy > 0
+                        ? <span style={{ fontWeight: 800, color: 'var(--exito)' }}>{t.lotesHoy}</span>
+                        : <span style={{ color: 'var(--muted)' }}>—</span>}
+                    </td>
+                  )}
                   <td style={{ ...td, textAlign: 'center', color: 'var(--muted)' }}>{t.totalLotes}</td>
                   <td style={{ ...td, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmtFecha(t.ultimaFecha)}</td>
                   <td style={td}><span className="chip" style={{ color: em.color, borderColor: em.color }}>{em.label}</span></td>
