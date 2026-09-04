@@ -4,7 +4,8 @@
 // (auto o manual) y siguen pendientes, para que arranque sin buscar cliente por
 // cliente. Se oculta si no hay nada listo.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 import { fmtDia } from '@/lib/fechas';
@@ -40,23 +41,30 @@ function listoRel(iso: string): string {
   } catch { return fmtFecha(iso); }
 }
 
+// El mes lo manda la URL, igual que en el resto de Mi Día: dos paneles de la
+// misma pantalla mostrando meses distintos es peor que no poder cambiar de mes.
+const PERIODO_RE = /^\d{4}-\d{2}$/;
+
 export default function ListoParaProcesar() {
+  const params = useSearchParams();
+  const periodoURL = params.get('periodo') ?? '';
   const [data, setData] = useState<Resp | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ id: string; texto: string } | null>(null);
 
-  async function cargar() {
+  const cargar = useCallback(async () => {
     try {
-      const r = await fetch('/api/planeador/gestion/mi-dia/procesar', { cache: 'no-store' });
+      const qs = PERIODO_RE.test(periodoURL) ? `?periodo=${encodeURIComponent(periodoURL)}` : '';
+      const r = await fetch(`/api/planeador/gestion/mi-dia/procesar${qs}`, { cache: 'no-store' });
       const d = await r.json();
       if (!r.ok) { setError(d?.error ?? `La API respondió ${r.status}`); return; }
       setData(d as Resp); setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error de red');
     } finally { setCargando(false); }
-  }
-  useEffect(() => { cargar(); }, []);
+  }, [periodoURL]);
+  useEffect(() => { cargar(); }, [cargar]);
 
   async function cambiarEstado(id: string, estado: string) {
     try {

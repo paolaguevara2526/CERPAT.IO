@@ -9,7 +9,8 @@
 // marca destraba SU propio trabajo. Enterrada en otra pantalla no se marcaría, y
 // una marca que no se marca no mide nada.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import PanelPlegable from '@/app/_components/PanelPlegable';
 import TablaDatos, { type Columna } from '@/app/_components/TablaDatos';
 import { fmtDia } from '@/lib/fechas';
@@ -35,7 +36,13 @@ const fmt = (iso: string | null) => {
   try { return fmtDia(iso, { day: '2-digit', month: 'short' }); } catch { return '—'; }
 };
 
+// El mes lo manda la URL (navegador de período de Mi Día). Antes este panel
+// pedía siempre el mes en curso: parado en agosto arriba, aquí se veía septiembre.
+const PERIODO_RE = /^\d{4}-\d{2}$/;
+
 export default function InsumoDelCliente() {
+  const params = useSearchParams();
+  const periodoURL = params.get('periodo') ?? '';
   const [data, setData] = useState<Resp | null>(null);
   const [cargando, setCargando] = useState(true);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -43,15 +50,16 @@ export default function InsumoDelCliente() {
   const [msg, setMsg] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
-  async function cargar() {
+  const cargar = useCallback(async () => {
     try {
-      const r = await fetch('/api/plan/insumo-cliente', { cache: 'no-store' });
+      const qs = PERIODO_RE.test(periodoURL) ? `?periodo=${encodeURIComponent(periodoURL)}` : '';
+      const r = await fetch(`/api/plan/insumo-cliente${qs}`, { cache: 'no-store' });
       const d = await r.json();
       if (r.ok) setData(d as Resp);
     } catch { /* silencioso: el panel se oculta si no aplica al usuario */ }
     finally { setCargando(false); }
-  }
-  useEffect(() => { cargar(); }, []);
+  }, [periodoURL]);
+  useEffect(() => { cargar(); }, [cargar]);
 
   async function marcar(f: Fila) {
     setTrabajando(true); setMsg(null);
