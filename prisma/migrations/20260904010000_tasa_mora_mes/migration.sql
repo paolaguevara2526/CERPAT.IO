@@ -1,0 +1,11 @@
+-- Mes para el que se cargó la tasa de mora.
+--
+-- La DIAN publica la tasa cada mes y el liquidador aplica la vigente a todo el
+-- período, así que basta con guardar UNA tasa. El problema es que una tasa
+-- vieja no se ve vieja: el número sigue ahí, Pagos sigue calculando, y el
+-- resultado parece correcto aunque esté liquidado con la tasa del mes pasado.
+--
+-- Queda NULL en las filas existentes a propósito: no se sabe de qué mes es la
+-- tasa que está cargada hoy, y ponerle el mes en curso sería afirmar que está
+-- al día sin haberlo verificado. La pantalla trata el NULL como "verifícala".
+ALTER TABLE "parametros_liquidacion" ADD COLUMN "tasa_mora_mes" TEXT;

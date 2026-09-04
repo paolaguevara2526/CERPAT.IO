@@ -17,6 +17,7 @@ import { VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
 import { duplicadoDe } from '../catalogos/nombre.js';
 import { areasSinAsesor } from '../empresas/asesor-inicial.js';
 import { gruposDuplicados, choqueDeNit } from '../empresas/duplicados.js';
+import { mesDe, vigenciaDeTasa } from '../vencimientos/vigencia-tasa.js';
 
 export const adminRouter = Router();
 
@@ -39,6 +40,9 @@ adminRouter.get('/parametros', requireAuth, async (req: AuthedRequest, res) => {
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
   const p = await prisma.parametrosLiquidacion.findUnique({ where: { organizacionId: id } });
   const num = (v: any) => (v != null ? Number(v) : null);
+  // Con qué mes se está liquidando hoy. Va con los parámetros y no en otra
+  // pantalla: la pregunta "¿esta tasa es la de este mes?" se hace justo aquí.
+  const vigencia = vigenciaDeTasa(p?.tasaMoraMes);
   // Si aún no se han guardado, se devuelven los valores por defecto (los mismos
   // del esquema) para que el panel no aparezca vacío.
   res.json({
@@ -49,13 +53,15 @@ adminRouter.get('/parametros', requireAuth, async (req: AuthedRequest, res) => {
       sancionMinimaUvt: num(p?.sancionMinimaUvt) ?? 10,
       pctSancionExtemporaneidad: num(p?.pctSancionExtemporaneidad) ?? 0.05,
     },
+    tasaMora: vigencia,
   });
 });
 
 adminRouter.put('/parametros', requireAuth, soloAdmin, async (req, res) => {
   const id = await orgId(req);
   if (!id) return res.status(404).json({ error: 'Organización no encontrada.' });
-  const data: Record<string, number> = {};
+  // Los valores son números; `tasaMoraMes` (abajo) es el único texto que entra.
+  const data: Record<string, number | string> = {};
   for (const c of CAMPOS_PARAM) {
     if (req.body?.[c] !== undefined && req.body[c] !== null && req.body[c] !== '') {
       const n = Number(req.body[c]);
@@ -63,12 +69,21 @@ adminRouter.put('/parametros', requireAuth, soloAdmin, async (req, res) => {
       data[c] = n;
     }
   }
+  // Guardar la tasa la fecha para el mes en que se guarda. Es lo único que
+  // después permite saber si la que está puesta sigue siendo la vigente: el
+  // valor por sí solo no delata que quedó viejo.
+  if ('tasaMoraMensual' in data) data.tasaMoraMes = mesDe(new Date());
+
   const p = await prisma.parametrosLiquidacion.upsert({
     where: { organizacionId: id },
     create: { organizacionId: id, ...data },
     update: data,
   });
-  res.json({ ok: true, parametros: { tasaMoraMensual: Number(p.tasaMoraMensual), valorUvt: Number(p.valorUvt), smmlv: Number(p.smmlv), sancionMinimaUvt: Number(p.sancionMinimaUvt), pctSancionExtemporaneidad: Number(p.pctSancionExtemporaneidad) } });
+  res.json({
+    ok: true,
+    parametros: { tasaMoraMensual: Number(p.tasaMoraMensual), valorUvt: Number(p.valorUvt), smmlv: Number(p.smmlv), sancionMinimaUvt: Number(p.sancionMinimaUvt), pctSancionExtemporaneidad: Number(p.pctSancionExtemporaneidad) },
+    tasaMora: vigenciaDeTasa(p.tasaMoraMes),
+  });
 });
 
 // ---------- Catálogos simples (nombre + orden opcional) ----------
