@@ -738,6 +738,11 @@ model ParametrosLiquidacion {
   id                        String  @id @default(uuid())
   organizacionId            String  @unique
   tasaMoraMensual           Decimal @default(0.2679) @db.Decimal(6, 4)
+  // Mes ('YYYY-MM') para el que se cargó esa tasa. La DIAN la publica cada mes y
+  // el liquidador aplica la vigente a todo el período, así que se guarda una
+  // sola — pero una tasa vieja no se ve vieja, y sin esta marca nadie nota que
+  // Pagos sigue liquidando con la del mes pasado. Ver vencimientos/vigencia-tasa.ts.
+  tasaMoraMes               String? @map("tasa_mora_mes")
   valorUvt                  Decimal @default(52374) @db.Decimal(12, 2)
   smmlv                     Decimal @default(1423500) @db.Decimal(12, 2)
   sancionMinimaUvt          Decimal @default(10) @db.Decimal(6, 2)

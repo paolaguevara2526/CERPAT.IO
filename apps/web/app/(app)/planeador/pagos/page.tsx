@@ -39,13 +39,18 @@ type Item = {
   notas: string | null; manual: boolean;
 };
 
-async function fetchVencPagos(anio: number): Promise<{ data: VencPago[]; error: string | null }> {
+// Con qué tasa se liquidó lo que se está viendo, y si es la del mes en curso
+// (lo resuelve el backend, en vencimientos/vigencia-tasa.ts).
+type TasaMora = { mes: string | null; alDia: boolean; atraso: number; aviso: string | null; tasaAnual: number | null };
+
+async function fetchVencPagos(anio: number): Promise<{ data: VencPago[]; tasa: TasaMora | null; error: string | null }> {
   try {
     const res = await apiFetch(`/vencimientos/pagos?anio=${anio}`);
-    if (!res.ok) return { data: [], error: `La API respondió ${res.status}` };
-    return { data: ((await res.json()) as { vencimientos: VencPago[] }).vencimientos ?? [], error: null };
+    if (!res.ok) return { data: [], tasa: null, error: `La API respondió ${res.status}` };
+    const j = (await res.json()) as { vencimientos: VencPago[]; tasaMora?: TasaMora };
+    return { data: j.vencimientos ?? [], tasa: j.tasaMora ?? null, error: null };
   } catch (e) {
-    return { data: [], error: e instanceof Error ? e.message : 'Error de red' };
+    return { data: [], tasa: null, error: e instanceof Error ? e.message : 'Error de red' };
   }
 }
 async function fetchPendientes(): Promise<Pendiente[]> {
@@ -148,7 +153,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const ordenAsc = (searchParams?.dir || 'asc') !== 'desc';
   const anio = new Date().getFullYear();
 
-  const [{ data: vencs, error }, pendientes, empresas, sesion] = await Promise.all([
+  const [{ data: vencs, tasa, error }, pendientes, empresas, sesion] = await Promise.all([
     fetchVencPagos(anio), fetchPendientes(), fetchEmpresas(), getSessionUser(),
   ]);
   // Solo el Administrador (o root) modifica el pago: el valor a pagar, el estado
@@ -239,15 +244,28 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
           <div className="tile"><div className="k">Por pagar</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kPorPagar.v)}</div><div className="s">{kPorPagar.n} sin pagar</div></div>
           <div className="tile" style={{ borderColor: kVencido.n > 0 ? 'var(--peligro-borde)' : undefined }}><div className="k">Vencido sin pagar</div><div className="v" style={{ color: kVencido.n > 0 ? 'var(--peligro)' : 'var(--neutro)', fontSize: 21 }}>${fmtCOP(kVencido.v)}</div><div className="s">{kVencido.n} con intereses corriendo</div></div>
           <div className="tile" style={{ borderColor: kRiesgo.n > 0 ? 'var(--peligro-fuerte)' : undefined }}><div className="k">Riesgo ineficacia / RST</div><div className="v" style={{ color: kRiesgo.n > 0 ? 'var(--peligro-fuerte)' : 'var(--neutro)', fontSize: 21 }}>{kRiesgo.n}</div><div className="s">límite de pago ≤ {UMBRAL_RIESGO} d o vencido</div></div>
-          <div className="tile"><div className="k">Interés de mora</div><div className="v" style={{ color: kInteres > 0 ? 'var(--alerta)' : 'var(--neutro)', fontSize: 21 }}>${fmtCOP(kInteres)}</div><div className="s">estimado a hoy (DIAN)</div></div>
+          {/* Un interés que se le cobra a un cliente tiene que decir con qué tasa
+              se calculó: el número solo se ve igual de bien esté bien o mal. */}
+          <div className="tile"><div className="k">Interés de mora</div><div className="v" style={{ color: kInteres > 0 ? 'var(--alerta)' : 'var(--neutro)', fontSize: 21 }}>${fmtCOP(kInteres)}</div><div className="s" style={tasa && !tasa.alDia ? { color: 'var(--alerta-fuerte)', fontWeight: 700 } : undefined}>
+            {tasa?.tasaAnual ? `tasa ${(tasa.tasaAnual * 100).toFixed(2).replace('.', ',')}%` : 'tasa por defecto'}
+            {tasa?.mes ? ` · de ${tasa.mes}` : ' · sin mes registrado'}
+          </div></div>
           <div className="tile"><div className="k">Sanción (est.)</div><div className="v" style={{ color: kSancion > 0 ? 'var(--peligro-fuerte)' : 'var(--neutro)', fontSize: 21 }}>${fmtCOP(kSancion)}</div><div className="s">extemporaneidad / ineficacia</div></div>
           <div className="tile" style={{ borderColor: kTotal > 0 ? 'var(--navy)' : undefined }}><div className="k">Total a pagar (hoy)</div><div className="v" style={{ color: 'var(--navy)', fontSize: 21 }}>${fmtCOP(kTotal)}</div><div className="s">capital + interés + sanción</div></div>
         </div>
       )}
 
+      {/* El aviso va donde se lee el número, no solo en Administración: quien
+          mira Pagos es quien va a cobrar ese interés. */}
+      {tasa && !tasa.alDia && tasa.aviso && (
+        <div style={{ background: 'var(--alerta-suave)', border: '1px solid var(--alerta-borde)', color: 'var(--alerta-fuerte)', borderRadius: 6, padding: '10px 12px', fontSize: 12.5, fontWeight: 600, marginBottom: 14, lineHeight: 1.55 }}>
+          ⚠ {tasa.aviso} <span style={{ fontWeight: 500 }}>Se cambia en Administración → Parámetros.</span>
+        </div>
+      )}
+
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Por pagar</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-        Vencimientos ya presentados {esEditor ? '(marca el pago)' : puedeAbonar ? '(registra abonos)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se calcula a hoy y se actualiza solo.
+        Vencimientos ya presentados {esEditor ? '(marca el pago)' : puedeAbonar ? '(registra abonos)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se recalcula a hoy cada vez que abres la pantalla; la <strong>tasa</strong> no: esa la publica la DIAN cada mes y se carga en Administración → Parámetros.
       </p>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

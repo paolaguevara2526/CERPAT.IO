@@ -12,6 +12,7 @@ import { esStaffAcotado } from '../auth/alcance.js';
 import { vencimientosNacionales, vencimientosIca, aplicaRub, RUB_OBLIGACION, OBLIGACIONES_NACIONALES, OBLIGACIONES_ICA, OBLIGACIONES_SIN_PAGO, obligacionSinPago, ANIO_CALENDARIO, type ConfigNacional, type MunicipioIcaInput } from '../vencimientos/generador.js';
 import { limitePago } from '../vencimientos/reglas-pago.js';
 import { interesMora, sancionExtemporaneidad } from '../vencimientos/tasas-mora.js';
+import { vigenciaDeTasa } from '../vencimientos/vigencia-tasa.js';
 import { vinculoDeObligacion, VINCULOS_VENCIMIENTO } from '../vencimientos/vinculos.js';
 import { transicion, puedePresentar, actorDe, EVENTO_DE, type EstadoRevision, type AccionRevision } from '../vencimientos/revision.js';
 import { estaVencido } from '../plan/dia-calendario.js';
@@ -37,6 +38,9 @@ async function cargarParamsLiq(orgId: string) {
   const p = await prisma.parametrosLiquidacion.findUnique({ where: { organizacionId: orgId } });
   return {
     tasaAnual: p ? Number(p.tasaMoraMensual) : null,
+    // Para qué mes se cargó esa tasa. Un interés que se le cobra a un cliente
+    // tiene que poder decir con qué se calculó y de cuándo es.
+    tasaMes: p?.tasaMoraMes ?? null,
     uvt: p ? Number(p.valorUvt) : null,
     sancionMinUvt: p ? Number(p.sancionMinimaUvt) : null,
     pct: p ? Number(p.pctSancionExtemporaneidad) : null,
@@ -273,6 +277,9 @@ vencimientosRouter.get('/portal-pagos', requireAuth, async (req: AuthedRequest, 
 
   res.json({
     anio,
+    // Con qué tasa se liquidó TODO lo de esta respuesta, y si esa tasa es la del
+    // mes en curso. Sin esto, un interés viejo se ve idéntico a uno correcto.
+    tasaMora: { ...vigenciaDeTasa(pl.tasaMes), tasaAnual: pl.tasaAnual },
     vencimientos: ciclo.map((v) => {
       const { valor, abonado, saldo, lp, im, san } = calcular(v, v.fechaVencimiento.getFullYear());
       return { id: v.id, obligacion: v.obligacion, periodo: v.periodo, fechaVencimiento: v.fechaVencimiento, estado: v.estado, valorPago: valor, abonado, saldo, fechaLimitePago: lp.fechaLimitePago, consecuencia: lp.consecuencia, diasMora: im.dias, interesMora: im.interes, sancion: san.sancion, empresa: v.empresa?.nombre ?? null, municipio: v.municipio?.nombre ?? null };

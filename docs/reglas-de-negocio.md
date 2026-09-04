@@ -31,6 +31,21 @@
      % sanción**) los edita el Administrador en **Administración → Parámetros**
      (modelo `ParametrosLiquidacion`); el liquidador los lee y, si faltan, usa los
      valores embebidos. **UVT 2026 = $52.374.**
+   - **La tasa cargada viaja con el mes para el que se cargó** (`tasaMoraMes`, en
+     formato `YYYY-MM`, sellado automáticamente al guardar). Se guarda **una sola
+     tasa** —la vigente— porque el método aplica la del pago a todo el período; lo
+     que hacía falta era saber si sigue siendo la de hoy. Ver
+     `apps/api/src/vencimientos/vigencia-tasa.ts`.
+     - Si el mes sellado ya pasó (o no hay sello, como en las filas anteriores a
+       esta marca), **Parámetros y Pagos avisan** y el KPI de interés muestra en
+       ámbar la tasa aplicada y su mes.
+     - **No se bloquea ni se adivina la tasa nueva.** La publica la
+       Superfinanciera/DIAN cada mes y la digita la firma; lo que el sistema no
+       puede hacer es seguir liquidando en silencio con la del mes pasado, porque
+       una tasa vieja da un número que se ve exactamente igual de bien que uno
+       correcto — y se le cobra a un cliente.
+     - El KPI de Pagos nombra la tasa aplicada; la leyenda ya no dice que el
+       interés "se actualiza solo": lo que se recalcula solo son los **días**.
    - **Retención en la fuente DIAN < 10 UVT:** el plazo de pago antes de ineficacia
      es **1 año** en vez de 2 meses (solo retención en la fuente DIAN, no
      autorretención ni ReteICA). `limitePago(fecha, obligacion, valor)`.

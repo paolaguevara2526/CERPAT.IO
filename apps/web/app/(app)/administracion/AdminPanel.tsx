@@ -196,8 +196,13 @@ const CAMPOS: { k: string; label: string; sufijo?: string; ayuda?: string; step?
   { k: 'pctSancionExtemporaneidad', label: '% sanción extemporaneidad', step: '0.0001', ayuda: 'En decimal (0.05 = 5%)' },
 ];
 
+// Estado de la tasa de mora frente al mes en curso (lo calcula el backend, en
+// vencimientos/vigencia-tasa.ts).
+type VigenciaTasa = { mes: string | null; alDia: boolean; atraso: number; aviso: string | null };
+
 function ParametrosEditor() {
   const [vals, setVals] = useState<Record<string, string>>({});
+  const [tasa, setTasa] = useState<VigenciaTasa | null>(null);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -212,6 +217,7 @@ function ParametrosEditor() {
           const v: Record<string, string> = {};
           for (const c of CAMPOS) v[c.k] = data.parametros[c.k] != null ? String(data.parametros[c.k]) : '';
           setVals(v);
+          setTasa(data.tasaMora ?? null);
         }
       } catch { setError('Error de red.'); }
       setCargando(false);
@@ -226,7 +232,9 @@ function ParametrosEditor() {
       });
       const data = await res.json();
       if (!res.ok) setError(data.error || 'No se pudo guardar.');
-      else { setOk(true); setTimeout(() => setOk(false), 1800); }
+      // Al guardar, la tasa queda sellada con el mes en curso: el aviso tiene
+      // que desaparecer en el momento, no en la próxima recarga.
+      else { setTasa(data.tasaMora ?? null); setOk(true); setTimeout(() => setOk(false), 1800); }
     } catch { setError('Error de red.'); }
     setGuardando(false);
   }
@@ -240,6 +248,21 @@ function ParametrosEditor() {
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 4px' }}>Parámetros de liquidación</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 16px' }}>Valores que usan las liquidaciones de Pagos (interés de mora y sanción) y las calculadoras. Actualiza la <strong>tasa de mora cada mes</strong> y la <strong>UVT cada año</strong>.</p>
       {error && <div style={{ background: 'var(--peligro-suave)', color: 'var(--peligro-fuerte)', borderRadius: 6, padding: '8px 11px', fontSize: 12.5, fontWeight: 600, marginBottom: 12 }}>{error}</div>}
+
+      {/* Una tasa vieja no se ve vieja: el número sigue ahí y Pagos sigue
+          calculando. Este aviso es lo único que delata que se está liquidando
+          con la tasa del mes pasado. */}
+      {tasa && !tasa.alDia && tasa.aviso && (
+        <div style={{ background: 'var(--alerta-suave)', border: '1px solid var(--alerta-borde)', color: 'var(--alerta-fuerte)', borderRadius: 6, padding: '10px 12px', fontSize: 12.5, fontWeight: 600, marginBottom: 14, lineHeight: 1.55 }}>
+          ⚠ {tasa.aviso}
+        </div>
+      )}
+      {tasa && tasa.alDia && tasa.mes && (
+        <div style={{ fontSize: 12, color: 'var(--exito-fuerte)', fontWeight: 700, marginBottom: 14 }}>
+          ✓ Tasa de mora cargada para {tasa.mes}.
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
         {CAMPOS.map((c) => (
           <label key={c.k} style={{ display: 'grid', gridTemplateColumns: '1fr 170px', alignItems: 'center', gap: 12 }}>
