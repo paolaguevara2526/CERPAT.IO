@@ -616,11 +616,16 @@ vencimientosRouter.get('/:id/rastro', requireAuth, async (req: AuthedRequest, re
   res.json({ eventos: eventos.map((e) => ({ ...e, usuario: e.usuario?.nombre ?? null })) });
 });
 
-// POST /vencimientos — registra un pago pendiente a mano (Administrador / root).
+// POST /vencimientos — registra un pago pendiente a mano (coordinación).
 // Para deudas de años anteriores o impuestos que no se cargaron. Se marca
 // generado=false para distinguirlo de los vencimientos del generador.
+//
+// Lo puede la COORDINACIÓN, no solo el Administrador: cargar una deuda vieja es
+// parte del seguimiento de cartera, que es de quien coordina. Y es una operación
+// que solo AGREGA — la que borra deuda ya registrada sigue siendo del
+// Administrador (ver el DELETE).
 vencimientosRouter.post('/', requireAuth, async (req: AuthedRequest, res) => {
-  if (!puedeEditar(req.user)) return res.status(403).json({ error: 'Solo el Administrador puede agregar pagos pendientes.' });
+  if (!esCoordinacion(req.user)) return res.status(403).json({ error: 'Tu rol no puede agregar pagos pendientes.' });
   const org = await orgActual(req);
   if (!org) return res.status(404).json({ error: 'Organización no encontrada.' });
   const b = req.body ?? {};

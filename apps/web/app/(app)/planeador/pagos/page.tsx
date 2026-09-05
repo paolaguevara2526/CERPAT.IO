@@ -14,6 +14,7 @@ import PagosAcciones from '../PagosAcciones';
 import AbonosBoton from '../AbonosBoton';
 import FormFiltros from './FormFiltros';
 import { fmtDia } from '@/lib/fechas';
+import { coincide } from '@/lib/buscar';
 
 
 export const metadata = { title: 'Pagos' };
@@ -156,9 +157,10 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const [{ data: vencs, tasa, error }, pendientes, empresas, sesion] = await Promise.all([
     fetchVencPagos(anio), fetchPendientes(), fetchEmpresas(), getSessionUser(),
   ]);
-  // Solo el Administrador (o root) modifica el pago: el valor a pagar, el estado
-  // y los pendientes cargados a mano. El backend ya valida esto; aquí evitamos
-  // mostrar controles que devolverían un error.
+  // Solo el Administrador (o root) BORRA: un pago pendiente cargado a mano o un
+  // abono ya registrado. Borrar no corrige un dato, elimina una deuda de la que
+  // después nadie se acuerda. El backend ya valida esto; aquí evitamos mostrar
+  // controles que devolverían un error.
   const esEditor = !!sesion && (sesion.esRoot || sesion.roles.includes('Administrador'));
   // Los ABONOS van aparte y más abiertos: Asesor y Coordinador también los
   // registran, porque son quienes hacen el seguimiento de cartera y quienes se
@@ -167,6 +169,13 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   // permisos por separado: mostrar un botón que va a devolver 403 es peor que no
   // mostrarlo.
   const puedeAbonar = !!sesion && (sesion.esRoot || sesion.roles.some((r) => ['Administrador', 'Coordinador', 'Asesor'].includes(r)));
+  // Coordinación lleva el seguimiento de cartera: carga las deudas viejas y les
+  // registra el valor y el estado del pago. Son operaciones que AGREGAN o
+  // corrigen un dato; el backend ya las permitía (POST /vencimientos y PATCH
+  // /vencimientos/:id aceptan coordinación) y solo la pantalla las escondía.
+  // Borrar sigue siendo del Administrador: eso no corrige un dato, elimina una
+  // deuda registrada.
+  const esCoordinacion = !!sesion && (sesion.esRoot || sesion.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)));
 
   // Listado unificado: vencimientos presentados + pagos pendientes manuales.
   const items: Item[] = [
@@ -187,7 +196,10 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const clientes = [...new Set(items.map((i) => i.empresa).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
 
   // KPIs sobre el alcance por cliente (el estado es drill-down de la tabla).
-  const scope = items.filter((i) => !cliente || i.empresa === cliente);
+  // El filtro es por PEDAZO del nombre y no por coincidencia exacta: con noventa
+  // clientes, tener que dar con el nombre completo es lo mismo que no tener
+  // filtro. Ver lib/buscar.ts.
+  const scope = items.filter((i) => coincide(i.empresa, cliente));
   // Lo pendiente se mide por SALDO (valor − abonos); lo pagado, por su valor.
   const pend = (i: Item) => i.saldo ?? i.valorPago ?? 0;
   const suma = (pred: (i: Item) => boolean, val: (i: Item) => number = (i) => i.valorPago ?? 0) => scope.filter(pred).reduce((a, i) => ({ n: a.n + 1, v: a.v + val(i) }), { n: 0, v: 0 });
@@ -265,15 +277,22 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Por pagar</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-        Vencimientos ya presentados {esEditor ? '(marca el pago)' : puedeAbonar ? '(registra abonos)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se recalcula a hoy cada vez que abres la pantalla; la <strong>tasa</strong> no: esa la publica la DIAN cada mes y se carga en Administración → Parámetros.
+        Vencimientos ya presentados {esCoordinacion ? '(marca el pago)' : puedeAbonar ? '(registra abonos)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se recalcula a hoy cada vez que abres la pantalla; la <strong>tasa</strong> no: esa la publica la DIAN cada mes y se carga en Administración → Parámetros.
       </p>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <FormFiltros>
-          <select name="cliente" defaultValue={cliente} style={{ ...sel, maxWidth: 240 }}>
-            <option value="">Todos los clientes</option>
-            {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          {/* Campo de texto con sugerencias, no un desplegable: en una lista de
+              noventa, teclear una letra solo salta a la primera que empieza así,
+              y el nombre que uno recuerda suele ser una palabra del medio. La
+              lista completa sigue estando, ahora como autocompletado. */}
+          <input name="cliente" defaultValue={cliente} list="clientes-pagos" autoComplete="off"
+            placeholder="Todos los clientes — escribe para filtrar"
+            title="Escribe cualquier parte del nombre. Varias palabras se buscan todas, en cualquier orden."
+            style={{ ...sel, maxWidth: 280, minWidth: 230 }} />
+          <datalist id="clientes-pagos">
+            {clientes.map((c) => <option key={c} value={c} />)}
+          </datalist>
           <select name="estado" defaultValue={estado} style={sel}>
             <option value="">Todos los estados</option>
             <option value="pendiente">Pendiente</option>
@@ -290,8 +309,16 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar los pagos: {error}.</div>
       ) : filas.length === 0 ? (
         <div className="panel" style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>
-          No hay obligaciones por pagar con estos filtros.
-          <div style={{ fontSize: 12, marginTop: 6 }}>Marca un vencimiento como <strong>Presentado</strong> en Vencimientos, o usa <strong>+ Agregar pago pendiente</strong> abajo.</div>
+          {/* Con un campo de texto libre, "estos filtros" no dice cuál falló:
+              casi siempre es una palabra mal escrita, y hay que verla. */}
+          {cliente
+            ? <>Ningún cliente coincide con <strong style={{ color: 'var(--ink)' }}>«{cliente}»</strong>{estado ? ' con ese estado' : ''}.</>
+            : 'No hay obligaciones por pagar con estos filtros.'}
+          <div style={{ fontSize: 12, marginTop: 6 }}>
+            {cliente
+              ? <>Se busca por cualquier parte del nombre. Prueba con una sola palabra, o usa <strong>Limpiar</strong>.</>
+              : <>Marca un vencimiento como <strong>Presentado</strong> en Vencimientos, o usa <strong>+ Agregar pago pendiente</strong> abajo.</>}
+          </div>
         </div>
       ) : (
         <div className="panel">
@@ -331,7 +358,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
-                        <VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} editable={esEditor} />
+                        <VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} editable={esCoordinacion} />
                         {i.abonado > 0 && (
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>Abonado <b style={{ color: 'var(--exito-fuerte)' }}>${fmtCOP(i.abonado)}</b> · Saldo <b style={{ color: 'var(--navy)' }}>${fmtCOP(i.saldo ?? 0)}</b></div>
                         )}
@@ -347,7 +374,9 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         </div>
       )}
 
-      <PendientesManuales empresas={empresas} pendientes={pendientes} mostrarTabla={false} editable={esEditor} />
+      {/* mostrarTabla=false: acá solo va el botón de agregar. La tabla (con su
+          borrado, que sigue siendo del Administrador) no se dibuja. */}
+      <PendientesManuales empresas={empresas} pendientes={pendientes} mostrarTabla={false} editable={esCoordinacion} />
     </>
   );
 }

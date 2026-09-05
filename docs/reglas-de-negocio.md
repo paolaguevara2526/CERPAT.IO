@@ -870,6 +870,37 @@ Con **varios asesores** en la empresa y el área sin resolver **no se reparte a
 dedo**: ahí el área es la única respuesta correcta. Un vencimiento sin dueño se ve
 y se reclama; uno con el dueño equivocado se trabaja mal.
 
+**Filtrar por cliente se escribe, no se escoge.** Con noventa clientes, un
+desplegable obliga a saber por dónde **empieza** el nombre: teclear una letra solo
+salta a la primera opción que arranca con ella. Pero nadie recuerda si el cliente
+quedó guardado como *"Grupo Empresarial Dajitaneja SAS"* o como *"Dajitaneja"* — lo
+que se recuerda es una palabra del medio. En *Pagos* el filtro de cliente es un campo
+de texto (`lib/buscar.ts`):
+
+- Se busca por **pedazo**, no por el comienzo: *"taneja"* encuentra *"Dajitaneja"*.
+- **Tildes y mayúsculas no cuentan**: *"piña"* y *"PINA"* son lo mismo.
+- **Varias palabras se piden todas, en cualquier orden**: *"acme sas"* y *"sas acme"*
+  encuentran *"Acme Consultores SAS"*. Exigir el orden obligaría a recordar el nombre
+  completo, que es justo lo que no pasa.
+- **La lista completa no se pierde**: sigue como autocompletado, así que quien
+  prefiera escoger, escoge.
+- **El campo vacío no filtra**, y cuando nada coincide la pantalla **repite lo que se
+  escribió**: con texto libre casi siempre es una palabra mal tecleada, y *"con estos
+  filtros"* no dice cuál de los dos falló.
+
+**Pagos: agregar y corregir es de coordinación; borrar es del Administrador.**
+La línea no la marca *quién manda*, sino qué le pasa a la información:
+
+- **Cargar un pago pendiente a mano** (deudas de años anteriores o impuestos que
+  nunca entraron al sistema) y **registrar el valor y el estado del pago** los puede
+  **Administrador, Coordinador o root**. Son operaciones que **agregan o corrigen**
+  un dato, y quien lleva la cartera es quien se entera de la deuda y persigue el
+  pago; tener que pedirle a Administración que la cargue atrasa el dato justo donde
+  se usa. El `PATCH /vencimientos/:id` ya aceptaba coordinación desde siempre —
+  **solo la pantalla lo escondía**, que en la práctica es un permiso que no existe.
+- **Eliminar** un pago pendiente o un abono sigue siendo **solo del Administrador**:
+  eso no corrige un dato, borra una deuda registrada y el rastro de que existió.
+
 **Abonos (pagos parciales): quién los registra.** Registrar un abono lo pueden
 **Administrador, Coordinador y Asesor** — son quienes hacen el seguimiento de
 cartera y quienes se enteran de que el cliente abonó; tener que pedírselo a
