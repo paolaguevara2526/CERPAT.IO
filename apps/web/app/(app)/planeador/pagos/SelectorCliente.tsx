@@ -93,10 +93,21 @@ export default function SelectorCliente({ clientes, valor, estilo }: {
           boxShadow: '0 8px 24px rgba(15,29,51,0.16)', overflow: 'hidden',
         }}>
           <div style={{ padding: 7, borderBottom: '1px solid var(--line)' }}>
-            <input ref={campo} value={texto} onChange={(e) => { setTexto(e.target.value); setMarcado(0); }} onKeyDown={teclas}
+            {/* stopPropagation NO es decorativo: el formulario de filtros envía
+                con su propio onChange, y en React los eventos suben por el árbol.
+                Sin esto, cada letra que se teclea aquí enviaba el formulario, la
+                página se recargaba y el desplegable se cerraba solo — por eso no
+                se alcanzaba a picar ninguna opción. */}
+            <input ref={campo} value={texto} onKeyDown={teclas}
+              onChange={(e) => { e.stopPropagation(); setTexto(e.target.value); setMarcado(0); }}
               placeholder="Escribe cualquier palabra…" autoComplete="off"
               style={{ width: '100%', padding: '6px 9px', borderRadius: 5, border: '1px solid var(--edge-strong)', background: 'var(--panel)', color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--ui)' }} />
           </div>
+          {texto && opciones.length > 1 && (
+            <div style={{ padding: '5px 12px', fontSize: 11, color: 'var(--muted)', borderBottom: '1px solid var(--line)' }}>
+              {opciones.length - 1} de {clientes.length} cliente(s)
+            </div>
+          )}
           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
             {opciones.length === 1 && texto ? (
               // Solo quedó "Todos los clientes": nada coincidió. Decir con qué

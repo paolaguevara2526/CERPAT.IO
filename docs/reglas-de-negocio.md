@@ -890,9 +890,15 @@ se le **agregó la búsqueda encima** (`SelectorCliente` + `lib/buscar.ts`):
 - Cuando nada coincide, se **repite lo que se escribió** —en el selector y en la tabla
   vacía—: casi siempre es una palabra mal tecleada, y *"con estos filtros"* no dice
   cuál de los dos falló.
-- Detalle de implementación que importa: al elegir se llama a `form.requestSubmit()`
-  y **no** se simula un evento `change`. React ignora los cambios de `value` hechos
-  por código, así que el envío no se dispararía y elegir un cliente no filtraría nada.
+- Dos detalles de implementación que **no** son decorativos, porque romperlos deja el
+  selector inservible de maneras que se ven distintas:
+  - Al elegir se llama a `form.requestSubmit()` y **no** se simula un evento `change`.
+    React ignora los cambios de `value` hechos por código, así que el envío no se
+    dispararía y elegir un cliente no filtraría nada.
+  - El `onChange` del campo de búsqueda **corta la propagación**. El formulario de
+    filtros envía con su propio `onChange` y en React los eventos suben por el árbol:
+    sin cortarlos, **cada letra tecleada enviaba el formulario**, la página se recargaba
+    y el desplegable se cerraba solo — no se alcanzaba a picar ninguna opción.
 
 **Pagos: agregar y corregir es de coordinación; borrar es del Administrador.**
 La línea no la marca *quién manda*, sino qué le pasa a la información:
