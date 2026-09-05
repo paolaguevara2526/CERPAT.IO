@@ -33,6 +33,18 @@ test('escribir filtra por cualquier parte del nombre', () => {
   assert.match(selector, /import \{ coincide \} from '@\/lib\/buscar'/);
 });
 
+test('escribir en el buscador no envía el formulario', () => {
+  // El formulario de filtros envía con su propio onChange y en React los
+  // eventos suben por el árbol: sin cortarlos, cada letra recargaba la página y
+  // el desplegable se cerraba solo — no se alcanzaba a picar ninguna opción.
+  assert.match(selector, /onChange=\{\(e\) => \{ e\.stopPropagation\(\); setTexto\(e\.target\.value\); setMarcado\(0\); \}\}/);
+});
+
+test('al filtrar se ve cuántos quedan', () => {
+  // Escribir a ciegas no dice si vale la pena seguir escribiendo.
+  assert.match(selector, /de \{clientes\.length\} cliente\(s\)/);
+});
+
 test('elegir un cliente sí filtra la pantalla', () => {
   // React ignora los cambios de `value` hechos por código, así que simular un
   // evento no dispararía el envío: elegir un cliente no haría nada.
