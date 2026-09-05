@@ -1,12 +1,13 @@
-// El filtro de cliente en Pagos se escribe, no se escoge.
+// El selector de cliente en Pagos: se escoge de la lista, y además se busca.
 //
-// Con noventa clientes, un <select> obliga a saber por dónde EMPIEZA el nombre:
-// se teclea una letra y salta a la primera opción que arranca con ella. Pero uno
-// no recuerda si el cliente quedó guardado como "Grupo Empresarial Dajitaneja
-// SAS" o como "Dajitaneja" — lo que recuerda es una palabra del medio.
+// El desplegable de siempre está bien para escoger: se abre, se ve la lista
+// completa y se elige. Lo que no sirve con noventa clientes es BUSCAR — teclear
+// una letra en un <select> solo salta a la primera opción que empieza así, y el
+// nombre que uno recuerda suele ser una palabra del medio ("taneja" por "Grupo
+// Empresarial Dajitaneja SAS").
 //
-// La lista completa no se pierde: sigue ahí como autocompletado, así que quien
-// prefiera escoger, escoge.
+// Así que no se reemplazó el desplegable por un campo de texto: se le agregó la
+// búsqueda encima. Abrirlo sigue mostrando la lista completa.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,28 +17,54 @@ import { dirname, join } from 'node:path';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const pagina = readFileSync(join(AQUI, 'page.tsx'), 'utf8');
+const selector = readFileSync(join(AQUI, 'SelectorCliente.tsx'), 'utf8');
 
-test('el filtro de cliente es un campo de texto', () => {
-  assert.match(pagina, /<input name="cliente" defaultValue=\{cliente\} list="clientes-pagos"/);
-  assert.ok(!/<select name="cliente"/.test(pagina), 'el desplegable de cliente ya no debería existir');
+test('el filtro sigue siendo un selector con su lista', () => {
+  assert.match(pagina, /<SelectorCliente clientes=\{clientes\} valor=\{cliente\}/);
 });
 
-test('la lista de clientes sigue disponible como sugerencia', () => {
-  // Quitarla convertiría el cambio en una pérdida: quien prefiere escoger de una
-  // lista se quedaría sin saber cómo está escrito cada nombre.
-  assert.match(pagina, /<datalist id="clientes-pagos">/);
+test('abrirlo muestra la lista completa, no solo lo que uno escriba', () => {
+  // Si arrancara vacío hasta escribir, se perdería lo que el desplegable hacía
+  // bien: ver quiénes hay.
+  assert.match(selector, /\[TODOS, \.\.\.clientes\.filter\(\(c\) => coincide\(c, texto\)\)\]/);
 });
 
-test('se filtra por pedazo del nombre, no por coincidencia exacta', () => {
-  // `i.empresa === cliente` obligaba a dar con el nombre completo, que con
-  // noventa clientes es lo mismo que no tener filtro.
-  assert.match(pagina, /const scope = items\.filter\(\(i\) => coincide\(i\.empresa, cliente\)\)/);
-  assert.match(pagina, /import \{ coincide \} from '@\/lib\/buscar'/);
+test('escribir filtra por cualquier parte del nombre', () => {
+  assert.match(selector, /import \{ coincide \} from '@\/lib\/buscar'/);
+});
+
+test('elegir un cliente sí filtra la pantalla', () => {
+  // React ignora los cambios de `value` hechos por código, así que simular un
+  // evento no dispararía el envío: elegir un cliente no haría nada.
+  assert.match(selector, /oculto\.current\.form\?\.requestSubmit\(\)/);
+  assert.ok(!/dispatchEvent\(new Event\('change'/.test(selector), 'simular el evento no funciona con React');
+});
+
+test('el valor viaja con el nombre que espera el formulario', () => {
+  assert.match(selector, /<input ref=\{oculto\} type="hidden" name="cliente" defaultValue=\{valor\} \/>/);
+});
+
+test('se puede recorrer y elegir con el teclado', () => {
+  for (const tecla of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape']) {
+    assert.ok(selector.includes(`e.key === '${tecla}'`), `falta ${tecla}`);
+  }
+});
+
+test('se cierra al hacer clic afuera', () => {
+  // Abierto encima de la tabla tapa justo lo que se acaba de filtrar.
+  assert.match(selector, /document\.addEventListener\('mousedown', fuera\)/);
+  assert.match(selector, /document\.removeEventListener\('mousedown', fuera\)/);
 });
 
 test('cuando no coincide nada, se ve QUÉ se buscó', () => {
-  // Con texto libre casi siempre es una palabra mal escrita, y "estos filtros"
-  // no dice cuál de los dos falló.
+  // Ahorra el "¿está mal escrito o no existe?". Va en los dos lados: dentro del
+  // selector y en la tabla vacía.
+  assert.match(selector, /Ningún cliente coincide con/);
   assert.match(pagina, /Ningún cliente coincide con/);
   assert.match(pagina, /«\{cliente\}»/);
+});
+
+test('se filtra por pedazo del nombre también en el servidor', () => {
+  // El botón "Filtrar" con texto a medias tiene que funcionar igual.
+  assert.match(pagina, /const scope = items\.filter\(\(i\) => coincide\(i\.empresa, cliente\)\)/);
 });

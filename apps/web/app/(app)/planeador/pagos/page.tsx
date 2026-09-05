@@ -13,6 +13,7 @@ import BorrarPendiente from '../BorrarPendiente';
 import PagosAcciones from '../PagosAcciones';
 import AbonosBoton from '../AbonosBoton';
 import FormFiltros from './FormFiltros';
+import SelectorCliente from './SelectorCliente';
 import { fmtDia } from '@/lib/fechas';
 import { coincide } from '@/lib/buscar';
 
@@ -282,17 +283,11 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <FormFiltros>
-          {/* Campo de texto con sugerencias, no un desplegable: en una lista de
-              noventa, teclear una letra solo salta a la primera que empieza así,
-              y el nombre que uno recuerda suele ser una palabra del medio. La
-              lista completa sigue estando, ahora como autocompletado. */}
-          <input name="cliente" defaultValue={cliente} list="clientes-pagos" autoComplete="off"
-            placeholder="Todos los clientes — escribe para filtrar"
-            title="Escribe cualquier parte del nombre. Varias palabras se buscan todas, en cualquier orden."
-            style={{ ...sel, maxWidth: 280, minWidth: 230 }} />
-          <datalist id="clientes-pagos">
-            {clientes.map((c) => <option key={c} value={c} />)}
-          </datalist>
+          {/* El desplegable de siempre —se abre y se ve la lista completa— con
+              búsqueda encima: escribir filtra por cualquier parte del nombre.
+              Con noventa clientes, teclear una letra en un <select> solo salta
+              a la primera opción que empieza así. */}
+          <SelectorCliente clientes={clientes} valor={cliente} estilo={{ width: 240 }} />
           <select name="estado" defaultValue={estado} style={sel}>
             <option value="">Todos los estados</option>
             <option value="pendiente">Pendiente</option>

@@ -870,23 +870,29 @@ Con **varios asesores** en la empresa y el área sin resolver **no se reparte a
 dedo**: ahí el área es la única respuesta correcta. Un vencimiento sin dueño se ve
 y se reclama; uno con el dueño equivocado se trabaja mal.
 
-**Filtrar por cliente se escribe, no se escoge.** Con noventa clientes, un
-desplegable obliga a saber por dónde **empieza** el nombre: teclear una letra solo
-salta a la primera opción que arranca con ella. Pero nadie recuerda si el cliente
-quedó guardado como *"Grupo Empresarial Dajitaneja SAS"* o como *"Dajitaneja"* — lo
-que se recuerda es una palabra del medio. En *Pagos* el filtro de cliente es un campo
-de texto (`lib/buscar.ts`):
+**Filtrar por cliente: se escoge de la lista Y se puede buscar.** El desplegable
+está bien para **escoger** —se abre, se ve quiénes hay y se elige—; lo que no sirve
+con noventa clientes es **buscar**, porque teclear una letra en un `<select>` solo
+salta a la primera opción que empieza así. Y nadie recuerda si el cliente quedó
+guardado como *"Grupo Empresarial Dajitaneja SAS"* o como *"Dajitaneja"*: lo que se
+recuerda es una palabra del medio. Así que en *Pagos* no se reemplazó el desplegable,
+se le **agregó la búsqueda encima** (`SelectorCliente` + `lib/buscar.ts`):
 
+- **Abrirlo muestra la lista completa**, como siempre. Si además se escribe, se filtra.
 - Se busca por **pedazo**, no por el comienzo: *"taneja"* encuentra *"Dajitaneja"*.
 - **Tildes y mayúsculas no cuentan**: *"piña"* y *"PINA"* son lo mismo.
 - **Varias palabras se piden todas, en cualquier orden**: *"acme sas"* y *"sas acme"*
   encuentran *"Acme Consultores SAS"*. Exigir el orden obligaría a recordar el nombre
   completo, que es justo lo que no pasa.
-- **La lista completa no se pierde**: sigue como autocompletado, así que quien
-  prefiera escoger, escoge.
-- **El campo vacío no filtra**, y cuando nada coincide la pantalla **repite lo que se
-  escribió**: con texto libre casi siempre es una palabra mal tecleada, y *"con estos
-  filtros"* no dice cuál de los dos falló.
+- Se recorre con **teclado** (flechas, Enter, Escape) y se cierra al hacer clic afuera.
+- **El servidor filtra igual**, por pedazo: escribir a medias y pulsar *Filtrar*
+  funciona lo mismo que elegir de la lista.
+- Cuando nada coincide, se **repite lo que se escribió** —en el selector y en la tabla
+  vacía—: casi siempre es una palabra mal tecleada, y *"con estos filtros"* no dice
+  cuál de los dos falló.
+- Detalle de implementación que importa: al elegir se llama a `form.requestSubmit()`
+  y **no** se simula un evento `change`. React ignora los cambios de `value` hechos
+  por código, así que el envío no se dispararía y elegir un cliente no filtraría nada.
 
 **Pagos: agregar y corregir es de coordinación; borrar es del Administrador.**
 La línea no la marca *quién manda*, sino qué le pasa a la información:
