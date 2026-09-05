@@ -14,6 +14,7 @@ import PagosAcciones from '../PagosAcciones';
 import AbonosBoton from '../AbonosBoton';
 import FormFiltros from './FormFiltros';
 import { fmtDia } from '@/lib/fechas';
+import { coincide } from '@/lib/buscar';
 
 
 export const metadata = { title: 'Pagos' };
@@ -195,7 +196,10 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const clientes = [...new Set(items.map((i) => i.empresa).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b));
 
   // KPIs sobre el alcance por cliente (el estado es drill-down de la tabla).
-  const scope = items.filter((i) => !cliente || i.empresa === cliente);
+  // El filtro es por PEDAZO del nombre y no por coincidencia exacta: con noventa
+  // clientes, tener que dar con el nombre completo es lo mismo que no tener
+  // filtro. Ver lib/buscar.ts.
+  const scope = items.filter((i) => coincide(i.empresa, cliente));
   // Lo pendiente se mide por SALDO (valor − abonos); lo pagado, por su valor.
   const pend = (i: Item) => i.saldo ?? i.valorPago ?? 0;
   const suma = (pred: (i: Item) => boolean, val: (i: Item) => number = (i) => i.valorPago ?? 0) => scope.filter(pred).reduce((a, i) => ({ n: a.n + 1, v: a.v + val(i) }), { n: 0, v: 0 });
@@ -278,10 +282,17 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <FormFiltros>
-          <select name="cliente" defaultValue={cliente} style={{ ...sel, maxWidth: 240 }}>
-            <option value="">Todos los clientes</option>
-            {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          {/* Campo de texto con sugerencias, no un desplegable: en una lista de
+              noventa, teclear una letra solo salta a la primera que empieza así,
+              y el nombre que uno recuerda suele ser una palabra del medio. La
+              lista completa sigue estando, ahora como autocompletado. */}
+          <input name="cliente" defaultValue={cliente} list="clientes-pagos" autoComplete="off"
+            placeholder="Todos los clientes — escribe para filtrar"
+            title="Escribe cualquier parte del nombre. Varias palabras se buscan todas, en cualquier orden."
+            style={{ ...sel, maxWidth: 280, minWidth: 230 }} />
+          <datalist id="clientes-pagos">
+            {clientes.map((c) => <option key={c} value={c} />)}
+          </datalist>
           <select name="estado" defaultValue={estado} style={sel}>
             <option value="">Todos los estados</option>
             <option value="pendiente">Pendiente</option>
@@ -298,8 +309,16 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         <div className="panel" style={{ padding: '16px 18px', color: 'var(--peligro-fuerte)', fontWeight: 600 }}>No se pudieron cargar los pagos: {error}.</div>
       ) : filas.length === 0 ? (
         <div className="panel" style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>
-          No hay obligaciones por pagar con estos filtros.
-          <div style={{ fontSize: 12, marginTop: 6 }}>Marca un vencimiento como <strong>Presentado</strong> en Vencimientos, o usa <strong>+ Agregar pago pendiente</strong> abajo.</div>
+          {/* Con un campo de texto libre, "estos filtros" no dice cuál falló:
+              casi siempre es una palabra mal escrita, y hay que verla. */}
+          {cliente
+            ? <>Ningún cliente coincide con <strong style={{ color: 'var(--ink)' }}>«{cliente}»</strong>{estado ? ' con ese estado' : ''}.</>
+            : 'No hay obligaciones por pagar con estos filtros.'}
+          <div style={{ fontSize: 12, marginTop: 6 }}>
+            {cliente
+              ? <>Se busca por cualquier parte del nombre. Prueba con una sola palabra, o usa <strong>Limpiar</strong>.</>
+              : <>Marca un vencimiento como <strong>Presentado</strong> en Vencimientos, o usa <strong>+ Agregar pago pendiente</strong> abajo.</>}
+          </div>
         </div>
       ) : (
         <div className="panel">
