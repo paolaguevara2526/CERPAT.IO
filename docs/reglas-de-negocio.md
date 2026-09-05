@@ -870,6 +870,19 @@ Con **varios asesores** en la empresa y el área sin resolver **no se reparte a
 dedo**: ahí el área es la única respuesta correcta. Un vencimiento sin dueño se ve
 y se reclama; uno con el dueño equivocado se trabaja mal.
 
+**Pagos: agregar y corregir es de coordinación; borrar es del Administrador.**
+La línea no la marca *quién manda*, sino qué le pasa a la información:
+
+- **Cargar un pago pendiente a mano** (deudas de años anteriores o impuestos que
+  nunca entraron al sistema) y **registrar el valor y el estado del pago** los puede
+  **Administrador, Coordinador o root**. Son operaciones que **agregan o corrigen**
+  un dato, y quien lleva la cartera es quien se entera de la deuda y persigue el
+  pago; tener que pedirle a Administración que la cargue atrasa el dato justo donde
+  se usa. El `PATCH /vencimientos/:id` ya aceptaba coordinación desde siempre —
+  **solo la pantalla lo escondía**, que en la práctica es un permiso que no existe.
+- **Eliminar** un pago pendiente o un abono sigue siendo **solo del Administrador**:
+  eso no corrige un dato, borra una deuda registrada y el rastro de que existió.
+
 **Abonos (pagos parciales): quién los registra.** Registrar un abono lo pueden
 **Administrador, Coordinador y Asesor** — son quienes hacen el seguimiento de
 cartera y quienes se enteran de que el cliente abonó; tener que pedírselo a

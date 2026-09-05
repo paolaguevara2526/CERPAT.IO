@@ -156,9 +156,10 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   const [{ data: vencs, tasa, error }, pendientes, empresas, sesion] = await Promise.all([
     fetchVencPagos(anio), fetchPendientes(), fetchEmpresas(), getSessionUser(),
   ]);
-  // Solo el Administrador (o root) modifica el pago: el valor a pagar, el estado
-  // y los pendientes cargados a mano. El backend ya valida esto; aquí evitamos
-  // mostrar controles que devolverían un error.
+  // Solo el Administrador (o root) BORRA: un pago pendiente cargado a mano o un
+  // abono ya registrado. Borrar no corrige un dato, elimina una deuda de la que
+  // después nadie se acuerda. El backend ya valida esto; aquí evitamos mostrar
+  // controles que devolverían un error.
   const esEditor = !!sesion && (sesion.esRoot || sesion.roles.includes('Administrador'));
   // Los ABONOS van aparte y más abiertos: Asesor y Coordinador también los
   // registran, porque son quienes hacen el seguimiento de cartera y quienes se
@@ -167,6 +168,13 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
   // permisos por separado: mostrar un botón que va a devolver 403 es peor que no
   // mostrarlo.
   const puedeAbonar = !!sesion && (sesion.esRoot || sesion.roles.some((r) => ['Administrador', 'Coordinador', 'Asesor'].includes(r)));
+  // Coordinación lleva el seguimiento de cartera: carga las deudas viejas y les
+  // registra el valor y el estado del pago. Son operaciones que AGREGAN o
+  // corrigen un dato; el backend ya las permitía (POST /vencimientos y PATCH
+  // /vencimientos/:id aceptan coordinación) y solo la pantalla las escondía.
+  // Borrar sigue siendo del Administrador: eso no corrige un dato, elimina una
+  // deuda registrada.
+  const esCoordinacion = !!sesion && (sesion.esRoot || sesion.roles.some((r) => ['Administrador', 'Coordinador'].includes(r)));
 
   // Listado unificado: vencimientos presentados + pagos pendientes manuales.
   const items: Item[] = [
@@ -265,7 +273,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
 
       <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 3px' }}>Por pagar</h2>
       <p style={{ fontSize: 12.5, color: 'var(--muted)', margin: '0 0 12px' }}>
-        Vencimientos ya presentados {esEditor ? '(marca el pago)' : puedeAbonar ? '(registra abonos)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se recalcula a hoy cada vez que abres la pantalla; la <strong>tasa</strong> no: esa la publica la DIAN cada mes y se carga en Administración → Parámetros.
+        Vencimientos ya presentados {esCoordinacion ? '(marca el pago)' : puedeAbonar ? '(registra abonos)' : '(solo consulta)'} y pagos pendientes cargados a mano. El interés de mora se recalcula a hoy cada vez que abres la pantalla; la <strong>tasa</strong> no: esa la publica la DIAN cada mes y se carga en Administración → Parámetros.
       </p>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -331,7 +339,7 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-start' }}>
-                        <VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} editable={esEditor} />
+                        <VencimientoPagoEditor id={i.id} valorPago={i.valorPago} estado={i.estado} editable={esCoordinacion} />
                         {i.abonado > 0 && (
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>Abonado <b style={{ color: 'var(--exito-fuerte)' }}>${fmtCOP(i.abonado)}</b> · Saldo <b style={{ color: 'var(--navy)' }}>${fmtCOP(i.saldo ?? 0)}</b></div>
                         )}
@@ -347,7 +355,9 @@ export default async function PagosPage({ searchParams }: { searchParams?: Recor
         </div>
       )}
 
-      <PendientesManuales empresas={empresas} pendientes={pendientes} mostrarTabla={false} editable={esEditor} />
+      {/* mostrarTabla=false: acá solo va el botón de agregar. La tabla (con su
+          borrado, que sigue siendo del Administrador) no se dibuja. */}
+      <PendientesManuales empresas={empresas} pendientes={pendientes} mostrarTabla={false} editable={esCoordinacion} />
     </>
   );
 }
